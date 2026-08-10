@@ -90,6 +90,7 @@ contract Executor {
     error PermitMismatch();
     error NothingReceived(address asset);
     error ResidualBalance(address token, uint256 amount);
+    error AmountOverflow(address asset, uint256 amount);
 
     event Executed(uint256 indexed mandateId, uint256 indexed receiptId, uint256 legs);
 
@@ -213,6 +214,10 @@ contract Executor {
 
         uint256 received = IERC20(leg.asset).balanceOf(owner) - before;
         if (received == 0) revert NothingReceived(leg.asset);
+        // Solidity does not check explicit casts. A truncated amount here would
+        // be written into the receipt and into the position the exit triggers
+        // are measured against — wrong numbers that look deliberate.
+        if (received > type(uint128).max) revert AmountOverflow(leg.asset, received);
 
         uint128 priceE8 = _priceE8(leg.amountInUsdg, received, IERC20(leg.asset).decimals());
 

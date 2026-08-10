@@ -72,12 +72,16 @@ contract FairValueOracle {
     event Published(address indexed asset, uint128 fairValueE8, uint8 gapRisk, MarketState state);
     event PublisherSet(address indexed publisher, bool allowed);
     event MaxAgeSet(uint64 maxAge);
+    event AdminSet(address indexed admin);
 
     error NotAdmin();
     error NotPublisher();
     error NoData();
     error Stale(uint64 updatedAt, uint64 nowTs);
     error ValueWithheld();
+    error ValuelessPublication(address asset);
+    error GapRiskOutOfRange(uint8 gapRisk);
+    error ZeroAddress();
 
     modifier onlyAdmin() {
         if (msg.sender != admin) revert NotAdmin();
@@ -103,14 +107,24 @@ contract FairValueOracle {
     }
 
     function setAdmin(address newAdmin) external onlyAdmin {
+        // Handing admin to the zero address would freeze the publisher set with
+        // no way back, and this contract is the guard's only source of truth.
+        if (newAdmin == address(0)) revert ZeroAddress();
         admin = newAdmin;
+        emit AdminSet(newAdmin);
     }
 
     // -------------------------------------------------------- publishing
 
     function publish(Publication calldata p) public {
         if (!isPublisher[msg.sender]) revert NotPublisher();
-        require(p.gapRisk <= 100, "gapRisk>100");
+        if (p.gapRisk > 100) revert GapRiskOutOfRange(p.gapRisk);
+        // A published value of zero is not a value. Allowing `hasValue` with a
+        // zero price would make `checkExecution` divide by zero and revert with
+        // a panic instead of a rejection code — the guard would stop working in
+        // the one way that gives no reason. Withholding is expressed by
+        // `hasValue == false`, and it is the only way to express it.
+        if (p.hasValue && p.fairValueE8 == 0) revert ValuelessPublication(p.asset);
 
         _obs[p.asset] = Observation({
             fairValueE8: p.hasValue ? p.fairValueE8 : 0,
@@ -183,6 +197,10 @@ contract FairValueOracle {
         if (o.updatedAt == 0) return (false, "NO_DATA");
         if (block.timestamp > o.updatedAt + maxAge) return (false, "STALE");
         if (!o.hasValue) return (false, "NO_REFERENCE");
+        // Defence in depth: `publish` now refuses this combination, but an
+        // observation written before that rule must still reject cleanly rather
+        // than divide by zero.
+        if (o.fairValueE8 == 0) return (false, "NO_REFERENCE");
         if (o.gapRisk > maxGapRisk) return (false, "GAP_RISK");
 
         uint256 fv = o.fairValueE8;

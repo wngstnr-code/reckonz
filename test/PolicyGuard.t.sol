@@ -239,6 +239,88 @@ contract PolicyGuardTest is Test {
         return guard.validateAndRecord(mandateId, fills, keccak256("thesis"), keccak256("evidence"), "ipfs://cid");
     }
 
+    // ------------------------------------------- the allowlist is a set
+
+    /// Toggling an asset off and on again used to append a second entry to the
+    /// mandate's asset list. `_checkWeights` then read the same balance twice:
+    /// the doubled total shrinks every computed weight, so the cap stops
+    /// binding at precisely the moment it is supposed to.
+    function test_ReAllowingAnAssetDoesNotDuplicateItInTheList() public {
+        assertEq(guard.allowedAssets(mandateId).length, 2);
+
+        vm.startPrank(owner);
+        guard.setAssetAllowed(mandateId, address(wNVDAx), false);
+        guard.setAssetAllowed(mandateId, address(wNVDAx), true);
+        vm.stopPrank();
+
+        address[] memory list = guard.allowedAssets(mandateId);
+        assertEq(list.length, 2, "asset must appear once, however often it is toggled");
+        assertTrue(guard.isAllowedAsset(mandateId, address(wNVDAx)));
+    }
+
+    function test_WeightCapStillBindsAfterAToggle() public {
+        // A weight-enforcing mandate holding one asset and a little cash.
+        PolicyGuard.Policy memory p = _policy();
+        p.enforceWeights = true;
+        p.maxWeightBps = 4000;
+        p.minCashBufferBps = 0;
+        p.maxSlippageBps = 200;
+
+        address[] memory assets = new address[](1);
+        assets[0] = address(wNVDAx);
+        vm.prank(owner);
+        uint256 id = guard.createMandate(agent, executor, p, assets);
+
+        vm.startPrank(owner);
+        guard.setAssetAllowed(id, address(wNVDAx), false);
+        guard.setAssetAllowed(id, address(wNVDAx), true);
+        vm.stopPrank();
+
+        // 10 units at ~223 USDG is ~2,235 of a ~2,335 portfolio: ~95%, far past
+        // the 40% cap. Double-counting the asset would have halved that to ~48%
+        // — still over, so make the cash side large enough that only the
+        // duplicate could rescue it.
+        wNVDAx.mint(owner, 10e18);
+        usdg.mint(owner, 2_100_000000);
+
+        vm.expectRevert();
+        vm.prank(executor);
+        guard.validateAndRecord(
+            id, _fill(address(wNVDAx), 100_000000, NVDA_FV, 10), bytes32(0), bytes32(0), ""
+        );
+    }
+
+    // ------------------------------------ a published value of zero is not one
+
+    /// `hasValue` with a zero price used to be publishable, and `checkExecution`
+    /// then divided by it: the guard reverted with a panic and no reason code.
+    function test_OracleRefusesToPublishAValueOfZero() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(FairValueOracle.ValuelessPublication.selector, address(wNVDAx))
+        );
+        oracle.publish(
+            FairValueOracle.Publication({
+                asset: address(wNVDAx),
+                fairValueE8: 0,
+                confidenceBps: 100,
+                basisBps: 0,
+                capacityUsdg: DEFAULT_CAPACITY,
+                gapRisk: 10,
+                state: FairValueOracle.MarketState.PRE,
+                anchorAt: uint64(block.timestamp),
+                hasValue: true
+            })
+        );
+    }
+
+    function test_WithholdingIsStillTheWayToSayNoValue() public {
+        _publish(address(wNVDAx), 0, 0, 10, 0, DEFAULT_CAPACITY, false);
+        (bool ok, bytes32 reason) =
+            oracle.checkExecution(address(wNVDAx), NVDA_FV, 60, 100);
+        assertFalse(ok);
+        assertEq(reason, bytes32("NO_REFERENCE"), "a clean reason, not a panic");
+    }
+
     // -------------------------------------------------------- happy path
 
     function test_ValidFillIsRecorded() public {

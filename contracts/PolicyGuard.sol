@@ -87,6 +87,10 @@ contract PolicyGuard {
     mapping(uint256 => mapping(address => bool)) public isAllowedAsset;
     /// @dev mandateId => allowlist, needed for portfolio-level checks
     mapping(uint256 => address[]) private _assetList;
+    /// @dev mandateId => asset => already present in `_assetList`. Distinct from
+    ///      `isAllowedAsset`, which toggles: an asset that is disallowed stays in
+    ///      the list, and re-allowing it must not append a second entry.
+    mapping(uint256 => mapping(address => bool)) private _listed;
     mapping(uint256 => mapping(address => uint8)) private _assetDecimals;
 
     uint256 public constant MAX_ASSETS = 24;
@@ -510,10 +514,17 @@ contract PolicyGuard {
     ///      decimals are recorded as 0 and `_checkWeights` refuses to run
     ///      against them, so the capability degrades loudly instead of silently
     ///      pricing a position with a guessed scale.
+    ///
+    ///      Membership in `_assetList` is tracked separately from the allow flag.
+    ///      Keying the append off `isAllowedAsset` meant allow → disallow → allow
+    ///      pushed the asset twice, and `_checkWeights` then counted the same
+    ///      balance twice: the inflated total shrinks every computed weight, so
+    ///      the cap silently stops binding at exactly the moment it matters.
     function _allowAsset(uint256 mandateId, address asset, bool allowed) internal {
-        if (allowed && !isAllowedAsset[mandateId][asset]) {
+        if (allowed && !_listed[mandateId][asset]) {
             if (_assetList[mandateId].length >= MAX_ASSETS) revert TooManyAssets();
             _assetList[mandateId].push(asset);
+            _listed[mandateId][asset] = true;
             // Low-level on purpose: a high-level call to an address with no
             // code reverts on Solidity's own extcodesize check, in this
             // contract's frame, where try/catch cannot reach it.
