@@ -5,6 +5,9 @@ Built for the X Layer "AI Season" hackathon (AI-RWA track).
 
 ## Read first
 
+`docs/` is **local-only** — it is gitignored and will not be present in a fresh clone. The
+files below exist on the working machine and remain the source of truth there.
+
 | Doc | When |
 |---|---|
 | `docs/05-status.md` | **Always.** What exists, what runs, what is blocked, what is next. |
