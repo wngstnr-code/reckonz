@@ -18,7 +18,8 @@
     "mandate": "tsx src/mandate-demo.ts",
     "dev": "next dev",
     "build:web": "next build",
-    "start": "next start"
+    "start": "next start",
+    "execute": "tsx src/execute.ts"
   },
   "keywords": [],
   "author": "",
