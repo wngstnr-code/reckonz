@@ -4,6 +4,8 @@
 You write the thesis; Reckonz maps it to what actually trades, sizes it against real
 depth, and enforces the exits on chain.
 
+[@reckonz_xyz](https://x.com/reckonz_xyz)
+
 Two components of the product, both running against live X Layer mainnet (chain 196):
 
 - **Execution Planner** — sizes and schedules trades using a full multi-tick Uniswap V3

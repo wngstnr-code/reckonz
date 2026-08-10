@@ -93,11 +93,23 @@ export default function Page() {
         </section>
 
         <footer className="max-w-[72ch] pt-2 pb-16 text-[12.5px] leading-relaxed text-faint">
-          The oracle is a guard, not a price: when it cannot defend a number it marks the value
-          unpublishable rather than inventing one. Capacity is reported honestly — capital the
-          market cannot absorb is returned, not forced. The agent proposes routing and never holds
-          a key that can move funds; PolicyGuard bounds execution and reverts in the trade&apos;s
-          own transaction. Tooling, not investment advice.
+          <p>
+            The oracle is a guard, not a price: when it cannot defend a number it marks the value
+            unpublishable rather than inventing one. Capacity is reported honestly — capital the
+            market cannot absorb is returned, not forced. The agent proposes routing and never
+            holds a key that can move funds; PolicyGuard bounds execution and reverts in the
+            trade&apos;s own transaction. Tooling, not investment advice.
+          </p>
+          <p className="mt-3 font-mono">
+            <a
+              href="https://x.com/reckonz_xyz"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-signal"
+            >
+              @reckonz_xyz
+            </a>
+          </p>
         </footer>
       </main>
     </>
