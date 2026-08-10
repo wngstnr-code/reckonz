@@ -16,14 +16,17 @@ import {
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { xLayerTestnet } from './chain';
+import { TESTNET } from './deployments';
 import { ASSETS, computeFairValue, toOraclePayload } from './fairvalue';
 import { capacity, loadVenues } from './planner';
 
 /** Impact limit the published capacity is measured at. */
 const REFERENCE_IMPACT_BPS = Number(process.env.REFERENCE_IMPACT_BPS ?? 50);
 
+// Default to the recorded deployment rather than a literal, so this cannot
+// drift onto an older oracle that is still live on the same chain.
 const ORACLE = (process.env.ORACLE_ADDRESS ??
-  '0x40d6C616dEBD91Fd85eAF11C281E0c4B2b74D87b') as Address;
+  TESTNET.contracts.FairValueOracle) as Address;
 
 const ADDRESS_BY_SYMBOL: Record<string, Address> = {
   wSPYx: '0xe7e553cd128f0011777323a0b44a7b96ea1cb540',

@@ -17,9 +17,11 @@ import {
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { xLayerTestnet } from './chain';
+import { TESTNET } from './deployments';
 
-const GUARD = (process.env.GUARD_ADDRESS ??
-  '0xa06C2930C279Fd60b6Cbe0752732e008044fc8Ed') as Address;
+// Default to the recorded deployment rather than a literal, so this cannot
+// drift onto an older guard that is still live on the same chain.
+const GUARD = (process.env.GUARD_ADDRESS ?? TESTNET.contracts.PolicyGuard) as Address;
 
 const wMUx = '0xe2047ee3bddb5c99ae428ab83df63f8730698e30' as Address;
 const wNVDAx = '0xa8ddb5cd96b5222afe198316e9a57caa642850d5' as Address;
