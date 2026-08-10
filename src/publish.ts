@@ -7,26 +7,29 @@
  * to testnet — the oracle is an address-keyed registry, and reusing the real
  * identifiers keeps testnet observations comparable to mainnet ones.
  */
-import {
-  createWalletClient,
-  http,
-  parseAbi,
-  publicActions,
-  type Address,
-} from 'viem';
-import { privateKeyToAccount } from 'viem/accounts';
-import { xLayerTestnet } from './chain';
-import { TESTNET } from './deployments';
+import { parseAbi, type Address } from 'viem';
 import { ASSETS, computeFairValue, toOraclePayload } from './fairvalue';
 import { capacity, loadVenues } from './planner';
+import {
+  accountFrom,
+  chainFor,
+  deploymentFor,
+  target,
+  waitUntil,
+  walletFor,
+} from './wallet';
 
 /** Impact limit the published capacity is measured at. */
 const REFERENCE_IMPACT_BPS = Number(process.env.REFERENCE_IMPACT_BPS ?? 50);
 
-// Default to the recorded deployment rather than a literal, so this cannot
-// drift onto an older oracle that is still live on the same chain.
+// Chain and addresses both come from TARGET, so this script cannot publish to
+// one chain while reporting another. Defaulting to the recorded deployment
+// rather than a literal also keeps it off older contracts that are still live.
+const t = target();
+const chain = chainFor(t);
+const deployment = deploymentFor(t);
 const ORACLE = (process.env.ORACLE_ADDRESS ??
-  TESTNET.contracts.FairValueOracle) as Address;
+  deployment.contracts.FairValueOracle) as Address;
 
 const ADDRESS_BY_SYMBOL: Record<string, Address> = {
   wSPYx: '0xe7e553cd128f0011777323a0b44a7b96ea1cb540',
@@ -46,17 +49,10 @@ const oracleAbi = parseAbi([
   'function checkExecution(address asset, uint256 executionPriceE8, uint8 maxGapRisk, uint32 maxDeviationBps) view returns (bool ok, bytes32 reason)',
 ]);
 
-const pk = process.env.PRIVATE_KEY;
-if (!pk) throw new Error('PRIVATE_KEY is not set — see .env.example');
+const account = accountFrom('PUBLISHER_KEY', 'PRIVATE_KEY');
+const client = walletFor(account, t);
 
-const account = privateKeyToAccount(pk as `0x${string}`);
-const client = createWalletClient({
-  account,
-  chain: xLayerTestnet,
-  transport: http(),
-}).extend(publicActions);
-
-console.log(`\n  FairValueOracle ${ORACLE}  (chain ${xLayerTestnet.id})`);
+console.log(`\n  FairValueOracle ${ORACLE}  (${deployment.name}, chain ${chain.id})`);
 console.log(`  publisher       ${account.address}\n`);
 
 // 1 — run the off-chain engine: fair value from marketdata, capacity and basis
@@ -124,29 +120,20 @@ const receipt = await client.waitForTransactionReceipt({ hash });
 console.log(`  tx ${hash}`);
 console.log(`  block ${receipt.blockNumber}  gas ${receipt.gasUsed}  status ${receipt.status}`);
 
-/**
- * The public X Layer RPC load-balances across nodes, so a read issued straight
- * after a confirmed write can land on a node that has not synced that block and
- * return zeroes — a stale read, not an error. Wait until a node that has the
- * write answers before reading anything back.
- */
-async function waitForState(probe: Address, tries = 20): Promise<void> {
-  for (let i = 0; i < tries; i++) {
-    const o = await client.readContract({
+// The public X Layer RPC load-balances, so a read issued straight after a
+// confirmed write can land on a node that has not synced the block and return
+// zeroes — a stale read, not an error. See D18.
+await waitUntil(
+  () =>
+    client.readContract({
       address: ORACLE,
       abi: oracleAbi,
       functionName: 'peek',
-      args: [probe],
-    });
-    if (o.updatedAt !== 0n) {
-      if (i > 0) console.log(`  (state visible after ${i + 1} reads — RPC nodes lag)`);
-      return;
-    }
-    await new Promise((r) => setTimeout(r, 500));
-  }
-  throw new Error('published state never became readable');
-}
-await waitForState(assets[0]!);
+      args: [assets[0]!],
+    }),
+  (o) => o.updatedAt !== 0n,
+  { attempts: 20, delayMs: 500, what: 'the published observation' },
+);
 console.log();
 
 // 3 — read it back and let the contract decide

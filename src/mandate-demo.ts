@@ -1,7 +1,10 @@
 /**
- * Creates a mandate on testnet, installs exit triggers compiled from a thesis,
- * and shows the guard refusing a trade — using capacity measured from real
- * mainnet pool liquidity, published to the oracle by `pnpm publish`.
+ * Creates a mandate, installs exit triggers compiled from a thesis, and shows
+ * the guard refusing a trade — using capacity measured from real mainnet pool
+ * liquidity, published to the oracle by `pnpm oracle:publish`.
+ *
+ * Chain comes from `TARGET` (default testnet), so this cannot write to one
+ * chain while printing another.
  *
  * The deployer plays owner, agent and executor here. In production those are
  * three different keys; the separation is what the access-control tests cover.
@@ -9,19 +12,18 @@
 import {
   BaseError,
   ContractFunctionRevertedError,
-  createWalletClient,
-  http,
   parseAbi,
-  publicActions,
   type Address,
 } from 'viem';
-import { privateKeyToAccount } from 'viem/accounts';
-import { xLayerTestnet } from './chain';
-import { TESTNET } from './deployments';
+import { accountFrom, chainFor, deploymentFor, target, waitUntil, walletFor } from './wallet';
 
-// Default to the recorded deployment rather than a literal, so this cannot
-// drift onto an older guard that is still live on the same chain.
-const GUARD = (process.env.GUARD_ADDRESS ?? TESTNET.contracts.PolicyGuard) as Address;
+// Chain and addresses both come from TARGET. Defaulting to the recorded
+// deployment rather than a literal also keeps this off older guards that are
+// still live on the same chain.
+const t = target();
+const chain = chainFor(t);
+const deployment = deploymentFor(t);
+const GUARD = (process.env.GUARD_ADDRESS ?? deployment.contracts.PolicyGuard) as Address;
 
 const wMUx = '0xe2047ee3bddb5c99ae428ab83df63f8730698e30' as Address;
 const wNVDAx = '0xa8ddb5cd96b5222afe198316e9a57caa642850d5' as Address;
@@ -37,13 +39,20 @@ const guardAbi = parseAbi([
   'function nextMandateId() view returns (uint256)',
   'function getMandate(uint256 mandateId) view returns ((address owner, address agent, address executor, uint32 version, bool active, bool circuitBreaker, uint64 lastActionAt, uint64 epochStart, uint16 fillsThisEpoch, (uint16,uint16,uint16,uint16,uint8,uint128,uint16,uint32,uint32,bool) policy))',
   'error TriggerFired(uint256 triggerIndex, address asset, int256 value, int256 threshold)',
+  'error OracleRejected(address asset, bytes32 reason)',
+  'error AssetNotAllowed(address asset)',
+  'error SlippageTooHigh(address asset, uint16 realised, uint16 limit)',
+  'error NotionalTooLarge(address asset, uint128 amount, uint128 limit)',
 ]);
 
-const account = privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`);
-const client = createWalletClient({ account, chain: xLayerTestnet, transport: http() })
-  .extend(publicActions);
+const oracleAbi = parseAbi([
+  'function peek(address asset) view returns ((uint128 fairValueE8, uint32 confidenceBps, int32 basisBps, uint128 capacityUsdg, uint8 gapRisk, uint8 state, uint64 anchorAt, uint64 updatedAt, bool hasValue))',
+]);
 
-console.log(`\n  PolicyGuard ${GUARD}  (chain ${xLayerTestnet.id})`);
+const account = accountFrom('OWNER_KEY', 'PRIVATE_KEY');
+const client = walletFor(account, t);
+
+console.log(`\n  PolicyGuard ${GUARD}  (${deployment.name}, chain ${chain.id})`);
 console.log(`  owner/agent/executor ${account.address}\n`);
 
 // 1 — create the mandate
@@ -74,27 +83,22 @@ let hash = await client.writeContract({
 });
 await client.waitForTransactionReceipt({ hash });
 
-/**
- * A confirmed receipt is not enough on X Layer: the public RPC load-balances,
- * and the *gas estimation* for the next transaction can land on a node that has
- * not seen this one yet — which reads the mandate as owner 0x0 and reverts
- * NotOwner. Dependent transactions need the state confirmed visible, not just
- * the receipt (see docs/04-decisions.md D18).
- */
-for (let i = 0; i < 30; i++) {
-  const m = await client.readContract({
-    address: GUARD,
-    abi: guardAbi,
-    functionName: 'getMandate',
-    args: [mandateId],
-  });
-  if (m.owner.toLowerCase() === account.address.toLowerCase()) {
-    if (i > 0) console.log(`  (mandate visible after ${i + 1} reads — RPC nodes lag)`);
-    break;
-  }
-  if (i === 29) throw new Error('mandate never became readable');
-  await new Promise((r) => setTimeout(r, 500));
-}
+// A confirmed receipt is not enough on X Layer: the public RPC load-balances,
+// and the *gas estimation* for the next transaction can land on a node that has
+// not seen this one yet — which reads the mandate as owner 0x0 and reverts
+// NotOwner. Dependent transactions need the state confirmed visible, not just
+// the receipt. See D18.
+await waitUntil(
+  () =>
+    client.readContract({
+      address: GUARD,
+      abi: guardAbi,
+      functionName: 'getMandate',
+      args: [mandateId],
+    }),
+  (m) => m.owner.toLowerCase() === account.address.toLowerCase(),
+  { attempts: 30, delayMs: 500, what: 'the mandate' },
+);
 console.log(`  mandate #${mandateId} created — allows wMUx, wNVDAx`);
 
 // 2 — install triggers compiled from the thesis
@@ -148,11 +152,31 @@ const fill = (asset: Address, priceE8: bigint) => [
   },
 ];
 
-console.log('\n  attempting a 100 USDG buy on each\n');
-for (const [name, asset, price] of [
-  ['wMUx', wMUx, 87280000000n],
-  ['wNVDAx', wNVDAx, 22321000000n],
+// Price each fill AT the oracle's current fair value. Hardcoded prices go
+// stale, and a fill rejected for drifting 2% from fair value would be a
+// truthful rejection of the wrong thing — this demo is about the trigger.
+const ORACLE = (process.env.ORACLE_ADDRESS ??
+  deployment.contracts.FairValueOracle) as Address;
+
+async function fairValueOf(asset: Address): Promise<bigint> {
+  const o = await client.readContract({
+    address: ORACLE,
+    abi: oracleAbi,
+    functionName: 'peek',
+    args: [asset],
+  });
+  if (!o.hasValue || o.fairValueE8 === 0n) {
+    throw new Error(`oracle has no publishable value for ${asset} — run pnpm oracle:publish`);
+  }
+  return o.fairValueE8;
+}
+
+console.log('\n  attempting a 100 USDG buy on each, priced at the oracle\'s fair value\n');
+for (const [name, asset] of [
+  ['wMUx', wMUx],
+  ['wNVDAx', wNVDAx],
 ] as const) {
+  const price = await fairValueOf(asset);
   try {
     await client.simulateContract({
       account,
@@ -168,11 +192,21 @@ for (const [name, asset, price] of [
         ? e.walk((err) => err instanceof ContractFunctionRevertedError)
         : undefined;
     if (reverted instanceof ContractFunctionRevertedError && reverted.data) {
-      const [idx, , value, threshold] = (reverted.data.args ?? []) as bigint[];
-      console.log(
-        `    ${name.padEnd(8)} REJECT  ${reverted.data.errorName}` +
-          ` — trigger #${idx}: capacity ${Number(value) / 1e6} < ${Number(threshold) / 1e6} USDG`,
-      );
+      const args = (reverted.data.args ?? []) as unknown[];
+      if (reverted.data.errorName === 'TriggerFired') {
+        const [idx, , value, threshold] = args as bigint[];
+        console.log(
+          `    ${name.padEnd(8)} REJECT  TriggerFired` +
+            ` — trigger #${idx}: capacity ${Number(value) / 1e6} < ${Number(threshold) / 1e6} USDG`,
+        );
+      } else if (reverted.data.errorName === 'OracleRejected') {
+        const reason = Buffer.from(String(args[1]).slice(2), 'hex')
+          .toString('utf8')
+          .replace(/\0+$/, '');
+        console.log(`    ${name.padEnd(8)} REJECT  OracleRejected — ${reason}`);
+      } else {
+        console.log(`    ${name.padEnd(8)} REJECT  ${reverted.data.errorName} ${args.join(' ')}`);
+      }
     } else {
       console.log(`    ${name.padEnd(8)} REJECT  ${(e as Error).message.split('\n')[0]}`);
     }

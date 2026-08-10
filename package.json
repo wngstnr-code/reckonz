@@ -14,7 +14,7 @@
     "deploy": "forge script script/Deploy.s.sol --tc Deploy --rpc-url xlayer_testnet --broadcast",
     "thesis": "tsx src/thesis-demo.ts",
     "thesis:gemini": "LLM_PROVIDER=gemini tsx src/thesis-demo.ts",
-    "publish": "tsx src/publish.ts",
+    "oracle:publish": "tsx src/publish.ts",
     "mandate": "tsx src/mandate-demo.ts",
     "dev": "next dev",
     "build:web": "next build",
