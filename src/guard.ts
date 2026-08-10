@@ -14,15 +14,22 @@ export interface Mandate {
   maxDeviationBps: number;
   /** ceiling on price impact for a single fill, in bps */
   maxImpactBps: number;
-  /** reject data older than this, in seconds */
-  maxOracleAge: number;
 }
+
+/**
+ * One check in `FairValueOracle.checkExecution` has no counterpart here, on
+ * purpose: `STALE`, which compares the on-chain `updatedAt` against `maxAge`.
+ * This mirror runs against a report computed seconds ago, so there is no
+ * publication to be stale. Staleness of the *reference market* is a different
+ * quantity and is already priced into `gapRisk`. A `maxOracleAge` field used to
+ * sit in this interface and was never read — a parameter that implies a check
+ * nobody performs is worse than an acknowledged gap.
+ */
 
 export const DEFAULT_MANDATE: Mandate = {
   maxGapRisk: 60,
   maxDeviationBps: 100,
   maxImpactBps: 50,
-  maxOracleAge: 900,
 };
 
 export type Rejection =
@@ -49,7 +56,7 @@ export function checkExecution(
   // Order matters: "we withheld a value" is a different and more useful
   // answer than "we have no observation", and a withheld value must never fall
   // through to a deviation check against a number we do not trust.
-  if (report.fairValue == null || !report.publishable) {
+  if (report.fairValue == null || report.fairValue === 0 || !report.publishable) {
     return {
       ok: false,
       reason: 'NO_REFERENCE',

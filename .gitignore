@@ -15,3 +15,5 @@ tsconfig.tsbuildinfo
 
 # Working notes: research, architecture, decision log, status. Kept local.
 docs/
+
+.DS_Store
