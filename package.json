@@ -1,0 +1,46 @@
+{
+  "name": "reckonz",
+  "version": "1.0.0",
+  "description": "Reckonz — non-custodial execution and risk tooling for tokenised equities on X Layer",
+  "main": "index.js",
+  "scripts": {
+    "verify": "tsx src/verify.ts",
+    "plan": "tsx src/demo.ts",
+    "capacity": "tsx src/capacity.ts",
+    "typecheck": "tsc --noEmit",
+    "oracle": "tsx src/oracle-demo.ts",
+    "build": "forge build",
+    "test:sol": "forge test",
+    "deploy": "forge script script/Deploy.s.sol --tc Deploy --rpc-url xlayer_testnet --broadcast",
+    "thesis": "tsx src/thesis-demo.ts",
+    "thesis:gemini": "LLM_PROVIDER=gemini tsx src/thesis-demo.ts",
+    "publish": "tsx src/publish.ts",
+    "mandate": "tsx src/mandate-demo.ts",
+    "dev": "next dev",
+    "build:web": "next build",
+    "start": "next start"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.33.0",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.116.0",
+    "@google/genai": "^2.16.0",
+    "next": "^16.3.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "viem": "^2.55.13",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^26.2.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2"
+  },
+  "type": "module"
+}

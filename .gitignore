@@ -1,0 +1,17 @@
+node_modules
+out
+cache
+broadcast
+lib
+
+# Secrets. The example is the one file in this family that belongs in the repo.
+.env
+.env.*
+!.env.example
+
+.next
+next-env.d.ts
+tsconfig.tsbuildinfo
+
+# Working notes: research, architecture, decision log, status. Kept local.
+docs/
