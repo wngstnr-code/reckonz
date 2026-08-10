@@ -71,9 +71,16 @@ export const USDT0 = {
 };
 
 /**
- * Seed set of tokenised equities verified on X Layer mainnet. The Universe
- * Mapper discovers the rest from the factory at runtime — this list only
- * bootstraps discovery so we never hard-code the investable universe.
+ * The tokenised equities this system currently models — **8 of the 30** that
+ * have USDG pools on X Layer (full list in docs/01-xlayer-reality.md).
+ *
+ * This is the investable universe as far as the allocator is concerned, and
+ * that is a real limitation, not a design: a thesis about Apple or TSMC is
+ * currently told "no matching asset", which is false — wAAPLx and wTSMx exist
+ * and trade. The eight are the ones with a verified reference market in
+ * `ASSETS` (src/fairvalue.ts), which is what the oracle needs to defend a
+ * price. Widening the universe means separating "what trades" from "what we
+ * can price". See D33.
  */
 export const XSTOCK_SEEDS: Address[] = [
   '0xe7e553cd128f0011777323a0b44a7b96ea1cb540', // wSPYx  — Wrapped SP500 xStock
