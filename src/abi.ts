@@ -64,6 +64,33 @@ export const PERMIT2_ABI = parseAbi([
  * `validateAndRecord` is callable only by the mandate's executor — it is here so
  * reverts decode, not because a browser should ever call it.
  */
+/**
+ * Safe 1.4.1. Not ours, so `pnpm verify:abi` does not check it — the same
+ * footing as `ERC20_ABI` and `PERMIT2_ABI`.
+ *
+ * Only the pre-validated signature path is used: an owner records approval
+ * on-chain with `approveHash`, and `execTransaction` is handed a signature of
+ * `r = owner, s = 0, v = 1`. That needs no EIP-712 signing, no Safe web UI and
+ * no transaction service — none of which are proven to exist for X Layer, and
+ * an unproven dependency is how D35 happened.
+ */
+export const SAFE_PROXY_FACTORY_ABI = parseAbi([
+  'function createProxyWithNonce(address singleton, bytes initializer, uint256 saltNonce) returns (address proxy)',
+  'event ProxyCreation(address indexed proxy, address singleton)',
+]);
+
+export const SAFE_ABI = parseAbi([
+  'function setup(address[] owners, uint256 threshold, address to, bytes data, address fallbackHandler, address paymentToken, uint256 payment, address paymentReceiver)',
+  'function getOwners() view returns (address[])',
+  'function getThreshold() view returns (uint256)',
+  'function isOwner(address owner) view returns (bool)',
+  'function nonce() view returns (uint256)',
+  'function approveHash(bytes32 hashToApprove)',
+  'function approvedHashes(address owner, bytes32 hash) view returns (uint256)',
+  'function getTransactionHash(address to, uint256 value, bytes data, uint8 operation, uint256 safeTxGas, uint256 baseGas, uint256 gasPrice, address gasToken, address refundReceiver, uint256 nonce) view returns (bytes32)',
+  'function execTransaction(address to, uint256 value, bytes data, uint8 operation, uint256 safeTxGas, uint256 baseGas, uint256 gasPrice, address gasToken, address refundReceiver, bytes signatures) payable returns (bool)',
+]);
+
 export const POLICY_GUARD_ABI = parseAbi([
   'struct Policy { uint16 maxWeightBps; uint16 minCashBufferBps; uint16 maxSlippageBps; uint16 maxDeviationBps; uint8 maxGapRisk; uint128 maxNotionalPerTrade; uint16 maxFillsPerEpoch; uint32 epochDuration; uint32 minRebalanceInterval; bool enforceWeights; }',
   'struct Mandate { address owner; address agent; address executor; uint32 version; bool active; bool circuitBreaker; uint64 lastActionAt; uint64 epochStart; uint16 fillsThisEpoch; Policy policy; }',

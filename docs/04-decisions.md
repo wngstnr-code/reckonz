@@ -830,3 +830,62 @@ that currency — rather than "we did not build the leg".
 **Anyone holding wSKHYx on X Layer should read the number.** The system's job is to refuse, and it
 does: `PolicyGuard` rejects with the sentence above attached, and `pnpm reconcile` re-checks it
 every run.
+
+---
+
+## D40 — A multisig closes the admin half. It cannot close the publisher half.
+
+Asked while planning the publish-time bounds: why not just use a multisig and close the
+"oracle has a single admin key" gap properly? The answer needed separating two powers that
+`FairValueOracle` treats as one key today but which have nothing in common:
+
+| Power | Who calls it | How often | Multisig? |
+|---|---|---|---|
+| `admin` — `setPublisher`, `setMaxAge`, `setAdmin` | a human | rarely, deliberately | **yes, ideal** |
+| `publisher` — `publish()` | a machine | every ~15 minutes | **no** |
+
+Publishing is automated. Put it behind human co-signing and the oracle stops working; automate
+the co-signers and their keys sit on the same box as the publisher's, which is a multisig in name
+and nothing else. **So the multisig and the publish-time bound close different halves, and only
+one half can be closed by a multisig.** The bound is the defence for the power that has to stay
+automated — which is also the power that can permit a bad fill.
+
+**The ordering was wrong, though, and the multisig should have come first.** `setAdmin` already
+exists, so handing admin to a Safe costs **one transaction and no redeploy**. The bound needs a
+new `FairValueOracle`, and `oracle` is `immutable` in both `PolicyGuard` and `Executor`, so it
+drags a three-contract redeploy, new published mainnet addresses and fresh Sourcify verification
+behind it. Cheap first.
+
+**The bigger finding, which neither item was about.** Read on mainnet: `admin` == `deployer` ==
+`isPublisher` == the key that holds the funds. One key is every role. Splitting them — Safe for
+admin, a dedicated hot key for publishing — is a few transactions, no redeploy, and shrinks the
+blast radius more than either change on its own.
+
+**Safe is proven on X Layer, not assumed.** Bytecode exists at the canonical 1.4.1 addresses on
+both 196 and 1952. That proves nothing: the Universal Router was deployed, correctly shaped and
+carried the exact selector, and could not do the one thing we needed (D35). So `pnpm safe:prove`
+does the actual work on testnet, and all five steps passed:
+
+1. deploy a 2-of-3 — owners 3, threshold 2 read back from the proxy
+2. hand the oracle's admin to it
+3. **one approval, then execute → reverted `GS020`** — the count binds
+4. **claim two approvers with one approval recorded → reverted `GS025`** — approvals are
+   *verified*, not counted. Without this, step 3 alone would only prove Safe does arithmetic.
+5. two real approvals → `setMaxAge` executed by the Safe, read back changed; then the Safe handed
+   admin back to the deployer
+
+Step 5's handback is deliberate: a proof run that fails halfway must never cost us admin of the
+testnet oracle.
+
+**No Safe SDK, no transaction service, no web UI.** None are proven to support X Layer and the
+whole point of this entry is not to assume. `src/safe.ts` calls the singleton directly and uses
+pre-validated signatures — each owner records consent on-chain with `approveHash`, and
+`execTransaction` gets `r = owner, s = 0, v = 1`. More gas, zero off-chain dependencies, works
+from any wallet that can send a transaction. `singletonL2` is chosen over the plain singleton
+because it emits an event per executed transaction: with no transaction service on this chain,
+logs are the only audit trail a Safe has.
+
+**What this does not do.** A 2-of-3 whose three keys are held by one person is not a multisig, it
+is a number in a document. The owners here are Wangsit, Nabil, and a third key held separately.
+And even with it done, the gap list keeps an entry: a hot publisher key still publishes
+automatically, bounded by the contract rather than by consent.

@@ -63,6 +63,26 @@ export const ADDR = {
   aaveV3Pool: '0xE3F3Caefdd7180F884c01E57f65Df979Af84f116',
 } as const satisfies Record<string, Address>;
 
+/**
+ * Safe 1.4.1, at its canonical addresses. Verified to have code on **both**
+ * X Layer mainnet (196) and testnet (1952) — the deployment is identical across
+ * chains, which is why this is one constant rather than a per-chain entry.
+ *
+ * Code at an address proves only that something is there (D35). The claim that
+ * Safe *works* on X Layer rests on `pnpm safe:prove`, which deploys a 2-of-3 and
+ * makes it perform a real admin action on the oracle.
+ *
+ * `singletonL2` rather than the plain singleton: the L2 variant emits an event
+ * per executed transaction, so a Safe's history can be reconstructed from logs
+ * alone. Without a Safe transaction service on this chain — and there is none —
+ * that is the only audit trail there is.
+ */
+export const SAFE = {
+  proxyFactory: '0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67',
+  singletonL2: '0x29fcB43b46531BcA003ddC8FCB67FFE91900C762',
+  fallbackHandler: '0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99',
+} as const satisfies Record<string, Address>;
+
 /** Settlement currency for every xStock pool on X Layer. */
 export const USDG = {
   address: '0x4ae46a509f6b1d9056937ba4500cb143933d2dc8' as Address,

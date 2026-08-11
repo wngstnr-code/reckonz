@@ -112,6 +112,7 @@ pnpm plan [usdg] [maxBps]    # thesis basket: naive vs planned execution
 pnpm capacity                # absorbable size per xStock, by impact limit
 pnpm oracle [usdg]           # fair value, gap risk, off-chain guard decision
 pnpm reconcile               # reference-market admission test over all 30 xStocks
+pnpm safe:prove              # deploy a 2-of-3 Safe and make it administer the oracle (testnet)
 pnpm thesis ["free text"]    # thesis -> assets -> sizing -> mandate
 pnpm thesis:gemini "..."     # force the Gemini provider
 pnpm oracle:publish          # run the oracle engine, publish on-chain, read back
@@ -238,6 +239,11 @@ That single run exercises every claim the product makes. It is the demo.
 - **What the wSKHYx pool is actually pricing is unknown.** We refuse it and say the number; we do
   not claim to know why. Its pool holds a single full-range position with no tick structure from
   trading. Anyone holding wSKHYx on X Layer should read that −86.4%.
+- **The oracle's admin, publisher and treasury are one key.** Read on mainnet: `admin` ==
+  `deployer` == `isPublisher` == the key holding the funds. Safe 1.4.1 is **proven working on
+  X Layer** (`pnpm safe:prove`, all five steps incl. two negative tests — D40), so the admin half
+  is ready to move behind a 2-of-3. Pending: the real owner addresses, then one mainnet
+  transaction. The publisher half cannot be fixed by a multisig and needs the publish-time bound.
 - **`.env` holds a live Gemini key** pasted in chat. Owner assessed the exposure as acceptable
   2026-08-11; the key is in Vercel's environment too. Recorded rather than re-argued.
 - **No logo.** Four prompt directions were drafted on 2026-08-11 (the cut / the narrowing / the
