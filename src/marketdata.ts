@@ -21,6 +21,14 @@ export interface Series {
   exchange: string;
   timezone: string;
   currency: string;
+  /**
+   * The currency the venue actually quotes in, when this series has been
+   * converted. Present only on converted series — a USD price that used to be
+   * KRW must never be indistinguishable from one that was always USD.
+   */
+  nativeCurrency?: string;
+  /** Units of `nativeCurrency` per USD used to convert `last`. */
+  fxRate?: number;
   /** most recent price the venue has printed */
   last: number;
   /** epoch seconds of the last *regular session* print */
@@ -92,6 +100,127 @@ export const intraday = (symbol: string) => yahooChart(symbol, '1m', '5d');
 
 /** Daily series — used to estimate betas. */
 export const daily = (symbol: string) => yahooChart(symbol, '1d', '1y');
+
+// ----------------------------------------------------------------- currency
+
+/**
+ * Yahoo quotes a currency pair `C=X` as **units of C per USD** — `KRW=X` is
+ * ~1418, `EUR=X` is ~0.87. So a price in C becomes USD by dividing, never
+ * multiplying, and getting that backwards produces a number that is wrong by
+ * six orders of magnitude in one direction and looks plausible in the other.
+ */
+const fxCache = new Map<string, Promise<{ intra: Series; day: Series }>>();
+
+export function fxSeries(currency: string) {
+  let p = fxCache.get(currency);
+  if (!p) {
+    p = (async () => ({
+      intra: await intraday(`${currency}=X`),
+      day: await daily(`${currency}=X`),
+    }))();
+    fxCache.set(currency, p);
+  }
+  return p;
+}
+
+const div = (b: Bar, rate: number): Bar => ({
+  t: b.t,
+  close: b.close / rate,
+  // One rate for both ends of a bar, so an intraday move stays an equity move.
+  open: b.open == null ? undefined : b.open / rate,
+});
+
+/** Intraday: FX trades continuously, so the rate in force at the bar is right. */
+function convertIntraday(bars: Bar[], rates: Bar[]): Bar[] {
+  const out: Bar[] = [];
+  let i = 0;
+  let rate: number | null = null;
+  for (const b of bars) {
+    while (i < rates.length && rates[i]!.t <= b.t) rate = rates[i++]!.close;
+    if (rate == null || !(rate > 0)) continue;
+    out.push(div(b, rate));
+  }
+  return out;
+}
+
+/**
+ * Daily: matched by calendar date, **not** by timestamp.
+ *
+ * A daily FX bar is stamped at the 23:00 UTC **end** of its own session — its
+ * close matches the intraday rate at that timestamp, not 24h later, which is
+ * checkable and was checked. A Seoul equity bar for the same trading day is
+ * stamped 00:00 UTC. So a timestamp walk, which takes the last bar at or before
+ * 00:00, picks the FX session *before* the equity session: an off-by-one that
+ * injects a day of unrelated currency movement into every return.
+ *
+ * Matching on the date label pairs the Seoul session of day D with the FX
+ * session ending 23:00 on day D — the one that contains it. That is the same
+ * rule `alignedReturns` already uses, and it is what "the same trading day"
+ * means here.
+ *
+ * Dates with no FX print carry the last known rate forward rather than dropping
+ * the bar, so the gap statistics keep seeing a continuous series.
+ */
+function convertDaily(bars: Bar[], rates: Bar[]): Bar[] {
+  const byDay = new Map<string, number>();
+  for (const r of rates) {
+    if (r.close > 0) byDay.set(new Date(r.t * 1000).toISOString().slice(0, 10), r.close);
+  }
+  const out: Bar[] = [];
+  let rate: number | null = null;
+  for (const b of bars) {
+    rate = byDay.get(new Date(b.t * 1000).toISOString().slice(0, 10)) ?? rate;
+    if (rate == null) continue;
+    out.push(div(b, rate));
+  }
+  return out;
+}
+
+/**
+ * Re-express a foreign-quoted series in USD.
+ *
+ * The two legs are converted differently on purpose. **History** is converted
+ * at each bar's own contemporaneous rate, so the returns that feed the beta fit
+ * and the gap statistics are true USD returns rather than KRW returns wearing a
+ * dollar sign. The **last print** is converted at the rate right now, because
+ * that is what is true: when Seoul is shut the equity leg is stale and the FX
+ * leg is not. A Seoul close marked at the current rate is the honest USD anchor,
+ * and it means only the equity component has to be carried forward.
+ *
+ * The resulting gap statistic includes day-over-day FX moves, which slightly
+ * overstates the jump — FX trades through the night rather than gapping. That
+ * error widens the band, which is the safe direction for a guard, so it is left
+ * in rather than modelled away.
+ */
+export async function toUsd(series: Series): Promise<Series | null> {
+  if (series.currency === 'USD') return series;
+
+  let fx;
+  try {
+    fx = await fxSeries(series.currency);
+  } catch {
+    return null;
+  }
+  if (!(fx.intra.last > 0)) return null;
+
+  // Daily bars need a daily rate and date matching; intraday bars need an
+  // intraday rate and a timestamp walk. Picking by bar spacing keeps `toUsd`
+  // usable on either without a second argument.
+  const spacing =
+    series.bars.length > 1 ? series.bars[1]!.t - series.bars[0]!.t : 86_400;
+  const isDaily = spacing >= 3_600;
+
+  return {
+    ...series,
+    currency: 'USD',
+    nativeCurrency: series.currency,
+    fxRate: fx.intra.last,
+    last: series.last / fx.intra.last,
+    bars: isDaily
+      ? convertDaily(series.bars, fx.day.bars)
+      : convertIntraday(series.bars, fx.intra.bars),
+  };
+}
 
 /** Price of a signal series at or immediately before a timestamp. */
 export function priceAt(series: Series, at: number): number | null {

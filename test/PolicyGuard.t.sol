@@ -192,6 +192,16 @@ contract PolicyGuardTest is Test {
         );
     }
 
+    /// Publish a value the bound will not believe on sight: announce it, wait
+    /// out the confirmation delay, publish it again. Two transactions and
+    /// thirty minutes is what a move past `MAX_JUMP_BPS` costs now, and tests
+    /// that move a price hard have to pay it like anything else would.
+    function _publishJump(address asset, uint128 fv, uint32 confidenceBps, uint8 gapRisk) internal {
+        _publish(asset, fv, confidenceBps, gapRisk);
+        vm.warp(block.timestamp + oracle.JUMP_CONFIRM_DELAY());
+        _publish(asset, fv, confidenceBps, gapRisk);
+    }
+
     function _trigger(
         ExitTriggers.Metric metric,
         ExitTriggers.Comparator comparator,
@@ -521,7 +531,9 @@ contract PolicyGuardTest is Test {
 
         vm.warp(t0 + 2 hours);
         uint128 higher = NVDA_FV * 2; // 447.02
-        _publish(address(wNVDAx), higher, 211, 38);
+        // A 100% move is far past MAX_JUMP_BPS, so it has to be confirmed
+        // before it takes effect — see FairValueOracle.t.sol.
+        _publishJump(address(wNVDAx), higher, 211, 38);
         _exec(_fill(address(wNVDAx), 1_000_000000, higher, 10)); // 1000 USDG @ 447.02
 
         ExitTriggers.Position memory p = guard.getPosition(mandateId, address(wNVDAx));

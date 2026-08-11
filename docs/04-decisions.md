@@ -715,3 +715,306 @@ intentions. 50 is already more than twice the top of the published range. The fe
 dust trade pays nothing rather than a rounded-up minimum, and `withdraw()` is open to anyone
 because the destination is fixed.
 
+
+---
+
+## D38 — The oracle universe is now measured, not curated: 8 → 28 of 30
+
+D33 left the oracle modelling 8 of 30 xStocks and said so honestly. But "honestly" was doing a
+lot of work: 22 of those assets were withheld not because their fair value is indefensible, but
+because nobody had hand-written a mapping for them. *Not yet mapped* and *cannot be defended* are
+different statements, and printing the second when the first is true is the same dishonesty the
+oracle exists to prevent — just pointed inward.
+
+**The wrong way to close it** is to add `wAAPLx → AAPL` because it is obviously Apple. That is an
+assertion, and the whole design rests on not publishing assertions. It would also have no answer
+for wSKHYx, which is *also* obviously SK Hynix and is *also* wrong to publish.
+
+**The fix is an admission test** — `src/reconcile.ts`, run by `pnpm reconcile`. The candidate
+reference is generated mechanically from the ticker (`w<TICKER>x` → `TICKER`, two overrides), and
+being mechanical is the point: naming a candidate is worthless, and the candidate then has to
+survive six gates. It resolves and prints a price; it quotes in USD; the wrapper has a live pool;
+**the chain's price reconciles with the reference**; there is enough aligned history to fit a
+beta. The carry-forward signal is picked the same way — fitted against NQ=F, ES=F and BTC-USD,
+best R² wins — so signal choice stops being a human's guess too.
+
+**Measured 2026-08-11: 28 of 30 admitted.** Widest reconciling basis 2.0% (wIBMx). The two
+rejections are the two that should be:
+
+- **wSKHYx** — `FX_REQUIRED`. Correct reference, correct security, quotes in KRW, so the basis
+  against a USDG pool is not computable. Blocked on one FX leg, and now says so.
+- **wSPCXx** — `NO_CANDIDATE`. SpaceX is private.
+
+Nothing failed on basis, which is the strongest thing the run says: admitted assets cluster inside
+2% and the failures are out by orders of magnitude. `MAX_IDENTITY_BASIS_BPS` is 2,000 and the same
+partition falls out anywhere between 5% and 50%, so the threshold carries no weight — a property
+the script prints rather than a claim the comment makes.
+
+**What makes a value publishable changed.** It is no longer "the symbol appears in `ASSETS`" but
+`admittedOn != null` — evidence, not membership. wSKHYx sits in `ASSETS` with its reference
+recorded and no `admittedOn`, so it is a documented refusal rather than a gap. `pnpm reconcile`
+re-runs the test against live data and exits non-zero if an admitted mapping stops reconciling:
+a wrapper that quietly stops tracking its listing is exactly what the oracle must not sleep
+through, so it is a regression check on the same footing as `pnpm verify`.
+
+**Deliberately not a gate: how well the beta fits.** wIBMx fits ES=F at R² 0.05 and wGLDx fits
+NQ=F at 0.10. Both are admitted. A weak fit is not a broken mapping — it produces a wide band, a
+high uncertainty term in gap risk, and a refusal at the guard on its own merits. Rejecting it here
+would hide a measurable answer behind a missing one, which is the D33 mistake again.
+
+**One behaviour regressed on purpose.** wCRCLx carried `['NQ=F', 'BTC-USD']`. The engine sums
+*univariate* betas, so two correlated signals count the same move twice. The test picks one, and
+for wCRCLx, wCOINx, wHOODx and wMSTRx that one is BTC-USD — the data choosing the signal, not a
+human deciding Coinbase is a crypto stock.
+
+**Verified live.** `pnpm oracle 2000` over all 30: every admitted asset now clears the oracle
+gate, and the rejections are `PRICE_IMPACT` — a real, measured, chain-side limit — instead of
+`NO_REFERENCE`. A 2,000 USDG buy of wSPYx, wQQQx, wNVDAx, wIWMx and wGLDx is allowed; the rest are
+refused for depth, at 86–121 bp against a 50 bp mandate. Before this change, 22 of those refusals
+said we had no reference market, and that was not true.
+
+Also removed while here: `ADDRESS_BY_SYMBOL` was copied into `src/publish.ts` and
+`src/oracle-demo.ts`, eight entries each. Both now call `addressBySymbol()` in `src/pool.ts`,
+which joins `XSTOCKS` to the symbols the chain reports — one source, and it cannot drift.
+
+---
+
+## D39 — The FX leg is built, and wSKHYx still does not reconcile
+
+wSKHYx was the one asset D38 left blocked on infrastructure rather than on evidence: the reference
+was correct, the currency was KRW, and the basis against a USDG pool was not computable. That is a
+real, sized piece of work, so it was done.
+
+**The FX leg.** `toUsd()` in `src/marketdata.ts` re-expresses any foreign-quoted series in USD, and
+the engine is currency-blind after it. Two details are load-bearing:
+
+- **Yahoo quotes `C=X` as units of C per USD** — `KRW=X` is ~1418, `EUR=X` is ~0.87. Prices are
+  divided by it, never multiplied. Getting that backwards is wrong by six orders of magnitude in
+  one direction and plausible-looking in the other.
+- **History converts at each bar's own rate; the last print converts at the rate now.** When Seoul
+  is shut the equity leg is stale and the FX leg is not, so a Seoul close marked at the current
+  rate is the honest USD anchor and only the equity component is carried forward.
+
+**A daily-bar alignment defect, found and fixed while measuring.** A timestamp walk pairs a Seoul
+equity bar stamped `D 00:00` with the FX bar stamped `D−1 23:00` — one session behind. Checked
+rather than assumed: a daily FX bar's close matches the intraday rate at *its own* timestamp
+(bar `2026-08-09 23:00` closes 1407.00, intraday there is 1407.45; 24h later it is 1417.90), so
+the bar stamped `D 23:00` is the session *ending* on D, which is the one containing the Seoul
+session of D. Daily conversion now matches on the date label, the same rule `alignedReturns` uses.
+
+An earlier reading claimed this fix doubled the R² of 000660.KS against NQ=F. It did not — that
+number came from a smaller sample, not a better alignment. Measured like for like, KRW returns fit
+at R² 0.058 and USD returns at 0.060. **The FX conversion is correct and it barely moves the fit.**
+Recorded because the wrong version is the more flattering one.
+
+**The result the work was for: wSKHYx still fails, at −86.4%.** X Layer quotes it at **$136.93**
+against an SK Hynix share worth **$1,004.97** — 1,425,000 KRW at 1417.95/USD. The reference is not
+the doubtful part: Seoul and Frankfurt (`HY9H.F`, EUR) agree within **1.6%** on ~$1,008–1,025.
+
+What that pool is pricing, we do not know, and the honest position is not to guess. One
+observation, offered as evidence and not as an explanation: the wSKHYx pool holds a **single
+full-range position** between ticks 210640 and 242840 with no tick structure from trading, at ~$137
+— while wSPCXx, a pool with 31 initialised ticks, sits at ~$136.79. A price nobody has arbitraged
+is consistent with what we see; so are other things.
+
+**Why this is a better outcome than closing the gap.** wSKHYx moves from *"blocked on an FX leg we
+have not built"* to *"converted, compared, and refused at −86.4%"*. It is the first asset to fail on
+the gate that actually matters, and it makes D38's threshold argument checkable rather than
+rhetorical: the widest reconciling basis is **2.0%** and the narrowest failing one is **86.4%**, a
+factor of 43. `MAX_IDENTITY_BASIS_BPS` could sit anywhere across more than an order of magnitude
+and admit exactly the same 28 assets.
+
+`FX_REQUIRED` survives as a rejection reason and now means what it says — no USD rate exists for
+that currency — rather than "we did not build the leg".
+
+**Anyone holding wSKHYx on X Layer should read the number.** The system's job is to refuse, and it
+does: `PolicyGuard` rejects with the sentence above attached, and `pnpm reconcile` re-checks it
+every run.
+
+---
+
+## D40 — A multisig closes the admin half. It cannot close the publisher half.
+
+Asked while planning the publish-time bounds: why not just use a multisig and close the
+"oracle has a single admin key" gap properly? The answer needed separating two powers that
+`FairValueOracle` treats as one key today but which have nothing in common:
+
+| Power | Who calls it | How often | Multisig? |
+|---|---|---|---|
+| `admin` — `setPublisher`, `setMaxAge`, `setAdmin` | a human | rarely, deliberately | **yes, ideal** |
+| `publisher` — `publish()` | a machine | every ~15 minutes | **no** |
+
+Publishing is automated. Put it behind human co-signing and the oracle stops working; automate
+the co-signers and their keys sit on the same box as the publisher's, which is a multisig in name
+and nothing else. **So the multisig and the publish-time bound close different halves, and only
+one half can be closed by a multisig.** The bound is the defence for the power that has to stay
+automated — which is also the power that can permit a bad fill.
+
+**The ordering was wrong, though, and the multisig should have come first.** `setAdmin` already
+exists, so handing admin to a Safe costs **one transaction and no redeploy**. The bound needs a
+new `FairValueOracle`, and `oracle` is `immutable` in both `PolicyGuard` and `Executor`, so it
+drags a three-contract redeploy, new published mainnet addresses and fresh Sourcify verification
+behind it. Cheap first.
+
+**The bigger finding, which neither item was about.** Read on mainnet: `admin` == `deployer` ==
+`isPublisher` == the key that holds the funds. One key is every role. Splitting them — Safe for
+admin, a dedicated hot key for publishing — is a few transactions, no redeploy, and shrinks the
+blast radius more than either change on its own.
+
+**Safe is proven on X Layer, not assumed.** Bytecode exists at the canonical 1.4.1 addresses on
+both 196 and 1952. That proves nothing: the Universal Router was deployed, correctly shaped and
+carried the exact selector, and could not do the one thing we needed (D35). So `pnpm safe:prove`
+does the actual work on testnet, and all five steps passed:
+
+1. deploy a 2-of-3 — owners 3, threshold 2 read back from the proxy
+2. hand the oracle's admin to it
+3. **one approval, then execute → reverted `GS020`** — the count binds
+4. **claim two approvers with one approval recorded → reverted `GS025`** — approvals are
+   *verified*, not counted. Without this, step 3 alone would only prove Safe does arithmetic.
+5. two real approvals → `setMaxAge` executed by the Safe, read back changed; then the Safe handed
+   admin back to the deployer
+
+Step 5's handback is deliberate: a proof run that fails halfway must never cost us admin of the
+testnet oracle.
+
+**No Safe SDK, no transaction service, no web UI.** None are proven to support X Layer and the
+whole point of this entry is not to assume. `src/safe.ts` calls the singleton directly and uses
+pre-validated signatures — each owner records consent on-chain with `approveHash`, and
+`execTransaction` gets `r = owner, s = 0, v = 1`. More gas, zero off-chain dependencies, works
+from any wallet that can send a transaction. `singletonL2` is chosen over the plain singleton
+because it emits an event per executed transaction: with no transaction service on this chain,
+logs are the only audit trail a Safe has.
+
+**What this does not do.** A 2-of-3 whose three keys are held by one person is not a multisig, it
+is a number in a document. The owners here are Wangsit, Nabil, and a third key held separately.
+And even with it done, the gap list keeps an entry: a hot publisher key still publishes
+automatically, bounded by the contract rather than by consent.
+
+---
+
+## D41 — The oracle bounds its own publisher, because a multisig cannot
+
+D40 split the admin key's two powers and showed a multisig only reaches one of them. `publish()`
+runs every fifteen minutes from a machine, so consent cannot gate it and the contract has to.
+
+**The rule.** A value more than `MAX_JUMP_BPS` from the last one that took effect is not believed
+on sight. It is *announced*: the observation is written with the value **withheld**, an event is
+emitted, and the same value republished after `JUMP_CONFIRM_DELAY` takes effect. A confirmation
+must agree with what was announced, within the ordinary bound — otherwise announcing one jump
+would license publishing any other and the delay would buy nothing.
+
+**Withheld, not reverted.** `publishMany` writes 28 assets in one transaction; one asset gapping
+must not throw away the other 27. Withholding is also the vocabulary the system already speaks:
+when it cannot defend a number, it declines to publish one. The rest of the observation — gap
+risk, capacity, state — still lands, and those are exactly what a mandate wants at the moment the
+oracle stops trusting its own price.
+
+**Every constant is measured or argued, and none is settable.**
+
+| Constant | Value | Why |
+|---|---|---|
+| `MAX_JUMP_BPS` | 2 000 | Across **14 484** one-day moves (every close-to-open gap and daily return of the 29 references over a year) 20% trips **0.159%** of them — 23 events. 15% would trip 0.42%, 30% only 0.021%. Largest legitimate move in the sample: **31.86%** (AMD). |
+| `JUMP_CONFIRM_DELAY` | 30 min | Twice `maxAge`, so an asset awaiting confirmation is already stale to consumers and nothing executes against the old value either. |
+| `PENDING_TTL` | 2 h | An announcement is a window, not standing permission. |
+| `ANCHOR_MAX_AGE` | 1 day | `MAX_JUMP_BPS` is calibrated on one-day moves. Bounding against a week-old anchor would apply a one-day tolerance to a week of movement and withhold constantly. |
+| `MAX_MAX_AGE` | 1 h | An admin who sets `maxAge` to a year makes every stale observation usable — the freshness check defeated without touching a price. |
+
+`constant`, all of them, for the reason `MAX_FEE_BPS` is (D37): an admin who can raise a bound has
+no bound.
+
+**The bypass the design exists to close.** The obvious implementation keeps the anchor inside
+`Observation`. A withheld observation zeroes the value — so publish a withhold, then any price at
+all, and the bound is simply gone. `Anchor` is separate storage for exactly this, and
+`test_WithholdingDoesNotEraseTheAnchor` is the test that would have caught it.
+
+**A constant that did nothing, found by its own test.** `PENDING_TTL` was first set to 1 day, the
+same as `ANCHOR_MAX_AGE`. The anchor therefore always expired first and the TTL never ran — dead
+code that reads as a safeguard. The expiry test failed and said so. It is now 2 hours, and the
+test asserts `PENDING_TTL < ANCHOR_MAX_AGE` so it cannot quietly become dead again.
+
+**What this is not.** `test_APatientAttackerStillGetsThere` is in the suite on purpose: twelve
+confirmed steps is an 8x. The bound **caps the rate of change and forces an event trail**; it does
+not prevent a compromise. That is why it is one half and the admin multisig is the other, and why
+the gap list keeps an entry rather than closing.
+
+**Cost, paid.** `oracle` is `immutable` in both `PolicyGuard` and `Executor` — deliberately, since
+a guard whose oracle can be swapped is a guard whose price source can be swapped — so a new oracle
+drags the whole stack. Testnet is redeployed and all six contracts are **`exact_match` on
+Sourcify**. Mainnet is not done and is a separate decision.
+
+**Proven on chain, not only in Foundry** (89 tests pass, up from 73):
+
+```
+MAX_JUMP_BPS 2000  JUMP_CONFIRM_DELAY 1800s
+anchor published        fv=100
++10% inside the bound   fv=110   hasValue=true
++82% past the bound     fv=0     hasValue=false   anchor=110  pending=200
+                        gapRisk 20 and capacity 5000 survive the withhold
+immediate retry         hasValue=false            (delay not served)
+```
+
+---
+
+## D42 — Mainnet migrated: the record kept, the single key retired
+
+D41's bound and D40's Safe both landed on mainnet on 2026-08-11. Two things had to be true at the
+end: the track record must be in **one** append-only history, and no single key may still be able
+to do everything.
+
+**`Deploy.s.sol` would have destroyed the first one.** It stands up every contract from nothing,
+which is right for a fresh chain and wrong for a migration: it would have deployed empty copies of
+`ReceiptRegistry` and `ThesisRegistry`, stranding the three real mainnet fills and thesis #0 that
+receipt #2 resolves to. The only evidence this project has that the loop closes would have been
+split across two contracts — the split D37 refused when the fee was added.
+
+`script/Migrate.s.sol` redeploys only what changed and reuses what carries history. It refuses to
+start unless the deployer is the registry's admin and the named old guard is the current writer,
+and it asserts `receipts.count()` is unchanged at the end. It was 3 before and 3 after.
+
+```
+FairValueOracle  0xDB7949c99e6d234C0eD374a71966d9e6CbfcfD09   new — publish bound
+PolicyGuard      0x3F58df45FcB5D1074bA5D046D4928CF5efde5f4d   new
+Executor         0xf3a06c9f0F1AABf01080475E420DD7A1092E1e1B   new
+ReceiptRegistry  0x9D04575894F570C3638Bc1f6ECaD6EF36D479Fa6   kept — 3 fills
+ThesisRegistry   0xD4b503d002Fb77019d7BB1a26DCe1d60F32dfa1E   kept
+FeeCollector     0x3A1D6b9129E69fEF189E538996B18cebd56C3Dd0   kept
+```
+
+⚠️ **Two of those addresses collide with old testnet ones.** The new mainnet `PolicyGuard` is the
+address the old testnet `TestUSDG` had, and the new mainnet `Executor` is the address the old
+testnet `PolicyGuard` had. Nothing is wrong — the same deployer walks the same nonce sequence on
+both chains — but an address alone no longer tells you which contract you are looking at. Read the
+chain id with it.
+
+**The old guard's write permission was revoked**, deliberately: two contracts able to append to one
+append-only history is two places trust can leak from, and the unwatched one is the second. The
+cost, accepted by the owner rather than assumed: **mandate #1 on mainnet can no longer record
+fills.** Its receipts stand; new activity needs a new mandate on the new guard.
+
+**The single key is retired.** `pnpm handover` ran the sequence in the only safe order — grant the
+new publisher, **make it publish for real**, then revoke the deployer, then hand `admin` to the
+Safe. Step two exists because step three cannot be undone without the Safe, and a publisher that
+turns out not to work is otherwise discovered after the old one is gone. That is D35's lesson
+applied to our own key management.
+
+```
+Safe (2-of-3)  0x98d19BE6e810bEEfC8A0a408D4AEf164B7F1391e   admin of oracle, receipts, fees
+publisher      0x40101A4932dEb95f0A5951BB7fB0fFa7c17e3Ab8   hot key, publish() only
+deployer       admin of nothing, publisher of nothing
+```
+
+Verified independently after the fact, including the negative check: `setAdmin` from the deployer
+now reverts `NotAdmin`. Rehearsed end to end on testnet first, with the same three owner
+addresses, so the mainnet run was a repeat rather than a first attempt. Testnet Safe:
+`0x7a4EadB7d951E19d097531ea3E7Cbf00BCC34Ef3`.
+
+**The 30-minute confirmation was proven on the real clock before any of this.** A jump announced,
+withheld, and then confirmed after `JUMP_CONFIRM_DELAY` on X Layer testnet — `fv=200`,
+`hasValue=true`, anchor moved, announcement cleared, tx `0x05b1c38b…`. Without that, the mainnet
+oracle would have been one where a legitimate gap could be refused and never published again, and
+the failure would only have appeared the first time an asset actually gapped.
+
+**What is still true.** The publisher is a hot key. The bound caps how fast it can move a value
+and forces an event trail; it does not prevent a determined holder from walking the price in
+confirmed steps. The Safe covers admin only, because `publish()` runs every fifteen minutes from a
+machine and consent cannot gate it. Both facts stay in the gap list.

@@ -52,6 +52,33 @@ export const PERMIT2_ABI = parseAbi([
   'function allowance(address owner, address token, address spender) view returns (uint160 amount, uint48 expiration, uint48 nonce)',
 ]);
 
+/**
+ * Safe 1.4.1. Not ours, so `pnpm verify:abi` does not check it — the same
+ * footing as `ERC20_ABI` and `PERMIT2_ABI`.
+ *
+ * Only the pre-validated signature path is used: an owner records approval
+ * on-chain with `approveHash`, and `execTransaction` is handed a signature of
+ * `r = owner, s = 0, v = 1`. That needs no EIP-712 signing, no Safe web UI and
+ * no transaction service — none of which are proven to exist for X Layer, and
+ * an unproven dependency is how D35 happened.
+ */
+export const SAFE_PROXY_FACTORY_ABI = parseAbi([
+  'function createProxyWithNonce(address singleton, bytes initializer, uint256 saltNonce) returns (address proxy)',
+  'event ProxyCreation(address indexed proxy, address singleton)',
+]);
+
+export const SAFE_ABI = parseAbi([
+  'function setup(address[] owners, uint256 threshold, address to, bytes data, address fallbackHandler, address paymentToken, uint256 payment, address paymentReceiver)',
+  'function getOwners() view returns (address[])',
+  'function getThreshold() view returns (uint256)',
+  'function isOwner(address owner) view returns (bool)',
+  'function nonce() view returns (uint256)',
+  'function approveHash(bytes32 hashToApprove)',
+  'function approvedHashes(address owner, bytes32 hash) view returns (uint256)',
+  'function getTransactionHash(address to, uint256 value, bytes data, uint8 operation, uint256 safeTxGas, uint256 baseGas, uint256 gasPrice, address gasToken, address refundReceiver, uint256 nonce) view returns (bytes32)',
+  'function execTransaction(address to, uint256 value, bytes data, uint8 operation, uint256 safeTxGas, uint256 baseGas, uint256 gasPrice, address gasToken, address refundReceiver, bytes signatures) payable returns (bool)',
+]);
+
 // ---------------------------------------------------------------- PolicyGuard
 
 /**
@@ -144,6 +171,7 @@ export const POLICY_GUARD_ABI = parseAbi([
 export const FAIR_VALUE_ORACLE_ABI = parseAbi([
   'struct Observation { uint128 fairValueE8; uint32 confidenceBps; int32 basisBps; uint128 capacityUsdg; uint8 gapRisk; uint8 state; uint64 anchorAt; uint64 updatedAt; bool hasValue; }',
   'struct Publication { address asset; uint128 fairValueE8; uint32 confidenceBps; int32 basisBps; uint128 capacityUsdg; uint8 gapRisk; uint8 state; uint64 anchorAt; bool hasValue; }',
+  'struct Anchor { uint128 valueE8; uint64 at; uint128 pendingE8; uint64 pendingAt; }',
 
   'function publish(Publication p)',
   'function publishMany(Publication[] items)',
@@ -159,12 +187,28 @@ export const FAIR_VALUE_ORACLE_ABI = parseAbi([
   'function maxAge() view returns (uint64)',
   'function admin() view returns (address)',
 
+  // The publish-time bound. `anchorOf` is exposed so a withheld value is
+  // inspectable — a consumer can see what the oracle is measuring against and
+  // what jump is waiting on confirmation, rather than taking the refusal on
+  // trust. The four constants are read rather than hard-coded here for the
+  // same reason `MAX_FEE_BPS` is: the contract is the authority on its own
+  // limits, and a copy in TypeScript is a copy that drifts.
+  'function anchorOf(address asset) view returns (Anchor)',
+  'function MAX_JUMP_BPS() view returns (uint256)',
+  'function JUMP_CONFIRM_DELAY() view returns (uint64)',
+  'function PENDING_TTL() view returns (uint64)',
+  'function ANCHOR_MAX_AGE() view returns (uint64)',
+  'function MAX_MAX_AGE() view returns (uint64)',
+
   'event Published(address indexed asset, uint128 fairValueE8, uint8 gapRisk, uint8 state)',
   'event PublisherSet(address indexed publisher, bool allowed)',
   'event MaxAgeSet(uint64 maxAge)',
   'event AdminSet(address indexed admin)',
+  'event JumpPending(address indexed asset, uint128 fromE8, uint128 toE8, uint256 jumpBps, uint64 confirmableAt)',
+  'event JumpConfirmed(address indexed asset, uint128 fromE8, uint128 toE8)',
 
   'error GapRiskOutOfRange(uint8 gapRisk)',
+  'error MaxAgeOutOfRange(uint64 maxAge)',
   'error NoData()',
   'error NotAdmin()',
   'error NotPublisher()',

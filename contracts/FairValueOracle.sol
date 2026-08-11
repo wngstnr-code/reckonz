@@ -60,8 +60,23 @@ contract FairValueOracle {
         bool hasValue;
     }
 
+    /// @notice What a published value is measured against, so a jump can be
+    ///         recognised. Kept separately from `Observation` because a
+    ///         withheld observation must not erase the anchor: if it did,
+    ///         publishing a withhold and then any value at all would walk
+    ///         straight past the bound below.
+    struct Anchor {
+        /// @dev last fair value that actually took effect
+        uint128 valueE8;
+        uint64 at;
+        /// @dev a jump awaiting confirmation, and when it was announced
+        uint128 pendingE8;
+        uint64 pendingAt;
+    }
+
     /// @notice asset token address on X Layer => latest observation
     mapping(address => Observation) private _obs;
+    mapping(address => Anchor) private _anchor;
 
     mapping(address => bool) public isPublisher;
     address public admin;
@@ -69,10 +84,65 @@ contract FairValueOracle {
     /// @notice Consumers must reject data older than this.
     uint64 public maxAge = 15 minutes;
 
+    /// @notice How far a published value may move from the last one that took
+    ///         effect before it must be confirmed rather than believed.
+    ///
+    /// @dev Measured, not chosen. Across 14,484 one-day moves — every
+    ///      close-to-open gap and daily return of the 29 reference listings over
+    ///      a year — a 20% bound trips on **0.159%** of them (23), 15% on 0.42%,
+    ///      30% on 0.021%. The largest legitimate one-day move in the sample was
+    ///      31.86% (AMD). So this withholds roughly one publication in 600 for a
+    ///      genuinely gapping asset, and a 20%+ move is exactly when automated
+    ///      execution should stop anyway.
+    ///
+    ///      A `constant`, deliberately. An admin who can raise the bound has no
+    ///      bound — the same argument that makes `MAX_FEE_BPS` constant in
+    ///      `FeeCollector` (D37).
+    uint256 public constant MAX_JUMP_BPS = 2_000;
+
+    /// @notice How long a jump must sit announced before it can take effect.
+    /// @dev Twice `maxAge`, so an asset waiting on confirmation is already
+    ///      stale to consumers and nothing executes against the old value
+    ///      either. It does not stop a patient attacker; it caps the rate of
+    ///      change and forces two transactions and a loud event.
+    uint64 public constant JUMP_CONFIRM_DELAY = 30 minutes;
+
+    /// @notice An announced jump this old can no longer be confirmed.
+    /// @dev Four confirmation delays — enough that an honest publisher on a
+    ///      fifteen-minute cycle has several attempts, short enough that an
+    ///      announcement is a window rather than a standing permission.
+    ///
+    ///      It must be strictly inside `ANCHOR_MAX_AGE` or it is unreachable:
+    ///      set to the same day, the anchor always expires first and this
+    ///      constant never runs. A test found that, which is the argument for
+    ///      testing the expiry paths rather than reasoning about them.
+    uint64 public constant PENDING_TTL = 2 hours;
+
+    /// @notice Beyond this the anchor is not a meaningful comparison.
+    /// @dev One day, because `MAX_JUMP_BPS` is calibrated against one-day moves.
+    ///      Bounding a fresh value against a week-old anchor would apply a
+    ///      one-day tolerance to a week of price movement and withhold
+    ///      constantly. Past it, the feed is restarting rather than continuing,
+    ///      and consumers have been rejecting on `STALE` throughout.
+    uint64 public constant ANCHOR_MAX_AGE = 1 days;
+
+    /// @notice Ceiling on `maxAge`.
+    /// @dev Also constant. An admin who can set `maxAge` to a year makes every
+    ///      stale observation usable again, which defeats the freshness check
+    ///      without touching a single price.
+    uint64 public constant MAX_MAX_AGE = 1 hours;
+
     event Published(address indexed asset, uint128 fairValueE8, uint8 gapRisk, MarketState state);
     event PublisherSet(address indexed publisher, bool allowed);
     event MaxAgeSet(uint64 maxAge);
     event AdminSet(address indexed admin);
+    /// @notice A value too far from the anchor to be believed on sight. The
+    ///         observation was written with its value withheld.
+    event JumpPending(
+        address indexed asset, uint128 fromE8, uint128 toE8, uint256 jumpBps, uint64 confirmableAt
+    );
+    /// @notice A previously announced jump took effect.
+    event JumpConfirmed(address indexed asset, uint128 fromE8, uint128 toE8);
 
     error NotAdmin();
     error NotPublisher();
@@ -82,6 +152,7 @@ contract FairValueOracle {
     error ValuelessPublication(address asset);
     error GapRiskOutOfRange(uint8 gapRisk);
     error ZeroAddress();
+    error MaxAgeOutOfRange(uint64 maxAge);
 
     modifier onlyAdmin() {
         if (msg.sender != admin) revert NotAdmin();
@@ -102,6 +173,10 @@ contract FairValueOracle {
     }
 
     function setMaxAge(uint64 newMaxAge) external onlyAdmin {
+        // Zero would make every observation instantly stale and brick the
+        // guard; anything large would make stale data usable, which is the
+        // freshness check defeated without touching a price.
+        if (newMaxAge == 0 || newMaxAge > MAX_MAX_AGE) revert MaxAgeOutOfRange(newMaxAge);
         maxAge = newMaxAge;
         emit MaxAgeSet(newMaxAge);
     }
@@ -126,8 +201,13 @@ contract FairValueOracle {
         // `hasValue == false`, and it is the only way to express it.
         if (p.hasValue && p.fairValueE8 == 0) revert ValuelessPublication(p.asset);
 
+        bool takesEffect = p.hasValue && _admitValue(p.asset, p.fairValueE8);
+
         _obs[p.asset] = Observation({
-            fairValueE8: p.hasValue ? p.fairValueE8 : 0,
+            // A value the bound refused is withheld, not published. The rest of
+            // the observation still lands: gap risk, capacity and state remain
+            // true and are exactly what a mandate wants to see at that moment.
+            fairValueE8: takesEffect ? p.fairValueE8 : 0,
             confidenceBps: p.confidenceBps,
             basisBps: p.basisBps,
             capacityUsdg: p.capacityUsdg,
@@ -135,10 +215,90 @@ contract FairValueOracle {
             state: p.state,
             anchorAt: p.anchorAt,
             updatedAt: uint64(block.timestamp),
-            hasValue: p.hasValue
+            hasValue: takesEffect
         });
 
-        emit Published(p.asset, p.fairValueE8, p.gapRisk, p.state);
+        emit Published(p.asset, takesEffect ? p.fairValueE8 : 0, p.gapRisk, p.state);
+    }
+
+    /// @notice Decide whether a value may take effect, and record the anchor.
+    ///
+    /// @dev The threat this bounds is a leaked publisher key. Publishing runs
+    ///      every fifteen minutes from a machine, so it cannot sit behind a
+    ///      multisig — a human cannot co-sign it and an automated co-signer's
+    ///      key lives on the same box. The contract has to be the constraint.
+    ///
+    ///      A refused value is **withheld, not reverted**, on purpose:
+    ///      `publishMany` writes 28 assets in one transaction, and one asset
+    ///      gapping must not throw away the other 27. Withholding is also the
+    ///      vocabulary the whole system already speaks — when it cannot defend
+    ///      a number it declines to publish one.
+    ///
+    ///      This bounds and slows a compromise. It does not prevent one: an
+    ///      attacker holding the key long enough can walk the value in
+    ///      confirmed steps. That is why it is one half of the answer and the
+    ///      admin multisig is the other, and why the gap stays on the record.
+    function _admitValue(address asset, uint128 valueE8) private returns (bool) {
+        Anchor storage a = _anchor[asset];
+
+        // No usable anchor: genesis, or a feed that has lapsed past the window
+        // its tolerance was calibrated for. Nothing to compare against, so the
+        // value re-anchors. This is a real limit, not an oversight — a first
+        // publication cannot be bounded without an outside reference.
+        if (a.valueE8 == 0 || block.timestamp > uint256(a.at) + ANCHOR_MAX_AGE) {
+            _anchorTo(a, valueE8);
+            return true;
+        }
+
+        uint256 jumpBps = _jumpBps(a.valueE8, valueE8);
+        if (jumpBps <= MAX_JUMP_BPS) {
+            // Back inside the bound: any announced jump is abandoned, so a
+            // stale announcement can never be confirmed later by accident.
+            _anchorTo(a, valueE8);
+            return true;
+        }
+
+        // The confirmation must agree with what was announced, within the
+        // ordinary bound. Otherwise announcing one jump would license
+        // publishing any other, and the delay would buy nothing.
+        bool confirmable = a.pendingAt != 0 && block.timestamp >= uint256(a.pendingAt) + JUMP_CONFIRM_DELAY
+            && block.timestamp <= uint256(a.pendingAt) + PENDING_TTL
+            && _jumpBps(a.pendingE8, valueE8) <= MAX_JUMP_BPS;
+
+        if (confirmable) {
+            emit JumpConfirmed(asset, a.valueE8, valueE8);
+            _anchorTo(a, valueE8);
+            return true;
+        }
+
+        a.pendingE8 = valueE8;
+        a.pendingAt = uint64(block.timestamp);
+        // uint64 + uint64 under checked arithmetic, rather than casting a
+        // uint256 sum down. The cast is unreachable in practice and that is
+        // exactly what was said about the two that turned into D31 and D36.
+        emit JumpPending(asset, a.valueE8, valueE8, jumpBps, a.pendingAt + JUMP_CONFIRM_DELAY);
+        return false;
+    }
+
+    function _anchorTo(Anchor storage a, uint128 valueE8) private {
+        a.valueE8 = valueE8;
+        a.at = uint64(block.timestamp);
+        a.pendingE8 = 0;
+        a.pendingAt = 0;
+    }
+
+    /// @dev Relative to `from`, so the bound is symmetric in ratio rather than
+    ///      in absolute price. `from` is never zero on this path.
+    function _jumpBps(uint128 from, uint128 to) private pure returns (uint256) {
+        uint256 diff = to > from ? uint256(to) - from : uint256(from) - to;
+        return (diff * 10_000) / uint256(from);
+    }
+
+    /// @notice What a value is currently measured against, and any jump waiting
+    ///         on confirmation. Exposed so the refusal is inspectable rather
+    ///         than something a publisher has to be believed about.
+    function anchorOf(address asset) external view returns (Anchor memory) {
+        return _anchor[asset];
     }
 
     function publishMany(Publication[] calldata items) external {

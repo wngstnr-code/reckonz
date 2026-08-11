@@ -6,7 +6,7 @@
  * during binary search and TWAP sizing, and none of them touch the network.
  */
 import { getAddress, parseAbi, type Address } from 'viem';
-import { ADDR, client, FEE_TIERS, serial } from './chain';
+import { ADDR, client, FEE_TIERS, serial, XSTOCKS } from './chain';
 import {
   computeSwapStep,
   compressTick,
@@ -76,6 +76,24 @@ export async function loadToken(address: Address): Promise<TokenInfo> {
       .catch(() => undefined),
   ]);
   return { address: getAddress(address), symbol, decimals: Number(decimals), name };
+}
+
+/**
+ * On-chain symbol → address for the whole xStock universe.
+ *
+ * Scripts used to each keep their own literal map of the eight assets they
+ * cared about, which is precisely the copy that drifts. `XSTOCKS` holds
+ * addresses and the chain holds the symbols, so this is the only place the two
+ * are joined, and it cannot disagree with what is deployed.
+ */
+let symbolIndex: Promise<Map<string, Address>> | null = null;
+
+export function addressBySymbol(): Promise<Map<string, Address>> {
+  symbolIndex ??= (async () => {
+    const tokens = await serial(XSTOCKS, (a: Address) => loadToken(a));
+    return new Map(tokens.map((t) => [t.symbol, t.address]));
+  })();
+  return symbolIndex;
 }
 
 export async function findPool(
