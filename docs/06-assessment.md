@@ -1,9 +1,11 @@
 # Assessment — is this strong, and is it a startup?
 
 Written 2026-08-11, ten days before submission, and revised the same day after the system went
-live on mainnet. Two different questions with two different answers: the idea is strong, and it is
-not startup-ready. Both statements are load-bearing, and **the second did not change when the
-first got stronger** — which is the most useful thing in this document.
+live on mainnet. Revised again that evening against the competitive landscape (D49), which is the
+first time this document was checked against the outside world rather than against the chain. Two
+different questions with two different answers: the idea is strong, and it is not startup-ready.
+Both statements are load-bearing, and **the second did not change when the first got stronger** —
+which is the most useful thing in this document.
 
 ---
 
@@ -12,7 +14,11 @@ first got stronger** — which is the most useful thing in this document.
 **A real gap, verified rather than assumed.** X Layer has a live tokenised-equity market with no
 application layer on top of it. That was checked against the chain, and the first version of the
 check was wrong — a prose summary of an API invented two protocols that do not exist here (D2).
-The emptiness is measured, not inferred.
+The emptiness is measured, not inferred: **56 protocols on X Layer, of which 26 are DEXs, 10 are
+bridges and 6 are lenders — and zero in any RWA, asset-management, index or portfolio category**
+(D49). The four things closest to an application layer hold $0, $3, $81 and $133 respectively.
+The primitives arrived this year — Uniswap in January, Aave in March — and nothing has been built
+on top of them.
 
 **The core insight is counter-intuitive and quantified.** Almost every financial product sells
 "you can". This one sells "you cannot, and here is the number". $250,000 of intent, $2,191 that
@@ -64,13 +70,40 @@ The hypothesis is plausible. But people **hate** being constrained by their own 
 precisely why rules kept in the head are never enforced. A product whose selling point is saying
 "no" faces a real adoption problem, and that has not been tested at all.
 
-### 3 — The reference data problem is unsolved 🟠
+### 3 — The venue arrived first, and it belongs to the host 🟠
+
+New on 2026-08-11 (D49), and unknown when the rest of this document was written.
+
+OKX's own **Unified Tokenized Stocks** is live: 40+ tokenised US stocks and ETFs against USDT on a
+shared order book that merges issuers' versions of the same stock, trading 24/7, with deposits and
+withdrawals on **X Layer and Solana** — reportedly fee-free and gas-free. Behind it: an **X Layer ×
+xStocks** partnership with a 24/7 fast-listing mechanism, and, around 23 Jun 2026, **ICE — the
+parent of NYSE — investing in OKX at $25B and forming a JV to put tokenised NYSE stocks on-chain**.
+
+For a retail buyer, a market-maker order book with no gas is strictly better than a $200k AMM pool.
+Worse for the numbers in item 1: because X Layer deposits and withdrawals are open, arbitrage flows
+between the two, which over time deepens the pools and erodes the $48k capacity premise the sizing
+half of the product is built on. Separately, xStocks now ships **xChange**, an RFQ-based multi-chain
+execution layer on Ethereum and Solana — RFQ is not bounded by pool depth, so if it reaches X Layer
+the capacity argument weakens further.
+
+This is amber rather than red, and it is genuinely two-sided. **The judges are OKX**, and this is
+the non-custodial application layer for the exact category they have just bet the company on — that
+is a tailwind no competitor in the track can manufacture. But the positioning has to change: never
+compete with the venue on price, depth or gas in front of the people who built it. The four things
+an exchange structurally cannot offer are custody staying with the user, execution bounded by a
+contract rather than an internal policy, an unfakeable on-chain receipt, and a **refusal** to trade
+in a high-gap-risk window — no exchange declines a user's trade, because that trade is its revenue.
+
+Not a competing venue. The discipline layer above one.
+
+### 4 — The reference data problem is unsolved 🟠
 
 Yahoo Finance cannot be used in production, and the obstacle is licensing rather than engineering.
 Equity price data is paid and contractually restricted. Republishing equity prices on-chain, where
 anyone can read them, likely needs its own licence. That is an uncosted fixed expense.
 
-### 4 — The oracle has a single point of trust 🟡
+### 5 — The oracle has a single point of trust 🟡
 
 Was 🟠, and the work named here as "real work" was done on 2026-08-11: admin of the oracle, the
 receipt registry and the fee collector is a **2-of-3 Safe** (D40, D42), and the publisher is
@@ -86,7 +119,7 @@ freely once publishing has lapsed a day, and publishing is currently manual (D44
 
 See D31 for the original statement, D40–D42 for what changed.
 
-### 5 — The regulatory line is thin 🟠
+### 6 — The regulatory line is thin 🟠
 
 "Tooling, not investment advice" is the right framing and it is held consistently: the user writes
 the thesis, the system maps it. Non-custodial helps enormously — no client assets are ever held.
@@ -95,11 +128,27 @@ But the moment `ThesisRegistry` goes live and people **pay to follow someone els
 is publishing investment recommendations in many jurisdictions. A legal question, not a technical
 one, answered differently per country, and it must be answered before that feature ships.
 
-### 6 — The moat is thin in code terms 🟡
+### 7 — The moat is thin in code terms 🟡
 
 The Uniswap math port, the fair-value regression, the thesis compiler — a competent team could
 rebuild these in weeks. The real moat is accumulated track-record data and publisher/follower
 network effects. Neither exists yet.
+
+D49 removed two claims that were being counted as moat and were not.
+
+**Publishing a fair value with its uncertainty is table stakes.** Pyth ships a confidence interval
+with every update, and on 30 Jun 2026 Nasdaq selected Pyth to distribute TotalView across chains.
+What survives is the enforcement, not the estimate — and 2026 priced that gap twice: Pythnet halted
+for over four hours on 22 May with feeds going stale across 100+ chains, and Ventuals fell ~45% on
+bad oracle data. Nobody refuses to execute on a number they cannot defend. That is the claim.
+
+**Bounded agent execution is commodity.** Smart account + session keys + a policy engine enforcing
+limits, whitelists and spend ceilings is the default 2026 pattern — Giza has processed $3.96B of
+agentic volume under it, Almanak peaked at $132M TVL, Coinbase ships Agentic Wallets, and Safe +
+Zodiac Roles has done parameter-bounded permissions for years. `PolicyGuard` is not novel because
+it bounds; it is unusual because of **what** it bounds on — price defensibility and market depth,
+which none of the above touch. The pitch line in `02-product.md` still claims the generic version
+and needs rewriting before anyone technical reads it.
 
 ---
 
@@ -115,7 +164,11 @@ today; it is not a bet on RWA growth.
 
 **PolicyGuard as infrastructure.** "An AI agent may transact, within bounds enforced on-chain, and
 breaching a bound voids the transaction." As more agents actually hold funds, this becomes a
-general need, and few solve it properly. Reckonz happens to solve it properly for one use case.
+general need — and by 2026 it is a well-served one (D49): session keys, spend ceilings and
+destination whitelists are the industry default. The part that is not served is bounding on
+**market conditions** rather than on destination and size: refuse if the price cannot be defended,
+refuse if the depth is not there. That is the piece worth extracting, and it is the same insight as
+the capacity engine wearing a different hat.
 
 The application was built to justify the infrastructure. The infrastructure is the asset.
 
@@ -123,9 +176,16 @@ The application was built to justify the infrastructure. The infrastructure is t
 
 ## Verdict
 
-**As a hackathon project:** strong. It runs for real on mainnet — deployed, verified, three fills, a
-fee collected, a public URL — the numbers are striking, the positioning is clear, and the AI-RWA
-track is thinly contested.
+**As a hackathon project:** strong, and stronger after D49 than before it. It runs for real on
+mainnet — deployed, verified, three fills, a fee collected, a public URL — the numbers are striking
+and the AI-RWA track is thinly contested. What the landscape check added is timing: the layer this
+occupies on X Layer is measurably empty, and OKX has just tied itself to tokenised equities at the
+company level, with ICE alongside. Being the non-custodial application layer for the host's own
+strategic bet is a better story than being early to a thin market, and it is the same project.
+
+The positioning it removed matters as much. Two of the three "nobody does this" claims in
+`02-product.md` are no longer true, and one has become a liability — see D49 before writing a word
+of the submission.
 
 **As a startup today:** no. Not because the product is weak, but because the market is not there,
 the users are not there, and two large questions — data licensing and legal status — are
@@ -139,9 +199,15 @@ market is proof the plumbing works, not proof anyone wants it.
 1. **Talk to 20 people** who actually manage positions in thin markets. Not to sell — to find out
    which problem they actually feel. Cheapest and most decisive step available.
 2. **Detach the capacity engine from xStocks.** Make it a standalone tool for any thin market.
-   That market exists now.
+   That market exists now, and D49 makes the case sharper: pool depth on X Layer may well be
+   arbitraged deeper by OKX's own order book, which is good for users and bad for the premise this
+   product is currently sold on. The capacity engine does not care which market it measures.
 3. **Do not touch `ThesisRegistry`** until there is a clear legal answer.
-4. **Let the RWA side mature slowly.** If tokenised-equity liquidity does grow, the application
+4. **Rewrite the three landscape-invalidated claims** before any external audience sees them: the
+   market-hours gap is a venue condition rather than an industry one, publishing uncertainty is
+   table stakes next to Pyth, and bounded agent execution is commodity. Enforcement on market
+   conditions is what is left, and it is enough (D49).
+5. **Let the RWA side mature slowly.** If tokenised-equity liquidity does grow, the application
    layer is already built. If it does not, two useful products remain.
 
 The rarest thing here is not the idea — someone else could have had it. It is that the thing was
