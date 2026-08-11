@@ -18,10 +18,17 @@
  */
 import {
   formatUnits,
-  parseAbi,
   parseUnits,
   type Address,
 } from 'viem';
+import {
+  ERC20_ABI,
+  EXECUTOR_ABI,
+  FAIR_VALUE_ORACLE_ABI,
+  PERMIT2_ABI,
+  POLICY_GUARD_ABI,
+  RECEIPT_REGISTRY_ABI,
+} from './abi';
 import { ADDR, USDG } from './chain';
 import { bestQuote, loadVenues } from './planner';
 import { loadToken } from './pool';
@@ -58,48 +65,6 @@ const XSTOCKS: Record<string, Address> = {
 };
 
 const asset = (XSTOCKS[SYMBOL_OR_ADDRESS] ?? SYMBOL_OR_ADDRESS) as Address;
-
-// ------------------------------------------------------------------- abis
-
-const erc20Abi = parseAbi([
-  'function balanceOf(address) view returns (uint256)',
-  'function decimals() view returns (uint8)',
-  'function symbol() view returns (string)',
-  'function allowance(address owner, address spender) view returns (uint256)',
-  'function approve(address spender, uint256 amount) returns (bool)',
-]);
-
-const permit2Abi = parseAbi([
-  'function nonceBitmap(address owner, uint256 wordPos) view returns (uint256)',
-]);
-
-const executorAbi = parseAbi([
-  'struct Leg { address asset; uint128 amountInUsdg; uint256 minAmountOut; bytes path; }',
-  'struct TokenPermissions { address token; uint256 amount; }',
-  'struct PermitBatchTransferFrom { TokenPermissions[] permitted; uint256 nonce; uint256 deadline; }',
-  'function cash() view returns (address)',
-  'function execute(uint256 mandateId, Leg[] legs, PermitBatchTransferFrom permit, bytes signature, bytes32 thesisHash, bytes32 evidenceHash, string evidenceCID) returns (uint256)',
-]);
-
-const guardAbi = parseAbi([
-  'struct Policy { uint16 maxWeightBps; uint16 minCashBufferBps; uint16 maxSlippageBps; uint16 maxDeviationBps; uint8 maxGapRisk; uint128 maxNotionalPerTrade; uint16 maxFillsPerEpoch; uint32 epochDuration; uint32 minRebalanceInterval; bool enforceWeights; }',
-  'struct Mandate { address owner; address agent; address executor; uint32 version; bool active; bool circuitBreaker; uint64 lastActionAt; uint64 epochStart; uint16 fillsThisEpoch; Policy policy; }',
-  'struct Fill { address asset; bool isExit; uint128 amountInUsdg; uint128 amountOut; uint128 executionPriceE8; uint16 slippageBps; uint128 fairValueE8; uint8 gapRisk; }',
-  'function nextMandateId() view returns (uint256)',
-  'function getMandate(uint256) view returns (Mandate)',
-  'function dryRun(uint256 mandateId, Fill[] fills) view returns (bool ok, bytes32 reason, address offendingAsset)',
-]);
-
-const oracleAbi = parseAbi([
-  'struct Observation { uint128 fairValueE8; uint32 confidenceBps; int32 basisBps; uint128 capacityUsdg; uint8 gapRisk; uint8 state; uint64 anchorAt; uint64 updatedAt; bool hasValue; }',
-  'function peek(address asset) view returns (Observation)',
-]);
-
-const receiptsAbi = parseAbi([
-  'struct Receipt { uint256 mandateId; uint32 policyVersion; bytes32 thesisHash; bytes32 evidenceHash; address agent; uint64 timestamp; uint64 blockNumber; }',
-  'struct Fill { address asset; bool isExit; uint128 amountInUsdg; uint128 amountOut; uint128 executionPriceE8; uint16 slippageBps; uint128 fairValueE8; uint8 gapRisk; }',
-  'function get(uint256 receiptId) view returns (Receipt, Fill[])',
-]);
 
 // ------------------------------------------------------------------- setup
 
@@ -139,12 +104,12 @@ console.log(`  agent     ${agent.address}`);
 // asking the contract is the only answer that cannot drift.
 const cash = await ownerWallet.readContract({
   address: EXECUTOR,
-  abi: executorAbi,
+  abi: EXECUTOR_ABI,
   functionName: 'cash',
 });
 const cashDecimals = await ownerWallet.readContract({
   address: cash,
-  abi: erc20Abi,
+  abi: ERC20_ABI,
   functionName: 'decimals',
 });
 const amountIn = parseUnits(AMOUNT_USDG, cashDecimals);
@@ -178,7 +143,7 @@ const mandateId =
   (await (async () => {
     const next = await ownerWallet.readContract({
       address: GUARD,
-      abi: guardAbi,
+      abi: POLICY_GUARD_ABI,
       functionName: 'nextMandateId',
     });
     if (next <= 1n) throw new Error('no mandate exists — run pnpm mandate first');
@@ -187,7 +152,7 @@ const mandateId =
 
 const mandate = await ownerWallet.readContract({
   address: GUARD,
-  abi: guardAbi,
+  abi: POLICY_GUARD_ABI,
   functionName: 'getMandate',
   args: [mandateId],
 });
@@ -207,7 +172,7 @@ if (mandate.agent.toLowerCase() !== agent.address.toLowerCase()) {
 
 const observation = await ownerWallet.readContract({
   address: ORACLE,
-  abi: oracleAbi,
+  abi: FAIR_VALUE_ORACLE_ABI,
   functionName: 'peek',
   args: [asset],
 });
@@ -247,7 +212,7 @@ const predictedFill = {
 
 const [ok, reason, offending] = await ownerWallet.readContract({
   address: GUARD,
-  abi: guardAbi,
+  abi: POLICY_GUARD_ABI,
   functionName: 'dryRun',
   args: [mandateId, [predictedFill]],
 });
@@ -266,7 +231,7 @@ console.log(`  dryRun    ALLOW`);
 // this the signature is valid and the transfer still fails.
 const allowance = await ownerWallet.readContract({
   address: cash,
-  abi: erc20Abi,
+  abi: ERC20_ABI,
   functionName: 'allowance',
   args: [owner.address, ADDR.permit2],
 });
@@ -274,7 +239,7 @@ if (allowance < amountIn) {
   console.log(`\n  approving Permit2 to move ${USDG.symbol}…`);
   const hash = await ownerWallet.writeContract({
     address: cash,
-    abi: erc20Abi,
+    abi: ERC20_ABI,
     functionName: 'approve',
     args: [ADDR.permit2, (1n << 160n) - 1n],
   });
@@ -283,7 +248,7 @@ if (allowance < amountIn) {
     () =>
       ownerWallet.readContract({
         address: cash,
-        abi: erc20Abi,
+        abi: ERC20_ABI,
         functionName: 'allowance',
         args: [owner.address, ADDR.permit2],
       }),
@@ -302,7 +267,7 @@ async function unusedNonce(): Promise<bigint> {
   for (let word = 0n; word < 16n; word++) {
     const bitmap = await ownerWallet.readContract({
       address: ADDR.permit2,
-      abi: permit2Abi,
+      abi: PERMIT2_ABI,
       functionName: 'nonceBitmap',
       args: [owner.address, word],
     });
@@ -352,7 +317,7 @@ console.log(
 
 const before = await ownerWallet.readContract({
   address: asset,
-  abi: erc20Abi,
+  abi: ERC20_ABI,
   functionName: 'balanceOf',
   args: [owner.address],
 });
@@ -360,7 +325,7 @@ const before = await ownerWallet.readContract({
 console.log(`\n  executing…`);
 const hash = await agentWallet.writeContract({
   address: EXECUTOR,
-  abi: executorAbi,
+  abi: EXECUTOR_ABI,
   functionName: 'execute',
   args: [
     mandateId,
@@ -377,7 +342,7 @@ console.log(`  tx        ${hash}  (${receipt.status}, gas ${receipt.gasUsed})`);
 
 const after = await ownerWallet.readContract({
   address: asset,
-  abi: erc20Abi,
+  abi: ERC20_ABI,
   functionName: 'balanceOf',
   args: [owner.address],
 });

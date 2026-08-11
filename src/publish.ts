@@ -7,7 +7,8 @@
  * to testnet — the oracle is an address-keyed registry, and reusing the real
  * identifiers keeps testnet observations comparable to mainnet ones.
  */
-import { parseAbi, type Address } from 'viem';
+import { type Address } from 'viem';
+import { FAIR_VALUE_ORACLE_ABI } from './abi';
 import { ASSETS, computeFairValue, toOraclePayload } from './fairvalue';
 import { capacity, loadVenues } from './planner';
 import {
@@ -41,13 +42,6 @@ const ADDRESS_BY_SYMBOL: Record<string, Address> = {
   wSKHYx: '0x6215a58ed045d71f2561aaabe54f4c885c522998',
   wSNDKx: '0x75e82e2884ea10f72fca777449b73377f4646219',
 };
-
-const oracleAbi = parseAbi([
-  'struct Publication { address asset; uint128 fairValueE8; uint32 confidenceBps; int32 basisBps; uint128 capacityUsdg; uint8 gapRisk; uint8 state; uint64 anchorAt; bool hasValue; }',
-  'function publishMany(Publication[] items)',
-  'function peek(address asset) view returns ((uint128 fairValueE8, uint32 confidenceBps, int32 basisBps, uint128 capacityUsdg, uint8 gapRisk, uint8 state, uint64 anchorAt, uint64 updatedAt, bool hasValue))',
-  'function checkExecution(address asset, uint256 executionPriceE8, uint8 maxGapRisk, uint32 maxDeviationBps) view returns (bool ok, bytes32 reason)',
-]);
 
 const account = accountFrom('PUBLISHER_KEY', 'PRIVATE_KEY');
 const client = walletFor(account, t);
@@ -112,7 +106,7 @@ const assets = items.map((i) => i.asset);
 console.log(`\n  publishing ${assets.length} observations…`);
 const hash = await client.writeContract({
   address: ORACLE,
-  abi: oracleAbi,
+  abi: FAIR_VALUE_ORACLE_ABI,
   functionName: 'publishMany',
   args: [items],
 });
@@ -127,7 +121,7 @@ await waitUntil(
   () =>
     client.readContract({
       address: ORACLE,
-      abi: oracleAbi,
+      abi: FAIR_VALUE_ORACLE_ABI,
       functionName: 'peek',
       args: [assets[0]!],
     }),
@@ -142,7 +136,7 @@ for (let i = 0; i < assets.length; i++) {
   const symbol = ASSETS.find((a) => ADDRESS_BY_SYMBOL[a.symbol] === assets[i])!.symbol;
   const obs = await client.readContract({
     address: ORACLE,
-    abi: oracleAbi,
+    abi: FAIR_VALUE_ORACLE_ABI,
     functionName: 'peek',
     args: [assets[i]!],
   });
@@ -151,7 +145,7 @@ for (let i = 0; i < assets.length; i++) {
   // rejection here is the oracle's own state talking, not the price.
   const [ok, reason] = await client.readContract({
     address: ORACLE,
-    abi: oracleAbi,
+    abi: FAIR_VALUE_ORACLE_ABI,
     functionName: 'checkExecution',
     args: [assets[i]!, obs.fairValueE8, 60, 100],
   });

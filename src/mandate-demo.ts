@@ -12,9 +12,9 @@
 import {
   BaseError,
   ContractFunctionRevertedError,
-  parseAbi,
   type Address,
 } from 'viem';
+import { FAIR_VALUE_ORACLE_ABI, POLICY_GUARD_ABI } from './abi';
 import { accountFrom, chainFor, deploymentFor, target, waitUntil, walletFor } from './wallet';
 
 // Chain and addresses both come from TARGET. Defaulting to the recorded
@@ -27,27 +27,6 @@ const GUARD = (process.env.GUARD_ADDRESS ?? deployment.contracts.PolicyGuard) as
 
 const wMUx = '0xe2047ee3bddb5c99ae428ab83df63f8730698e30' as Address;
 const wNVDAx = '0xa8ddb5cd96b5222afe198316e9a57caa642850d5' as Address;
-
-const guardAbi = parseAbi([
-  'struct Policy { uint16 maxWeightBps; uint16 minCashBufferBps; uint16 maxSlippageBps; uint16 maxDeviationBps; uint8 maxGapRisk; uint128 maxNotionalPerTrade; uint16 maxFillsPerEpoch; uint32 epochDuration; uint32 minRebalanceInterval; bool enforceWeights; }',
-  'struct Trigger { uint8 metric; uint8 comparator; int256 threshold; address[] assets; }',
-  'struct Fill { address asset; bool isExit; uint128 amountInUsdg; uint128 amountOut; uint128 executionPriceE8; uint16 slippageBps; uint128 fairValueE8; uint8 gapRisk; }',
-  'function createMandate(address agent, address executor, Policy policy, address[] assets) returns (uint256)',
-  'function setTriggers(uint256 mandateId, Trigger[] triggers)',
-  'function validateAndRecord(uint256 mandateId, Fill[] fills, bytes32 thesisHash, bytes32 evidenceHash, string evidenceCID) returns (uint256)',
-  'function firedTriggers(uint256 mandateId) view returns (uint256[] triggerIndexes, address[] assets, address[] staleAssets)',
-  'function nextMandateId() view returns (uint256)',
-  'function getMandate(uint256 mandateId) view returns ((address owner, address agent, address executor, uint32 version, bool active, bool circuitBreaker, uint64 lastActionAt, uint64 epochStart, uint16 fillsThisEpoch, (uint16,uint16,uint16,uint16,uint8,uint128,uint16,uint32,uint32,bool) policy))',
-  'error TriggerFired(uint256 triggerIndex, address asset, int256 value, int256 threshold)',
-  'error OracleRejected(address asset, bytes32 reason)',
-  'error AssetNotAllowed(address asset)',
-  'error SlippageTooHigh(address asset, uint16 realised, uint16 limit)',
-  'error NotionalTooLarge(address asset, uint128 amount, uint128 limit)',
-]);
-
-const oracleAbi = parseAbi([
-  'function peek(address asset) view returns ((uint128 fairValueE8, uint32 confidenceBps, int32 basisBps, uint128 capacityUsdg, uint8 gapRisk, uint8 state, uint64 anchorAt, uint64 updatedAt, bool hasValue))',
-]);
 
 const account = accountFrom('OWNER_KEY', 'PRIVATE_KEY');
 const client = walletFor(account, t);
@@ -71,13 +50,13 @@ const policy = {
 
 const mandateId = await client.readContract({
   address: GUARD,
-  abi: guardAbi,
+  abi: POLICY_GUARD_ABI,
   functionName: 'nextMandateId',
 });
 
 let hash = await client.writeContract({
   address: GUARD,
-  abi: guardAbi,
+  abi: POLICY_GUARD_ABI,
   functionName: 'createMandate',
   args: [account.address, account.address, policy, [wMUx, wNVDAx]],
 });
@@ -92,7 +71,7 @@ await waitUntil(
   () =>
     client.readContract({
       address: GUARD,
-      abi: guardAbi,
+      abi: POLICY_GUARD_ABI,
       functionName: 'getMandate',
       args: [mandateId],
     }),
@@ -109,7 +88,7 @@ const triggers = [
 ];
 hash = await client.writeContract({
   address: GUARD,
-  abi: guardAbi,
+  abi: POLICY_GUARD_ABI,
   functionName: 'setTriggers',
   args: [mandateId, triggers],
 });
@@ -121,7 +100,7 @@ async function report() {
   for (let i = 0; i < 20; i++) {
     const [idx, assets, stale] = await client.readContract({
       address: GUARD,
-      abi: guardAbi,
+      abi: POLICY_GUARD_ABI,
       functionName: 'firedTriggers',
       args: [mandateId],
     });
@@ -161,7 +140,7 @@ const ORACLE = (process.env.ORACLE_ADDRESS ??
 async function fairValueOf(asset: Address): Promise<bigint> {
   const o = await client.readContract({
     address: ORACLE,
-    abi: oracleAbi,
+    abi: FAIR_VALUE_ORACLE_ABI,
     functionName: 'peek',
     args: [asset],
   });
@@ -181,7 +160,7 @@ for (const [name, asset] of [
     await client.simulateContract({
       account,
       address: GUARD,
-      abi: guardAbi,
+      abi: POLICY_GUARD_ABI,
       functionName: 'validateAndRecord',
       args: [mandateId, fill(asset, price), '0x'.padEnd(66, '1') as `0x${string}`, '0x'.padEnd(66, '2') as `0x${string}`, 'ipfs://demo'],
     });
