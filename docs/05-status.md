@@ -39,16 +39,30 @@ X account **[@reckonz_xyz](https://x.com/reckonz_xyz)** — created 2026-08-11, 
 eligibility requirement. Keep it active until judging; the mandatory `@XLayerOfficial` post is a
 separate item and is still outstanding.
 
-### Deployed and verified — X Layer testnet (chain 1952)
+### Deployed and verified — X Layer mainnet (chain 196)
 
 ```
-FairValueOracle  0x1f3b67d8209060eC68d0eDCD6E60Ba53A8e9ac28
-ReceiptRegistry  0x3A1D6b9129E69fEF189E538996B18cebd56C3Dd0
-PolicyGuard      0xdc2f34A220D4cd7c098D7927454F30AEf3157681
-Executor         0xA9c7423A4c91AE87f205aE574aD669035aAb055d
-TestUSDG (cash)  0x37E280C32b074a33A4325d06E139a2BeE6821Bb8
+FairValueOracle  0x3659E05Fbbaafb7bA868171aB98327b62831Cd75
+ReceiptRegistry  0x9D04575894F570C3638Bc1f6ECaD6EF36D479Fa6
+PolicyGuard      0x481e0A60c5E105708b86e804811F8fc98a43bEFd
+Executor         0xA7acf8428483c0b84081D36893A49fcEB38AA35d
+PoolSwapper      0x20a0fB089094c6b11A7b2de5c042E1f2f50D41f5
+cash (real USDG) 0x4ae46a509F6b1D9056937BA4500cb143933D2dc8
 admin/deployer   0xD7360Dc3ED4fE01bEbB8477594A76CBFb5c79BA5
 ```
+
+### Deployed and verified — X Layer testnet (chain 1952), redeployed 2026-08-11
+
+```
+FairValueOracle  0xCc797463921F3b623DB445d5fffAf744f3aC19E5
+ReceiptRegistry  0xBb63b9733Ba33117326479F42cd66B7a1B5Fae38
+PolicyGuard      0xf3a06c9f0F1AABf01080475E420DD7A1092E1e1B
+Executor         0xC4df2F5e72804843DBa0931813e827C67fbE1dDF
+TestUSDG (cash)  0x3F58df45FcB5D1074bA5D046D4928CF5efde5f4d
+```
+
+`Executor` on 1952 cannot swap and is not meant to: the X Layer v3 factory has no code there, so
+there are no pools to derive. `Deploy.s.sol` prints that rather than deploying quietly (D36).
 
 Checked on-chain: `PolicyGuard.oracle/receipts/cash` point at the right addresses,
 `ReceiptRegistry.isWriter(PolicyGuard) == true` and `isWriter(deployer) == false` — only the guard
@@ -200,10 +214,6 @@ That single run exercises every claim the product makes. It is the demo.
   maps to wAAPLx (D33), but the other 22 are refused at the guard with `NO_REFERENCE`. That
   refusal is true, and it is a real limit on what the system can execute — widening it means
   verifying, per wrapper, which listed security it tracks.
-- **The testnet stack is stale.** `Executor` at `0xA9c7423A…` was deployed with the router-era
-  constructor, so it does not match `src/abi.ts` (which now has `factory()` and a `Leg` carrying a
-  fee tier) and cannot swap — the X Layer v3 factory has no code on 1952 either. Mainnet is the
-  live stack; testnet needs redeploying for the two to agree, and it costs nothing.
 - **Contracts are not verified on the explorer.** Judges opening OKLink see bytecode. Verified
   source is what lets them read `validateAndRecord` and check the central claim without cloning.
 - **`.env` holds a live Gemini key** pasted in chat. Owner assessed the exposure as acceptable

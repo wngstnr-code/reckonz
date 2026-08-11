@@ -6,16 +6,28 @@ export interface Deployment {
   contracts: Record<string, string>;
 }
 
+/**
+ * Redeployed 2026-08-11 alongside the mainnet stack, because `Executor`'s
+ * constructor changed when the Universal Router was dropped (D35). The previous
+ * testnet addresses are still live and still answer, which is precisely the
+ * hazard: they would have matched `src/abi.ts` closely enough to call and not
+ * closely enough to work.
+ *
+ * `Executor` here cannot swap and is not meant to. The X Layer v3 factory has no
+ * code on 1952, so there are no pools to derive — `Deploy.s.sol` says so out loud
+ * rather than deploying quietly (D36). The oracle, guard and receipt registry are
+ * fully exercisable; execution is a mainnet-only story and always was.
+ */
 export const TESTNET: Deployment = {
   chainId: 1952,
   name: 'X Layer testnet',
   explorer: 'https://www.oklink.com/xlayer-test',
   contracts: {
-    FairValueOracle: '0x1f3b67d8209060eC68d0eDCD6E60Ba53A8e9ac28',
-    ReceiptRegistry: '0x3A1D6b9129E69fEF189E538996B18cebd56C3Dd0',
-    PolicyGuard: '0xdc2f34A220D4cd7c098D7927454F30AEf3157681',
-    Executor: '0xA9c7423A4c91AE87f205aE574aD669035aAb055d',
-    'TestUSDG (settlement)': '0x37E280C32b074a33A4325d06E139a2BeE6821Bb8',
+    FairValueOracle: '0xCc797463921F3b623DB445d5fffAf744f3aC19E5',
+    ReceiptRegistry: '0xBb63b9733Ba33117326479F42cd66B7a1B5Fae38',
+    PolicyGuard: '0xf3a06c9f0F1AABf01080475E420DD7A1092E1e1B',
+    Executor: '0xC4df2F5e72804843DBa0931813e827C67fbE1dDF',
+    'TestUSDG (settlement)': '0x3F58df45FcB5D1074bA5D046D4928CF5efde5f4d',
   },
 };
 
