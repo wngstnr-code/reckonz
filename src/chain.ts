@@ -52,6 +52,12 @@ export async function serial<T, R>(
 export const ADDR = {
   univ3Factory: '0x4b2ab38dbf28d31d467aa8993f6c2585981d6804',
   permit2: '0x000000000022D473030F116dDEE9F6B43aC78BA3',
+  /**
+   * ⛔ Deployed, correctly shaped, and **unable to execute a V3 swap on this chain.**
+   * Its bytecode has the canonical v3 factory baked in, not X Layer's, so it derives
+   * pool addresses that do not exist and reverts with no data. `SWEEP` works; nothing
+   * that touches a pool does. See D35 before using this for anything.
+   */
   universalRouter: '0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af',
   multicall3: '0xcA11bde05977b3631167028862bE2a173976CA11',
   aaveV3Pool: '0xE3F3Caefdd7180F884c01E57f65Df979Af84f116',

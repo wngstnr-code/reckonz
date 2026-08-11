@@ -88,6 +88,25 @@ function encodeMultiPath(hops: [Address, number, Address][]): `0x${string}` {
   return `0x${out}`.toLowerCase() as `0x${string}`;
 }
 
+/**
+ * Wait for a transaction, and do not let the wait itself fail the run.
+ *
+ * The public RPC load-balances, so `eth_getBlockByNumber` for a block we just
+ * mined can land on a node that has not seen it and answer `block is out of
+ * range` — which killed a run *after* its transaction had already succeeded.
+ * The receipt is a convenience here; the state poll that follows every call is
+ * the real confirmation, so a failed wait is reported and stepped over.
+ */
+async function settle(hash: `0x${string}`): Promise<bigint | null> {
+  try {
+    const receipt = await wallet.waitForTransactionReceipt({ hash, timeout: 120_000 });
+    return receipt.gasUsed;
+  } catch (e) {
+    console.log(`  (receipt unavailable: ${e instanceof Error ? e.message.split('\n')[0] : e})`);
+    return null;
+  }
+}
+
 const t = target();
 const chain = chainFor(t);
 const account = accountFrom('OWNER_KEY', 'PRIVATE_KEY');
@@ -109,19 +128,42 @@ const args = process.argv.slice(2);
 const dryRun = args.includes('--dry');
 const requested = args.find((a) => !a.startsWith('--'));
 
-const balance = await wallet.getBalance({ address: account.address });
-const amountIn = requested ? parseEther(requested) : balance - GAS_RESERVE;
+const wokbOf = (who: Address) =>
+  wallet.readContract({ address: WOKB, abi: ERC20_ABI, functionName: 'balanceOf', args: [who] });
 
-console.log(`\n  balance   ${formatEther(balance)} OKB`);
+const balance = await wallet.getBalance({ address: account.address });
+const heldWokb = await wokbOf(account.address);
+// WOKB already sitting with the router belongs to this leg too — an earlier run
+// funded it and died before the swap landed.
+const routerHeld = await wokbOf(ADDR.universalRouter);
+const alreadyWrapped = heldWokb + routerHeld;
+const amountIn = requested ? parseEther(requested) : balance + alreadyWrapped - GAS_RESERVE;
+
+// Only the part that is not already wrapped comes out of the OKB balance.
+// Charging the rest against the gas reserve again would refuse a swap that is
+// already paid for.
+const toWrap = amountIn > alreadyWrapped ? amountIn - alreadyWrapped : 0n;
+const gasLeft = balance - toWrap;
+
+console.log(
+  `\n  balance   ${formatEther(balance)} OKB` +
+    (heldWokb > 0n ? ` + ${formatEther(heldWokb)} WOKB held` : '') +
+    (routerHeld > 0n ? ` + ${formatEther(routerHeld)} WOKB already with the router` : ''),
+);
 console.log(`  swapping  ${formatEther(amountIn)} OKB`);
-console.log(`  reserve   ${formatEther(balance - amountIn)} OKB left for gas`);
+console.log(`  reserve   ${formatEther(gasLeft)} OKB left for gas`);
 
 if (amountIn <= 0n) {
   throw new Error(`nothing to swap: balance ${formatEther(balance)} OKB is at or below the reserve`);
 }
-if (balance - amountIn < GAS_RESERVE / 5n) {
+if (toWrap > balance) {
   throw new Error(
-    `that would leave ${formatEther(balance - amountIn)} OKB for gas, which is too thin to ` +
+    `need ${formatEther(toWrap)} OKB to wrap but only ${formatEther(balance)} is available`,
+  );
+}
+if (gasLeft < GAS_RESERVE / 5n) {
+  throw new Error(
+    `that would leave ${formatEther(gasLeft)} OKB for gas, which is too thin to ` +
       `deploy and execute. Swap less.`,
   );
 }
@@ -159,59 +201,49 @@ if (dryRun) {
 
 // ------------------------------------------------------------------ 3. wrap
 
-console.log(`\n  wrapping…`);
-const wrapHash = await wallet.writeContract({
-  address: WOKB,
-  abi: WOKB_ABI,
-  functionName: 'deposit',
-  value: amountIn,
-});
-await wallet.waitForTransactionReceipt({ hash: wrapHash });
-
-// A confirmed receipt is not a readable state on this RPC (D18).
-await waitUntil(
-  () =>
-    wallet.readContract({
-      address: WOKB,
-      abi: ERC20_ABI,
-      functionName: 'balanceOf',
-      args: [account.address],
-    }),
-  (b) => b >= amountIn,
-  { what: 'WOKB balance' },
-);
-console.log(`  wrapped   ${wrapHash}`);
+if (toWrap === 0n) {
+  // A previous run got this far. Wrapping again would spend OKB we no longer
+  // have and, worse, silently double the position. Every step below is written
+  // to be resumable for the same reason: on this RPC a run can die between a
+  // confirmed transaction and a readable state, and the fix must never be
+  // "start over".
+  console.log(`\n  wrapped   ${formatEther(heldWokb)} WOKB already held, skipping wrap`);
+} else {
+  console.log(`\n  wrapping  ${formatEther(toWrap)} OKB…`);
+  const wrapHash = await wallet.writeContract({
+    address: WOKB,
+    abi: WOKB_ABI,
+    functionName: 'deposit',
+    value: toWrap,
+  });
+  await settle(wrapHash);
+  await waitUntil(() => wokbOf(account.address), (b) => b >= amountIn, { what: 'WOKB balance' });
+  console.log(`  wrapped   ${wrapHash}`);
+}
 
 // -------------------------------------------------- 4. fund the router, swap
 
 // The router spends from its own balance, exactly as Executor does. Anything it
 // keeps would be money that silently did not become USDG, so the balance is
 // checked after the swap rather than assumed.
-const routerBefore = await wallet.readContract({
-  address: WOKB,
-  abi: ERC20_ABI,
-  functionName: 'balanceOf',
-  args: [ADDR.universalRouter],
-});
+const routerBefore = routerHeld;
 
-const fundHash = await wallet.writeContract({
-  address: WOKB,
-  abi: ERC20_ABI,
-  functionName: 'transfer',
-  args: [ADDR.universalRouter, amountIn],
-});
-await wallet.waitForTransactionReceipt({ hash: fundHash });
-await waitUntil(
-  () =>
-    wallet.readContract({
-      address: WOKB,
-      abi: ERC20_ABI,
-      functionName: 'balanceOf',
-      args: [ADDR.universalRouter],
-    }),
-  (b) => b >= routerBefore + amountIn,
-  { what: 'router funding' },
-);
+if (routerBefore >= amountIn) {
+  // Also resumable: the router is already holding this leg's WOKB from an
+  // interrupted run, so sending more would strand it there.
+  console.log(`  router    already funded with ${formatEther(routerBefore)} WOKB`);
+} else {
+  const fundHash = await wallet.writeContract({
+    address: WOKB,
+    abi: ERC20_ABI,
+    functionName: 'transfer',
+    args: [ADDR.universalRouter, amountIn - routerBefore],
+  });
+  await settle(fundHash);
+  await waitUntil(() => wokbOf(ADDR.universalRouter), (b) => b >= amountIn, {
+    what: 'router funding',
+  });
+}
 
 const path = encodeMultiPath([
   [WOKB, 500, USDT0.address],
@@ -238,8 +270,8 @@ const swapHash = await wallet.writeContract({
     BigInt(Math.floor(Date.now() / 1000) + 20 * 60),
   ],
 });
-const receipt = await wallet.waitForTransactionReceipt({ hash: swapHash });
-console.log(`  tx        ${swapHash}  (${receipt.status}, gas ${receipt.gasUsed})`);
+const gasUsed = await settle(swapHash);
+console.log(`  tx        ${swapHash}${gasUsed === null ? '' : `  (gas ${gasUsed})`}`);
 
 // ------------------------------------------------------------------ 5. report
 
@@ -255,20 +287,18 @@ const after = await waitUntil(
   { what: 'USDG balance' },
 );
 
-const routerAfter = await wallet.readContract({
-  address: WOKB,
-  abi: ERC20_ABI,
-  functionName: 'balanceOf',
-  args: [ADDR.universalRouter],
-});
+const routerAfter = await wokbOf(ADDR.universalRouter);
 
 console.log(`\n  received  ${formatUnits(after - before, USDG.decimals)} USDG`);
 console.log(`  balance   ${formatUnits(after, USDG.decimals)} USDG`);
 console.log(`  gas left  ${formatEther(await wallet.getBalance({ address: account.address }))} OKB`);
 
-if (routerAfter > routerBefore) {
+// The router was funded with exactly this leg's input and should end at zero.
+// Anything it kept is money that silently did not become USDG — the same check
+// Executor makes in Solidity, for the same reason.
+if (routerAfter > 0n) {
   console.log(
-    `\n  WARNING: the router kept ${formatEther(routerAfter - routerBefore)} WOKB. ` +
+    `\n  WARNING: the router kept ${formatEther(routerAfter)} WOKB. ` +
       `That is your money that did not become USDG.`,
   );
 }
