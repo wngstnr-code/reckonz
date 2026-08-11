@@ -21,7 +21,9 @@ import { THESIS_REGISTRY_ABI } from './abi';
 import { pickProvider } from './provider';
 import { thesisHash, type Thesis } from './thesis';
 import { fixtureProvider } from './thesis-fixture';
-import { accountFrom, chainFor, deploymentFor, target, waitUntil, walletFor } from './wallet';
+import { accountFrom, chainFor, deploymentFor, target, waitUntil, walletFor,
+  waitForReceipt,
+} from './wallet';
 
 const args = process.argv.slice(2);
 const useFixture = args.includes('--fixture');
@@ -111,7 +113,7 @@ const txHash = await wallet.writeContract({
 
 let gasUsed: bigint | null = null;
 try {
-  const receipt = await wallet.waitForTransactionReceipt({ hash: txHash, timeout: 120_000 });
+  const receipt = await waitForReceipt(wallet, txHash);
   gasUsed = receipt.gasUsed;
 } catch {
   // The RPC load-balances; a confirmed transaction can outrun a readable block

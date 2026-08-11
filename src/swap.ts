@@ -24,7 +24,9 @@ import { formatEther, formatUnits, parseEther, type Address } from 'viem';
 import { ERC20_ABI } from './abi';
 import { USDG, USDT0 } from './chain';
 import { loadPool, simulateExactInput } from './pool';
-import { accountFrom, chainFor, target, walletFor, waitUntil } from './wallet';
+import { accountFrom, chainFor, target, walletFor, waitUntil,
+  waitForReceipt,
+} from './wallet';
 
 /** WETH9-style wrapper for the gas token. `deposit()`/`withdraw()` confirmed on-chain. */
 const WOKB = '0xe538905cf8410324e03a5a23c1c177a474d59b2b' as Address;
@@ -88,7 +90,7 @@ const SLIPPAGE_BPS = 100n;
  */
 async function settle(hash: `0x${string}`): Promise<bigint | null> {
   try {
-    const receipt = await wallet.waitForTransactionReceipt({ hash, timeout: 120_000 });
+    const receipt = await waitForReceipt(wallet, hash);
     return receipt.gasUsed;
   } catch (e) {
     console.log(`  (receipt unavailable: ${e instanceof Error ? e.message.split('\n')[0] : e})`);

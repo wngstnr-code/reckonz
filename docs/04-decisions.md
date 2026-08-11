@@ -1136,3 +1136,90 @@ That is the design — D31 says the admin key is accepted-not-fixed, and D40–D
 The oracle stage now takes **55s** for 30 assets, and the universe read another 7s. The API route's
 `maxDuration` is 300s. The margin is real but thinner than before D38 doubled the number of
 reference markets fetched; if Yahoo slows down, the run is what breaks.
+
+---
+
+## D45 — Closing D44, and the RPC error that had been lying to us
+
+All four findings from the audit, worked one at a time. Two closed on chain, one closed in code,
+one is built and needs a secret and some gas.
+
+### Finding 1 closed — the new stack has now carried a real fill
+
+`0xc9eba0cb05da5f00d71a63486d696a90bddc4a4f7ca3ddaab6b1acdb158f74f8` — 0.5 USDG into wTSLAx
+through the new executor, new guard, new oracle. Receipt **#3**: 0.49925 USDG traded at 330.907
+against a fair value of 330.647, **7 bps** of shortfall, gap risk 19. The executor's wTSLAx balance
+afterwards is 0. "Deployed and verified" is now "proven".
+
+**Getting there is the more interesting part.** The first attempt was refused:
+
+```
+guard would REJECT: SLIPPAGE
+Refusing to spend gas on a transaction the guard will revert.
+```
+
+wSPYx was trading 53 bps above fair value against a mandate that tolerates 50. Republishing did not
+help, because the basis is real — the pool is above fair value, and a fresher fair value says the
+same thing. Checking every asset the oracle prices showed **all three assets mandate #3 allowed —
+wSPYx, wMUx, wNVDAx — were 52 to 68 bps out**, and a dozen others were inside 50.
+
+So two assets were added to the mandate (wTSLAx at 3 bps, wQQQx at 33) and the fill went through
+the tightest one. **The slippage limit was not touched.** Trading a market that fits the limit is
+the product; raising the limit to fit the market is the thing it exists to refuse. Recorded because
+the tempting one-line alternative was right there.
+
+### Finding 4 closed — the abandoned oracle is under the Safe
+
+The previous mainnet oracle now has the deployer revoked as publisher and admin handed to the Safe.
+Nothing consumes it. The point was that a contract carrying our name should not be writable by one
+key just because we stopped using it.
+
+### Finding 3 closed — the pipeline asks the chain
+
+`applyOnchainWithholding()` in `src/pipeline.ts` reads the deployed observation and marks a report
+unpublishable when the contract is withholding a value this engine considers fine — which the
+publish bound will do whenever a move is awaiting confirmation. The page can no longer answer ALLOW
+where the chain answers NO_REFERENCE.
+
+No field crosses the FE seam: `publishable` and `notes` already exist and the page renders both. A
+failed chain read is swallowed and *noted*, because a tightening must never be the reason a demo
+breaks.
+
+### Finding 2 built — publishing on a schedule
+
+`.github/workflows/publish-oracle.yml`, every ten minutes, comfortably inside the 15-minute
+`maxAge`. GitHub Actions rather than a Vercel cron deliberately: no publicly reachable endpoint
+holds a key that spends gas, and there is no shared secret to misconfigure.
+
+`pnpm oracle:publish` now prints its own gas runway and **exits non-zero below 20 runs**, because a
+scheduled publisher that quietly runs out of gas is worse than a manual one — the oracle goes
+stale, every on-chain check fails `STALE`, and nothing says why.
+
+Two things it needs before it runs: `PUBLISHER_KEY` as a repository secret, and gas. At ~880k gas
+a run and 0.02 gwei, ten-minute publishing costs **~0.0026 OKB/day**. The publisher holds 0.0019 —
+about **105 runs, or 17 hours**. Ten days to the deadline needs roughly **0.026 OKB** in
+`0x40101A4932dEb95f0A5951BB7fB0fFa7c17e3Ab8`. Topping it up is a plain transfer and needs no Safe
+signatures.
+
+### The root cause behind several confusing failures
+
+`block is out of range` had appeared three times and been misread every time. It is not a lagging
+node and it is not fee estimation. **viem's `waitForTransactionReceipt` fetches candidate blocks
+with their full transaction list** so it can detect a replaced transaction, and X Layer's public RPC
+intermittently refuses that call — *after* the transaction has been sent.
+
+So a confirmed write threw, and the natural reading was that it had failed. It had not. That is how
+two mandates were created by runs that appeared to fail (D44's cleanup), and it would have made the
+scheduled publisher flaky in exactly the way that teaches people to ignore red builds.
+
+`waitForReceipt()` in `src/wallet.ts` polls `eth_getTransactionReceipt` instead. We never replace
+transactions, so the detection it gives up was never doing anything. Every write path now uses it.
+
+### Two smaller things the fill turned up
+
+- **`src/execute.ts` carried the last hardcoded copy of the universe** — eight symbols. `pnpm
+  execute wTSLAx` failed with "invalid address" on an asset that has traded all along. It resolves
+  through `addressBySymbol()` now, like the other scripts.
+- **The fill printed `received 0 wTSLAx`** while the wallet had actually received 0.0015087. Same
+  read-after-write staleness, one line later. The trade was fine and the *evidence* was wrong, which
+  is the worse of the two. It polls now.

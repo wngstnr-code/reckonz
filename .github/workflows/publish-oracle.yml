@@ -1,0 +1,48 @@
+# Keep the deployed oracle fresh, and make the publish-time bound mean something.
+#
+# Two reasons this exists, and the second is the one that is easy to miss:
+#
+#   1. `maxAge` is 15 minutes. An oracle published by hand is usable for fifteen
+#      minutes and dead for the rest of the day, so nothing on chain can execute
+#      against it outside a manual window.
+#   2. `MAX_JUMP_BPS` is measured against the last value that took effect, and
+#      `ANCHOR_MAX_AGE` is one day. A feed that lapses past that re-anchors
+#      freely — so a bound that looks strict in the contract protects almost
+#      nothing while publishing is manual. See D44, finding 2.
+#
+# GitHub Actions rather than a Vercel cron on purpose: no publicly reachable
+# endpoint holds a key that spends gas, and there is no shared secret to get
+# wrong. The key is a repository secret and never leaves the runner.
+name: publish oracle
+
+on:
+  schedule:
+    # Every ten minutes, comfortably inside the 15-minute `maxAge`.
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+# A second run overlapping the first would publish twice from one key and
+# collide on the nonce. Let the in-flight one finish.
+concurrency:
+  group: publish-oracle
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: publish
+        env:
+          TARGET: mainnet
+          PUBLISHER_KEY: ${{ secrets.PUBLISHER_KEY }}
+        run: pnpm oracle:publish

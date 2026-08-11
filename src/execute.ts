@@ -32,7 +32,7 @@ import {
 } from './abi';
 import { ADDR, USDG } from './chain';
 import { bestQuote, loadVenues } from './planner';
-import { loadToken } from './pool';
+import { addressBySymbol, loadToken } from './pool';
 import {
   accountFrom,
   chainFor,
@@ -40,7 +40,7 @@ import {
   target,
   waitUntil,
   walletFor,
-} from './wallet';
+  waitForReceipt,} from './wallet';
 
 const SYMBOL_OR_ADDRESS = process.argv[2];
 const AMOUNT_USDG = process.argv[3] ?? '1';
@@ -55,18 +55,23 @@ if (!SYMBOL_OR_ADDRESS) {
   process.exit(1);
 }
 
-const XSTOCKS: Record<string, Address> = {
-  wSPYx: '0xe7e553cd128f0011777323a0b44a7b96ea1cb540',
-  wNVDAx: '0xa8ddb5cd96b5222afe198316e9a57caa642850d5',
-  wSPCXx: '0x8e2eed8b8b5e13ea7bf38e50d7821d2c57309072',
-  wCRCLx: '0xb11134f14d5b94db60d4599dfdc3bf1bba2150e8',
-  wINTCx: '0x33aa35b0271fffe2048cc093ab7fe60931786719',
-  wMUx: '0xe2047ee3bddb5c99ae428ab83df63f8730698e30',
-  wSKHYx: '0x6215a58ed045d71f2561aaabe54f4c885c522998',
-  wSNDKx: '0x75e82e2884ea10f72fca777449b73377f4646219',
-};
-
-const asset = (XSTOCKS[SYMBOL_OR_ADDRESS] ?? SYMBOL_OR_ADDRESS) as Address;
+// Symbols resolve against the chain, not a literal. The eight-entry map that
+// used to live here was the last copy of the universe in a script, and it went
+// stale the way copies do: `pnpm execute wTSLAx` failed with "invalid address"
+// on an asset that has traded on X Layer all along.
+let asset: Address;
+if (SYMBOL_OR_ADDRESS.startsWith('0x')) {
+  asset = SYMBOL_OR_ADDRESS as Address;
+} else {
+  const index = await addressBySymbol();
+  const found = index.get(SYMBOL_OR_ADDRESS);
+  if (!found) {
+    throw new Error(
+      `no xStock called ${SYMBOL_OR_ADDRESS} on this chain — known: ${[...index.keys()].join(', ')}`,
+    );
+  }
+  asset = found;
+}
 
 // ------------------------------------------------------------------- setup
 
@@ -319,7 +324,7 @@ if (allowance < amountIn) {
     functionName: 'approve',
     args: [ADDR.permit2, (1n << 160n) - 1n],
   });
-  await ownerWallet.waitForTransactionReceipt({ hash });
+  await waitForReceipt(ownerWallet, hash);
   await waitUntil(
     () =>
       ownerWallet.readContract({
@@ -413,15 +418,25 @@ const hash = await agentWallet.writeContract({
     '',
   ],
 });
-const receipt = await agentWallet.waitForTransactionReceipt({ hash });
+const receipt = await waitForReceipt(agentWallet, hash);
 console.log(`  tx        ${hash}  (${receipt.status}, gas ${receipt.gasUsed})`);
 
-const after = await ownerWallet.readContract({
-  address: asset,
-  abi: ERC20_ABI,
-  functionName: 'balanceOf',
-  args: [owner.address],
-});
+// The balance has to be polled, not read once. A confirmed receipt does not
+// mean the next read lands on a node that has seen the block, and this one
+// silently returned the pre-trade balance — so a fill that moved 0.0015091
+// wTSLAx printed `received 0`. The trade was fine; the evidence was wrong,
+// which is the worse of the two. See D18.
+const after = await waitUntil(
+  () =>
+    ownerWallet.readContract({
+      address: asset,
+      abi: ERC20_ABI,
+      functionName: 'balanceOf',
+      args: [owner.address],
+    }),
+  (b) => b > before,
+  { attempts: 30, delayMs: 500, what: `the ${token.symbol} the fill bought` },
+);
 
 console.log(
   `\n  received  ${formatUnits(after - before, token.decimals)} ${token.symbol}` +

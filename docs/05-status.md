@@ -280,17 +280,17 @@ That single run exercises every claim the product makes. It is the demo.
 - **The publisher is still a hot key, and that is structural.** `publish()` runs every fifteen
   minutes from a machine, so consent cannot gate it — the contract bounds it instead (D41). A
   multisig cannot close this half, and no amount of key hygiene changes that.
-- **The new guard and executor have never carried a fill** (D44). All three real fills went
-  through the previous pair. The replacements are deployed, verified and wired, and unproven —
-  which is the exact shape of D35. One 1 USDG fill settles it; the deployer holds 2.26 USDG.
-- **The publish bound is often in genesis mode, because publishing is manual** (D44). Past
-  `ANCHOR_MAX_AGE` (1 day) the next value re-anchors freely. The bound protects a live feed; ours
-  is run by hand between demos. The fix is a schedule, not a contract change.
-- **The off-chain pipeline does not model the on-chain publish bound** (D44). `src/guard.ts` still
-  mirrors `checkExecution` exactly, but the contract can withhold a value the engine thinks is
-  publishable — so the web app can read ALLOW where the chain would answer `NO_REFERENCE`.
-- **The previous mainnet oracle is still live with the deployer as admin** (D44). Nothing consumes
-  it, but it is a contract with our name on it that one key can still write to.
+- ~~The new guard and executor have never carried a fill~~ — ✅ **closed (D45).** Receipt **#3**,
+  `0xc9eba0cb…`, 0.5 USDG into wTSLAx, 7 bps shortfall, executor residual 0.
+- ~~The off-chain pipeline does not model the on-chain publish bound~~ — ✅ **closed (D45).** The
+  pipeline reads the deployed observation and respects a withhold.
+- ~~The previous mainnet oracle is writable by one key~~ — ✅ **closed (D45).** Publisher revoked,
+  admin handed to the Safe.
+- **Scheduled publishing is built but not running** (D45). `.github/workflows/publish-oracle.yml`
+  publishes every ten minutes. It needs two things: `PUBLISHER_KEY` as a **repository secret**, and
+  **gas** — ten-minute publishing costs ~0.0026 OKB/day and the publisher holds 0.0019, about 17
+  hours. Ten days needs roughly **0.026 OKB** at `0x40101A4932dEb95f0A5951BB7fB0fFa7c17e3Ab8`.
+  Until it runs, the publish bound is still in genesis mode between manual publishes.
 - **The bound slows a compromise; it does not prevent one.** Twelve confirmed steps is an 8x, and
   `test_APatientAttackerStillGetsThere` says so in the suite rather than in a comment. This entry
   stays even after the multisig lands.

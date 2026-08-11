@@ -60,6 +60,36 @@ export function walletFor(account: ReturnType<typeof accountFrom>, t: Target = t
 export type Wallet = ReturnType<typeof walletFor>;
 
 /**
+ * Wait for a receipt without viem's replacement detection.
+ *
+ * `waitForTransactionReceipt` fetches candidate blocks **with their full
+ * transaction list** so it can notice a replaced transaction. X Layer's public
+ * RPC intermittently refuses that call with `block is out of range` — and the
+ * throw arrives *after* the transaction has been sent, so a confirmed write
+ * looks like a failure. That is how two mandates were created by runs that
+ * appeared to fail, and it would have made the scheduled publisher flaky and
+ * misleading in the same way.
+ *
+ * Polling `eth_getTransactionReceipt` asks for exactly what is needed and
+ * nothing else. We do not replace transactions anywhere in this repo, so the
+ * detection it gives up was never doing anything for us.
+ */
+export async function waitForReceipt(
+  client: Wallet,
+  hash: `0x${string}`,
+  { attempts = 60, delayMs = 1000 } = {},
+) {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await client.getTransactionReceipt({ hash });
+    } catch {
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+  throw new Error(`no receipt for ${hash} after ${attempts} attempts`);
+}
+
+/**
  * Poll until a read reflects a write.
  *
  * A confirmed receipt is not enough on X Layer: the public RPC load-balances,

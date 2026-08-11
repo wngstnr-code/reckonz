@@ -7,7 +7,7 @@
  * to testnet — the oracle is an address-keyed registry, and reusing the real
  * identifiers keeps testnet observations comparable to mainnet ones.
  */
-import { type Address } from 'viem';
+import { formatEther, formatGwei, type Address } from 'viem';
 import { FAIR_VALUE_ORACLE_ABI } from './abi';
 import { ASSETS, computeFairValue, toOraclePayload } from './fairvalue';
 import { capacity, loadVenues } from './planner';
@@ -19,7 +19,7 @@ import {
   target,
   waitUntil,
   walletFor,
-} from './wallet';
+  waitForReceipt,} from './wallet';
 
 /** Impact limit the published capacity is measured at. */
 const REFERENCE_IMPACT_BPS = Number(process.env.REFERENCE_IMPACT_BPS ?? 50);
@@ -42,7 +42,27 @@ const account = accountFrom('PUBLISHER_KEY', 'PRIVATE_KEY');
 const client = walletFor(account, t);
 
 console.log(`\n  FairValueOracle ${ORACLE}  (${deployment.name}, chain ${chain.id})`);
-console.log(`  publisher       ${account.address}\n`);
+console.log(`  publisher       ${account.address}`);
+
+// A scheduled publisher that quietly runs out of gas is worse than a manual
+// one: the oracle goes stale, every on-chain check starts failing STALE, and
+// nothing says why. So the runway is printed every run and a nearly-empty key
+// fails the job loudly rather than half-working.
+const REFUEL_AT_RUNS = 20;
+const balance = await client.getBalance({ address: account.address });
+const gasPrice = await client.getGasPrice();
+const perRun = 900_000n * gasPrice; // ~884k gas for 30 warm slots, rounded up
+const runsLeft = perRun > 0n ? balance / perRun : 0n;
+console.log(
+  `  gas balance     ${formatEther(balance)} OKB — about ${runsLeft} runs at ${formatGwei(gasPrice)} gwei\n`,
+);
+if (runsLeft < BigInt(REFUEL_AT_RUNS)) {
+  console.error(
+    `  ✗ under ${REFUEL_AT_RUNS} runs of gas left. Top up ${account.address}.\n` +
+      '    Topping up is a plain transfer and needs no Safe signatures.\n',
+  );
+  process.exit(1);
+}
 
 // 1 — run the off-chain engine: fair value from marketdata, capacity and basis
 //     from live mainnet pool state via the planner.
@@ -105,7 +125,7 @@ const hash = await client.writeContract({
   functionName: 'publishMany',
   args: [items],
 });
-const receipt = await client.waitForTransactionReceipt({ hash });
+const receipt = await waitForReceipt(client, hash);
 console.log(`  tx ${hash}`);
 console.log(`  block ${receipt.blockNumber}  gas ${receipt.gasUsed}  status ${receipt.status}`);
 
