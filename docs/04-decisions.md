@@ -1371,3 +1371,174 @@ week and thin for an unattended month. Raising `REFUEL_AT_RUNS` to a full day wa
 folded into the same "no code changes this close to the deadline" call; the 5 Sep reminder is the
 substitute, and a human diary entry is a worse mechanism than a threshold. Recorded as a known
 weakness rather than pretended away.
+
+---
+
+## D49 — The competitive landscape, checked instead of assumed
+
+`02-product.md` opens with three claims about what nobody else does. They were written from
+reasoning, not from a search, and they had never been re-checked. On 2026-08-11 they were.
+Two survive, one is dead, and one has become the opposite of a moat.
+
+Method note, because D2 happened exactly this way: the X Layer numbers below come from
+`curl https://api.llama.fi/protocols | jq`, parsed, not from anyone's prose summary of it. The
+off-chain items come from press and are labelled as such — several of them are single-source and
+marked so.
+
+### The X Layer claim holds, and now has a number behind it
+
+X Layer TVL **$116,395,074**. **56 protocols** listed, by category:
+
+```
+26  Dexs                     3  Launchpad          1  Bridge Aggregator
+10  Bridge (incl. x-chain)   3  Liquidity Manager  1  CEX
+ 6  Lending                  2  Yield              1  CeDeFi
+ 3  Derivatives                                    1  Onchain Capital Allocator
+```
+
+A filter for `RWA|Asset|Index|Portfolio|Yield Agg` returns **nothing**. Top of book:
+
+```
+Aave V3       $81,808,601        PotatoSwap V2  $5,262,804
+Uniswap V3    $22,938,900        Curve DEX      $2,695,851
+Gate           $6,753,538
+```
+
+The four things closest to an application layer are all dead on this chain: Spark Liquidity Layer
+(`Onchain Capital Allocator`) **$0**; Steer **$81**, DefiEdge **$133**, Gamma **$3** — and those
+three manage Uniswap LP positions, not portfolios; Satori Perp **$0**, D8X **$0.0002**, Fufuture
+**$0**, so there is no live hedging venue either. Dolomite **$746**, ZeroLend **$7,181**:
+multi-chain deployments that arrived automatically and were never used.
+
+So "no application layer" is not a rhetorical flourish. Nobody has tried and failed here either.
+The primitives are complete — Uniswap landed 19 Jan 2026, Aave 30 Mar 2026 (v3.6) — and the layer
+above them is empty. The chain's DeFi ecosystem is about seven months old, which is the actual
+explanation.
+
+### The market-hours claim is half dead
+
+`02-product.md` says these assets spend ~80% of the week with "no reference price and **no way to
+hedge or redeem**". The redeem half is no longer true of the category. **Ondo** — renamed from Ondo
+Global Markets to **Ondo Stocks** — crossed **$1B TVL on 11 May 2026**, the first tokenised-equity
+platform to do so, and launched **24/7 mint and redemption in June 2026**. 430+ assets across
+Ethereum, BNB Chain and Solana, bridgeable to HyperEVM, distributed through MetaMask. On 27 Jul
+2026 they abandoned their planned L1 and shipped **Ondo Network**, an execution layer splitting
+execution, verification and settlement.
+
+The gap is therefore a *venue* condition, not an industry one. It is still true on X Layer, where
+the only route is a ~$200k AMM pool. Sell it that way. Selling it as a structural fact about
+tokenised equities invites a judge who has read the Ondo release to discount everything else.
+
+### "We publish uncertainty" was never the differentiator
+
+**Pyth** ships an aggregate confidence interval with every update, and on **30 Jun 2026 Nasdaq
+selected Pyth to distribute the TotalView order book across chains**. Publishing a fair value with
+its uncertainty is table stakes and about to be tier-1 sourced.
+
+What no one does is *act* on it. Two 2026 events show the cost of that gap:
+
+- **22 May 2026** — Pythnet validators halted, block production stopped for **over four hours**,
+  feeds went stale across 100+ chains simultaneously. Pythnet is proof-of-authority with a small
+  validator set: one failure point at the aggregation layer.
+- **Ventuals** fell **~45%** on faulty oracle data and liquidated hundreds of positions.
+
+Both are arguments *for* this codebase, and better ones than the current framing. The claim to
+make is not "we produce a fair value" — Pyth produces a better one. It is **we refuse to execute
+against a number we cannot defend**, which is the layer that was missing in May and cost real
+money. `guard.ts` / `FairValueOracle.checkExecution` is the product; the estimate is an input.
+
+### The pitch line no longer separates us from anything
+
+`02-product.md` closes on "the AI's key can only call `proposeRebalance()`… that single sentence
+separates this from every AI agent that trades for you". As of 2026 it separates us from nothing:
+
+- Non-custodial smart account + **session keys** + a policy engine enforcing limits, whitelists
+  and spend ceilings, with an audit log and a user kill-switch, is the **default** agent pattern.
+- **Giza**: session keys and smart accounts, guardrails that never touch principal —
+  **$3.96B of agentic volume as of March 2026**.
+- **Almanak**: peak TVL **$132M** (Dec 2025), 100k+ users, ~$6M annualised vault revenue.
+- **Coinbase** shipped **Agentic Wallets** as a developer-platform product.
+- **Safe + Zodiac Roles** has offered call-level, parameter-bounded permissions for years.
+
+What is still ours is not *that* execution is bounded but *what* it is bounded on: every product
+above bounds destination and size. None bounds on **price defensibility and market depth**. Rewrite
+the pitch line around that, or it will be met by a judge who has integrated one of these.
+
+### The venue arrived before we did — and it belongs to the host
+
+This is the finding with the most consequences, and none of it was known when `02-product.md` was
+written.
+
+**xStocks** shipped **xChange**, described by them as a *"multi-chain execution layer for tokenized
+equity trading"*: 70+ tokenised stocks, liquidity through **0x RFQ straight to market makers**
+rather than aggregators, running **24/5**. Ethereum and Solana; **X Layer is not mentioned**.
+Platform totals: **$3.5B onchain volume, $25B across exchanges, $225M tokenised assets onchain,
+80,000 unique onchain holders**. (The one article found gave internally inconsistent launch dates,
+so no date is recorded here.)
+
+RFQ matters more than the name does. Our entire capacity argument — ~$48k across 30 assets at 0.5%
+impact — is an argument about **AMM pool depth**. Market-maker RFQ is not bounded by pool depth. If
+xChange reaches X Layer, the sizing half of the product loses much of its reason to exist while the
+gap-risk half survives intact. Worth watching as an early-warning signal, not a reason to change
+anything now.
+
+**And OKX has already built the custodial version.** `Unified Tokenized Stocks` is live: 40+
+tokenised US stocks and ETFs (XNVDA, XAAPL, XTSLA) against USDT, on a **shared order book that
+merges different issuers' versions of the same stock into one market, "starting with xStocks"**,
+trading 24/7, with deposits and withdrawals on **X Layer and Solana**. US and EU users excluded;
+eligible regions are SEA, Northeast Asia, CIS, MENA and Türkiye.
+
+Behind it sits a real partnership, not a rumour. **X Layer × xStocks** brings tokenised equities and
+a **Fast-Listing Mechanism** — high-demand stocks and thematic ETFs tokenised and tradable 24/7
+without waiting on brokerage onboarding — into the OKX Wallet ecosystem, on top of xStocks' **$31B
+cumulative issuance**, with assets integrated into X Layer progressively. OKX's CEO, on the record:
+
+> *"Looking forward to seeing xStocks on X Layer, bringing tokenized equities and RWA assets into
+> the ecosystem."* — and separately, *"tokenized stocks are one of the most important use cases
+> for RWA."*
+
+The hardest confirmation is ours, though, and it predates the search: **32 assets in `ASSETS` carry
+`admittedOn: 2026-08-11`**, meaning each wrapper's on-chain price reconciled against its reference
+under `pnpm reconcile`. The partnership is not a press question. The tokens price correctly on our
+own chain reads.
+
+### ICE, NYSE and OKX — the strategic context
+
+Around **23 Jun 2026**, **ICE — the parent of NYSE — invested in OKX at a $25B valuation and formed
+a joint venture to put tokenised NYSE stocks on-chain.**
+
+This cuts both ways and both need saying.
+
+**For us:** the judges are OKX. This project is the non-custodial application layer for tokenised
+equities on OKX's own chain, in the exact category where OKX has just made its largest strategic
+bet with the parent of the NYSE. That is a slide, and it was not available a month ago.
+
+**Against us:** OKX's own order book gives retail 24/7 trading of the same assets with market-maker
+depth, no gas and no fees. For an ordinary buyer that is strictly better than a $200k AMM pool. And
+because X Layer deposits and withdrawals are open, arbitrage flows between the two, which over time
+deepens the pools and erodes the $48k premise the product is built on.
+
+### What actually changes
+
+Nothing in `src/` or `contracts/`. Three things in how this is described:
+
+1. **Stop selling the market-hours gap as an industry problem.** Ondo closed the redemption half.
+   It is a condition of this venue.
+2. **Rewrite the pitch line.** Bounded agent execution is commodity. Bounding on price
+   defensibility and market depth is not.
+3. **Never position against the venue.** OKX's order book beats us on price, depth and gas, in
+   front of the people who built it. The four things it structurally cannot offer are: custody
+   stays with the user, execution bounded by a contract rather than an internal policy, an
+   unfakeable on-chain receipt, and a refusal to trade in a high-gap-risk window — an exchange
+   will never decline a user's trade, because that trade is its revenue.
+
+The honest one-line position: **not a competing venue, the discipline layer above one.**
+
+### Not verified
+
+Recorded so nobody repeats the search believing it was done. The fee-free / zero-gas tokenised
+stock trading via X Layer story returned HTTP 403 and was never read. The exact date of the
+X Layer × xStocks announcement is unconfirmed — the primary write-up 403s, and it is corroborated
+only by secondary coverage plus the CEO post. Whether **dHEDGE**, **Enzyme** and **Reserve Index
+DTFs** are still live as comparables for the thesis-subscription model is unchecked; they are cited
+from memory, not from a source.

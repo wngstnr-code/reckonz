@@ -4,11 +4,20 @@
 
 X Layer has a **live tokenised-equity market with no application layer on top of it**.
 No portfolio manager, no index product, no research layer, no risk tooling, no
-liquidity-aware execution. And three structural problems nobody has solved anywhere:
+liquidity-aware execution. That is measured, not asserted: **56 protocols on the chain — 26
+DEXs, 10 bridges, 6 lenders — and zero in any RWA, asset-management, index or portfolio
+category**. The four things closest to an application layer hold $0, $3, $81 and $133. The
+primitives arrived this year (Uniswap in January, Aave in March) and nothing was built above
+them. See D49 for the parsed source.
 
-1. **The market-hours gap.** NYSE/Nasdaq are open ~32 of 168 hours a week. The tokens
-   trade 24/7. For ~80% of the time these assets trade with **no reference price and no
-   way to hedge or redeem**. Earnings land after the close; macro moves over weekends.
+And on this venue, three problems:
+
+1. **The market-hours gap — here.** NYSE/Nasdaq are open ~32 of 168 hours a week. The tokens
+   trade 24/7. Earnings land after the close; macro moves over weekends. Elsewhere the
+   redemption half of this is now solved — Ondo shipped 24/7 mint and redeem in June 2026 —
+   but on X Layer the only route out of a position is a ~$200k AMM pool, and there is **no
+   live hedging venue at all**: every derivatives protocol listed here holds $0. So for ~80%
+   of the week these assets trade with no reference price and no way out except the pool.
 2. **Thin, uniform liquidity.** ~$200k per pool. A $50k order loses ~6% instantly, and
    nobody tells the user.
 3. **wSPCXx has no public price at all.** SpaceX is private. The token exists; the
@@ -21,16 +30,21 @@ The user writes a thesis in plain language:
 > *"HBM memory supply stays tight for two more quarters, and the beneficiaries are
 > wider than NVIDIA alone."*
 
-The system then does four things nobody currently does:
+The system then does four things, and the fourth of them is the one nobody else does:
 
 1. **Maps the thesis onto what is actually investable on X Layer** — discovered from the
    factory at runtime, not hard-coded, so newly listed xStocks are absorbed automatically.
 2. **Sizes against real depth.** Reads live pool state, computes true slippage per size,
    tells the user the **maximum sane position**, splits the order, and *refuses to force
    capital into a market that cannot take it*.
-3. **Guards execution against fair value.** Knows the underlying is closed, how stale the
-   last official print is, and how wide the uncertainty band is. Refuses to execute in
-   high-gap-risk windows.
+3. **Refuses to execute against a price it cannot defend.** It knows the underlying is
+   closed, how stale the last official print is, and how wide the uncertainty band is — and
+   then *acts on it*, in the trade's own transaction. Publishing an estimate with its
+   uncertainty is not the claim; Pyth already ships a confidence interval on every update and
+   Nasdaq now feeds it. **Enforcing** it is the claim, and 2026 priced the missing layer
+   twice: Pythnet halted for over four hours on 22 May and feeds went stale across 100+ chains
+   at once, and Ventuals fell ~45% on bad oracle data. Nothing downstream refused to trade.
+   Here, `FairValueOracle.checkExecution` does.
 4. **Publishes a thesis receipt on-chain** — the thesis, the mapping, the evidence, the
    weights, the realised fills. Auditable, shareable, and impossible to polish.
 
@@ -73,14 +87,37 @@ maps and executes it. Never invert that order — a system issuing personalised
 recommendations changes its regulatory character in many jurisdictions. This also matches
 OKX's own hackathon disclaimer.
 
+**And not a competing venue.** OKX's own `Unified Tokenized Stocks` is live — 40+ tokenised
+stocks and ETFs on a shared order book, trading 24/7, settling on X Layer and Solana,
+reportedly with no fees and no gas. For an ordinary buyer that beats a $200k AMM pool on
+price, depth and speed, and saying otherwise in front of the people who built it is a losing
+argument. Four things an exchange structurally cannot offer, and they are the whole product:
+
+- custody stays with the user,
+- execution bounded by a contract rather than by an internal policy,
+- an on-chain receipt nobody can polish afterwards,
+- and a **refusal** to trade in a high-gap-risk window — no exchange declines a user's
+  trade, because that trade is its revenue.
+
+Not a competing venue. The discipline layer above one (D49).
+
 ## The pitch line
 
-> The AI's key can only call `proposeRebalance()`. Execution is bounded by `PolicyGuard`.
-> The worst case from a hallucinating or prompt-injected agent is a rebalance *within*
-> the mandate — a bounded loss, not a drained wallet.
+> The AI's key can only call `proposeRebalance()`, and `PolicyGuard` bounds the execution
+> **on whether the price can be defended and the depth is actually there** — not on where
+> the funds may go and how much. The worst case from a hallucinating or prompt-injected
+> agent is a rebalance *within* the mandate: a bounded loss, not a drained wallet, and not a
+> fill into a market that could not take it.
 
-That single sentence separates this from every "AI agent that trades for you" in the
-competition.
+The second half of that sentence is the load-bearing half, and it was not always written this
+way. "The agent's key is bounded" separated us from nothing by 2026: smart account plus
+session keys plus a policy engine enforcing limits, whitelists and spend ceilings is the
+default pattern — Giza has processed $3.96B of agentic volume under it, Almanak peaked at
+$132M TVL, Coinbase ships Agentic Wallets, and Safe + Zodiac Roles has offered call-level,
+parameter-bounded permissions for years.
+
+Every one of those bounds **destination and size**. None bounds on **market condition**.
+That is the sentence to say out loud (D49).
 
 ## Scope boundaries
 

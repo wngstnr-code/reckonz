@@ -257,7 +257,7 @@ That single run exercises every claim the product makes. It is the demo.
 | Item | Notes |
 |---|---|
 | ~~Real fill on mainnet~~ | ✅ **Done 2026-08-11.** `0x7240759d327d468f9a7086ed439abf42dead17887105d986ca0870ebf46d6545` — 0.5 USDG into wSPYx, guard and receipt in the same transaction. |
-| **Demo video / walkthrough** | Not started. The web app is now the thing to record. |
+| **Demo video / walkthrough** | Not started. The web app is now the thing to record. **Script it from the corrected positioning (D49), not from memory** — two of the three "nobody does this" claims are dead, and the ICE/OKX context is the strongest card available. |
 | ~~Deploy the web app~~ | ✅ **https://reckonz.vercel.app** — verified end to end in production: live Gemini, 30-asset universe, capacity-limited plan, 1/2 assets would execute. |
 | **Wallet connect + mandate creation in the UI** | The page reads and decides; it cannot yet sign. Everything on-chain still happens through `pnpm mandate` / `pnpm oracle:publish`. |
 
@@ -398,7 +398,43 @@ worker down; either is fine, silently running dry is not.
 
 ## Log
 
-**2026-08-11 (latest, twelfth)** — `ThesisRegistry` deployed on both chains and **the loop is
+**2026-08-11 (latest, thirteenth)** — the competitive landscape checked for the first time, and
+four docs corrected against it (**D49**). No code changed; nothing in `src/` or `contracts/` was
+wrong.
+
+What held: X Layer really is empty above the primitives — **56 protocols parsed from the DefiLlama
+API, zero in any RWA, asset-management, index or portfolio category**, and the four nearest things
+hold $0, $3, $81 and $133. There is also **no live hedging venue** (every derivatives protocol
+here holds $0), which strengthens the market-hours argument rather than weakening it.
+
+What did not hold, all in `02-product.md`:
+
+- **The market-hours gap is a venue condition, not an industry one.** Ondo shipped 24/7 mint and
+  redeem in June 2026 and crossed $1B TVL in May. Still true here; no longer true of the category.
+- **Publishing a fair value with its uncertainty is table stakes.** Pyth ships a confidence
+  interval on every update and Nasdaq selected it for TotalView distribution on 30 Jun. The claim
+  is the *enforcement* — and 2026 priced that gap twice, at Pythnet's four-hour halt on 22 May and
+  at Ventuals' ~45% drop on bad oracle data.
+- **"The agent's key is bounded" separates us from nothing.** Session keys plus a policy engine is
+  the 2026 default; Giza has run $3.96B of agentic volume under it. What is ours is bounding on
+  **price defensibility and market depth** rather than destination and size.
+
+And the finding with the most consequences: **the venue arrived first and belongs to the host.**
+OKX's `Unified Tokenized Stocks` is live — 40+ tickers, 24/7, shared order book, settling on X
+Layer — behind a real X Layer × xStocks partnership, with **ICE, the parent of NYSE, having
+invested in OKX at $25B in June to put tokenised NYSE stocks on-chain**. That is simultaneously the
+best card in the pitch (we are the non-custodial layer above the judges' own strategic bet) and a
+standing instruction never to compete with the venue on price, depth or gas.
+
+One thing to watch rather than act on: X Layer's Uniswap V3 TVL is up from $17.5M to **$22.9M**,
+and open deposits between order book and pool mean arbitrage should keep deepening them. **Re-run
+`pnpm capacity` before quoting the $48k anywhere.**
+
+Updated: `04-decisions.md` (D49), `06-assessment.md` (new risk 3, moat claims withdrawn),
+`02-product.md` (opening, point 3, pitch line, positioning), `01-xlayer-reality.md` (chain
+economics refreshed, venue section added), `00-hackathon.md` (strategic context).
+
+**2026-08-11 (twelfth)** — `ThesisRegistry` deployed on both chains and **the loop is
 closed on mainnet**:
 
 ```

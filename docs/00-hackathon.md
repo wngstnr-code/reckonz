@@ -75,7 +75,40 @@ assets are sitting on their chain.**
 - Feb 2026: OKX Ventures backed **STBL** — an RWA stablecoin on X Layer backed by
   tokenised Hamilton Lane private credit via Securitize. Introduced the "Ecosystem-Specific
   Stablecoin" idea. Not found on-chain yet.
-- X Layer × **xStocks** partnership — this is the one that is actually live. See
-  `01-xlayer-reality.md`.
+- X Layer × **xStocks** partnership — this is the one that is actually live. It brings
+  tokenised equities and a **24/7 fast-listing mechanism** into the OKX Wallet ecosystem, on
+  top of xStocks' $31B cumulative issuance, with assets integrated progressively. See
+  `01-xlayer-reality.md`; confirmed on our own chain reads, since 32 wrappers reconcile
+  against their references under `pnpm reconcile`.
+- **June 2026: ICE — the parent of NYSE — invested in OKX at a $25B valuation and formed a
+  joint venture to put tokenised NYSE stocks on-chain.** Around 23 Jun.
+- **OKX `Unified Tokenized Stocks` is live**: 40+ tokenised US stocks and ETFs against USDT
+  on a shared order book that merges issuers' versions of the same stock, "starting with
+  xStocks", trading 24/7, with deposits and withdrawals on **X Layer and Solana**. US and EU
+  excluded; SEA, Northeast Asia, CIS, MENA and Türkiye eligible.
 - The ecosystem page carries a dedicated **x402** category (Aeon, AInalyst): OKX is serious
   about agentic payments.
+
+### What that context is worth to us
+
+The three items above were found on 2026-08-11 (D49) and none of them was known when this
+file was written. They cut in one direction for the pitch and the opposite direction for the
+product, and both need saying before the submission is written.
+
+**For the pitch — this is the strongest card in the deck.** The judges are OKX. Tokenised
+equities are the category they have just bet the company on, with the parent of the NYSE
+alongside, and their own CEO is on record wanting xStocks on X Layer. This project is the
+**non-custodial application layer for exactly that**, on their chain, in a layer that is
+measurably empty. That is a better frame than "early to a thin market", and it is the same
+project either way. Judging criteria include *integration with X Layer*, *growth potential*
+and *contribution to the X Layer ecosystem* — this is the paragraph that answers all three.
+
+**For the product — do not position against the venue.** OKX's order book gives retail 24/7
+trading of the same assets with market-maker depth, no gas and no fees. Claiming to be a
+better place to buy loses in front of the people who built the better place. See
+`02-product.md`: the four things an exchange structurally cannot offer are the pitch.
+
+It also sharpens pattern 3 above. The judges' vocabulary is *"governed"*, *"verification"*,
+*"act with more context"* — and a system whose distinguishing feature is **refusing to
+execute** is the most literal possible reading of that. Lead with the refusal, not the
+execution.
