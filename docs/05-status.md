@@ -179,7 +179,7 @@ That single run exercises every claim the product makes. It is the demo.
 
 | Item | Notes |
 |---|---|
-| **Real fill on mainnet** | Unblocked in code (D35): `Executor` now derives the pool and swaps directly, proven on mainnet by `PoolSwapper` moving 0.0001 OKB into USDG. **Needs a redeploy** — the testnet stack still has the router-era constructor, and mainnet has never been deployed. |
+| ~~Real fill on mainnet~~ | ✅ **Done 2026-08-11.** `0x7240759d327d468f9a7086ed439abf42dead17887105d986ca0870ebf46d6545` — 0.5 USDG into wSPYx, guard and receipt in the same transaction. |
 | **Demo video / walkthrough** | Not started. The web app is now the thing to record. |
 | **Deploy the web app** | Runs locally only. Judges will not `pnpm dev`. |
 | **Wallet connect + mandate creation in the UI** | The page reads and decides; it cannot yet sign. Everything on-chain still happens through `pnpm mandate` / `pnpm oracle:publish`. |
@@ -260,6 +260,34 @@ If time remains after all four: `FeeCollector`, then `ThesisRegistry`. Not befor
 ---
 
 ## Log
+
+**2026-08-11 (latest, eighth)** — **the first real fill on mainnet.**
+
+```
+tx        0x7240759d327d468f9a7086ed439abf42dead17887105d986ca0870ebf46d6545
+gas       619,519   block 67653297
+in        0.5 USDG        out  0.000643062196002867 wSPYx
+price     777.53 (E8 77752976789)   fair value 773.96   shortfall 46bp   gapRisk 7
+receipt   #0, mandate #1, policy v3, agent 0xD736…
+```
+
+Every number in that receipt was written by the contracts: `executionPriceE8` from the measured
+balance delta, `fairValueE8` and `gapRisk` stamped by the guard from the oracle. The agent
+supplied routing and nothing else — which is the claim the whole design exists to make.
+
+`Executor` held **0 USDG** afterwards, asserted in the same transaction. wSPYx went straight to
+the owner's wallet; the executor never touched it.
+
+`dryRun` said ALLOW before any gas was spent on the fill, and the Permit2 signature was scoped to
+0.5 USDG, to that executor, for 20 minutes.
+
+Two gaps surfaced doing it. `pnpm mandate` left the mandate with the owner as its own executor —
+which is what lets the demo call `validateAndRecord` directly, and what made the first fill revert
+`NotThisExecutor`. The script now hands the mandate to the real `Executor` at the end. And the
+25 USDG cap was sized to a round number rather than to the 3.76 USDG balance it guarded; mainnet
+defaults are now 1 USDG per trade, live mandate updated to match.
+
+Balances after: **3.263878 USDG**, 0.000643 wSPYx, 0.00981 OKB.
 
 **2026-08-11 (latest, seventh)** — **deployed to X Layer mainnet (chain 196).**
 

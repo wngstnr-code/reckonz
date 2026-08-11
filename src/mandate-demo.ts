@@ -222,3 +222,33 @@ for (const [name, asset] of [
   }
 }
 console.log();
+
+// 4 — hand the mandate to the real Executor.
+//
+// Everything above ran with the owner as its own executor, which is what lets
+// this script call `validateAndRecord` directly and show a trigger firing. A
+// mandate left in that state cannot be filled through `Executor` — it reverts
+// `NotThisExecutor`, which is exactly what the first mainnet fill hit. The demo
+// is worth keeping; leaving the mandate unusable afterwards is not.
+const executorAddress = deployment.contracts.Executor as Address | undefined;
+if (executorAddress) {
+  const handover = await client.writeContract({
+    address: GUARD,
+    abi: POLICY_GUARD_ABI,
+    functionName: 'setExecutor',
+    args: [mandateId, executorAddress],
+  });
+  await waitUntil(
+    () =>
+      client.readContract({
+        address: GUARD,
+        abi: POLICY_GUARD_ABI,
+        functionName: 'getMandate',
+        args: [mandateId],
+      }),
+    (m) => m.executor.toLowerCase() === executorAddress.toLowerCase(),
+    { what: 'the executor handover' },
+  );
+  console.log(`\n  executor  -> ${executorAddress}  (mandate is now fillable via \`pnpm execute\`)`);
+  void handover;
+}
