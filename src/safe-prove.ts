@@ -37,7 +37,9 @@ import {
   safeTxHash,
   type SafeTx,
 } from './safe';
-import { accountFrom, chainFor, deploymentFor, target, waitUntil, walletFor } from './wallet';
+import { accountFrom, chainFor, deploymentFor, target, waitUntil, walletFor,
+  waitForReceipt,
+} from './wallet';
 
 const t = target();
 if (t === 'mainnet') {
@@ -93,7 +95,7 @@ if (state.threshold !== 2n || state.owners.length !== 3) {
 // Fund the one co-owner that has to send `approveHash`.
 const gasGift = parseEther('0.002');
 const fund = await wallet.sendTransaction({ to: coOwner.address, value: gasGift });
-await wallet.waitForTransactionReceipt({ hash: fund });
+await waitForReceipt(wallet, fund);
 console.log(`     funded owner 2 with ${formatEther(gasGift)} OKB for its approval\n`);
 
 // 2 — hand admin to the Safe
@@ -103,7 +105,7 @@ const setAdminToSafe = await wallet.writeContract({
   functionName: 'setAdmin',
   args: [safe],
 });
-await wallet.waitForTransactionReceipt({ hash: setAdminToSafe });
+await waitForReceipt(wallet, setAdminToSafe);
 await waitUntil(
   () => wallet.readContract({ address: ORACLE, abi: FAIR_VALUE_ORACLE_ABI, functionName: 'admin' }),
   (a) => a.toLowerCase() === safe.toLowerCase(),

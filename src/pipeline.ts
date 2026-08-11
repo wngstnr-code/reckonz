@@ -10,8 +10,10 @@
  * CLI demos use, so the browser and the terminal can never disagree.
  */
 import { parseUnits, type Address } from 'viem';
-import { serial, USDG, XSTOCKS } from './chain';
+import { client, serial, USDG, XSTOCKS } from './chain';
 import { computeFairValue, specFor, type FairValueReport } from './fairvalue';
+import { FAIR_VALUE_ORACLE_ABI } from './abi';
+import { MAINNET } from './deployments';
 import { checkExecution, DEFAULT_MANDATE, type Decision } from './guard';
 import {
   bestQuote,
@@ -71,6 +73,49 @@ export type RunEvent =
     }
   | { done: true }
   | { error: string };
+
+/**
+ * Let the deployed oracle override an optimistic off-chain verdict.
+ *
+ * `src/guard.ts` still mirrors `checkExecution` exactly; what can diverge is the
+ * *input*. A value the contract withheld — because the jump bound has not
+ * confirmed it — is `hasValue: false` on chain while this engine still believes
+ * it. So the observation is read and, where the chain declines, the report is
+ * marked unpublishable with the reason attached. No new field crosses the
+ * FE seam: `publishable` and `notes` already exist and the page already renders
+ * both.
+ *
+ * Failures here are swallowed on purpose. The chain read is a *tightening*, and
+ * a demo must not break because an RPC node was slow — but a run that could not
+ * check says so in the notes rather than staying silent.
+ */
+async function applyOnchainWithholding(asset: Address, report: FairValueReport): Promise<void> {
+  const deployment = MAINNET;
+  if (!deployment || !report.publishable) return;
+  try {
+    const o = await client.readContract({
+      address: deployment.contracts.FairValueOracle as Address,
+      abi: FAIR_VALUE_ORACLE_ABI,
+      functionName: 'peek',
+      args: [asset],
+    });
+    if (o.updatedAt === 0n) {
+      report.publishable = false;
+      report.notes.push('no observation published on chain for this asset — the guard would reject NO_DATA');
+      return;
+    }
+    if (!o.hasValue) {
+      report.publishable = false;
+      report.notes.push(
+        'the deployed oracle is withholding this value — most likely the publish-time jump ' +
+          'bound has not confirmed a move yet (D41). The chain refuses it whatever this ' +
+          'estimate says.',
+      );
+    }
+  } catch {
+    report.notes.push('could not read the deployed oracle; this verdict is the off-chain estimate only');
+  }
+}
 
 /** Chain reads are stable over a demo; the public RPC is not. */
 let universeCache: { at: number; value: UniverseEntry[] } | null = null;
@@ -177,6 +222,14 @@ export async function* runPipeline(
       now,
       onchainPrice: onchainPrice ?? undefined,
     });
+
+    // The contract has the last word, so ask it. `FairValueOracle` can withhold
+    // a value this engine considers publishable — the publish-time jump bound
+    // refuses a move it cannot confirm yet (D41) — and without this the page
+    // would answer ALLOW where the chain answers NO_REFERENCE. Optimistic is
+    // the wrong direction for a guard to be wrong in.
+    await applyOnchainWithholding(address, report);
+
     const q = venues.length ? bestQuote(venues, amountIn) : null;
     const decision: Decision = q
       ? checkExecution(report, q.effectivePrice, q.impactBps, DEFAULT_MANDATE, now)

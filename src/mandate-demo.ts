@@ -15,7 +15,15 @@ import {
   type Address,
 } from 'viem';
 import { FAIR_VALUE_ORACLE_ABI, POLICY_GUARD_ABI } from './abi';
-import { accountFrom, chainFor, deploymentFor, target, waitUntil, walletFor } from './wallet';
+import {
+  accountFrom,
+  chainFor,
+  deploymentFor,
+  target,
+  waitForReceipt,
+  waitUntil,
+  walletFor,
+} from './wallet';
 
 // Chain and addresses both come from TARGET. Defaulting to the recorded
 // deployment rather than a literal also keeps this off older guards that are
@@ -81,7 +89,7 @@ let hash = await client.writeContract({
   functionName: 'createMandate',
   args: [account.address, account.address, policy, [wMUx, wNVDAx, wSPYx]],
 });
-await client.waitForTransactionReceipt({ hash });
+await waitForReceipt(client, hash);
 
 // A confirmed receipt is not enough on X Layer: the public RPC load-balances,
 // and the *gas estimation* for the next transaction can land on a node that has
@@ -122,7 +130,7 @@ hash = await client.writeContract({
   functionName: 'setTriggers',
   args: [mandateId, triggers],
 });
-await client.waitForTransactionReceipt({ hash });
+await waitForReceipt(client, hash);
 console.log(`  trigger installed — exit when capacityUsdg < 1,000 (basket-wide)\n`);
 
 // 3 — ask the guard what is firing right now

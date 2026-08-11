@@ -31,7 +31,9 @@ import {
 } from 'viem';
 import { SAFE_ABI, SAFE_PROXY_FACTORY_ABI } from './abi';
 import { SAFE } from './chain';
-import { waitUntil, type Wallet } from './wallet';
+import { waitUntil, type Wallet,
+  waitForReceipt,
+} from './wallet';
 
 /** Safe's `Operation` enum. Only CALL is used — DELEGATECALL from a treasury
  *  contract is an arbitrary-code hole and nothing here needs it. */
@@ -91,7 +93,7 @@ export async function deploySafe(
     args: [SAFE.singletonL2, initializer, saltNonce],
   });
   const hash = await wallet.writeContract(request);
-  await wallet.waitForTransactionReceipt({ hash });
+  await waitForReceipt(wallet, hash);
   const proxy = getAddress(result);
 
   // A confirmed receipt is not enough: the public RPC load-balances, so the
@@ -127,7 +129,7 @@ export async function approveHash(wallet: Wallet, safe: Address, hash: Hex) {
     functionName: 'approveHash',
     args: [hash],
   });
-  await wallet.waitForTransactionReceipt({ hash: tx });
+  await waitForReceipt(wallet, tx);
   return tx;
 }
 
@@ -178,7 +180,7 @@ export async function execTransaction(
       prevalidatedSignatures(approvers),
     ],
   });
-  const receipt = await wallet.waitForTransactionReceipt({ hash });
+  const receipt = await waitForReceipt(wallet, hash);
   // execTransaction returns false on inner failure rather than reverting, and a
   // successful receipt for a Safe transaction that did nothing is the most
   // misleading result this file can produce.

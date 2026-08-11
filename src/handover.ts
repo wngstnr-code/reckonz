@@ -31,7 +31,15 @@
 import { formatEther, getAddress, parseEther, type Address } from 'viem';
 import { FAIR_VALUE_ORACLE_ABI, FEE_COLLECTOR_ABI, RECEIPT_REGISTRY_ABI } from './abi';
 import { deploySafe, safeState } from './safe';
-import { accountFrom, chainFor, deploymentFor, target, waitUntil, walletFor } from './wallet';
+import {
+  accountFrom,
+  chainFor,
+  deploymentFor,
+  target,
+  waitForReceipt,
+  waitUntil,
+  walletFor,
+} from './wallet';
 
 const t = target();
 const chain = chainFor(t);
@@ -88,7 +96,7 @@ let hash = await wallet.writeContract({
   address: ORACLE, abi: FAIR_VALUE_ORACLE_ABI, functionName: 'setPublisher',
   args: [publisher.address, true],
 });
-await wallet.waitForTransactionReceipt({ hash });
+await waitForReceipt(wallet, hash);
 await waitUntil(
   () => wallet.readContract({
     address: ORACLE, abi: FAIR_VALUE_ORACLE_ABI, functionName: 'isPublisher',
@@ -109,7 +117,7 @@ const gas = parseEther(process.env.PUBLISHER_GAS ?? '0.002');
 const balance = await wallet.getBalance({ address: publisher.address });
 if (balance < gas) {
   const fund = await wallet.sendTransaction({ to: publisher.address, value: gas - balance });
-  await wallet.waitForTransactionReceipt({ hash: fund });
+  await waitForReceipt(wallet, fund);
   console.log(`     funded with ${formatEther(gas - balance)} OKB`);
 }
 
@@ -127,7 +135,7 @@ const probe = await pubWallet.writeContract({
     gapRisk: 100, state: 5, anchorAt: BigInt(Math.floor(Date.now() / 1000)), hasValue: false,
   }],
 });
-await pubWallet.waitForTransactionReceipt({ hash: probe });
+await waitForReceipt(pubWallet, probe);
 await waitUntil(
   () => wallet.readContract({
     address: ORACLE, abi: FAIR_VALUE_ORACLE_ABI, functionName: 'peek', args: [PROBE],
@@ -143,7 +151,7 @@ hash = await wallet.writeContract({
   address: ORACLE, abi: FAIR_VALUE_ORACLE_ABI, functionName: 'setPublisher',
   args: [admin.address, false],
 });
-await wallet.waitForTransactionReceipt({ hash });
+await waitForReceipt(wallet, hash);
 await waitUntil(
   () => wallet.readContract({
     address: ORACLE, abi: FAIR_VALUE_ORACLE_ABI, functionName: 'isPublisher',
@@ -180,7 +188,7 @@ for (const [name, address, abi] of [
   const h = await wallet.writeContract({
     address, abi: abi as never, functionName: 'setAdmin', args: [safe] as never,
   });
-  await wallet.waitForTransactionReceipt({ hash: h });
+  await waitForReceipt(wallet, h);
   await waitUntil(
     () => wallet.readContract({ address, abi: abi as never, functionName: 'admin' }),
     (a) => String(a).toLowerCase() === safe.toLowerCase(),
