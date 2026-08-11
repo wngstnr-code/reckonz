@@ -285,8 +285,11 @@ That single run exercises every claim the product makes. It is the demo.
   stays even after the multisig lands.
 - **`.env` holds a live Gemini key** pasted in chat. Owner assessed the exposure as acceptable
   2026-08-11; the key is in Vercel's environment too. Recorded rather than re-argued.
-- **No logo.** Four prompt directions were drafted on 2026-08-11 (the cut / the narrowing / the
-  guard / the reckoning); none chosen, nothing drawn. The header still uses a bare `◇`.
+- ~~**No logo**~~ — drawn 2026-08-11. `public/logo-reckonz.svg` (header, `currentColor`, no
+  background) and `public/logo-reckonz.png` (1024² source). **Not yet wired in**: the header still
+  shows `◇`, and dropping it into `app/` is FE-owned. Ticket with the spec is in `07-team.md § FE 4`.
+- **Bring-your-own-key deferred**, not rejected — see D43. Wallet connect is worth more of the FE's
+  remaining time, and BYOK would not have closed the Claude gap regardless.
 
 ### Deliberately not started, and why
 
