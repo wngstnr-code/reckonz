@@ -64,9 +64,17 @@ deployer         0xD7360Dc3ED4fE01bEbB8477594A76CBFb5c79BA5   admin of nothing n
 `PolicyGuard` had** — the same deployer walking the same nonce sequence on two chains. Nothing is
 wrong, but an address alone no longer identifies a contract. Read the chain id with it.
 
-**Mandate #1 is dead by decision.** The old guard's write permission was revoked, because two
-contracts able to append to one append-only history is two places trust can leak from. Its
-receipts stand; new activity needs a new mandate on the new guard.
+**Mandate #1 on the *old* guard is dead by decision.** The old guard's write permission was
+revoked, because two contracts able to append to one append-only history is two places trust can
+leak from. Its receipts stand; new activity runs on the new guard.
+
+**The live mandate is #3 on the new guard** — 1 USDG per trade, 3 fills per 24h, allowing wMUx,
+wNVDAx and wSPYx, with the capacity exit trigger installed and already firing for wMUx. Mandates
+#1, #2, #4 and #5 on the new guard are closed: they were duplicates created while seeding, two by
+runs that sent `createMandate` and then died waiting for the receipt, two by a retry loop whose
+break condition was wrong. Closing them is the only cleanup available — `nextMandateId` never goes
+backwards, so the gap in the numbering is permanent and is recorded here rather than explained
+away.
 
 ### Deployed and verified — X Layer testnet (chain 1952), redeployed 2026-08-11 for D41
 
