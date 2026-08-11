@@ -159,10 +159,11 @@ snapshot, fair value / gap risk, thesis→basket compilation.
 
 1. Data layer + Universe Mapper ✅ — all 30 xStocks, read from the chain (D33)
 2. Execution Planner ✅ — the moat, demoable before any contract exists
-3. FairValueOracle engine + contract ✅ — live on mainnet, 8 assets, 2 withheld
+3. FairValueOracle engine + contract ✅ — live on mainnet, 28 of 30 priced, 2 withheld (D38),
+   publish-time jump bound and a 2-of-3 Safe on admin (D41, D42)
 4. `PolicyGuard` + `ReceiptRegistry` ✅ — deployed and verified on both chains
 5. Thesis Compiler ✅ — live on Gemini, refuses to substitute unmapped names
-6. Mainnet with small caps ✅ — two real fills, 25→1 USDG blast radius, receipts #0 and #1
+6. Mainnet with small caps ✅ — three real fills, 25→1 USDG blast radius, receipts #0–#2
 7. `FeeCollector` ✅ — 15 bps, taking a real fee ← **done ahead of order**
 8. `ThesisRegistry` ✅ — deployed, loop closed on mainnet (receipt #2 → thesis #0)
 9. Simple mode ← **next**
@@ -177,11 +178,15 @@ it had been "verified" by checking a codesize and a selector.
 - **Capacity ceiling ~$48k** at 0.5% impact, across all 30 xStocks. Telling users this is the product; it also
   means revenue cannot come from AUM.
 - **Oracle credibility** — answered by confidence bands and the "guard, not truth" framing.
-- **The oracle prices 8 of 30 assets.** The other 22 trade and are refused at the guard
-  with `NO_REFERENCE`, which is true but is still a limit on what can execute. Widening it
-  means verifying, per wrapper, which listed security it actually tracks.
+- **The oracle prices 28 of 30 assets** (D38), and the two refusals are measured rather than
+  pending: wSKHYx does not reconcile with SK Hynix at −86.4% even after an FX leg (D39), and
+  SpaceX is private. The remaining limit is not coverage — it is that a wrapper can stop tracking
+  its listing, which is why `pnpm reconcile` re-runs the test and fails if one does.
 - **Wrapper risk** — xStocks on X Layer are a wrap of an already-wrapped Backed token.
   Read the wrapper and *surface the risk to users*; turn the liability into a trust feature.
+- **The publish bound only binds a feed that is actually being published.** Past
+  `ANCHOR_MAX_AGE` (1 day) the next value re-anchors freely, and publishing is currently manual.
+  Until it runs on a schedule, the bound is weaker in practice than in the contract. See D44.
 - **Reference-mapping is unverified for some assets.** wSKHYx proves it. Make it a visible
   feature: a per-asset page showing which reference is used and how well it has tracked.
 - **Weekends have no signal coverage** — futures are closed too. Only historical gap

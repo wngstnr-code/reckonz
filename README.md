@@ -17,21 +17,33 @@ bytecode.
 
 | Contract | Address |
 |---|---|
-| `FairValueOracle` | [`0x3659E05Fbbaafb7bA868171aB98327b62831Cd75`](https://repo.sourcify.dev/196/0x3659E05Fbbaafb7bA868171aB98327b62831Cd75) |
+| `FairValueOracle` | [`0xDB7949c99e6d234C0eD374a71966d9e6CbfcfD09`](https://repo.sourcify.dev/196/0xDB7949c99e6d234C0eD374a71966d9e6CbfcfD09) |
 | `ReceiptRegistry` | [`0x9D04575894F570C3638Bc1f6ECaD6EF36D479Fa6`](https://repo.sourcify.dev/196/0x9D04575894F570C3638Bc1f6ECaD6EF36D479Fa6) |
-| `PolicyGuard` | [`0x481e0A60c5E105708b86e804811F8fc98a43bEFd`](https://repo.sourcify.dev/196/0x481e0A60c5E105708b86e804811F8fc98a43bEFd) |
-| `Executor` | [`0xdc2f34A220D4cd7c098D7927454F30AEf3157681`](https://repo.sourcify.dev/196/0xdc2f34A220D4cd7c098D7927454F30AEf3157681) |
+| `PolicyGuard` | [`0x3F58df45FcB5D1074bA5D046D4928CF5efde5f4d`](https://repo.sourcify.dev/196/0x3F58df45FcB5D1074bA5D046D4928CF5efde5f4d) |
+| `Executor` | [`0xf3a06c9f0F1AABf01080475E420DD7A1092E1e1B`](https://repo.sourcify.dev/196/0xf3a06c9f0F1AABf01080475E420DD7A1092E1e1B) |
 | `FeeCollector` | [`0x3A1D6b9129E69fEF189E538996B18cebd56C3Dd0`](https://repo.sourcify.dev/196/0x3A1D6b9129E69fEF189E538996B18cebd56C3Dd0) |
+| `ThesisRegistry` | [`0xD4b503d002Fb77019d7BB1a26DCe1d60F32dfa1E`](https://repo.sourcify.dev/196/0xD4b503d002Fb77019d7BB1a26DCe1d60F32dfa1E) |
+
+The oracle, guard and executor were replaced on 2026-08-11 to add a publish-time bound; the
+registries were kept, so the fills below are in the same append-only history they were written to.
+Admin of the oracle, the registry and the fee collector is a **2-of-3 Safe**
+([`0x98d19BE6e810bEEfC8A0a408D4AEf164B7F1391e`](https://www.oklink.com/xlayer/address/0x98d19BE6e810bEEfC8A0a408D4AEf164B7F1391e));
+publishing is a separate key that can do nothing else.
 
 Settlement is real USDG, `0x4ae46a509F6b1D9056937BA4500cb143933D2dc8`. A testnet stack
 (chain 1952) is deployed and verified too; addresses in `src/deployments.ts`.
 
-**Two real fills, not a simulation:**
+**Three real fills, not a simulation:**
 
 ```
 0x7240759d327d468f9a7086ed439abf42dead17887105d986ca0870ebf46d6545   0.5 USDG -> wSPYx
 0x5710894e80baddfb35ab12321642b16c8cc8ab0b8f9a90a837f7c1e3ee9d1a23   0.5 USDG -> wSPYx, 15 bps fee
+                                                                     third fill carries a thesis hash
 ```
+
+All three were executed through the **previous** guard and executor. The replacements above are
+deployed, verified and wired, and have not yet carried a fill — stated rather than glossed,
+because a contract that has not done the work is not a contract that works (D35).
 
 In each, the swap, the policy check and the receipt happen in **one transaction**. The
 executor holds nothing when it returns, and asserts that rather than assuming it.
@@ -51,8 +63,11 @@ never touched.
 
 **The oracle is a guard, not a price.** It carries each equity's last official print
 forward using instruments still trading, publishes a band and a gap-risk score, and
-**refuses to publish at all** when it cannot defend a number. Two of the eight assets it
-covers come back withheld, on purpose.
+**refuses to publish at all** when it cannot defend a number. It prices **28 of the 30**
+xStocks on X Layer, and which 28 is not a judgement call: a test reconciles each wrapper's
+on-chain price against the listing it claims to track, and admits the mapping only if they
+agree. The two it refuses are refused with a number — wSKHYx trades 86% below an SK Hynix
+share, and SpaceX is private.
 
 **Funds are pulled per execution** against a signed, amount-bounded, expiring Permit2
 authorisation — never a standing allowance.
