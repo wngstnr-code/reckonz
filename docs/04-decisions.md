@@ -688,3 +688,30 @@ stays a decision.
 Mainnet deploy dry-run passes: settlement resolves to the real USDG, both dependencies have code,
 8,328,625 gas at 0.04 gwei — about 0.00033 OKB against a 0.00998 balance.
 
+---
+
+## D37 — The fee is an event, not a receipt field
+
+`FeeCollector` had to take 10–20 bps without touching `ReceiptRegistry`, because receipt #0 is the
+first mainnet fill and lives in the registry already deployed. Changing the `Fill` struct would
+mean a new registry and a track record split across two contracts — the opposite of the point.
+
+So the fee is a `FeeTaken` event, indexed on mandate, and the registry is untouched.
+
+**The subtler decision is what `amountInUsdg` records.** The fee never reaches a pool. Recording
+the full pulled amount would make `executionPriceE8` describe a price no pool quoted, and — worse
+— feed the guard a `slippageBps` inflated by our own fee, so `maxSlippageBps` would start
+rejecting fills for a cost that is ours rather than the market's. A risk limit that trips on the
+operator's own margin is not measuring risk.
+
+So the receipt records **what was traded**: 0.49925 USDG of a 0.5 USDG notional, priced at 777.49
+with 44 bps of shortfall. Confirmed on chain — 44, not the 59 it would have shown otherwise. The
+0.00075 USDG fee is in the event and in the collector's balance, where it can be read and summed
+without pretending to be part of the trade.
+
+`MAX_FEE_BPS` is a `constant`. An admin who can raise the fee without limit can take the whole
+trade, and a user should be able to bound their worst case from the source rather than from our
+intentions. 50 is already more than twice the top of the published range. The fee rounds down so a
+dust trade pays nothing rather than a rounded-up minimum, and `withdraw()` is open to anyone
+because the destination is fixed.
+

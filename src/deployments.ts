@@ -36,6 +36,12 @@ export const TESTNET: Deployment = {
  * up a TestUSDG when the configured address has no code, and on mainnet it
  * correctly left it alone.
  *
+ * `Executor` was redeployed 2026-08-11 when `FeeCollector` was added — the
+ * collector is immutable on it, so the fee path cannot be switched on after
+ * users have read the contract they are trusting. Guard, oracle and registry are
+ * unchanged, so receipt #0 (the first mainnet fill, made through the previous
+ * executor at `0xA7acf842…`) is still in the same append-only history.
+ *
  * Verified on-chain after deployment: the guard points at this oracle, these
  * receipts and this cash; `ReceiptRegistry.isWriter` is true for the guard and
  * false for the deployer, so only the guard can append; and the executor derives
@@ -50,7 +56,8 @@ export const MAINNET: Deployment | null = {
     FairValueOracle: '0x3659E05Fbbaafb7bA868171aB98327b62831Cd75',
     ReceiptRegistry: '0x9D04575894F570C3638Bc1f6ECaD6EF36D479Fa6',
     PolicyGuard: '0x481e0A60c5E105708b86e804811F8fc98a43bEFd',
-    Executor: '0xA7acf8428483c0b84081D36893A49fcEB38AA35d',
+    Executor: '0xdc2f34A220D4cd7c098D7927454F30AEf3157681',
+    FeeCollector: '0x3A1D6b9129E69fEF189E538996B18cebd56C3Dd0',
     USDG: '0x4ae46a509F6b1D9056937BA4500cb143933D2dc8',
     PoolSwapper: '0x1f3b67d8209060eC68d0eDCD6E60Ba53A8e9ac28',
   },

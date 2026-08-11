@@ -45,7 +45,8 @@ separate item and is still outstanding.
 FairValueOracle  0x3659E05Fbbaafb7bA868171aB98327b62831Cd75
 ReceiptRegistry  0x9D04575894F570C3638Bc1f6ECaD6EF36D479Fa6
 PolicyGuard      0x481e0A60c5E105708b86e804811F8fc98a43bEFd
-Executor         0xA7acf8428483c0b84081D36893A49fcEB38AA35d
+Executor         0xdc2f34A220D4cd7c098D7927454F30AEf3157681
+FeeCollector     0x3A1D6b9129E69fEF189E538996B18cebd56C3Dd0   15 bps, ceiling 50
 PoolSwapper      0x1f3b67d8209060eC68d0eDCD6E60Ba53A8e9ac28
 cash (real USDG) 0x4ae46a509F6b1D9056937BA4500cb143933D2dc8
 admin/deployer   0xD7360Dc3ED4fE01bEbB8477594A76CBFb5c79BA5
@@ -226,7 +227,6 @@ not exist yet, so starting them now would produce a component with nothing to op
 
 | Component | Blocked on | Verdict for this submission |
 |---|---|---|
-| `FeeCollector` | a real executed notional to take bps from | **Worth doing if time allows.** Smallest of the five, and it turns "10–20 bps on notional" from a line in a doc into a number on a block explorer. `Executor` already has everything it needs. ~half a day. |
 | `ThesisRegistry` | receipts that make a track record unfakeable | **Second.** Append-only, hash + pointer. Closes the thesis → execution → record loop the pitch rests on. |
 | Consumer / simple mode | — | Partly covered by the web app already. Low priority. |
 | Indexer | receipts to index (there are zero) | **Skip.** Real work, pays off only with volume. Roadmap item. |
@@ -275,6 +275,32 @@ If time remains after all four: `FeeCollector`, then `ThesisRegistry`. Not befor
 ---
 
 ## Log
+
+**2026-08-11 (latest, eleventh)** — `FeeCollector` shipped and **taking a real fee on mainnet**.
+
+```
+fill 2    tx 0x5710894e80baddfb35ab12321642b16c8cc8ab0b8f9a90a837f7c1e3ee9d1a23
+in        0.5 USDG   fee 0.00075 USDG (15 bps)   traded 0.49925 USDG
+out       0.000642131415566899 wSPYx
+receipt   #1 — amountInUsdg 499250, price 777.49, shortfall 44bp
+collector holds 750 units of USDG; executor holds 0
+```
+
+The revenue line stops being a claim. Two constraints shaped it: `ReceiptRegistry` could not
+change (receipt #0 is the first mainnet fill and lives in the deployed one), so the fee is an
+event and not a field; and the fee never reaches a pool, so the receipt records **what was
+traded**, not what was pulled — folding it into `amountInUsdg` would make `executionPriceE8` a
+price no pool quoted and push the guard into rejecting fills for a cost that is ours rather than
+the market's. `shortfallBps` came back 44, not 59.
+
+`MAX_FEE_BPS` is a constant rather than a setting, so a user can bound their worst case by reading
+the source instead of trusting the admin. The fee rounds down: dust pays nothing.
+
+`Executor` was redeployed for the immutable collector; guard, oracle and registry are unchanged,
+so both fills sit in the same append-only history. Both new contracts verified `exact_match`.
+
+The first attempt was refused by `dryRun` — the oracle had gone stale at 2117s — which cost no
+gas and is the guard doing precisely its job.
 
 **2026-08-11 (latest, tenth)** — testnet redeployed so it matches the code again (the old stack
 still answers, which was the hazard), and **all nine contracts verified on Sourcify**, every one
@@ -333,7 +359,8 @@ Balances after: **3.263878 USDG**, 0.000643 wSPYx, 0.00981 OKB.
 FairValueOracle  0x3659E05Fbbaafb7bA868171aB98327b62831Cd75
 ReceiptRegistry  0x9D04575894F570C3638Bc1f6ECaD6EF36D479Fa6
 PolicyGuard      0x481e0A60c5E105708b86e804811F8fc98a43bEFd
-Executor         0xA7acf8428483c0b84081D36893A49fcEB38AA35d
+Executor         0xdc2f34A220D4cd7c098D7927454F30AEf3157681
+FeeCollector     0x3A1D6b9129E69fEF189E538996B18cebd56C3Dd0   15 bps, ceiling 50
 PoolSwapper      0x1f3b67d8209060eC68d0eDCD6E60Ba53A8e9ac28
 cash             0x4ae46a509F6b1D9056937BA4500cb143933D2dc8  (real USDG, not a mock)
 ```
