@@ -23,7 +23,7 @@ other already made.
 
 ## Two people, one repo
 
-Wangsit is **BE + on-chain**, his teammate is **FE**. Ownership is by path, and it is not
+Wangsit is **BE + on-chain**, Nabil is **FE**. Ownership is by path, and it is not
 advisory — two branches editing one file means one of them silently loses.
 
 | Path | Owner |
@@ -37,10 +37,19 @@ across it, it is a ticket for the owner, not an edit. Branch as `be/…` or `fe/
 `main` directly. The full rules — the frozen `RunEvent` contract, what counts as a breaking
 change, how FE unblocks itself with `src/thesis-fixture.ts` — are in `docs/08-parallel.md`.
 
+## Language
+
+**Talk to Wangsit in Indonesian. Write everything that lands in the repo in English.**
+
+Chat, explanations, questions — Bahasa Indonesia. Code, comments, commit messages, file and
+directory names, docs, UI copy, error strings — English. The split is deliberate: the repo is
+read by hackathon judges and a teammate, and a codebase in two languages reads as unfinished.
+
 ## Commands
 
 ```bash
 pnpm verify                  # Uniswap math vs live on-chain state — run after touching v3math.ts
+pnpm verify:abi              # src/abi.ts vs the compiled contracts — run after touching either
 pnpm plan [usdg] [maxBps]    # thesis basket: naive vs planned execution
 pnpm capacity                # absorbable size per xStock, by impact limit
 pnpm oracle [usdg]           # fair value, gap risk, PolicyGuard allow/reject
@@ -92,6 +101,10 @@ pnpm typecheck               # covers src/ and app/
 - **Derive magic constants, do not recall them.** See D5.
 - `src/guard.ts` mirrors `FairValueOracle.checkExecution` line for line. If they diverge,
   the off-chain mirror is wrong.
+- **One source per kind of fact:** addresses in `src/deployments.ts`, ABIs in `src/abi.ts`.
+  Never inline a second copy in a script — the copy is what drifts. `src/abi.ts`,
+  `src/deployments.ts` and `src/chain.ts` must stay importable from the browser: no `node:`
+  import, no `process.env`, no RPC client. The FE's wallet UI imports all three.
 - Comments explain *why*, especially where a naive implementation would look correct.
 
 ## Workflow

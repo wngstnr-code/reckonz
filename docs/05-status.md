@@ -76,6 +76,7 @@ can append receipts. `Executor.permit2/router/guard/oracle/cash` all correct.
 | `Executor` — Permit2 → route → settle → submit | `contracts/Executor.sol` | ⚠️ deployed; swap path unit-tested only |
 | Test suite | `test/PolicyGuard.t.sol`, `test/Executor.t.sol` | ✅ 49/49 |
 | Chain selection + Permit2/path helpers | `src/wallet.ts` | ✅ `TARGET=mainnet\|testnet` |
+| ABIs, one source, browser-safe | `src/abi.ts` | ✅ `pnpm verify:abi` checks every selector vs bytecode |
 | **One real fill, end to end** | `src/execute.ts` | ✅ written, dry-run path verified; **never run against mainnet** |
 | Streamed pipeline (one run, six stages) | `src/pipeline.ts` | ✅ shared by CLI and web |
 | Web app — Next.js 16 App Router + Tailwind 4 | `app/` | ✅ `pnpm dev`, run verified end to end |
@@ -85,6 +86,7 @@ can append receipts. `Executor.permit2/router/guard/oracle/cash` all correct.
 
 ```bash
 pnpm verify                  # Uniswap math vs live on-chain state
+pnpm verify:abi              # src/abi.ts vs the compiled contracts, selector by selector
 pnpm plan [usdg] [maxBps]    # thesis basket: naive vs planned execution
 pnpm capacity                # absorbable size per xStock, by impact limit
 pnpm oracle [usdg]           # fair value, gap risk, off-chain guard decision
@@ -255,6 +257,12 @@ If time remains after all four: `FeeCollector`, then `ThesisRegistry`. Not befor
 ---
 
 ## Log
+
+**2026-08-11 (latest, second)** — `src/abi.ts`: the contract surface in one place, generated
+from the Foundry artefacts and verified selector by selector (`pnpm verify:abi`). `execute.ts`,
+`publish.ts` and `mandate-demo.ts` each carried their own trimmed copy; the copies had already
+diverged, and a missing `error` entry turns a named revert into unreadable hex. Unblocks the FE's
+wallet work — `abi.ts`, `deployments.ts` and `chain.ts` are the browser-safe seam.
 
 **2026-08-11 (latest)** — the project became two people. `docs/` un-gitignored and committed;
 `07-team.md` (path ownership + each side's backlog in order) and `08-parallel.md` (branch

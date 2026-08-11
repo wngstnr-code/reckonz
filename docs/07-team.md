@@ -80,17 +80,26 @@ cannot be faked.
 **Hands the FE:** a non-null `MAINNET` in `src/deployments.ts`. The header chip is already wired
 to it and lights up on its own.
 
-### 2. Wallet seam for the FE 🔴 blocking FE task 3
+### 2. Wallet seam for the FE ✅ shipped 2026-08-11
 
-FE cannot build "connect wallet and create a mandate" until BE exports the pieces. Deliver:
+FE is unblocked. Three modules, all browser-safe — no `node:` import, no `process.env`, no RPC
+client. They must stay that way.
 
-- `src/abi.ts` — `POLICY_GUARD_ABI`, `EXECUTOR_ABI`, `ORACLE_ABI`, `ERC20_ABI`, all `as const`.
-- `src/deployments.ts` — already exports `TESTNET` / `MAINNET`; keep the shape.
-- `src/chain.ts` — already exports the `xLayer` / `xLayerTestnet` viem chains and is
-  client-safe. **Keep it that way**: no `node:` import may enter this file.
+| Module | Exports |
+|---|---|
+| `src/abi.ts` | `POLICY_GUARD_ABI`, `FAIR_VALUE_ORACLE_ABI`, `EXECUTOR_ABI`, `RECEIPT_REGISTRY_ABI`, `ERC20_ABI`, `PERMIT2_ABI`, plus `TRIGGER_METRICS` / `TRIGGER_COMPARATORS` / `MARKET_STATES` and their encode/decode helpers |
+| `src/deployments.ts` | `TESTNET`, `MAINNET` (still `null` until the mainnet deploy) |
+| `src/chain.ts` | `xLayer`, `xLayerTestnet` — viem chain objects, ready for wagmi |
 
-Nothing else. FE signs in the browser with its own wallet library; BE does not build a signing
-endpoint — a server that can sign is a server that has custody, and D6 forbids it.
+`pnpm verify:abi` checks every exported selector against the compiled bytecode, so an ABI that
+drifts from a contract fails loudly instead of at the moment someone spends gas.
+
+The errors are in the ABIs deliberately: viem decodes a revert against the ABI it is handed, so
+`TriggerFired(0, wMUx, 813, 1000)` only renders as that sentence because the error is listed.
+Surface those — a guard's refusal, with its numbers, is the product.
+
+FE signs in the browser with its own wallet library. BE does not build a signing endpoint — a
+server that can sign is a server that has custody, and D6 forbids it.
 
 ### 3. Deploy the API runtime
 
@@ -135,7 +144,7 @@ The page works end to end today; it is not yet something to record a video of. P
   unpublishable, render the withholding — not `0`, not `—` alone.
 - Mobile is not required. Judges will use a laptop.
 
-### 3. Wallet connect + mandate creation ⚠️ needs BE item 2
+### 3. Wallet connect + mandate creation — unblocked
 
 Today the page reads and decides; it cannot sign. Everything on-chain still happens through
 `pnpm mandate` / `pnpm oracle:publish`. Target: connect, pick a chain, create a mandate, see the
@@ -146,6 +155,33 @@ receipt.
   offer testnet only.
 - Add the wallet library to `package.json` yourself; see `08-parallel.md` for how to touch a
   shared file without a conflict.
+
+The call to build against first:
+
+```ts
+import { POLICY_GUARD_ABI } from '@/src/abi';
+import { TESTNET } from '@/src/deployments';
+
+writeContract({
+  address: TESTNET.contracts.PolicyGuard as `0x${string}`,
+  abi: POLICY_GUARD_ABI,
+  functionName: 'createMandate',
+  args: [agent, executor, policy, assets],
+});
+```
+
+`policy` is the `Policy` struct — `maxWeightBps`, `minCashBufferBps`, `maxSlippageBps`,
+`maxDeviationBps`, `maxGapRisk`, `maxNotionalPerTrade`, `maxFillsPerEpoch`, `epochDuration`,
+`minRebalanceInterval`, `enforceWeights`. Every `uint128` and `uint64` field is a `bigint`.
+`src/mandate-demo.ts` builds a working one end to end; read it before inventing values.
+
+Then `setTriggers(mandateId, triggers)` — a `Trigger` is `{ metric, comparator, threshold,
+assets }` where `metric` and `comparator` are `uint8` **enum indexes**, not strings. Encode them
+with `metricIndex()` / `comparatorIndex()` from `src/abi.ts`; the order of `TRIGGER_METRICS`
+mirrors the Solidity enum and cannot be reordered.
+
+`dryRun(mandateId, fills)` is a read that returns the guard's verdict without spending gas.
+Call it before every write and show the answer — refusing early *is* the feature.
 
 ### 4. The logo
 
