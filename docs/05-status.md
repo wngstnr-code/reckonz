@@ -286,17 +286,19 @@ That single run exercises every claim the product makes. It is the demo.
   pipeline reads the deployed observation and respects a withhold.
 - ~~The previous mainnet oracle is writable by one key~~ — ✅ **closed (D45).** Publisher revoked,
   admin handed to the Safe.
-- **Continuous publishing is built and not yet deployed** (D45, D46). `pnpm publish:loop` is a
-  long-running worker with `railway.json` ready; GitHub Actions is the manual button only, because
-  its `schedule` is best-effort and a five-minute lag against a 15-minute `maxAge` is a stale
-  oracle. Two things left, both outside the repo:
-  - **Deploy the worker** (Railway or any host), env `TARGET=mainnet`, `PUBLISHER_KEY`,
-    `PUBLISH_INTERVAL_SEC=600`.
-  - **Gas.** ~0.0026 OKB/day at ten minutes; the publisher holds 0.00289, about **27 hours**. Ten
-    days needs ~**0.026 OKB** at `0x40101A4932dEb95f0A5951BB7fB0fFa7c17e3Ab8`.
+- **Continuous publishing is built and deliberately not running** (D45–D47). `pnpm publish:loop`
+  plus `railway.json` are ready; GitHub Actions is the manual button only, because its `schedule`
+  is best-effort and a five-minute lag against a 15-minute `maxAge` is a stale oracle.
 
-  Until it runs, the oracle is only fresh for 15 minutes after each manual publish, and the publish
-  bound is in genesis mode in between.
+  **Deploy it near submission, not before.** The web app needs no publishing at all — fair value is
+  computed off-chain — and only a real fill needs a fresh on-chain oracle. Ten-minute publishing is
+  ~$0.24/day against a publisher holding $0.27; running it for ten days so nothing observes it is
+  the wrong trade. Before a demo, the video or a fill: run `pnpm oracle:publish`, or deploy the
+  worker with `TARGET=mainnet`, `PUBLISHER_KEY`, `PUBLISH_INTERVAL_SEC=600`.
+
+  While it is off, the on-chain observation is stale between manual publishes. The page says so in
+  a note and does **not** turn it into a rejection — that would be refusing assets for something no
+  user caused. See D47.
 - **The bound slows a compromise; it does not prevent one.** Twelve confirmed steps is an 8x, and
   `test_APatientAttackerStillGetsThere` says so in the suite rather than in a comment. This entry
   stays even after the multisig lands.
