@@ -1223,3 +1223,51 @@ transactions, so the detection it gives up was never doing anything. Every write
 - **The fill printed `received 0 wTSLAx`** while the wallet had actually received 0.0015087. Same
   read-after-write staleness, one line later. The trade was fine and the *evidence* was wrong, which
   is the worse of the two. It polls now.
+
+---
+
+## D46 — A schedule that can be late is not a schedule, for a 15-minute oracle
+
+The publisher was going to run on a GitHub Actions `schedule`. Asked directly whether Actions
+lags, which was the right question.
+
+**It does, and it is documented.** GitHub describes `schedule` as best-effort: delayed during high
+load, worst at the top of every hour, and occasionally skipped entirely. Against `maxAge` of
+fifteen minutes, a five-minute delay is already a stale oracle — and a stale oracle does not
+degrade, it fails **every** on-chain check with `STALE`. Ten-minute cron plus routine lag means the
+oracle is unusable for part of most hours, which is worse than obviously broken because it looks
+intermittent.
+
+So the cadence belongs to a process that owns its own timer. `pnpm publish:loop`
+(`src/publish-loop.ts`) is a long-running worker: publish, wait, repeat, measuring the interval
+from when each cycle *started* so a slow publish does not push the whole schedule later and later.
+`railway.json` deploys it with `restartPolicyType: ON_FAILURE`.
+
+**Each cycle is a child process, not an in-process call.** `publish.ts` is a top-level script that
+exits when the gas runway is dead; reusing it as a module would mean either rewriting it or letting
+it `process.exit` the supervisor. Spawning keeps one definition of what publishing *is*, and a
+cycle that dies cannot take the loop with it. Six consecutive failures and the worker exits
+non-zero — out of gas, a bad key and an hour-long RPC outage look identical from inside, and
+handing the decision to the host's restart policy makes the failure visible instead of looping
+quietly on a broken configuration for days.
+
+**The Actions workflow stays, with its cron removed.** It is the manual button now, and a way to
+check that the key and the runner still work when the worker is the thing under suspicion. The cron
+is *absent* rather than slowed on purpose: running both on a schedule would double the gas burn for
+freshness the worker already provides, and gas is the binding constraint.
+
+### Gas is the binding constraint, and it is not covered yet
+
+At ~880k gas a cycle and 0.02 gwei, ten-minute publishing costs **~0.0026 OKB/day**. The publisher
+holds **0.00289** — 160 cycles, about **27 hours**. Ten days to the deadline needs roughly
+**0.026 OKB** at `0x40101A4932dEb95f0A5951BB7fB0fFa7c17e3Ab8`. A plain transfer; no Safe
+signatures. `pnpm oracle:publish` prints the runway every cycle and exits non-zero below 20, so
+this fails loudly rather than going quietly stale.
+
+### The secret was never on GitHub
+
+Checked before running anything: no repository secret, no variable, and no environment secret on
+`Production`, `Preview` or `copilot`. It was almost certainly added to **Vercel**, which is a
+different store with a similarly-named field. Worth writing down because the workflow would have
+failed on its first line and the obvious reading — "the workflow is broken" — would have been
+wrong.

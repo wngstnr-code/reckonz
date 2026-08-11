@@ -25,7 +25,8 @@
     "execute": "tsx src/execute.ts",
     "swap": "tsx src/swap.ts",
     "safe:prove": "tsx src/safe-prove.ts",
-    "handover": "tsx src/handover.ts"
+    "handover": "tsx src/handover.ts",
+    "publish:loop": "tsx src/publish-loop.ts"
   },
   "keywords": [],
   "author": "",

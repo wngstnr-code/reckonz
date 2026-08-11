@@ -10,19 +10,26 @@
 #      freely — so a bound that looks strict in the contract protects almost
 #      nothing while publishing is manual. See D44, finding 2.
 #
-# GitHub Actions rather than a Vercel cron on purpose: no publicly reachable
-# endpoint holds a key that spends gas, and there is no shared secret to get
-# wrong. The key is a repository secret and never leaves the runner.
-name: publish oracle
+# **This is the manual button, not the schedule.** `schedule` on GitHub Actions
+# is documented as best-effort: delayed under load, worst at the top of the
+# hour, sometimes skipped. Against a 15-minute `maxAge` a five-minute delay is
+# already a stale oracle, so the cadence belongs to a process that owns its own
+# timer — `pnpm publish:loop`, deployed as a worker. See D46.
+#
+# The cron is deliberately absent rather than set to something slow: running
+# both this and the worker on a schedule would double the gas burn for no
+# freshness the worker does not already provide, and gas is the binding
+# constraint here.
+#
+# Use it to publish on demand, or to check the key and the runner still work
+# when the worker is the thing under suspicion.
+name: publish oracle (manual)
 
 on:
-  schedule:
-    # Every ten minutes, comfortably inside the 15-minute `maxAge`.
-    - cron: '*/10 * * * *'
   workflow_dispatch:
 
-# A second run overlapping the first would publish twice from one key and
-# collide on the nonce. Let the in-flight one finish.
+# A second run overlapping the first — or overlapping the worker — would publish
+# twice from one key and collide on the nonce. Let the in-flight one finish.
 concurrency:
   group: publish-oracle
   cancel-in-progress: false
