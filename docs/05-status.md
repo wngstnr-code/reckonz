@@ -41,17 +41,32 @@ separate item and is still outstanding.
 
 ### Deployed and verified — X Layer mainnet (chain 196)
 
+Migrated 2026-08-11 (D42) for the publish bound. Oracle, guard and executor are new; the
+registries and the fee collector are **kept**, so all three real fills stay in one append-only
+history. `receipts.count()` was 3 before and 3 after.
+
 ```
-FairValueOracle  0x3659E05Fbbaafb7bA868171aB98327b62831Cd75
-ReceiptRegistry  0x9D04575894F570C3638Bc1f6ECaD6EF36D479Fa6
-PolicyGuard      0x481e0A60c5E105708b86e804811F8fc98a43bEFd
-Executor         0xdc2f34A220D4cd7c098D7927454F30AEf3157681
-ThesisRegistry   0xD4b503d002Fb77019d7BB1a26DCe1d60F32dfa1E
-FeeCollector     0x3A1D6b9129E69fEF189E538996B18cebd56C3Dd0   15 bps, ceiling 50
+FairValueOracle  0xDB7949c99e6d234C0eD374a71966d9e6CbfcfD09   new — publish-time jump bound
+PolicyGuard      0x3F58df45FcB5D1074bA5D046D4928CF5efde5f4d   new
+Executor         0xf3a06c9f0F1AABf01080475E420DD7A1092E1e1B   new
+ReceiptRegistry  0x9D04575894F570C3638Bc1f6ECaD6EF36D479Fa6   kept — 3 fills
+ThesisRegistry   0xD4b503d002Fb77019d7BB1a26DCe1d60F32dfa1E   kept
+FeeCollector     0x3A1D6b9129E69fEF189E538996B18cebd56C3Dd0   kept — 15 bps, ceiling 50
 PoolSwapper      0x1f3b67d8209060eC68d0eDCD6E60Ba53A8e9ac28
 cash (real USDG) 0x4ae46a509F6b1D9056937BA4500cb143933D2dc8
-admin/deployer   0xD7360Dc3ED4fE01bEbB8477594A76CBFb5c79BA5
+
+Safe (2-of-3)    0x98d19BE6e810bEEfC8A0a408D4AEf164B7F1391e   admin of oracle, receipts, fees
+publisher        0x40101A4932dEb95f0A5951BB7fB0fFa7c17e3Ab8   hot key, publish() only
+deployer         0xD7360Dc3ED4fE01bEbB8477594A76CBFb5c79BA5   admin of nothing now
 ```
+
+⚠️ **The new mainnet `PolicyGuard` and `Executor` reuse addresses the old testnet `TestUSDG` and
+`PolicyGuard` had** — the same deployer walking the same nonce sequence on two chains. Nothing is
+wrong, but an address alone no longer identifies a contract. Read the chain id with it.
+
+**Mandate #1 is dead by decision.** The old guard's write permission was revoked, because two
+contracts able to append to one append-only history is two places trust can leak from. Its
+receipts stand; new activity needs a new mandate on the new guard.
 
 ### Deployed and verified — X Layer testnet (chain 1952), redeployed 2026-08-11 for D41
 
@@ -250,11 +265,13 @@ That single run exercises every claim the product makes. It is the demo.
 - **What the wSKHYx pool is actually pricing is unknown.** We refuse it and say the number; we do
   not claim to know why. Its pool holds a single full-range position with no tick structure from
   trading. Anyone holding wSKHYx on X Layer should read that −86.4%.
-- **The oracle's admin, publisher and treasury are one key.** Read on mainnet: `admin` ==
-  `deployer` == `isPublisher` == the key holding the funds. Both halves of the fix now exist:
-  Safe 1.4.1 is **proven working on X Layer** (`pnpm safe:prove`, five steps incl. two negative
-  tests — D40), and the publisher is **bounded in the contract** (D41, on testnet). What is left
-  is the mainnet handover and the mainnet redeploy — both decisions, not unknowns.
+- ~~**The oracle's admin, publisher and treasury are one key**~~ — ✅ **Closed 2026-08-11 (D42).**
+  Admin of the oracle, receipts and fees is a **2-of-3 Safe**; publishing is a separate hot key;
+  the deployer administers nothing and `setAdmin` from it reverts `NotAdmin`, checked after the
+  fact. Rehearsed on testnet with the same owners before the mainnet run.
+- **The publisher is still a hot key, and that is structural.** `publish()` runs every fifteen
+  minutes from a machine, so consent cannot gate it — the contract bounds it instead (D41). A
+  multisig cannot close this half, and no amount of key hygiene changes that.
 - **The bound slows a compromise; it does not prevent one.** Twelve confirmed steps is an 8x, and
   `test_APatientAttackerStillGetsThere` says so in the suite rather than in a comment. This entry
   stays even after the multisig lands.

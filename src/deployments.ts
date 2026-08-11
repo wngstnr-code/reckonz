@@ -64,10 +64,10 @@ export const MAINNET: Deployment | null = {
   name: 'X Layer mainnet',
   explorer: 'https://www.oklink.com/xlayer',
   contracts: {
-    FairValueOracle: '0x3659E05Fbbaafb7bA868171aB98327b62831Cd75',
+    FairValueOracle: '0xDB7949c99e6d234C0eD374a71966d9e6CbfcfD09',
     ReceiptRegistry: '0x9D04575894F570C3638Bc1f6ECaD6EF36D479Fa6',
-    PolicyGuard: '0x481e0A60c5E105708b86e804811F8fc98a43bEFd',
-    Executor: '0xdc2f34A220D4cd7c098D7927454F30AEf3157681',
+    PolicyGuard: '0x3F58df45FcB5D1074bA5D046D4928CF5efde5f4d',
+    Executor: '0xf3a06c9f0F1AABf01080475E420DD7A1092E1e1B',
     FeeCollector: '0x3A1D6b9129E69fEF189E538996B18cebd56C3Dd0',
     ThesisRegistry: '0xD4b503d002Fb77019d7BB1a26DCe1d60F32dfa1E',
     USDG: '0x4ae46a509F6b1D9056937BA4500cb143933D2dc8',

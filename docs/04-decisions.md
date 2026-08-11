@@ -952,3 +952,69 @@ anchor published        fv=100
                         gapRisk 20 and capacity 5000 survive the withhold
 immediate retry         hasValue=false            (delay not served)
 ```
+
+---
+
+## D42 — Mainnet migrated: the record kept, the single key retired
+
+D41's bound and D40's Safe both landed on mainnet on 2026-08-11. Two things had to be true at the
+end: the track record must be in **one** append-only history, and no single key may still be able
+to do everything.
+
+**`Deploy.s.sol` would have destroyed the first one.** It stands up every contract from nothing,
+which is right for a fresh chain and wrong for a migration: it would have deployed empty copies of
+`ReceiptRegistry` and `ThesisRegistry`, stranding the three real mainnet fills and thesis #0 that
+receipt #2 resolves to. The only evidence this project has that the loop closes would have been
+split across two contracts — the split D37 refused when the fee was added.
+
+`script/Migrate.s.sol` redeploys only what changed and reuses what carries history. It refuses to
+start unless the deployer is the registry's admin and the named old guard is the current writer,
+and it asserts `receipts.count()` is unchanged at the end. It was 3 before and 3 after.
+
+```
+FairValueOracle  0xDB7949c99e6d234C0eD374a71966d9e6CbfcfD09   new — publish bound
+PolicyGuard      0x3F58df45FcB5D1074bA5D046D4928CF5efde5f4d   new
+Executor         0xf3a06c9f0F1AABf01080475E420DD7A1092E1e1B   new
+ReceiptRegistry  0x9D04575894F570C3638Bc1f6ECaD6EF36D479Fa6   kept — 3 fills
+ThesisRegistry   0xD4b503d002Fb77019d7BB1a26DCe1d60F32dfa1E   kept
+FeeCollector     0x3A1D6b9129E69fEF189E538996B18cebd56C3Dd0   kept
+```
+
+⚠️ **Two of those addresses collide with old testnet ones.** The new mainnet `PolicyGuard` is the
+address the old testnet `TestUSDG` had, and the new mainnet `Executor` is the address the old
+testnet `PolicyGuard` had. Nothing is wrong — the same deployer walks the same nonce sequence on
+both chains — but an address alone no longer tells you which contract you are looking at. Read the
+chain id with it.
+
+**The old guard's write permission was revoked**, deliberately: two contracts able to append to one
+append-only history is two places trust can leak from, and the unwatched one is the second. The
+cost, accepted by the owner rather than assumed: **mandate #1 on mainnet can no longer record
+fills.** Its receipts stand; new activity needs a new mandate on the new guard.
+
+**The single key is retired.** `pnpm handover` ran the sequence in the only safe order — grant the
+new publisher, **make it publish for real**, then revoke the deployer, then hand `admin` to the
+Safe. Step two exists because step three cannot be undone without the Safe, and a publisher that
+turns out not to work is otherwise discovered after the old one is gone. That is D35's lesson
+applied to our own key management.
+
+```
+Safe (2-of-3)  0x98d19BE6e810bEEfC8A0a408D4AEf164B7F1391e   admin of oracle, receipts, fees
+publisher      0x40101A4932dEb95f0A5951BB7fB0fFa7c17e3Ab8   hot key, publish() only
+deployer       admin of nothing, publisher of nothing
+```
+
+Verified independently after the fact, including the negative check: `setAdmin` from the deployer
+now reverts `NotAdmin`. Rehearsed end to end on testnet first, with the same three owner
+addresses, so the mainnet run was a repeat rather than a first attempt. Testnet Safe:
+`0x7a4EadB7d951E19d097531ea3E7Cbf00BCC34Ef3`.
+
+**The 30-minute confirmation was proven on the real clock before any of this.** A jump announced,
+withheld, and then confirmed after `JUMP_CONFIRM_DELAY` on X Layer testnet — `fv=200`,
+`hasValue=true`, anchor moved, announcement cleared, tx `0x05b1c38b…`. Without that, the mainnet
+oracle would have been one where a legitimate gap could be refused and never published again, and
+the failure would only have appeared the first time an asset actually gapped.
+
+**What is still true.** The publisher is a hot key. The bound caps how fast it can move a value
+and forces an event trail; it does not prevent a determined holder from walking the price in
+confirmed steps. The Safe covers admin only, because `publish()` runs every fifteen minutes from a
+machine and consent cannot gate it. Both facts stay in the gap list.
