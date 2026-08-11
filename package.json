@@ -20,7 +20,8 @@
     "dev": "next dev",
     "build:web": "next build",
     "start": "next start",
-    "execute": "tsx src/execute.ts"
+    "execute": "tsx src/execute.ts",
+    "swap": "tsx src/swap.ts"
   },
   "keywords": [],
   "author": "",
