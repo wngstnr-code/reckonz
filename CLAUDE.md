@@ -95,8 +95,11 @@ TARGET=mainnet pnpm swap [okb]         # OKB -> USDG, to fund the deployer
 - **A deployed address with the right selector proves nothing.** That router had 39,001
   bytes and the exact `execute` signature. An external dependency is unverified until a
   call that does the *actual work* succeeds against it.
-- **Morpho and Ondo are not on X Layer.** The $84M lender is Aave V3. Zero RWA-category
-  protocols. See D2.
+- **Morpho and Ondo are not on X Layer.** The $81.8M lender is Aave V3. Zero RWA-category
+  protocols — still true as of 2026-08-11, re-measured across all 56 protocols. See D2, D49.
+- **The ~$48k capacity figure is an AMM number with a shelf life.** OKX's own custodial order
+  book for these tickers settles on X Layer, so arbitrage deepens the pools; Uniswap V3 here
+  has already gone $17.5M → $22.9M. Re-run `pnpm capacity` before quoting it. See D49.
 - **Never trust a prose summary of a large JSON API** for X Layer facts — parse the JSON
   or hit the RPC. That is how D2 happened.
 - **There are no Chainlink equity feeds on X Layer.** The fair-value layer must be built.

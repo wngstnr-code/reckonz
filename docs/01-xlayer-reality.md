@@ -167,13 +167,57 @@ the conclusion: an AUM product still has nowhere to put money. See `02-product.m
 
 ## Chain economics
 
-- **Total TVL ~$113M.** For scale: Base $4.68B, Arbitrum $1.2B, Linea $28M.
-- Lending is **Aave V3 (~$84M)**, *not* Morpho. Morpho's own API does not list chain 196.
+Re-measured 2026-08-11 by parsing `https://api.llama.fi/protocols` and `/v2/chains` with `jq`
+— not by reading a summary of them, which is how D2 happened.
+
+- **Total TVL $116,395,074.** For scale: Base $4.68B, Arbitrum $1.2B, Linea $28M.
+- Lending is **Aave V3 ($81.8M)**, *not* Morpho. Morpho's own API does not list chain 196.
   Aave reserves: USDT0 $42M, XBTC $16.5M, OKB $15.3M, XETH $9.9M, USDG $0.44M, XSOL $0.1M.
-- DEXs: Uniswap V3 $17.5M, PotatoSwap $5.2M, Curve $2.7M, then a long tail.
-- **Zero RWA-category protocols** per DefiLlama. Ondo is not deployed. Spark Savings and
-  Spark Liquidity Layer list X Layer but hold $0.
+- DEXs: **Uniswap V3 $22.9M** (was $17.5M — the pools are growing), Gate $6.8M, PotatoSwap
+  $5.3M, Curve $2.7M, then a long tail.
+- **56 protocols in total**, by category: 26 Dexs, 10 bridge (incl. cross-chain and
+  aggregator), 6 Lending, 3 Derivatives, 3 Launchpad, 3 Liquidity Manager, 2 Yield, 1 CEX,
+  1 CeDeFi, 1 Onchain Capital Allocator.
+- **Zero RWA-category protocols**, and zero in asset management, index or portfolio. Ondo is
+  not deployed. The four things closest to an application layer are all dead here: Spark
+  Liquidity Layer **$0**, DefiEdge **$133**, Steer **$81**, Gamma **$3** — and the last three
+  manage Uniswap LP positions, not portfolios.
+- **No live hedging venue.** Satori Perp **$0**, D8X **$0.0002**, Fufuture **$0**. This is
+  load-bearing for `02-product.md`: a position taken here cannot be hedged on-chain here.
+- Multi-chain deployments that arrived automatically and were never used: Dolomite **$746**,
+  ZeroLend **$7,181**.
 - There is real memecoin and launchpad activity (DOGSHIT, XDOG, 万事OK, Flap.sh, XLAUNCH).
+
+## The venue above the pools — added 2026-08-11
+
+The AMM pools are not the only place these assets trade, and this was not known when the
+liquidity section above was written. It does not change any number in it. It changes what the
+numbers *mean*.
+
+**OKX `Unified Tokenized Stocks` is live**: 40+ tokenised US stocks and ETFs against USDT on a
+shared order book that merges different issuers' versions of the same stock into one market,
+"starting with xStocks", trading 24/7, with **deposits and withdrawals on X Layer and Solana**
+— reportedly with no fees and no gas (that last part returned HTTP 403 and is unverified).
+Custodial, and US and EU users are excluded.
+
+Two consequences worth holding in mind:
+
+1. **The $48k is an AMM number, not a market number.** A retail buyer on X Layer has a
+   deeper, cheaper, custodial route available. Our capacity figures remain exactly correct
+   about what the *pools* absorb, which is what a non-custodial execution path must use. They
+   are not a claim about total tradable size for these tickers.
+2. **The pools should deepen over time.** Because X Layer deposits and withdrawals are open,
+   arbitrage flows between order book and pool. That is good for users and erodes the premise
+   the sizing half of the product rests on. Uniswap V3 on this chain is already up from
+   $17.5M to $22.9M. **Re-run `pnpm capacity` before quoting the $48k anywhere**, and treat a
+   rising number as the expected case rather than an anomaly.
+
+Separately, **xStocks now ships `xChange`**, their own *"multi-chain execution layer for
+tokenized equity trading"*: 70+ tokenised stocks, liquidity via **0x RFQ straight to market
+makers** rather than pools, 24/5, on Ethereum and Solana. **X Layer is not mentioned.** RFQ
+depth is not bounded by pool depth, so if xChange lands here the capacity argument weakens
+considerably while the gap-risk argument does not. Worth checking periodically; nothing to do
+about it now. See D49.
 
 ## Tooling notes
 

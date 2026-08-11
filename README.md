@@ -57,6 +57,11 @@ the mandate is violated it reverts, and the Permit2 pull and every swap revert w
 There is no state in which a rule was broken and the trade stood. Off-chain checks are
 decoration; this is the enforcement.
 
+Bounding an agent's key is common by now — session keys, spend ceilings, destination
+whitelists. Those bound **where funds may go and how much**. This one also bounds on
+**whether the price can be defended and whether the depth is actually there**, which is the
+part nothing else checks.
+
 **The receipt cannot be authored by the agent.** Execution price is derived from measured
 balance deltas; fair value and gap risk are stamped by the guard from the oracle. Receipt
 `#1` records 0.49925 USDG traded at 777.49 with 44 bps of shortfall — numbers the agent
@@ -147,15 +152,15 @@ Pool state is prefetched into two multicalls, so the simulation is pure and sync
 ## The finding
 
 Absorbable USDG before price impact exceeds the limit. All 30 xStocks with a USDG pool,
-measured against live state; `*` marks the eight the oracle can price.
+measured against live state on 2026-08-11.
 
 ```
 asset       spot           0.50%     1.00%     2.00%     5.00%
 wGLDx         405.44      10,752    22,569    46,201   115,189
 wQQQx         723.83       3,885     8,155    16,696    42,316
-wSPYx   *     777.17       3,871     8,126    16,635    42,161
+wSPYx         777.17       3,871     8,126    16,635    42,161
 wIWMx         301.39       3,645     7,651    15,664    39,700
-wNVDAx  *     219.17       2,223     4,062     7,149    14,864
+wNVDAx        219.17       2,223     4,062     7,149    14,864
 …24 more, each ~800–1,100 at 0.5%
 TOTAL                     48,353   100,887   205,365   515,340
 ```
@@ -188,6 +193,8 @@ guard     wSKHYx REJECT NO_REFERENCE                    ← KRW basis will not r
 The third is worth dwelling on. `wSKHYx`'s reference quotes in KRW and does not reconcile
 with the on-chain price, so the oracle marks it unpublishable rather than printing a
 −99.99% basis. `wSPCXx` has no reference market at all — SpaceX is private — and is
-withheld by design. Twenty-two of the thirty xStocks trade but cannot yet be priced; a
-thesis about Apple now maps to wAAPLx, is sized against its real depth, and is refused at
-the guard for the true reason rather than the false claim that the asset does not exist.
+withheld by design. Those two are the only withholdings: the other 28 of the 30 are priced,
+and each was admitted by a reconciliation rather than by a judgement that the ticker looked
+obvious. A thesis about Apple maps to wAAPLx, is sized against its real depth, and — where it
+is refused — is refused for the true reason rather than the false claim that the asset does
+not exist.
