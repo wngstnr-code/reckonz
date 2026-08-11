@@ -261,6 +261,13 @@ If time remains after all four: `FeeCollector`, then `ThesisRegistry`. Not befor
 
 ## Log
 
+**2026-08-11 (latest, sixth)** — D36, second pre-mainnet audit. Six gaps closed: deploy script now
+refuses dependencies with no code on mainnet (the v3 factory is absent on testnet entirely), an
+unchecked `int256` cast bounded, `execute.ts` refuses truncated quotes and verifies the executor
+derives the same pool it priced, and `pnpm mandate` caps mainnet blast radius at 25 USDG / 3 fills
+instead of the hard-coded 5,000. Mainnet deploy dry-run clean: 8.3M gas, ~0.00033 OKB.
+Funded — 3.76 USDG in the deployer.
+
 **2026-08-11 (latest, fifth)** — D35 fixed. `V3Swapper` derives pool addresses from the factory
 and answers `uniswapV3SwapCallback`; `Executor` inherits it and the Universal Router is gone from
 the codebase. A `Leg` carries a fee tier instead of a path. Verified on mainnet first with

@@ -642,3 +642,49 @@ That is how 0.0396 WOKB was recovered after a funding transfer landed and the sw
 value sent to that router is sweepable by anyone, so it must never sit there between transactions
 — which is exactly the invariant `Executor`'s residual-balance check already enforces.
 
+---
+
+## D36 — Second pre-mainnet audit, after the swap path changed
+
+D31 audited the stack before the first mainnet attempt. D35 then replaced the swap path, so the
+audit was run again over what changed and what mainnet touches. Six gaps, all closed before any
+deployment.
+
+**1 — `Deploy.s.sol` accepted dependencies that do not exist on the target chain.** `V3_FACTORY`
+and `PERMIT2` were constants, unchecked. The X Layer v3 factory has **no code on testnet**, so
+deploying there produced an `Executor` that reverts on every swap and explains nothing — the exact
+shape of D35. The script already applied this discipline to the settlement token and nowhere else.
+Now: `require` on chain 196, a loud warning elsewhere, and a `V3_FACTORY` env override.
+
+**2 — `int256(amountIn)` was an unchecked cast in `V3Swapper`.** The sign of `amountSpecified` is
+what distinguishes exact-input from exact-output, so a wrapped amount would silently become a
+request to *buy* that much. Unreachable from `Executor`, whose amounts are `uint128` — which is
+also what was said about the `uint128` cast D31 found. Bounded explicitly.
+
+**3 — `execute.ts` would price a fill from a truncated simulation.** A quote whose tick window ran
+out stopped early and priced only the input it consumed, so `minAmountOut` derived from it is far
+too low: slippage protection that protects nothing. Identical to the D34 defect in `capacity()`.
+The quote is now refused.
+
+**4 — Nothing checked that the pool we quoted is the pool the executor will use.** The script
+found a pool through the factory; the contract derives one from the pair and fee tier. They should
+agree, and if they ever did not the fill would happen somewhere the quote never looked. It is a
+free read, and it is the check that would have caught D35 before it cost a transaction.
+
+**5 — `pnpm mandate` hard-coded a 5,000 USDG blast radius.** `maxNotionalPerTrade` and
+`maxFillsPerEpoch` are the ceiling on what a leaked key or a misbehaving agent can spend. Fine on
+testnet, absurd on mainnet against a $3.76 balance. Now chain-aware: **25 USDG and 3 fills per day
+on mainnet**, raised only on purpose via `MAX_NOTIONAL_USDG`.
+
+**6 — wSPYx was not on the mandate's allowlist**, though it is the asset a first mainnet fill
+should use: lowest gap risk of the eight priced assets. The guard would have rejected it correctly
+and confusingly.
+
+**Deliberately left as-is:** the callback does not check ERC-20 return values. The pool re-reads
+its own balance after the callback and reverts if it was not paid, which is a stronger guarantee
+than a bool — a token that fails silently still cannot get a swap through. Written down so it
+stays a decision.
+
+Mainnet deploy dry-run passes: settlement resolves to the real USDG, both dependencies have code,
+8,328,625 gas at 0.04 gwei — about 0.00033 OKB against a 0.00998 balance.
+
