@@ -124,7 +124,7 @@ can append receipts. `Executor.permit2/router/guard/oracle/cash` all correct.
 | `ReceiptRegistry` | `contracts/ReceiptRegistry.sol` | ✅ append-only |
 | `PolicyGuard` | `contracts/PolicyGuard.sol` | ✅ triggers + position accounting |
 | `ExitTriggers` — all 7 metrics | `contracts/ExitTriggers.sol` | ✅ |
-| `Executor` — Permit2 → swap → settle → submit | `contracts/Executor.sol` | ✅ **two real mainnet fills** |
+| `Executor` — Permit2 → swap → settle → submit | `contracts/Executor.sol` | ✅ **four real mainnet fills**, receipts #0–#3 |
 | `V3Swapper` — direct pool swaps, derived addresses | `contracts/V3Swapper.sol` | ✅ the Universal Router cannot swap here (D35) |
 | `FeeCollector` — 15 bps, ceiling 50 in code | `contracts/FeeCollector.sol` | ✅ took a real fee |
 | `ThesisRegistry` — append-only, no admin | `contracts/ThesisRegistry.sol` | ✅ receipt #2 resolves to thesis #0 |
@@ -315,7 +315,7 @@ That single run exercises every claim the product makes. It is the demo.
 | Component | Blocked on | Verdict for this submission |
 |---|---|---|
 | Consumer / simple mode | — | Browse published theses with their on-chain track records. The data now exists (`ThesisRegistry` + `ReceiptRegistry`), so this is mostly an FE question. Last item in the build order. |
-| Indexer | volume | No longer blocked on receipts — there are three — but three receipts do not need an index. Real work that only pays off with volume. Roadmap item. |
+| Indexer | volume | No longer blocked on receipts — there are **four** — but four receipts do not need an index. Real work that only pays off with volume. Roadmap item. |
 | ASP / x402 registration | a stable hosted endpoint | The endpoint exists now (reckonz.vercel.app), so this is unblocked and simply not started. Worth naming on the form as planned ecosystem contribution. |
 
 The honest summary: depth was chosen over breadth throughout, and that was the right call for
