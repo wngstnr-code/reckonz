@@ -5,17 +5,37 @@ Built for the X Layer "AI Season" hackathon (AI-RWA track).
 
 ## Read first
 
-`docs/` is **local-only** — it is gitignored and will not be present in a fresh clone. The
-files below exist on the working machine and remain the source of truth there.
+`docs/` is **in the repo** — it used to be gitignored and local-only, which stopped working the
+moment a second person joined. The decision log is how each of us avoids repeating a mistake the
+other already made.
 
 | Doc | When |
 |---|---|
 | `docs/05-status.md` | **Always.** What exists, what runs, what is blocked, what is next. |
-| `docs/04-decisions.md` | Before changing direction. Contains corrections — each one is a mistake you would otherwise repeat. |
+| `docs/04-decisions.md` | Before changing direction. Contains corrections — each one is a mistake you would otherwise repeat. Append-only. |
+| `docs/07-team.md` | Before picking up work. Who owns which files, and each side's backlog in order. |
+| `docs/08-parallel.md` | Before pushing. Branches, the frozen FE/BE contract, how to touch a shared file. |
 | `docs/01-xlayer-reality.md` | Before touching any address, asset, or chain assumption. |
 | `docs/03-architecture.md` | Before writing a contract or an agent stage. |
 | `docs/02-product.md` | Product shape, revenue model, scope boundaries. |
 | `docs/00-hackathon.md` | Rules, prize strategy, how the judges actually score. |
+| `docs/06-assessment.md` | The honest read on whether this is a business. |
+
+## Two people, one repo
+
+Wangsit is **BE + on-chain**, his teammate is **FE**. Ownership is by path, and it is not
+advisory — two branches editing one file means one of them silently loses.
+
+| Path | Owner |
+|---|---|
+| `src/**`, `contracts/**`, `script/**`, `test/**`, `app/api/**` | BE |
+| `app/` except `app/api/**` — pages, layout, `app/components/**`, styling | FE |
+| `package.json`, `pnpm-lock.yaml` | shared — one dependency per commit, never hand-edit the lock |
+
+Before editing, work out which side of the seam you are on and stay there. If a change is needed
+across it, it is a ticket for the owner, not an edit. Branch as `be/…` or `fe/…`; never push to
+`main` directly. The full rules — the frozen `RunEvent` contract, what counts as a breaking
+change, how FE unblocks itself with `src/thesis-fixture.ts` — are in `docs/08-parallel.md`.
 
 ## Commands
 
@@ -78,8 +98,12 @@ pnpm typecheck               # covers src/ and app/
 
 - After changing `v3math.ts` or `pool.ts`, run `pnpm verify` — it is the regression test.
 - Log real direction changes and corrections in `docs/04-decisions.md`; update
-  `docs/05-status.md` when something starts or finishes working.
-- Do not commit private keys. Deployment reads them from the environment.
+  `docs/05-status.md` when something starts or finishes working. Both are read by the other
+  person, so they are part of the change, not paperwork after it.
+- `pnpm typecheck` before every PR — it covers `src/` and `app/` together, so it is the one check
+  that catches a break across the FE/BE seam. `forge test` too if you touched Solidity.
+- Do not commit private keys. Deployment reads them from the environment. `docs/` is public now:
+  no key, no seed phrase, no unrotated API key may appear in it.
 
 ## Network
 
