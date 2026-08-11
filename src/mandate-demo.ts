@@ -42,10 +42,12 @@ console.log(`  owner/agent/executor ${account.address}\n`);
 // `maxNotionalPerTrade` and `maxFillsPerEpoch` are the blast radius: the most
 // this mandate can ever spend if a key leaks, an agent misbehaves, or a bug in
 // our own sizing gets through. On testnet the money is fake and a wide cap keeps
-// the demo unobstructed. On mainnet it is real, so the default is deliberately
-// smaller than anything we intend to trade and has to be raised on purpose.
+// the demo unobstructed. On mainnet it is real, and the cap should be sized to
+// the balance it guards, not to a round number: against a few dollars of USDG,
+// 1 USDG per trade is a blast radius you can lose without caring. Raise it on
+// purpose with MAX_NOTIONAL_USDG, never by default.
 const maxNotionalUsdg = BigInt(
-  process.env.MAX_NOTIONAL_USDG ?? (t === 'mainnet' ? '25' : '5000'),
+  process.env.MAX_NOTIONAL_USDG ?? (t === 'mainnet' ? '1' : '5000'),
 );
 const maxFills = Number(process.env.MAX_FILLS_PER_EPOCH ?? (t === 'mainnet' ? 3 : 8));
 

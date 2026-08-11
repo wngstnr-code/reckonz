@@ -42,7 +42,7 @@ import {
 } from './wallet';
 
 const SYMBOL_OR_ADDRESS = process.argv[2];
-const AMOUNT_USDG = process.argv[3] ?? '25';
+const AMOUNT_USDG = process.argv[3] ?? '1';
 /** How far below the simulated output the router may fill before it reverts. */
 const SLIPPAGE_TOLERANCE_BPS = Number(process.env.SLIPPAGE_TOLERANCE_BPS ?? 100);
 const MANDATE_ID = process.env.MANDATE_ID ? BigInt(process.env.MANDATE_ID) : null;
