@@ -97,7 +97,8 @@ pnpm mandate                 # create a mandate, install triggers, watch one fir
 pnpm deploy                  # deploy the full stack to testnet
 pnpm execute <sym> [usdg]    # quote -> dryRun -> Permit2 -> one real fill (TARGET=mainnet)
 pnpm dev                     # the web app — thesis in, guard verdict out
-pnpm build:web               # production build of the web app
+pnpm build                   # production build of the web app (what Vercel runs)
+pnpm build:contracts         # forge build
 pnpm typecheck && pnpm test:sol
 ```
 

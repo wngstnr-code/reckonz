@@ -10,7 +10,8 @@
     "capacity": "tsx src/capacity.ts",
     "typecheck": "tsc --noEmit",
     "oracle": "tsx src/oracle-demo.ts",
-    "build": "forge build",
+    "build": "next build",
+    "build:contracts": "forge build",
     "test:sol": "forge test",
     "deploy": "forge script script/Deploy.s.sol --tc Deploy --rpc-url xlayer_testnet --broadcast",
     "thesis": "tsx src/thesis-demo.ts",
@@ -18,7 +19,6 @@
     "oracle:publish": "tsx src/publish.ts",
     "mandate": "tsx src/mandate-demo.ts",
     "dev": "next dev",
-    "build:web": "next build",
     "start": "next start",
     "execute": "tsx src/execute.ts",
     "swap": "tsx src/swap.ts"
