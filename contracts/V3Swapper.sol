@@ -51,6 +51,7 @@ abstract contract V3Swapper {
     address public immutable factory;
 
     error PoolHasNoCode(address pool);
+    error AmountInTooLarge(uint256 amountIn);
     error UnexpectedCallback(address caller);
     error InsufficientOutput(uint256 received, uint256 minimum);
     error ZeroAmountIn();
@@ -95,6 +96,13 @@ abstract contract V3Swapper {
         address payer
     ) internal returns (uint256 amountOut) {
         if (amountIn == 0) revert ZeroAmountIn();
+        // Solidity does not check explicit casts, and the sign of
+        // `amountSpecified` is what tells the pool exact-input from
+        // exact-output. An amount that wraps negative would silently become a
+        // request to *buy* that much of the other token. Unreachable from
+        // Executor, whose amounts are uint128 — and D31 found this same class of
+        // unchecked cast in code that also looked unreachable.
+        if (amountIn > uint256(type(int256).max)) revert AmountInTooLarge(amountIn);
 
         address pool = poolFor(tokenIn, tokenOut, fee);
         // A derived address that holds no code is the failure mode that made the
@@ -131,6 +139,10 @@ abstract contract V3Swapper {
         (address tokenIn, address payer) = abi.decode(data, (address, address));
         uint256 owed = amount0Delta > 0 ? uint256(amount0Delta) : uint256(amount1Delta);
 
+        // Return values are deliberately unchecked: the pool re-reads its own
+        // balance after this returns and reverts if it was not paid, which is a
+        // stronger guarantee than trusting a bool. A token that fails silently
+        // still cannot get a swap through.
         if (payer == address(this)) {
             IERC20Minimal(tokenIn).transfer(msg.sender, owed);
         } else {

@@ -75,6 +75,30 @@ contract Deploy is Script {
             console2.log("cash    ", cash);
         }
 
+        // The same discipline the settlement token already gets, applied to the
+        // two dependencies Executor cannot work without. Both are correct on
+        // mainnet and one of them is *absent* on testnet — the X Layer v3
+        // factory has no code on 1952 — so an unchecked constant here deploys an
+        // Executor that reverts on every swap and says nothing about why. That
+        // is exactly how D35 stayed hidden.
+        address factory = vm.envOr("V3_FACTORY", V3_FACTORY);
+        bool factoryLive = factory.code.length > 0;
+        bool permit2Live = PERMIT2.code.length > 0;
+
+        console2.log("factory ", factory, factoryLive ? "" : "<- NO CODE ON THIS CHAIN");
+        console2.log("permit2 ", PERMIT2, permit2Live ? "" : "<- NO CODE ON THIS CHAIN");
+
+        // On mainnet this must be right or the deployment is worthless. On a
+        // testnet it is allowed to be missing, because the oracle, the guard and
+        // the receipt registry are still worth exercising there — but nobody
+        // gets to discover it from a revert with no data.
+        if (block.chainid == 196) {
+            require(factoryLive, "V3_FACTORY has no code on mainnet");
+            require(permit2Live, "PERMIT2 has no code on mainnet");
+        } else if (!factoryLive || !permit2Live) {
+            console2.log("WARNING: Executor cannot swap on this chain. Oracle/guard/receipts only.");
+        }
+
         FairValueOracle oracle = new FairValueOracle(deployer);
         ReceiptRegistry receipts = new ReceiptRegistry(deployer);
         PolicyGuard guard =
@@ -85,7 +109,7 @@ contract Deploy is Script {
 
         Executor executor = new Executor(
             ISignatureTransfer(PERMIT2),
-            V3_FACTORY,
+            factory,
             guard,
             IFairValueOracle(address(oracle)),
             cash
