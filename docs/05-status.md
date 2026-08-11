@@ -261,6 +261,25 @@ If time remains after all four: `FeeCollector`, then `ThesisRegistry`. Not befor
 
 ## Log
 
+**2026-08-11 (latest, seventh)** — **deployed to X Layer mainnet (chain 196).**
+
+```
+FairValueOracle  0x3659E05Fbbaafb7bA868171aB98327b62831Cd75
+ReceiptRegistry  0x9D04575894F570C3638Bc1f6ECaD6EF36D479Fa6
+PolicyGuard      0x481e0A60c5E105708b86e804811F8fc98a43bEFd
+Executor         0xA7acf8428483c0b84081D36893A49fcEB38AA35d
+PoolSwapper      0x20a0fB089094c6b11A7b2de5c042E1f2f50D41f5
+cash             0x4ae46a509F6b1D9056937BA4500cb143933D2dc8  (real USDG, not a mock)
+```
+
+Verified on-chain rather than read off the deploy log: guard wiring correct, `isWriter` true for
+the guard and false for the deployer, and the executor derives the USDG/wSPYx pool to the same
+address the factory reports — the check D35 taught us to make. Deploy cost 0.000128 OKB against an
+0.00998 balance.
+
+`TARGET=mainnet pnpm oracle:publish` seeded 8 observations (564k gas), read back identical, with
+wSKHYx and wSPCXx correctly REJECT NO_REFERENCE. Six assets would ALLOW.
+
 **2026-08-11 (latest, sixth)** — D36, second pre-mainnet audit. Six gaps closed: deploy script now
 refuses dependencies with no code on mainnet (the v3 factory is absent on testnet entirely), an
 unchecked `int256` cast bounded, `execute.ts` refuses truncated quotes and verifies the executor
