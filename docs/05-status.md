@@ -116,8 +116,10 @@ resolving to pnpm's own package-publishing command instead.
 
 ### Results worth keeping
 
-**Capacity** — the whole xStock universe absorbs ~$11k at 0.5% impact, ~$112k at 5%. Full table in
-`01-xlayer-reality.md`. This is the fact that killed the AUM business and produced D6.
+**Capacity** — the whole xStock universe (all 30) absorbs **~$48k at 0.5% impact**, ~$515k at 5%.
+Full table in `01-xlayer-reality.md`. This is the fact that killed the AUM business and produced
+D6. The earlier ~$11k/~$112k covered the eight priced assets and, at 5%, included a search bound
+mistaken for a measurement — see D33 and D34.
 
 **Naive vs planned** — a five-leg semiconductor basket sized naively at $250k pays **~$71,000** in
 slippage (28% of the basket). Sized to capacity it pays $28, and reports the $244k it refused to
@@ -193,9 +195,10 @@ That single run exercises every claim the product makes. It is the demo.
   assumed.
 - **Reference mapping unverified for some assets** — wSKHYx quotes in KRW and does not reconcile.
   The oracle correctly withholds, but *which* security each wrapper tracks is still unproven.
-- **The investable universe is 8 of 30 xStocks**, so a thesis about Apple or TSMC is told "no
-  matching asset" — a refusal that is factually false. Full list in `01-xlayer-reality.md`, fix
-  described in D33. This is the one known case where the system is not as honest as it claims.
+- **The oracle prices 8 of the 30 xStocks.** All 30 are now investable and a thesis about Apple
+  maps to wAAPLx (D33), but the other 22 are refused at the guard with `NO_REFERENCE`. That
+  refusal is true, and it is a real limit on what the system can execute — widening it means
+  verifying, per wrapper, which listed security it tracks.
 - **`.env` holds a live Gemini key** pasted in chat. Rotate at
   [aistudio.google.com/apikey](https://aistudio.google.com/apikey) before publishing anything.
 - **No logo.** Four prompt directions were drafted on 2026-08-11 (the cut / the narrowing / the
@@ -257,6 +260,12 @@ If time remains after all four: `FeeCollector`, then `ThesisRegistry`. Not befor
 ---
 
 ## Log
+
+**2026-08-11 (latest, third)** — D33 closed: the investable universe is all 30 xStocks, read
+from the chain, and separated from the 8 the oracle can price. A thesis about Apple now maps to
+wAAPLx and is refused for the true reason instead of the false one. Re-running capacity over 30
+exposed D34 — `capacity()` returned its own search ceiling as a measurement for any pool deeper
+than $1M-at-limit, which wGLDx was. Headline capacity: **~$48k at 0.5%**, ~$515k at 5%.
 
 **2026-08-11 (latest, second)** — `src/abi.ts`: the contract surface in one place, generated
 from the Foundry artefacts and verified selector by selector (`pnpm verify:abi`). `execute.ts`,

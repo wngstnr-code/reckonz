@@ -170,7 +170,7 @@ Steps 1–3 already produce the winning demo: naive vs planned execution, in rea
 
 ## Known risks, to state rather than hide
 
-- **Capacity ceiling ~$11k** at 0.5% impact. Telling users this is the product; it also
+- **Capacity ceiling ~$48k** at 0.5% impact, across all 30 xStocks. Telling users this is the product; it also
   means revenue cannot come from AUM.
 - **Oracle credibility** — answered by confidence bands and the "guard, not truth" framing.
 - **Wrapper risk** — xStocks on X Layer are a wrap of an already-wrapped Backed token.

@@ -36,8 +36,12 @@ Ordered by severity.
 
 ### 1 — The market, today, barely exists 🔴
 
-The entire xStock universe on X Layer absorbs ~$11k at 0.5% impact. Fifteen basis points on that
-is roughly **$16** per full turnover. Not $16k. Sixteen dollars.
+The entire xStock universe on X Layer absorbs ~$48k at 0.5% impact. Fifteen basis points on that
+is roughly **$73** per full turnover. Not $73k. Seventy-three dollars.
+
+(That was ~$11k and $16 until 2026-08-11, when capacity was re-measured across all 30 assets
+rather than the eight the oracle prices. 4.4× more of nothing is still nothing — the paragraph
+below stands unchanged, which is the point worth noticing.)
 
 This is not a detail, it is the existential question. The product is well built for a market that
 does not yet exist. The bet is *RWA liquidity will grow and we are early*. That bet may be

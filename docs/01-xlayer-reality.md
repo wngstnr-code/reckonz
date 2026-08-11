@@ -58,8 +58,8 @@ wSNDKx   0x75e82e2884ea10f72fca777449b73377f4646219
 ### The full universe — 30 xStocks, captured 2026-08-11
 
 Enumerated from every USDG pool GeckoTerminal indexes on `x-layer`, then spot-checked on-chain
-with `symbol()` / `name()`. **We model 8 of these 30** — see D33 for why, and why that is partly
-a defect.
+with `symbol()` / `name()`. **All 30 are investable; the oracle prices 8 of them** — the split is
+deliberate and D33 explains it. `*` below marks the eight.
 
 ```
 wAAPLx   0x943bf64d566c32a2bcd41ac92fb63c111cc9de8f   Apple          197,507
@@ -114,21 +114,55 @@ TVL is misleading here; the liquidity is spread wide, not concentrated at price.
 matters is absorbable size, measured by simulating swaps against live pool state
 (`pnpm capacity`):
 
+All 30, measured 2026-08-11. `*` marks the eight with a verified reference market in
+`ASSETS` — the ones the oracle can price. The other 22 trade, and are refused at the
+guard for a reason that is true (D33).
+
 ```
-asset       spot         0.50%     1.00%     2.00%     5.00%
-wSPYx         777.30     3,872     8,126    16,636    42,165
-wNVDAx        223.11     2,089     4,710     7,813    15,557
-wSPCXx        135.92       887     1,862     3,812     9,663
-wCRCLx         67.02       840     1,763     3,609     9,147
-wINTCx         97.29       838     1,759     3,601     9,128
-wMUx          861.42       807     1,693     3,467     8,786
-wSKHYx        134.81       800     1,678     3,436     8,708
-wSNDKx       1192.82       834     1,750     3,582     9,080
-TOTAL                   10,965    23,342    45,957   112,233
+asset       spot           0.50%     1.00%     2.00%     5.00%
+wAAPLx        309.77       1,069     2,243     4,592    11,638
+wAMDx         472.15         787     1,651     3,380     8,566
+wAMZNx        277.45       1,081     2,269     4,646    11,775
+wASMLx       1749.54       1,078     2,263     4,633    11,743
+wAVGOx        425.26       1,072     2,251     4,608    11,678
+wCOINx        149.34       1,081     2,269     4,644    11,771
+wCRCLx  *      66.98         840     1,762     3,608     9,144
+wDELLx        461.57         892     1,873     3,834     9,718
+wEWYx         165.37         891     1,870     3,828     9,702
+wGLDx         405.44      10,752    22,569    46,201   115,189
+wGOOGLx       357.72       1,072     2,251     4,608    11,678
+wHOODx         94.87         819     1,718     3,517     8,914
+wIBMx         241.12         815     1,710     3,501     8,873
+wINTCx  *      98.52         843     1,770     3,624     9,186
+wIWMx         301.39       3,645     7,651    15,664    39,700
+wMETAx        596.75       1,077     2,261     4,628    11,731
+wMRVLx        211.15         812     1,704     3,488     8,839
+wMSFTx        508.46       1,083     2,274     4,655    11,798
+wMSTRx         97.52         818     1,718     3,516     8,911
+wMUx    *     871.33         811     1,703     3,486     8,837
+wNVDAx  *     219.17       2,223     4,062     7,149    14,864
+wORCLx        152.27       1,108     2,326     4,761    12,066
+wPLTRx        173.18       1,125     2,361     4,834    12,253
+wQQQx         723.83       3,885     8,155    16,696    42,316
+wSKHYx  *     137.10         806     1,692     3,465     8,781
+wSNDKx  *    1253.22         855     1,794     3,672     9,307
+wSPCXx  *     136.66         890     1,868     3,825     9,694
+wSPYx   *     777.17       3,871     8,126    16,635    42,161
+wTSLAx        331.50       1,128     2,367     4,846    12,282
+wTSMx         422.81       1,122     2,356     4,823    12,223
+TOTAL                     48,353   100,887   205,365   515,340
 ```
 
-**The entire tokenised-equity universe on X Layer absorbs ~$11k at 0.5% impact.**
-This is the fact that kills any AUM-based product here. See `02-product.md`.
+Gold is the outlier by an order of magnitude — $10.7k at 0.5% against ~$1k for a typical
+equity wrapper — and the index ETFs (wSPYx, wQQQx, wIWMx) sit between. Depth is not
+uniform even though TVL nearly is, which is the whole argument for measuring absorbable
+size rather than reading TVL off a dashboard.
+
+**The entire tokenised-equity universe on X Layer absorbs ~$48k at 0.5% impact**, and
+~$515k at 5%. Re-measured 2026-08-11 across all 30 assets; the table above covers the
+eight the oracle prices, which is where the earlier ~$11k figure came from — a real number
+described as something it was not. The correction is 4.4×, and it changes nothing about
+the conclusion: an AUM product still has nowhere to put money. See `02-product.md` and D34.
 
 ## Chain economics
 

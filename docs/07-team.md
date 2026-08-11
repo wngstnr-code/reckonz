@@ -119,8 +119,8 @@ a day, needs a real fill first), then `ThesisRegistry`. Not before items 1–4.
 
 - Claude provider is typechecked but has never executed. Gemini is the default.
 - Yahoo Finance is not a production data source.
-- The investable universe is 8 of 30 xStocks, so a thesis about Apple is told "no matching
-  asset" — factually false, and the one place the system is less honest than it claims (D33).
+- The oracle prices 8 of the 30 xStocks. All 30 are investable (D33), but a thesis about Apple
+  is refused at the guard with `NO_REFERENCE` — true, and still a limit on what can execute.
 - `wSKHYx` quotes in KRW and does not reconcile; the oracle correctly withholds.
 
 ---

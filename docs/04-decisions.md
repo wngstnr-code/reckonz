@@ -64,8 +64,10 @@ anything is built on top.
 
 ## D6 — Non-custodial, no vault
 
-Measured capacity across the whole xStock universe: **~$11k at 0.5% impact**
-(`pnpm capacity`). A vault that gathers assets has nowhere to put them.
+Measured capacity across the whole xStock universe: **~$48k at 0.5% impact**
+(`pnpm capacity`, re-measured across all 30 assets 2026-08-11 — the original figure was
+~$11k and covered only the eight the oracle prices; see D34). A vault that gathers assets
+has nowhere to put them, and 4.4× nowhere is still nowhere.
 
 **Consequence:** users hold their own assets. The system decides what/how much/when/
 whether. `PolicyGuard`, `ReceiptRegistry`, `ThesisRegistry` are unchanged; only custody
@@ -75,7 +77,7 @@ of funds was dropped.
 
 ## D7 — Revenue is execution fees → subscriptions → oracle feed, never AUM
 
-Direct consequence of D6. AUM fees on an $11k ceiling are not a business. See
+Direct consequence of D6. AUM fees on a $48k ceiling are not a business. See
 `02-product.md` for the full table.
 
 ---
@@ -535,5 +537,48 @@ execution for the true reason — *we cannot yet defend a fair value for this wr
 the false one. Cost: 30 `loadToken` reads instead of 8 on a cold cache, and a demo that shows more
 rejections. Both acceptable; the second is arguably the point.
 
-Not done before the deadline unless the mainnet fill lands early. Recorded so it is a choice
-rather than an oversight.
+**Done 2026-08-11.** `XSTOCKS` in `src/chain.ts` now holds all 30 and `universe()` reads every
+one from the chain; `specFor()` in `src/fairvalue.ts` hands back a withheld report for any symbol
+outside `ASSETS`, carrying its own note — *"tradable on X Layer, but no verified reference market
+yet"* — so the refusal states the real reason instead of the private-security one. The oracle
+stage no longer drops legs it cannot price, which was hiding the most interesting verdict the
+guard produces.
+
+Verified live: *"Apple and TSMC benefit as on-device AI drives a smartphone replacement cycle"*
+now finds 30 assets, maps to wAAPLx 60% / wTSMx 40%, sizes them against real depth ($2,191 of
+$250,000 executable), and both are refused at the guard with `NO_REFERENCE` and that sentence
+attached. Before this change the same thesis was told "no matching asset" about two tokens with
+~$200k pools.
+
+---
+
+## D34 — A search bound was being reported as a measurement
+
+Found while re-running `pnpm capacity` over all 30 assets for D33. wGLDx printed exactly
+**1,000,000** at the 5% impact limit — a round number where every other cell was ragged.
+
+`capacity()` bisected between 0 and a hard-coded `hi = 1_000_000` USDG and opened with
+`if (impactAt(hi) <= maxBps) return hi`. So for any pool deeper than the guess, the function
+returned the guess. Gold's pool is ~$406k, twice a typical wrapper's, and it was the first asset
+deep enough to reach the ceiling — with eight seeds, all of them thin, the bug could not surface.
+It had been there since the first capacity run.
+
+This is precisely the failure the product claims not to commit: publishing a number it cannot
+defend. The real figure is **115,189**, and the universe total at 5% falls from a fictional
+1,400,320 to a measured 515,340.
+
+**The fix, and the second bug inside it.** Replacing the ceiling with "double until the pool
+cannot absorb it" hangs. `simulateExactInput` only walks the tick window it prefetched, and on
+running out it breaks early and returns the input it actually consumed — so impact *plateaus*
+rather than rising without bound, and the doubling loop never terminates. Confirmed by watching
+the run stall on wGLDx and nowhere else.
+
+So the loop treats an exhausted window as infinite impact. A truncated swap is a **lower bound**
+on impact, and a lower bound cannot justify a size. The capacity now reported is the largest size
+we can prove from the state actually loaded — which is the only kind of number this system is
+allowed to print.
+
+**Consequence:** the headline capacity figure changed from ~$11k to ~$48k at 0.5%, but for two
+unrelated reasons stacked together — 22 more assets (D33) and one honest ceiling (this). Both are
+corrections to the same habit: describing a partial measurement as a complete one. The business
+conclusion in D6 and D7 does not move.

@@ -40,7 +40,7 @@ The system then does four things nobody currently does:
 *whether at all*; it never takes deposits.
 
 This was decided after measuring capacity. A vault that gathers assets has no room to
-gather them into: the whole universe absorbs ~$11k at 0.5% impact. `PolicyGuard`,
+gather them into: the whole universe absorbs ~$48k at 0.5% impact. `PolicyGuard`,
 `ReceiptRegistry` and `ThesisRegistry` are unaffected — only the question of whether
 funds sit in our contract changed, and they do not.
 
@@ -51,7 +51,7 @@ funds sit in our contract changed, and they do not.
 | **Execution fee** | 10–20 bps on notional routed | **Most real.** Works from the first transaction; grows with volume. The number to show judges. |
 | **Thesis subscription** | Pay to follow a published thesis — per-call via x402, or a subscription | **Highest margin, needs no AUM.** This is the actual business. Depends entirely on the on-chain track record being unfakeable. |
 | **Oracle feed** | Other X Layer protocols pay for fair value + gap risk | **Most durable.** Slow to start, compounds as xStocks grow. |
-| Management / performance fee | bps on AUM | **Dead on arrival.** Capacity is ~$11k. Do not build the story on it. |
+| Management / performance fee | bps on AUM | **Dead on arrival.** Capacity is ~$48k across all 30 assets. Do not build the story on it. |
 | Order flow / market making | — | No. Adds inventory risk, muddies the positioning. |
 
 Early revenue = execution fees. Business = subscriptions. Long game = the oracle.

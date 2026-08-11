@@ -94,7 +94,7 @@ force into the market.
 Two consequences for the product:
 
 1. **This cannot be an AUM business.** The entire tokenised-equity universe on X Layer
-   absorbs ~$11k at 0.5% impact. Fees must come from execution quality, published
+   absorbs ~$48k at 0.5% impact. Fees must come from execution quality, published
    theses, and the fair-value feed — not from assets gathered.
 2. **Telling the user the truth is the product.** Every competing allocator will show a
    clean pie chart and hand the user a 28% haircut.
