@@ -151,5 +151,28 @@ for (let i = 0; i < assets.length; i++) {
       `gap=${String(obs.gapRisk).padStart(3)}  cap=${(Number(obs.capacityUsdg) / 1e6).toFixed(0).padStart(6)}  ` +
       `→ ${ok ? 'ALLOW' : `REJECT ${decoded}`}`,
   );
+
+  // A value the contract's jump bound refused comes back withheld even though
+  // we sent one. Reporting it is not optional: a publisher that cannot tell
+  // "the oracle declined my number" from "I published a withhold" would keep
+  // resending and never learn it has to confirm.
+  const sent = items.find((it) => it.asset === assets[i])!;
+  if (sent.hasValue && !obs.hasValue) {
+    const a = await client.readContract({
+      address: ORACLE,
+      abi: FAIR_VALUE_ORACLE_ABI,
+      functionName: 'anchorOf',
+      args: [assets[i]!],
+    });
+    const jumpPct =
+      a.valueE8 === 0n
+        ? '—'
+        : `${((Number(sent.fairValueE8 - a.valueE8) / Number(a.valueE8)) * 100).toFixed(1)}%`;
+    console.log(
+      `  ${''.padEnd(9)} withheld by the publish bound: ${(Number(sent.fairValueE8) / 1e8).toFixed(2)} is ` +
+        `${jumpPct} from the anchor ${(Number(a.valueE8) / 1e8).toFixed(2)}. ` +
+        `Re-publish the same value after JUMP_CONFIRM_DELAY to confirm it.`,
+    );
+  }
 }
 console.log();

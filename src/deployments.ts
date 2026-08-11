@@ -18,17 +18,27 @@ export interface Deployment {
  * rather than deploying quietly (D36). The oracle, guard and receipt registry are
  * fully exercisable; execution is a mainnet-only story and always was.
  */
+/**
+ * Redeployed 2026-08-11 for the publish-time bound in `FairValueOracle`.
+ *
+ * The whole stack moved, not just the oracle: `oracle` is `immutable` in both
+ * `PolicyGuard` and `Executor`, so a new oracle cannot be pointed at from the
+ * old ones. That immutability is deliberate — a guard whose oracle can be
+ * swapped is a guard whose price source can be swapped — and the redeploy is
+ * the price it charges.
+ */
 export const TESTNET: Deployment = {
   chainId: 1952,
   name: 'X Layer testnet',
   explorer: 'https://www.oklink.com/xlayer-test',
   contracts: {
-    FairValueOracle: '0xCc797463921F3b623DB445d5fffAf744f3aC19E5',
-    ReceiptRegistry: '0xBb63b9733Ba33117326479F42cd66B7a1B5Fae38',
-    PolicyGuard: '0xf3a06c9f0F1AABf01080475E420DD7A1092E1e1B',
-    Executor: '0xC4df2F5e72804843DBa0931813e827C67fbE1dDF',
-    ThesisRegistry: '0x15c04f77560673F88220c1328f976ECCdA6D53F0',
-    'TestUSDG (settlement)': '0x3F58df45FcB5D1074bA5D046D4928CF5efde5f4d',
+    FairValueOracle: '0x20a30E6fe3e3C2aCad4180EbeEeAD8BC9aB32B5c',
+    ReceiptRegistry: '0xc5589899556749c2D56fD08c7214739c0bA2bF94',
+    PolicyGuard: '0x92aF161Ac20177b49FE498f3fFb0e0DC062a6278',
+    Executor: '0xE127C36390c0Ee6c4eB1632b514BA498696c883b',
+    FeeCollector: '0x40B494716a60e2348eD7470BEF789365DF4d36b5',
+    ThesisRegistry: '0x5A2e03eb2B07464Da0821a95411e6614ab16C694',
+    'TestUSDG (settlement)': '0xE2D6d2BBA5Ece46A90F5ab5656664D4182332c32',
   },
 };
 

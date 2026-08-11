@@ -57,7 +57,7 @@ pnpm reconcile               # reference-market admission test — run before tr
 pnpm dev                     # the web app — thesis in, guard verdict out
 pnpm build                   # next build (what Vercel runs); contracts are build:contracts
 pnpm typecheck               # covers src/ and app/
-pnpm test:sol                # 64 Foundry tests
+pnpm test:sol                # 89 Foundry tests
 ```
 
 Anything that writes on chain takes its chain from `TARGET` (default `testnet`):

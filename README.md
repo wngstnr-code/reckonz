@@ -68,7 +68,7 @@ pnpm plan [usdg] [maxBps]    # a thesis basket: naive execution vs planned
 pnpm capacity                # what every xStock can absorb, by impact limit
 pnpm oracle [usdg]           # fair value, gap risk, and the guard's decision per asset
 pnpm thesis "free text"      # thesis -> assets -> sizing -> mandate
-pnpm test:sol                # 64 tests
+pnpm test:sol                # 89 tests
 ```
 
 On-chain writes take their chain from `TARGET` (`testnet` by default), so nothing can

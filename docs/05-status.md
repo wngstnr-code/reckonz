@@ -16,7 +16,7 @@ colliding. `06-assessment.md` is the honest read on whether this is a business.
 ```bash
 cd /Users/mac/Desktop/okxai
 set -a && source .env && set +a     # PRIVATE_KEY, GEMINI_API_KEY, CASH
-pnpm typecheck && forge test        # expect: clean, 45 passed
+pnpm typecheck && forge test        # expect: clean, 89 passed
 git status --short                  # expect: clean; docs/ is ignored, not missing
 pnpm dev                            # the web app, port 3000 (falls back if taken)
 ```
@@ -53,15 +53,25 @@ cash (real USDG) 0x4ae46a509F6b1D9056937BA4500cb143933D2dc8
 admin/deployer   0xD7360Dc3ED4fE01bEbB8477594A76CBFb5c79BA5
 ```
 
-### Deployed and verified — X Layer testnet (chain 1952), redeployed 2026-08-11
+### Deployed and verified — X Layer testnet (chain 1952), redeployed 2026-08-11 for D41
+
+All six `exact_match` on Sourcify. The whole stack moved, not just the oracle: `oracle` is
+`immutable` in `PolicyGuard` and `Executor`, so a new oracle cannot be pointed at from the old
+ones. That is deliberate — a guard whose oracle can be swapped is a guard whose price source can
+be swapped — and the redeploy is what it costs.
 
 ```
-FairValueOracle  0xCc797463921F3b623DB445d5fffAf744f3aC19E5
-ReceiptRegistry  0xBb63b9733Ba33117326479F42cd66B7a1B5Fae38
-PolicyGuard      0xf3a06c9f0F1AABf01080475E420DD7A1092E1e1B
-Executor         0xC4df2F5e72804843DBa0931813e827C67fbE1dDF
-TestUSDG (cash)  0x3F58df45FcB5D1074bA5D046D4928CF5efde5f4d
+FairValueOracle  0x20a30E6fe3e3C2aCad4180EbeEeAD8BC9aB32B5c   + publish-time jump bound
+ReceiptRegistry  0xc5589899556749c2D56fD08c7214739c0bA2bF94
+PolicyGuard      0x92aF161Ac20177b49FE498f3fFb0e0DC062a6278
+Executor         0xE127C36390c0Ee6c4eB1632b514BA498696c883b
+FeeCollector     0x40B494716a60e2348eD7470BEF789365DF4d36b5
+ThesisRegistry   0x5A2e03eb2B07464Da0821a95411e6614ab16C694
+TestUSDG (cash)  0xE2D6d2BBA5Ece46A90F5ab5656664D4182332c32
 ```
+
+**Mainnet still runs the pre-D41 oracle.** The bound is built, tested and proven on testnet; the
+mainnet redeploy is a separate decision and is not done.
 
 `Executor` on 1952 cannot swap and is not meant to: the X Layer v3 factory has no code there, so
 there are no pools to derive. `Deploy.s.sol` prints that rather than deploying quietly (D36).
@@ -86,7 +96,8 @@ can append receipts. `Executor.permit2/router/guard/oracle/cash` all correct.
 | Gemini provider (free tier) | `src/thesis-gemini.ts` | ✅ **run live**, `gemini-3.6-flash` |
 | Claude provider | `src/thesis.ts` | ⚠️ typechecked only, never executed |
 | Deterministic fixture provider | `src/thesis-fixture.ts` | ✅ |
-| `FairValueOracle` | `contracts/FairValueOracle.sol` | ✅ + basis, capacity |
+| `FairValueOracle` | `contracts/FairValueOracle.sol` | ✅ + basis, capacity, publish-time jump bound (D41) |
+| Safe 2-of-3 over the oracle admin | `src/safe.ts` | ✅ proven on testnet (D40); mainnet handover pending |
 | `ReceiptRegistry` | `contracts/ReceiptRegistry.sol` | ✅ append-only |
 | `PolicyGuard` | `contracts/PolicyGuard.sol` | ✅ triggers + position accounting |
 | `ExitTriggers` — all 7 metrics | `contracts/ExitTriggers.sol` | ✅ |
@@ -94,7 +105,7 @@ can append receipts. `Executor.permit2/router/guard/oracle/cash` all correct.
 | `V3Swapper` — direct pool swaps, derived addresses | `contracts/V3Swapper.sol` | ✅ the Universal Router cannot swap here (D35) |
 | `FeeCollector` — 15 bps, ceiling 50 in code | `contracts/FeeCollector.sol` | ✅ took a real fee |
 | `ThesisRegistry` — append-only, no admin | `contracts/ThesisRegistry.sol` | ✅ receipt #2 resolves to thesis #0 |
-| Test suite | `test/*.t.sol` | ✅ 64/64 |
+| Test suite | `test/*.t.sol` | ✅ 89/89 |
 | Chain selection + Permit2 helpers | `src/wallet.ts` | ✅ `TARGET=mainnet\|testnet` |
 | ABIs, one source, browser-safe | `src/abi.ts` | ✅ `pnpm verify:abi` checks every selector vs bytecode |
 | **One real fill, end to end** | `src/execute.ts` | ✅ **run on mainnet twice**; refuses truncated quotes and pool mismatches |
@@ -240,10 +251,13 @@ That single run exercises every claim the product makes. It is the demo.
   not claim to know why. Its pool holds a single full-range position with no tick structure from
   trading. Anyone holding wSKHYx on X Layer should read that −86.4%.
 - **The oracle's admin, publisher and treasury are one key.** Read on mainnet: `admin` ==
-  `deployer` == `isPublisher` == the key holding the funds. Safe 1.4.1 is **proven working on
-  X Layer** (`pnpm safe:prove`, all five steps incl. two negative tests — D40), so the admin half
-  is ready to move behind a 2-of-3. Pending: the real owner addresses, then one mainnet
-  transaction. The publisher half cannot be fixed by a multisig and needs the publish-time bound.
+  `deployer` == `isPublisher` == the key holding the funds. Both halves of the fix now exist:
+  Safe 1.4.1 is **proven working on X Layer** (`pnpm safe:prove`, five steps incl. two negative
+  tests — D40), and the publisher is **bounded in the contract** (D41, on testnet). What is left
+  is the mainnet handover and the mainnet redeploy — both decisions, not unknowns.
+- **The bound slows a compromise; it does not prevent one.** Twelve confirmed steps is an 8x, and
+  `test_APatientAttackerStillGetsThere` says so in the suite rather than in a comment. This entry
+  stays even after the multisig lands.
 - **`.env` holds a live Gemini key** pasted in chat. Owner assessed the exposure as acceptable
   2026-08-11; the key is in Vercel's environment too. Recorded rather than re-argued.
 - **No logo.** Four prompt directions were drafted on 2026-08-11 (the cut / the narrowing / the

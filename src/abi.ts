@@ -52,18 +52,6 @@ export const PERMIT2_ABI = parseAbi([
   'function allowance(address owner, address token, address spender) view returns (uint160 amount, uint48 expiration, uint48 nonce)',
 ]);
 
-// ---------------------------------------------------------------- PolicyGuard
-
-/**
- * `PolicyGuard` — the mandate, its policy, its exit triggers, and the check that
- * runs inside the trade's own transaction.
- *
- * A wallet UI needs `createMandate`, `setTriggers`, `setAssetAllowed` and
- * `setCircuitBreaker` to write, and `getMandate` / `firedTriggers` / `dryRun` to
- * show the user what the guard would decide before they spend gas on it.
- * `validateAndRecord` is callable only by the mandate's executor — it is here so
- * reverts decode, not because a browser should ever call it.
- */
 /**
  * Safe 1.4.1. Not ours, so `pnpm verify:abi` does not check it — the same
  * footing as `ERC20_ABI` and `PERMIT2_ABI`.
@@ -91,6 +79,18 @@ export const SAFE_ABI = parseAbi([
   'function execTransaction(address to, uint256 value, bytes data, uint8 operation, uint256 safeTxGas, uint256 baseGas, uint256 gasPrice, address gasToken, address refundReceiver, bytes signatures) payable returns (bool)',
 ]);
 
+// ---------------------------------------------------------------- PolicyGuard
+
+/**
+ * `PolicyGuard` — the mandate, its policy, its exit triggers, and the check that
+ * runs inside the trade's own transaction.
+ *
+ * A wallet UI needs `createMandate`, `setTriggers`, `setAssetAllowed` and
+ * `setCircuitBreaker` to write, and `getMandate` / `firedTriggers` / `dryRun` to
+ * show the user what the guard would decide before they spend gas on it.
+ * `validateAndRecord` is callable only by the mandate's executor — it is here so
+ * reverts decode, not because a browser should ever call it.
+ */
 export const POLICY_GUARD_ABI = parseAbi([
   'struct Policy { uint16 maxWeightBps; uint16 minCashBufferBps; uint16 maxSlippageBps; uint16 maxDeviationBps; uint8 maxGapRisk; uint128 maxNotionalPerTrade; uint16 maxFillsPerEpoch; uint32 epochDuration; uint32 minRebalanceInterval; bool enforceWeights; }',
   'struct Mandate { address owner; address agent; address executor; uint32 version; bool active; bool circuitBreaker; uint64 lastActionAt; uint64 epochStart; uint16 fillsThisEpoch; Policy policy; }',
@@ -171,6 +171,7 @@ export const POLICY_GUARD_ABI = parseAbi([
 export const FAIR_VALUE_ORACLE_ABI = parseAbi([
   'struct Observation { uint128 fairValueE8; uint32 confidenceBps; int32 basisBps; uint128 capacityUsdg; uint8 gapRisk; uint8 state; uint64 anchorAt; uint64 updatedAt; bool hasValue; }',
   'struct Publication { address asset; uint128 fairValueE8; uint32 confidenceBps; int32 basisBps; uint128 capacityUsdg; uint8 gapRisk; uint8 state; uint64 anchorAt; bool hasValue; }',
+  'struct Anchor { uint128 valueE8; uint64 at; uint128 pendingE8; uint64 pendingAt; }',
 
   'function publish(Publication p)',
   'function publishMany(Publication[] items)',
@@ -186,12 +187,28 @@ export const FAIR_VALUE_ORACLE_ABI = parseAbi([
   'function maxAge() view returns (uint64)',
   'function admin() view returns (address)',
 
+  // The publish-time bound. `anchorOf` is exposed so a withheld value is
+  // inspectable — a consumer can see what the oracle is measuring against and
+  // what jump is waiting on confirmation, rather than taking the refusal on
+  // trust. The four constants are read rather than hard-coded here for the
+  // same reason `MAX_FEE_BPS` is: the contract is the authority on its own
+  // limits, and a copy in TypeScript is a copy that drifts.
+  'function anchorOf(address asset) view returns (Anchor)',
+  'function MAX_JUMP_BPS() view returns (uint256)',
+  'function JUMP_CONFIRM_DELAY() view returns (uint64)',
+  'function PENDING_TTL() view returns (uint64)',
+  'function ANCHOR_MAX_AGE() view returns (uint64)',
+  'function MAX_MAX_AGE() view returns (uint64)',
+
   'event Published(address indexed asset, uint128 fairValueE8, uint8 gapRisk, uint8 state)',
   'event PublisherSet(address indexed publisher, bool allowed)',
   'event MaxAgeSet(uint64 maxAge)',
   'event AdminSet(address indexed admin)',
+  'event JumpPending(address indexed asset, uint128 fromE8, uint128 toE8, uint256 jumpBps, uint64 confirmableAt)',
+  'event JumpConfirmed(address indexed asset, uint128 fromE8, uint128 toE8)',
 
   'error GapRiskOutOfRange(uint8 gapRisk)',
+  'error MaxAgeOutOfRange(uint64 maxAge)',
   'error NoData()',
   'error NotAdmin()',
   'error NotPublisher()',

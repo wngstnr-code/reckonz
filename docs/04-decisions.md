@@ -889,3 +889,66 @@ logs are the only audit trail a Safe has.
 is a number in a document. The owners here are Wangsit, Nabil, and a third key held separately.
 And even with it done, the gap list keeps an entry: a hot publisher key still publishes
 automatically, bounded by the contract rather than by consent.
+
+---
+
+## D41 — The oracle bounds its own publisher, because a multisig cannot
+
+D40 split the admin key's two powers and showed a multisig only reaches one of them. `publish()`
+runs every fifteen minutes from a machine, so consent cannot gate it and the contract has to.
+
+**The rule.** A value more than `MAX_JUMP_BPS` from the last one that took effect is not believed
+on sight. It is *announced*: the observation is written with the value **withheld**, an event is
+emitted, and the same value republished after `JUMP_CONFIRM_DELAY` takes effect. A confirmation
+must agree with what was announced, within the ordinary bound — otherwise announcing one jump
+would license publishing any other and the delay would buy nothing.
+
+**Withheld, not reverted.** `publishMany` writes 28 assets in one transaction; one asset gapping
+must not throw away the other 27. Withholding is also the vocabulary the system already speaks:
+when it cannot defend a number, it declines to publish one. The rest of the observation — gap
+risk, capacity, state — still lands, and those are exactly what a mandate wants at the moment the
+oracle stops trusting its own price.
+
+**Every constant is measured or argued, and none is settable.**
+
+| Constant | Value | Why |
+|---|---|---|
+| `MAX_JUMP_BPS` | 2 000 | Across **14 484** one-day moves (every close-to-open gap and daily return of the 29 references over a year) 20% trips **0.159%** of them — 23 events. 15% would trip 0.42%, 30% only 0.021%. Largest legitimate move in the sample: **31.86%** (AMD). |
+| `JUMP_CONFIRM_DELAY` | 30 min | Twice `maxAge`, so an asset awaiting confirmation is already stale to consumers and nothing executes against the old value either. |
+| `PENDING_TTL` | 2 h | An announcement is a window, not standing permission. |
+| `ANCHOR_MAX_AGE` | 1 day | `MAX_JUMP_BPS` is calibrated on one-day moves. Bounding against a week-old anchor would apply a one-day tolerance to a week of movement and withhold constantly. |
+| `MAX_MAX_AGE` | 1 h | An admin who sets `maxAge` to a year makes every stale observation usable — the freshness check defeated without touching a price. |
+
+`constant`, all of them, for the reason `MAX_FEE_BPS` is (D37): an admin who can raise a bound has
+no bound.
+
+**The bypass the design exists to close.** The obvious implementation keeps the anchor inside
+`Observation`. A withheld observation zeroes the value — so publish a withhold, then any price at
+all, and the bound is simply gone. `Anchor` is separate storage for exactly this, and
+`test_WithholdingDoesNotEraseTheAnchor` is the test that would have caught it.
+
+**A constant that did nothing, found by its own test.** `PENDING_TTL` was first set to 1 day, the
+same as `ANCHOR_MAX_AGE`. The anchor therefore always expired first and the TTL never ran — dead
+code that reads as a safeguard. The expiry test failed and said so. It is now 2 hours, and the
+test asserts `PENDING_TTL < ANCHOR_MAX_AGE` so it cannot quietly become dead again.
+
+**What this is not.** `test_APatientAttackerStillGetsThere` is in the suite on purpose: twelve
+confirmed steps is an 8x. The bound **caps the rate of change and forces an event trail**; it does
+not prevent a compromise. That is why it is one half and the admin multisig is the other, and why
+the gap list keeps an entry rather than closing.
+
+**Cost, paid.** `oracle` is `immutable` in both `PolicyGuard` and `Executor` — deliberately, since
+a guard whose oracle can be swapped is a guard whose price source can be swapped — so a new oracle
+drags the whole stack. Testnet is redeployed and all six contracts are **`exact_match` on
+Sourcify**. Mainnet is not done and is a separate decision.
+
+**Proven on chain, not only in Foundry** (89 tests pass, up from 73):
+
+```
+MAX_JUMP_BPS 2000  JUMP_CONFIRM_DELAY 1800s
+anchor published        fv=100
++10% inside the bound   fv=110   hasValue=true
++82% past the bound     fv=0     hasValue=false   anchor=110  pending=200
+                        gapRisk 20 and capacity 5000 survive the withhold
+immediate retry         hasValue=false            (delay not served)
+```
