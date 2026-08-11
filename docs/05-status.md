@@ -286,11 +286,17 @@ That single run exercises every claim the product makes. It is the demo.
   pipeline reads the deployed observation and respects a withhold.
 - ~~The previous mainnet oracle is writable by one key~~ — ✅ **closed (D45).** Publisher revoked,
   admin handed to the Safe.
-- **Scheduled publishing is built but not running** (D45). `.github/workflows/publish-oracle.yml`
-  publishes every ten minutes. It needs two things: `PUBLISHER_KEY` as a **repository secret**, and
-  **gas** — ten-minute publishing costs ~0.0026 OKB/day and the publisher holds 0.0019, about 17
-  hours. Ten days needs roughly **0.026 OKB** at `0x40101A4932dEb95f0A5951BB7fB0fFa7c17e3Ab8`.
-  Until it runs, the publish bound is still in genesis mode between manual publishes.
+- **Continuous publishing is built and not yet deployed** (D45, D46). `pnpm publish:loop` is a
+  long-running worker with `railway.json` ready; GitHub Actions is the manual button only, because
+  its `schedule` is best-effort and a five-minute lag against a 15-minute `maxAge` is a stale
+  oracle. Two things left, both outside the repo:
+  - **Deploy the worker** (Railway or any host), env `TARGET=mainnet`, `PUBLISHER_KEY`,
+    `PUBLISH_INTERVAL_SEC=600`.
+  - **Gas.** ~0.0026 OKB/day at ten minutes; the publisher holds 0.00289, about **27 hours**. Ten
+    days needs ~**0.026 OKB** at `0x40101A4932dEb95f0A5951BB7fB0fFa7c17e3Ab8`.
+
+  Until it runs, the oracle is only fresh for 15 minutes after each manual publish, and the publish
+  bound is in genesis mode in between.
 - **The bound slows a compromise; it does not prevent one.** Twelve confirmed steps is an 8x, and
   `test_APatientAttackerStillGetsThere` says so in the suite rather than in a comment. This entry
   stays even after the multisig lands.
