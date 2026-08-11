@@ -20,15 +20,9 @@
  *
  *     TARGET=mainnet pnpm swap [okb]     # default: everything above the gas reserve
  */
-import {
-  encodeAbiParameters,
-  formatEther,
-  formatUnits,
-  parseEther,
-  type Address,
-} from 'viem';
+import { formatEther, formatUnits, parseEther, type Address } from 'viem';
 import { ERC20_ABI } from './abi';
-import { ADDR, USDG, USDT0 } from './chain';
+import { USDG, USDT0 } from './chain';
 import { loadPool, simulateExactInput } from './pool';
 import { accountFrom, chainFor, target, walletFor, waitUntil } from './wallet';
 
@@ -39,54 +33,44 @@ const WOKB_ABI = [
   { type: 'function', name: 'deposit', inputs: [], outputs: [], stateMutability: 'payable' },
 ] as const;
 
-const ROUTER_ABI = [
+/**
+ * `PoolSwapper`, deployed 2026-08-11. Calls the pools directly, because the
+ * Universal Router on this chain derives pool addresses from the canonical
+ * factory and reverts on every swap (D35).
+ */
+const POOL_SWAPPER = '0x20a0fB089094c6b11A7b2de5c042E1f2f50D41f5' as Address;
+
+const POOL_SWAPPER_ABI = [
   {
     type: 'function',
-    name: 'execute',
+    name: 'swapExactInput',
     inputs: [
-      { name: 'commands', type: 'bytes' },
-      { name: 'inputs', type: 'bytes[]' },
-      { name: 'deadline', type: 'uint256' },
+      {
+        name: 'hops',
+        type: 'tuple[]',
+        components: [
+          { name: 'tokenIn', type: 'address' },
+          { name: 'tokenOut', type: 'address' },
+          { name: 'fee', type: 'uint24' },
+        ],
+      },
+      { name: 'amountIn', type: 'uint256' },
+      { name: 'minAmountOut', type: 'uint256' },
+      { name: 'recipient', type: 'address' },
     ],
-    outputs: [],
-    stateMutability: 'payable',
+    outputs: [{ name: 'amountOut', type: 'uint256' }],
+    stateMutability: 'nonpayable',
   },
+  { type: 'function', name: 'poolFor', inputs: [
+      { type: 'address' }, { type: 'address' }, { type: 'uint24' },
+    ], outputs: [{ type: 'address' }], stateMutability: 'view' },
 ] as const;
-
-/** Universal Router command. Same constant `Executor.sol` uses. */
-const V3_SWAP_EXACT_IN = '0x00';
 
 /** Leave this much OKB behind for gas — ~30x the whole deploy-to-fill sequence. */
 const GAS_RESERVE = parseEther('0.005');
 
 /** Tolerated shortfall against the simulated output, in bps. */
 const SLIPPAGE_BPS = 100n;
-
-/**
- * `V3_SWAP_EXACT_IN`'s input tuple, encoded exactly as `Executor.sol` encodes it:
- * recipient, amountIn, amountOutMin, path, payerIsUser. `payerIsUser` is false
- * because the router has already been funded and pays itself.
- */
-function encodeSwapInput(
-  recipient: Address,
-  amountIn: bigint,
-  minOut: bigint,
-  path: `0x${string}`,
-): `0x${string}` {
-  return encodeAbiParameters(
-    [{ type: 'address' }, { type: 'uint256' }, { type: 'uint256' }, { type: 'bytes' }, { type: 'bool' }],
-    [recipient, amountIn, minOut, path, false],
-  );
-}
-
-/** Uniswap V3 multi-hop path: token | fee | token | fee | token, fees big-endian over 3 bytes. */
-function encodeMultiPath(hops: [Address, number, Address][]): `0x${string}` {
-  let out = hops[0]![0].slice(2);
-  for (const [, fee, tokenOut] of hops) {
-    out += fee.toString(16).padStart(6, '0') + tokenOut.slice(2);
-  }
-  return `0x${out}`.toLowerCase() as `0x${string}`;
-}
 
 /**
  * Wait for a transaction, and do not let the wait itself fail the run.
@@ -133,10 +117,7 @@ const wokbOf = (who: Address) =>
 
 const balance = await wallet.getBalance({ address: account.address });
 const heldWokb = await wokbOf(account.address);
-// WOKB already sitting with the router belongs to this leg too — an earlier run
-// funded it and died before the swap landed.
-const routerHeld = await wokbOf(ADDR.universalRouter);
-const alreadyWrapped = heldWokb + routerHeld;
+const alreadyWrapped = heldWokb;
 const amountIn = requested ? parseEther(requested) : balance + alreadyWrapped - GAS_RESERVE;
 
 // Only the part that is not already wrapped comes out of the OKB balance.
@@ -147,8 +128,7 @@ const gasLeft = balance - toWrap;
 
 console.log(
   `\n  balance   ${formatEther(balance)} OKB` +
-    (heldWokb > 0n ? ` + ${formatEther(heldWokb)} WOKB held` : '') +
-    (routerHeld > 0n ? ` + ${formatEther(routerHeld)} WOKB already with the router` : ''),
+    (heldWokb > 0n ? ` + ${formatEther(heldWokb)} WOKB held` : ''),
 );
 console.log(`  swapping  ${formatEther(amountIn)} OKB`);
 console.log(`  reserve   ${formatEther(gasLeft)} OKB left for gas`);
@@ -221,34 +201,40 @@ if (toWrap === 0n) {
   console.log(`  wrapped   ${wrapHash}`);
 }
 
-// -------------------------------------------------- 4. fund the router, swap
+// ------------------------------------------------- 4. approve once, then swap
 
-// The router spends from its own balance, exactly as Executor does. Anything it
-// keeps would be money that silently did not become USDG, so the balance is
-// checked after the swap rather than assumed.
-const routerBefore = routerHeld;
+// PoolSwapper pulls with transferFrom, so it needs an allowance rather than a
+// transfer. That is the safer shape: nothing sits in the contract between
+// transactions waiting to be swept, which is exactly what happened when a
+// funding transfer to the router landed and the swap did not.
+const allowance = await wallet.readContract({
+  address: WOKB,
+  abi: ERC20_ABI,
+  functionName: 'allowance',
+  args: [account.address, POOL_SWAPPER],
+});
 
-if (routerBefore >= amountIn) {
-  // Also resumable: the router is already holding this leg's WOKB from an
-  // interrupted run, so sending more would strand it there.
-  console.log(`  router    already funded with ${formatEther(routerBefore)} WOKB`);
-} else {
-  const fundHash = await wallet.writeContract({
+if (allowance < amountIn) {
+  console.log(`  approving…`);
+  const approveHash = await wallet.writeContract({
     address: WOKB,
     abi: ERC20_ABI,
-    functionName: 'transfer',
-    args: [ADDR.universalRouter, amountIn - routerBefore],
+    functionName: 'approve',
+    args: [POOL_SWAPPER, amountIn],
   });
-  await settle(fundHash);
-  await waitUntil(() => wokbOf(ADDR.universalRouter), (b) => b >= amountIn, {
-    what: 'router funding',
-  });
+  await settle(approveHash);
+  await waitUntil(
+    () =>
+      wallet.readContract({
+        address: WOKB,
+        abi: ERC20_ABI,
+        functionName: 'allowance',
+        args: [account.address, POOL_SWAPPER],
+      }),
+    (a) => a >= amountIn,
+    { what: 'allowance' },
+  );
 }
-
-const path = encodeMultiPath([
-  [WOKB, 500, USDT0.address],
-  [USDT0.address, 100, USDG.address],
-]);
 
 const before = await wallet.readContract({
   address: USDG.address,
@@ -259,15 +245,17 @@ const before = await wallet.readContract({
 
 console.log(`  swapping…`);
 const swapHash = await wallet.writeContract({
-  address: ADDR.universalRouter,
-  abi: ROUTER_ABI,
-  functionName: 'execute',
+  address: POOL_SWAPPER,
+  abi: POOL_SWAPPER_ABI,
+  functionName: 'swapExactInput',
   args: [
-    V3_SWAP_EXACT_IN,
     [
-      encodeSwapInput(account.address, amountIn, minOut, path),
+      { tokenIn: WOKB, tokenOut: USDT0.address, fee: 500 },
+      { tokenIn: USDT0.address, tokenOut: USDG.address, fee: 100 },
     ],
-    BigInt(Math.floor(Date.now() / 1000) + 20 * 60),
+    amountIn,
+    minOut,
+    account.address,
   ],
 });
 const gasUsed = await settle(swapHash);
@@ -287,19 +275,7 @@ const after = await waitUntil(
   { what: 'USDG balance' },
 );
 
-const routerAfter = await wokbOf(ADDR.universalRouter);
-
 console.log(`\n  received  ${formatUnits(after - before, USDG.decimals)} USDG`);
 console.log(`  balance   ${formatUnits(after, USDG.decimals)} USDG`);
 console.log(`  gas left  ${formatEther(await wallet.getBalance({ address: account.address }))} OKB`);
-
-// The router was funded with exactly this leg's input and should end at zero.
-// Anything it kept is money that silently did not become USDG — the same check
-// Executor makes in Solidity, for the same reason.
-if (routerAfter > 0n) {
-  console.log(
-    `\n  WARNING: the router kept ${formatEther(routerAfter)} WOKB. ` +
-      `That is your money that did not become USDG.`,
-  );
-}
 console.log();

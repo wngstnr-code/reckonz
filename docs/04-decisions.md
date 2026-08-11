@@ -623,11 +623,19 @@ succeeds against it — not a selector, not a codesize.
 `V3_SWAP_EXACT_IN`. On mainnet it will revert 100% of the time. The contract is deployed on
 testnet where the router has 0 bytes, so the failure has never had a chance to appear.
 
-**The fix.** `Executor` should call the pool directly and implement `uniswapV3SwapCallback`. It is
-already a contract, so it can be its own callback recipient; the router was buying nothing that
-justifies a dependency this fragile. This removes the external router entirely rather than hunting
-for a correctly-configured one — and the pool address comes from the factory we have verified,
-which is the same source `src/pool.ts` already uses.
+**The fix, done the same day.** `contracts/V3Swapper.sol` derives the pool and answers the
+callback; `Executor` inherits it and no longer knows what a router is. A `Leg` now carries a fee
+tier instead of an encoded path, so there is no route left to get wrong. The constructor takes the
+factory in the router's place.
+
+Proven on mainnet before touching `Executor`: `PoolSwapper` (the same base class, deployed at
+`0x20a0fB089094c6b11A7b2de5c042E1f2f50D41f5`) swapped **0.0001 OKB → 0.009506 USDG** through
+WOKB/USD₮0/USDG, against a simulation that said 0.009507. One unit of USDG apart, which is the
+smallest disagreement the token can express.
+
+`Executor.t.sol`'s mock router became a mock **pool**, etched at the derived address — it pays the
+recipient first and then calls back for payment, because that ordering is the reason the callback
+has to exist at all. 53 tests pass.
 
 **Also worth keeping:** `SWEEP` (command `0x04`) *does* work, because it never touches a pool.
 That is how 0.0396 WOKB was recovered after a funding transfer landed and the swap did not. Any

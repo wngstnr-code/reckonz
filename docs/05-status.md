@@ -179,7 +179,7 @@ That single run exercises every claim the product makes. It is the demo.
 
 | Item | Notes |
 |---|---|
-| **Real fill on mainnet** | 🔴 **Blocked by D35.** The Universal Router on mainnet cannot execute a V3 swap at all — canonical factory baked into its bytecode, X Layer's factory is non-canonical, so it derives empty pool addresses and reverts. `Executor._swap` calls exactly that. Fix: call the pool directly and implement `uniswapV3SwapCallback`, then redeploy. |
+| **Real fill on mainnet** | Unblocked in code (D35): `Executor` now derives the pool and swaps directly, proven on mainnet by `PoolSwapper` moving 0.0001 OKB into USDG. **Needs a redeploy** — the testnet stack still has the router-era constructor, and mainnet has never been deployed. |
 | **Demo video / walkthrough** | Not started. The web app is now the thing to record. |
 | **Deploy the web app** | Runs locally only. Judges will not `pnpm dev`. |
 | **Wallet connect + mandate creation in the UI** | The page reads and decides; it cannot yet sign. Everything on-chain still happens through `pnpm mandate` / `pnpm oracle:publish`. |
@@ -260,6 +260,13 @@ If time remains after all four: `FeeCollector`, then `ThesisRegistry`. Not befor
 ---
 
 ## Log
+
+**2026-08-11 (latest, fifth)** — D35 fixed. `V3Swapper` derives pool addresses from the factory
+and answers `uniswapV3SwapCallback`; `Executor` inherits it and the Universal Router is gone from
+the codebase. A `Leg` carries a fee tier instead of a path. Verified on mainnet first with
+`PoolSwapper`: 0.0001 OKB → 0.009506 USDG, one unit off the simulation. Executor's mock router
+became a mock pool etched at the derived address; 53 tests pass. Both stacks need redeploying —
+the constructor changed.
 
 **2026-08-11 (latest, fourth)** — D35, found while funding the mainnet deployer: the Universal
 Router at `0x66a9…` **cannot execute a V3 swap on X Layer**. Its bytecode carries the canonical v3
