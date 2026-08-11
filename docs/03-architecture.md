@@ -157,22 +157,28 @@ snapshot, fair value / gap risk, thesis→basket compilation.
 
 ## Build order
 
-1. Data layer + Universe Mapper ✅
+1. Data layer + Universe Mapper ✅ — all 30 xStocks, read from the chain (D33)
 2. Execution Planner ✅ — the moat, demoable before any contract exists
-3. FairValueOracle engine + contract ✅
-4. `PolicyGuard` + `ReceiptRegistry`, testnet 1952 ← **current**
-5. Thesis Compiler
-6. Mainnet with small caps
-7. Simple mode + `ThesisRegistry`
-8. ASP / x402
+3. FairValueOracle engine + contract ✅ — live on mainnet, 8 assets, 2 withheld
+4. `PolicyGuard` + `ReceiptRegistry` ✅ — deployed and verified on both chains
+5. Thesis Compiler ✅ — live on Gemini, refuses to substitute unmapped names
+6. Mainnet with small caps ✅ — two real fills, 25→1 USDG blast radius, receipts #0 and #1
+7. `FeeCollector` ✅ — 15 bps, taking a real fee ← **done ahead of order**
+8. Simple mode + `ThesisRegistry` ← **next**
+9. ASP / x402
 
-Steps 1–3 already produce the winning demo: naive vs planned execution, in real USDG.
+`Executor` swaps by calling the pool directly (`V3Swapper`). The Universal Router was in
+this design until it turned out it cannot swap on X Layer at all — see D35, and note that
+it had been "verified" by checking a codesize and a selector.
 
 ## Known risks, to state rather than hide
 
 - **Capacity ceiling ~$48k** at 0.5% impact, across all 30 xStocks. Telling users this is the product; it also
   means revenue cannot come from AUM.
 - **Oracle credibility** — answered by confidence bands and the "guard, not truth" framing.
+- **The oracle prices 8 of 30 assets.** The other 22 trade and are refused at the guard
+  with `NO_REFERENCE`, which is true but is still a limit on what can execute. Widening it
+  means verifying, per wrapper, which listed security it actually tracks.
 - **Wrapper risk** — xStocks on X Layer are a wrap of an already-wrapped Backed token.
   Read the wrapper and *surface the risk to users*; turn the liability into a trust feature.
 - **Reference-mapping is unverified for some assets.** wSKHYx proves it. Make it a visible

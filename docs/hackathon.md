@@ -1,3 +1,8 @@
+> Raw source material — the original announcement threads, quoted verbatim (Indonesian).
+> `00-hackathon.md` is the structured version and is the one to act on.
+
+---
+
 https://x.com/XLayerOfficial/status/2085742815947157765
 Para Pembuat, ini khusus untuk kalian.
 

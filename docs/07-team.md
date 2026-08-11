@@ -64,21 +64,25 @@ browser.
 Order is from `05-status.md § Suggested order`. Item 1 unblocks the most and nothing else should
 jump ahead of it.
 
-### 1. Mainnet deploy + one real fill 🔴 blocking
+### 1. Mainnet deploy + one real fill ✅ done 2026-08-11
 
-The hard requirement ("testnet during, mainnet after") *and* the only place `Executor`'s swap
-path stops being unit-tested-only. The Universal Router has **0 bytes on testnet**, so this
-cannot be faked.
+```
+FairValueOracle  0x3659E05Fbbaafb7bA868171aB98327b62831Cd75
+ReceiptRegistry  0x9D04575894F570C3638Bc1f6ECaD6EF36D479Fa6
+PolicyGuard      0x481e0A60c5E105708b86e804811F8fc98a43bEFd
+Executor         0xdc2f34A220D4cd7c098D7927454F30AEf3157681
+FeeCollector     0x3A1D6b9129E69fEF189E538996B18cebd56C3Dd0
+PoolSwapper      0x1f3b67d8209060eC68d0eDCD6E60Ba53A8e9ac28
+cash             0x4ae46a509F6b1D9056937BA4500cb143933D2dc8  (real USDG)
+```
 
-- Fund a mainnet deployer with OKB on chain 196.
-- `CASH` must be real USDG `0x4ae46a509F6b1D9056937BA4500cb143933D2dc8`, not the mock.
-- Decide `maxNotionalPerTrade` and `maxFillsPerEpoch` **before** creating the mandate — they are
-  the blast radius.
-- `TARGET=mainnet` on every script; record addresses in `src/deployments.ts` (`MAINNET`).
-- Expect RPC lag between dependent transactions (D18) — poll until state is visible.
+Two fills, receipts `#0` and `#1`. All nine contracts across both chains verified on Sourcify.
+`MAINNET` in `src/deployments.ts` is populated, so the FE header chip lights up on its own.
 
-**Hands the FE:** a non-null `MAINNET` in `src/deployments.ts`. The header chip is already wired
-to it and lights up on its own.
+The route there is worth knowing about, because it changed the contracts: **the Universal Router
+cannot swap on X Layer**. It carries the canonical v3 factory in its bytecode and X Layer's is not
+canonical, so every swap resolved to an empty address (D35). `Executor` now derives the pool
+itself. If you see `ADDR.universalRouter` anywhere, it is a trap.
 
 ### 2. Wallet seam for the FE ✅ shipped 2026-08-11
 
@@ -101,19 +105,26 @@ Surface those — a guard's refusal, with its numbers, is the product.
 FE signs in the browser with its own wallet library. BE does not build a signing endpoint — a
 server that can sign is a server that has custody, and D6 forbids it.
 
-### 3. Deploy the API runtime
+### 3. Deploy the API runtime ✅ done
 
-The route needs `GEMINI_API_KEY` and a host that tolerates a ~2-minute streamed response
-(`maxDuration = 300` is already set). Coordinate with FE — one deployment serves both.
+**https://reckonz.vercel.app** — Root Directory is the repo root, not `app/`. The only environment
+variable is `GEMINI_API_KEY`; the web path reads no key that can move funds, and it must stay that
+way. `pnpm build` is `next build` (Foundry moved to `build:contracts`) so Vercel's default works.
 
-### 4. Rotate the Gemini key
+Verified in production end to end, not just a 200: six stages, live Gemini, 30 assets from the
+chain, capacity-limited plan, one of two assets refused at the guard.
 
-`.env` holds a key pasted into a chat. Rotate before the repo goes public.
+### 4. `FeeCollector` ✅ done
 
-### 5. If time remains
+15 bps on notional, ceiling fixed in code at 50. Took a real fee on the second fill. The receipt
+records what was *traded*, not what was pulled — see D37 for why that distinction protects the
+guard's slippage check.
 
-`FeeCollector` (turns the revenue model from a doc line into a number on a block explorer, ~half
-a day, needs a real fill first), then `ThesisRegistry`. Not before items 1–4.
+### 5. Next up
+
+`ThesisRegistry` — append-only, hash + pointer, closing the thesis → execution → record loop the
+pitch rests on. Note `06-assessment.md` argues for a legal answer *before* people can pay to follow
+a thesis; the registry itself is fine, the paid-following on top of it is the question.
 
 ### Known gaps BE owns
 
@@ -121,16 +132,22 @@ a day, needs a real fill first), then `ThesisRegistry`. Not before items 1–4.
 - Yahoo Finance is not a production data source.
 - The oracle prices 8 of the 30 xStocks. All 30 are investable (D33), but a thesis about Apple
   is refused at the guard with `NO_REFERENCE` — true, and still a limit on what can execute.
+- The oracle has one admin key that can publish any fair value, and the guard believes it.
+  Stated openly rather than hidden; fixing it properly is multisig plus publish-time bounds.
 - `wSKHYx` quotes in KRW and does not reconcile; the oracle correctly withholds.
 
 ---
 
 ## FE — backlog, in order
 
-### 1. Deploy the web app 🔴 blocking
+### 1. Deploy the web app ✅ done by BE 2026-08-11
 
-Judges will not run `pnpm dev`. The submission has to be a link. Needs the env var and the long
-streamed response — see BE item 3, do it together.
+**https://reckonz.vercel.app.** Redeploys on push to `main`. If you need to change build settings:
+Root Directory is the repo root (not `app/`), and `GEMINI_API_KEY` is the only environment
+variable — never add a key that can move funds to a host serving public traffic.
+
+A run takes ~2 minutes and `maxDuration` is 300. If it ever gets cut at 60 seconds, that is a plan
+limit, not the code.
 
 ### 2. Make the run legible
 

@@ -1,7 +1,9 @@
 # Assessment — is this strong, and is it a startup?
 
-Written 2026-08-11, ten days before submission. Two different questions with two different
-answers: the idea is strong, and it is not startup-ready. Both statements are load-bearing.
+Written 2026-08-11, ten days before submission, and revised the same day after the system went
+live on mainnet. Two different questions with two different answers: the idea is strong, and it is
+not startup-ready. Both statements are load-bearing, and **the second did not change when the
+first got stronger** — which is the most useful thing in this document.
 
 ---
 
@@ -13,13 +15,19 @@ check was wrong — a prose summary of an API invented two protocols that do not
 The emptiness is measured, not inferred.
 
 **The core insight is counter-intuitive and quantified.** Almost every financial product sells
-"you can". This one sells "you cannot, and here is the number". $250,000 of intent, $1,618 that
-fits, $176,174 lost if you force it. Those come from tick-by-tick simulation against live pool
-state, so they can be disagreed with but not disputed.
+"you can". This one sells "you cannot, and here is the number". $250,000 of intent, $2,191 that
+fits, and the rest handed back. Those come from tick-by-tick simulation against live pool state,
+so they can be disagreed with but not disputed.
 
-**The architectural claim is real, not marketing.** "The AI holds no key that can move funds" is
-easy to say. Here the enforcement is inside the trade's own transaction: break the mandate and the
-whole thing unwinds. 49 tests exist because that claim has to survive contact with an adversary.
+**The architectural claim is real, not marketing, and it is now on mainnet.** "The AI holds no key
+that can move funds" is easy to say. Here the enforcement is inside the trade's own transaction:
+break the mandate and the whole thing unwinds. 64 tests exist because that claim has to survive
+contact with an adversary — and two real fills exist because tests are not the same as contact.
+Receipt `#1` records a price the agent did not author, stamped by the guard from the oracle.
+
+**The revenue line stopped being a diagram.** `FeeCollector` took 15 bps on a real fill. The amount
+is trivial — 750 units of USDG — and that is the point: the mechanism is proven at a size that
+matches a $48k market rather than asserted at a size that does not exist.
 
 **The business model does not need custody.** Because capacity is thin, the AUM path died early
 (D6). That constraint forced a better model: an unfakeable track record, sold as access.
@@ -106,12 +114,14 @@ The application was built to justify the infrastructure. The infrastructure is t
 
 ## Verdict
 
-**As a hackathon project:** strong. It runs for real, the numbers are striking, the positioning is
-clear, and the AI-RWA track is thinly contested.
+**As a hackathon project:** strong. It runs for real on mainnet — deployed, verified, two fills, a
+fee collected, a public URL — the numbers are striking, the positioning is clear, and the AI-RWA
+track is thinly contested.
 
 **As a startup today:** no. Not because the product is weak, but because the market is not there,
 the users are not there, and two large questions — data licensing and legal status — are
-unanswered.
+unanswered. Shipping to mainnet did not move any of those. A fee of 750 units of USDG on a $48k
+market is proof the plumbing works, not proof anyone wants it.
 
 **As a foundation for one:** well placed, provided the product is allowed to change shape.
 

@@ -54,7 +54,18 @@ pnpm plan [usdg] [maxBps]    # thesis basket: naive vs planned execution
 pnpm capacity                # absorbable size per xStock, by impact limit
 pnpm oracle [usdg]           # fair value, gap risk, PolicyGuard allow/reject
 pnpm dev                     # the web app — thesis in, guard verdict out
+pnpm build                   # next build (what Vercel runs); contracts are build:contracts
 pnpm typecheck               # covers src/ and app/
+pnpm test:sol                # 64 Foundry tests
+```
+
+Anything that writes on chain takes its chain from `TARGET` (default `testnet`):
+
+```bash
+TARGET=mainnet pnpm oracle:publish     # run the engine, publish, read back
+TARGET=mainnet pnpm mandate            # create a mandate, install triggers, hand to Executor
+TARGET=mainnet pnpm execute <sym> [n]  # quote -> dryRun -> Permit2 -> one real fill
+TARGET=mainnet pnpm swap [okb]         # OKB -> USDG, to fund the deployer
 ```
 
 ## Non-negotiables
@@ -75,6 +86,13 @@ pnpm typecheck               # covers src/ and app/
 
 - **The Uniswap V3 factory on X Layer is NOT at the canonical address.** It is
   `0x4b2ab38dbf28d31d467aa8993f6c2585981d6804`. SDK defaults fail *silently*.
+- **The Universal Router on X Layer cannot swap.** It carries the canonical factory in its
+  own bytecode, so every V3 swap through it resolves to an empty address and reverts with
+  no data. `Executor` derives the pool itself via `V3Swapper`. Never route through
+  `ADDR.universalRouter`. See D35.
+- **A deployed address with the right selector proves nothing.** That router had 39,001
+  bytes and the exact `execute` signature. An external dependency is unverified until a
+  call that does the *actual work* succeeds against it.
 - **Morpho and Ondo are not on X Layer.** The $84M lender is Aave V3. Zero RWA-category
   protocols. See D2.
 - **Never trust a prose summary of a large JSON API** for X Layer facts — parse the JSON
@@ -98,7 +116,10 @@ pnpm typecheck               # covers src/ and app/
 - All financial math in `BigInt` at chain precision; convert to `number` only for display.
 - Uniswap math is ported faithfully from the Solidity — if it differs from
   `UniswapV3Pool.swap`, the port is wrong.
-- **Derive magic constants, do not recall them.** See D5.
+- **Derive magic constants, do not recall them.** See D5. The pool init-code hash in
+  `V3Swapper` is pinned by test against two live X Layer pools for this reason.
+- **Explicit casts are unchecked in Solidity.** Two defects have come from this (D31, D36).
+  Bound the value before casting, even where it looks unreachable.
 - `src/guard.ts` mirrors `FairValueOracle.checkExecution` line for line. If they diverge,
   the off-chain mirror is wrong.
 - **One source per kind of fact:** addresses in `src/deployments.ts`, ABIs in `src/abi.ts`.
@@ -117,6 +138,10 @@ pnpm typecheck               # covers src/ and app/
   that catches a break across the FE/BE seam. `forge test` too if you touched Solidity.
 - Do not commit private keys. Deployment reads them from the environment. `docs/` is public now:
   no key, no seed phrase, no unrotated API key may appear in it.
+- **Contracts are verified on Sourcify** (`forge verify-contract <addr> <path>:<name> --chain 196
+  --verifier sourcify`, no API key needed). Anything deployed and listed in `src/deployments.ts`
+  should be verified — an address we publish that nobody can read the source of is worth less
+  than the redeploy costs.
 
 ## Network
 

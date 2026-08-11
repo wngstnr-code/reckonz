@@ -88,13 +88,16 @@ can append receipts. `Executor.permit2/router/guard/oracle/cash` all correct.
 | `ReceiptRegistry` | `contracts/ReceiptRegistry.sol` | ✅ append-only |
 | `PolicyGuard` | `contracts/PolicyGuard.sol` | ✅ triggers + position accounting |
 | `ExitTriggers` — all 7 metrics | `contracts/ExitTriggers.sol` | ✅ |
-| `Executor` — Permit2 → route → settle → submit | `contracts/Executor.sol` | ⚠️ deployed; swap path unit-tested only |
-| Test suite | `test/PolicyGuard.t.sol`, `test/Executor.t.sol` | ✅ 49/49 |
-| Chain selection + Permit2/path helpers | `src/wallet.ts` | ✅ `TARGET=mainnet\|testnet` |
+| `Executor` — Permit2 → swap → settle → submit | `contracts/Executor.sol` | ✅ **two real mainnet fills** |
+| `V3Swapper` — direct pool swaps, derived addresses | `contracts/V3Swapper.sol` | ✅ the Universal Router cannot swap here (D35) |
+| `FeeCollector` — 15 bps, ceiling 50 in code | `contracts/FeeCollector.sol` | ✅ took a real fee |
+| Test suite | `test/*.t.sol` | ✅ 64/64 |
+| Chain selection + Permit2 helpers | `src/wallet.ts` | ✅ `TARGET=mainnet\|testnet` |
 | ABIs, one source, browser-safe | `src/abi.ts` | ✅ `pnpm verify:abi` checks every selector vs bytecode |
-| **One real fill, end to end** | `src/execute.ts` | ✅ written, dry-run path verified; **never run against mainnet** |
+| **One real fill, end to end** | `src/execute.ts` | ✅ **run on mainnet twice**; refuses truncated quotes and pool mismatches |
+| OKB → USDG funding swap | `src/swap.ts` | ✅ resumable; used to fund the deployer |
 | Streamed pipeline (one run, six stages) | `src/pipeline.ts` | ✅ shared by CLI and web |
-| Web app — Next.js 16 App Router + Tailwind 4 | `app/` | ✅ `pnpm dev`, run verified end to end |
+| Web app — Next.js 16 App Router + Tailwind 4 | `app/` | ✅ **live at reckonz.vercel.app** |
 | SSE endpoint | `app/api/run/route.ts` | ✅ streams each stage as it lands |
 
 ### Commands
