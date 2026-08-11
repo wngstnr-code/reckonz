@@ -10,6 +10,7 @@
     "capacity": "tsx src/capacity.ts",
     "typecheck": "tsc --noEmit",
     "oracle": "tsx src/oracle-demo.ts",
+    "reconcile": "tsx src/reconcile-demo.ts",
     "build": "next build",
     "build:contracts": "forge build",
     "test:sol": "forge test",

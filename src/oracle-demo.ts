@@ -2,22 +2,14 @@
  * Runs the fair-value engine over the X Layer xStock universe and puts each
  * result next to the price the chain is actually quoting right now.
  */
-import { parseUnits, type Address } from 'viem';
+import { parseUnits } from 'viem';
 import { serial, USDG } from './chain';
 import { ASSETS, computeFairValue, type FairValueReport } from './fairvalue';
 import { checkExecution, DEFAULT_MANDATE } from './guard';
 import { bestQuote, loadVenues, type Venue } from './planner';
+import { addressBySymbol } from './pool';
 
-const ADDRESS_BY_SYMBOL: Record<string, Address> = {
-  wSPYx: '0xe7e553cd128f0011777323a0b44a7b96ea1cb540',
-  wNVDAx: '0xa8ddb5cd96b5222afe198316e9a57caa642850d5',
-  wSPCXx: '0x8e2eed8b8b5e13ea7bf38e50d7821d2c57309072',
-  wCRCLx: '0xb11134f14d5b94db60d4599dfdc3bf1bba2150e8',
-  wINTCx: '0x33aa35b0271fffe2048cc093ab7fe60931786719',
-  wMUx: '0xe2047ee3bddb5c99ae428ab83df63f8730698e30',
-  wSKHYx: '0x6215a58ed045d71f2561aaabe54f4c885c522998',
-  wSNDKx: '0x75e82e2884ea10f72fca777449b73377f4646219',
-};
+const ADDRESS_BY_SYMBOL = await addressBySymbol();
 
 const now = Math.floor(Date.now() / 1000);
 console.log(`\n  FairValueOracle — ${new Date(now * 1000).toISOString()}\n`);
@@ -29,7 +21,7 @@ console.log('  ' + '─'.repeat(94));
 const venuesBySymbol = new Map<string, Venue[]>();
 
 const reports = await serial(ASSETS, async (spec) => {
-  const address = ADDRESS_BY_SYMBOL[spec.symbol];
+  const address = ADDRESS_BY_SYMBOL.get(spec.symbol);
   let onchainPrice: number | undefined;
   if (address) {
     const venues = await loadVenues(address);

@@ -53,6 +53,7 @@ pnpm verify:abi              # src/abi.ts vs the compiled contracts — run afte
 pnpm plan [usdg] [maxBps]    # thesis basket: naive vs planned execution
 pnpm capacity                # absorbable size per xStock, by impact limit
 pnpm oracle [usdg]           # fair value, gap risk, PolicyGuard allow/reject
+pnpm reconcile               # reference-market admission test — run before trusting ASSETS
 pnpm dev                     # the web app — thesis in, guard verdict out
 pnpm build                   # next build (what Vercel runs); contracts are build:contracts
 pnpm typecheck               # covers src/ and app/
@@ -131,6 +132,11 @@ TARGET=mainnet pnpm swap [okb]         # OKB -> USDG, to fund the deployer
 ## Workflow
 
 - After changing `v3math.ts` or `pool.ts`, run `pnpm verify` — it is the regression test.
+- **Never hand-add an asset to `ASSETS` in `src/fairvalue.ts`.** A mapping is admitted by
+  `pnpm reconcile`, which reconciles the wrapper's on-chain price against its candidate
+  reference; `admittedOn` records that it passed, and it is what makes a fair value publishable.
+  Adding a line because the ticker is obvious is the exact assertion this oracle refuses to make.
+  See D38.
 - Log real direction changes and corrections in `docs/04-decisions.md`; update
   `docs/05-status.md` when something starts or finishes working. Both are read by the other
   person, so they are part of the change, not paperwork after it.

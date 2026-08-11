@@ -79,6 +79,7 @@ can append receipts. `Executor.permit2/router/guard/oracle/cash` all correct.
 | Pool loader + multi-tick exact-input simulation | `src/pool.ts` | ✅ |
 | Routing, capacity search, slicing, basket planning | `src/planner.ts` | ✅ |
 | Market data — references, 24/7 signals, gap stats | `src/marketdata.ts` | ✅ Yahoo + Coinbase |
+| Reference-market admission test | `src/reconcile.ts` | ✅ **28 of 30 admitted**, re-runnable as a regression check (D38) |
 | Fair-value engine — β, band, gap risk | `src/fairvalue.ts` | ✅ |
 | Off-chain mirror of the on-chain guard | `src/guard.ts` | ✅ |
 | Thesis Compiler — schema, prompts, mandate compilation | `src/thesis.ts` | ✅ |
@@ -110,6 +111,7 @@ pnpm verify:abi              # src/abi.ts vs the compiled contracts, selector by
 pnpm plan [usdg] [maxBps]    # thesis basket: naive vs planned execution
 pnpm capacity                # absorbable size per xStock, by impact limit
 pnpm oracle [usdg]           # fair value, gap risk, off-chain guard decision
+pnpm reconcile               # reference-market admission test over all 30 xStocks
 pnpm thesis ["free text"]    # thesis -> assets -> sizing -> mandate
 pnpm thesis:gemini "..."     # force the Gemini provider
 pnpm oracle:publish          # run the oracle engine, publish on-chain, read back
@@ -145,6 +147,14 @@ mistaken for a measurement — see D33 and D34.
 **Naive vs planned** — a five-leg semiconductor basket sized naively at $250k pays **~$71,000** in
 slippage (28% of the basket). Sized to capacity it pays $28, and reports the $244k it refused to
 force into the market.
+
+**Reference-market admission test** (`pnpm reconcile`, 2026-08-11) — **28 of 30 xStocks
+admitted**. Every admitted asset reconciles with its reference inside 2.0%; nothing failed on
+basis, so the admitted set and the refusals are separated by orders of magnitude rather than by
+the threshold. wSKHYx rejects `FX_REQUIRED` (KRW), wSPCXx rejects `NO_CANDIDATE` (private). With
+that in place, `pnpm oracle 2000` refuses assets for **`PRICE_IMPACT` at 86–121 bp against a
+50 bp mandate** — a real chain-side limit — where 22 of those refusals used to say `NO_REFERENCE`.
+See D38.
 
 **Oracle live on-chain** (`pnpm oracle:publish` — ~582k gas for 8 cold slots, ~186k to refresh them):
 
@@ -214,12 +224,16 @@ That single run exercises every claim the product makes. It is the demo.
 - **Gemini output varies run to run** — two live runs of the same input produced 1 and 2 exit
   triggers; the fixture produces 3. Trigger coverage must be reviewed per compilation, not
   assumed.
-- **Reference mapping unverified for some assets** — wSKHYx quotes in KRW and does not reconcile.
-  The oracle correctly withholds, but *which* security each wrapper tracks is still unproven.
-- **The oracle prices 8 of the 30 xStocks.** All 30 are now investable and a thesis about Apple
-  maps to wAAPLx (D33), but the other 22 are refused at the guard with `NO_REFERENCE`. That
-  refusal is true, and it is a real limit on what the system can execute — widening it means
-  verifying, per wrapper, which listed security it tracks.
+- ~~**Reference mapping unverified for some assets**~~ / ~~**The oracle prices 8 of the 30
+  xStocks**~~ — ✅ **Closed 2026-08-11 (D38).** `pnpm reconcile` is an admission test, not a
+  hand-written list: it reconciles each wrapper's on-chain price against its candidate reference
+  and admits the mapping only if they agree. **28 of 30 admitted**, widest reconciling basis 2.0%.
+  The two refusals are now measured rather than pending — **wSKHYx** blocked on a KRW/USD leg,
+  **wSPCXx** because SpaceX is private. The test re-runs against live data and fails if an
+  admitted mapping stops reconciling.
+- **wSKHYx still needs an FX leg.** The reference is correct and identified; the basis against a
+  USDG pool is not computable in KRW. This is the one remaining unpriced asset with a public
+  listing, and it is a sized piece of work rather than an unknown.
 - **`.env` holds a live Gemini key** pasted in chat. Owner assessed the exposure as acceptable
   2026-08-11; the key is in Vercel's environment too. Recorded rather than re-argued.
 - **No logo.** Four prompt directions were drafted on 2026-08-11 (the cut / the narrowing / the

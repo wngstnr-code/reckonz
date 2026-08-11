@@ -715,3 +715,64 @@ intentions. 50 is already more than twice the top of the published range. The fe
 dust trade pays nothing rather than a rounded-up minimum, and `withdraw()` is open to anyone
 because the destination is fixed.
 
+
+---
+
+## D38 — The oracle universe is now measured, not curated: 8 → 28 of 30
+
+D33 left the oracle modelling 8 of 30 xStocks and said so honestly. But "honestly" was doing a
+lot of work: 22 of those assets were withheld not because their fair value is indefensible, but
+because nobody had hand-written a mapping for them. *Not yet mapped* and *cannot be defended* are
+different statements, and printing the second when the first is true is the same dishonesty the
+oracle exists to prevent — just pointed inward.
+
+**The wrong way to close it** is to add `wAAPLx → AAPL` because it is obviously Apple. That is an
+assertion, and the whole design rests on not publishing assertions. It would also have no answer
+for wSKHYx, which is *also* obviously SK Hynix and is *also* wrong to publish.
+
+**The fix is an admission test** — `src/reconcile.ts`, run by `pnpm reconcile`. The candidate
+reference is generated mechanically from the ticker (`w<TICKER>x` → `TICKER`, two overrides), and
+being mechanical is the point: naming a candidate is worthless, and the candidate then has to
+survive six gates. It resolves and prints a price; it quotes in USD; the wrapper has a live pool;
+**the chain's price reconciles with the reference**; there is enough aligned history to fit a
+beta. The carry-forward signal is picked the same way — fitted against NQ=F, ES=F and BTC-USD,
+best R² wins — so signal choice stops being a human's guess too.
+
+**Measured 2026-08-11: 28 of 30 admitted.** Widest reconciling basis 2.0% (wIBMx). The two
+rejections are the two that should be:
+
+- **wSKHYx** — `FX_REQUIRED`. Correct reference, correct security, quotes in KRW, so the basis
+  against a USDG pool is not computable. Blocked on one FX leg, and now says so.
+- **wSPCXx** — `NO_CANDIDATE`. SpaceX is private.
+
+Nothing failed on basis, which is the strongest thing the run says: admitted assets cluster inside
+2% and the failures are out by orders of magnitude. `MAX_IDENTITY_BASIS_BPS` is 2,000 and the same
+partition falls out anywhere between 5% and 50%, so the threshold carries no weight — a property
+the script prints rather than a claim the comment makes.
+
+**What makes a value publishable changed.** It is no longer "the symbol appears in `ASSETS`" but
+`admittedOn != null` — evidence, not membership. wSKHYx sits in `ASSETS` with its reference
+recorded and no `admittedOn`, so it is a documented refusal rather than a gap. `pnpm reconcile`
+re-runs the test against live data and exits non-zero if an admitted mapping stops reconciling:
+a wrapper that quietly stops tracking its listing is exactly what the oracle must not sleep
+through, so it is a regression check on the same footing as `pnpm verify`.
+
+**Deliberately not a gate: how well the beta fits.** wIBMx fits ES=F at R² 0.05 and wGLDx fits
+NQ=F at 0.10. Both are admitted. A weak fit is not a broken mapping — it produces a wide band, a
+high uncertainty term in gap risk, and a refusal at the guard on its own merits. Rejecting it here
+would hide a measurable answer behind a missing one, which is the D33 mistake again.
+
+**One behaviour regressed on purpose.** wCRCLx carried `['NQ=F', 'BTC-USD']`. The engine sums
+*univariate* betas, so two correlated signals count the same move twice. The test picks one, and
+for wCRCLx, wCOINx, wHOODx and wMSTRx that one is BTC-USD — the data choosing the signal, not a
+human deciding Coinbase is a crypto stock.
+
+**Verified live.** `pnpm oracle 2000` over all 30: every admitted asset now clears the oracle
+gate, and the rejections are `PRICE_IMPACT` — a real, measured, chain-side limit — instead of
+`NO_REFERENCE`. A 2,000 USDG buy of wSPYx, wQQQx, wNVDAx, wIWMx and wGLDx is allowed; the rest are
+refused for depth, at 86–121 bp against a 50 bp mandate. Before this change, 22 of those refusals
+said we had no reference market, and that was not true.
+
+Also removed while here: `ADDRESS_BY_SYMBOL` was copied into `src/publish.ts` and
+`src/oracle-demo.ts`, eight entries each. Both now call `addressBySymbol()` in `src/pool.ts`,
+which joins `XSTOCKS` to the symbols the chain reports — one source, and it cannot drift.
