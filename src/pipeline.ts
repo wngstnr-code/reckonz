@@ -10,8 +10,8 @@
  * CLI demos use, so the browser and the terminal can never disagree.
  */
 import { parseUnits, type Address } from 'viem';
-import { serial, USDG, XSTOCK_SEEDS } from './chain';
-import { ASSETS, computeFairValue, type FairValueReport } from './fairvalue';
+import { serial, USDG, XSTOCKS } from './chain';
+import { computeFairValue, specFor, type FairValueReport } from './fairvalue';
 import { checkExecution, DEFAULT_MANDATE, type Decision } from './guard';
 import {
   bestQuote,
@@ -78,7 +78,7 @@ const UNIVERSE_TTL = 10 * 60_000;
 
 export async function universe(): Promise<UniverseEntry[]> {
   if (universeCache && Date.now() - universeCache.at < UNIVERSE_TTL) return universeCache.value;
-  const value = await serial(XSTOCK_SEEDS, async (a: Address) => {
+  const value = await serial(XSTOCKS, async (a: Address) => {
     const t = await loadToken(a);
     return { symbol: t.symbol, name: t.name, address: t.address };
   });
@@ -155,9 +155,13 @@ export async function* runPipeline(
   const now = Math.floor(Date.now() / 1000);
 
   const verdicts = await serial(plan.lines, async (line): Promise<AssetVerdict | null> => {
-    const spec = ASSETS.find((a) => a.symbol === line.symbol);
     const address = bySymbol.get(line.symbol);
-    if (!spec || !address) return null;
+    if (!address) return null;
+    // Every tradable asset gets a verdict, including the 22 with no verified
+    // reference market. Dropping those from the list would hide the guard's
+    // most interesting refusal — the asset trades, we sized it, and we still
+    // will not execute because we cannot defend a price for it. See D33.
+    const spec = specFor(line.symbol);
 
     // Each leg is priced at its own planned fill. Quoting every leg at the
     // basket's largest size would ask the guard about a trade the planner

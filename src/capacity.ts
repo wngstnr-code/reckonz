@@ -6,7 +6,7 @@
  * a given threshold. Computed from live pool state, not from TVL.
  */
 import { formatUnits } from 'viem';
-import { serial, XSTOCK_SEEDS } from './chain';
+import { serial, XSTOCKS } from './chain';
 import { capacity, loadVenues } from './planner';
 
 const LIMITS = [50, 100, 200, 500]; // bps
@@ -22,7 +22,7 @@ console.log('  ' + '─'.repeat(24 + LIMITS.length * 10));
 
 const totals = new Array(LIMITS.length).fill(0);
 
-await serial(XSTOCK_SEEDS, async (asset) => {
+await serial(XSTOCKS, async (asset) => {
   const venues = await loadVenues(asset);
   if (venues.length === 0) {
     console.log(`  ${asset.slice(0, 10)}…  no USDG pool`);

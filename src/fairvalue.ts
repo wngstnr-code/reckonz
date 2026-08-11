@@ -43,6 +43,13 @@ export interface AssetSpec {
   reference: string | null;
   /** 24/7 or extended-hours instruments used to carry the close forward */
   signals: string[];
+  /**
+   * Why the value is withheld, when `reference` is null for a reason other than
+   * "the security is private". The two cases look identical to a consumer — both
+   * are unpublishable — but they are not the same statement to a user, and
+   * saying the wrong one is the failure D33 was about.
+   */
+  noReferenceNote?: string;
 }
 
 export const ASSETS: AssetSpec[] = [
@@ -58,6 +65,38 @@ export const ASSETS: AssetSpec[] = [
   // SpaceX is private. There is no close to carry forward.
   { symbol: 'wSPCXx', reference: null, signals: [] },
 ];
+
+/**
+ * The spec for any xStock, modelled or not.
+ *
+ * The 22 assets outside `ASSETS` trade on X Layer with real depth, so the
+ * allocator must be allowed to map a thesis onto them. What it must not do is
+ * let them through the guard: no verified reference means no defensible fair
+ * value, so they come back withheld at maximum gap risk and `PolicyGuard`
+ * refuses them — for the true reason, in the user's own words, rather than the
+ * false claim that the asset does not exist. See D33.
+ *
+ * Adding one to `ASSETS` is deliberate work: prove which listed security the
+ * wrapper actually tracks, pick the 24/7 instruments that carry its close
+ * forward, and fit a beta. Until that is done, this is the honest answer.
+ */
+export function specFor(symbol: string): AssetSpec {
+  return (
+    ASSETS.find((a) => a.symbol === symbol) ?? {
+      symbol,
+      reference: null,
+      signals: [],
+      noReferenceNote:
+        'tradable on X Layer, but no verified reference market yet — ' +
+        'fair value withheld until the wrapped security is proven',
+    }
+  );
+}
+
+/** True when the oracle has a reference market it has actually verified. */
+export function isModelled(symbol: string): boolean {
+  return ASSETS.some((a) => a.symbol === symbol);
+}
 
 export interface SignalContribution {
   symbol: string;
@@ -205,7 +244,7 @@ export async function computeFairValue(
       publishable: false,
       gapRisk: 100,
       gapRiskParts: { staleness: 1, displacement: 0, uncertainty: 1, basis: 0 },
-      notes: ['no public reference market — fair value withheld by design'],
+      notes: [spec.noReferenceNote ?? 'no public reference market — fair value withheld by design'],
     };
   }
 

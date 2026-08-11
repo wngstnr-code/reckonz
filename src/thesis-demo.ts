@@ -4,7 +4,7 @@
  * compilation as the entry.
  */
 import type { Address } from 'viem';
-import { serial, XSTOCK_SEEDS } from './chain';
+import { serial, XSTOCKS } from './chain';
 import { loadToken } from './pool';
 import { planBasket, type BasketTarget } from './planner';
 import { compileMandate, describeTrigger } from './thesis';
@@ -40,7 +40,7 @@ for (const b of thesis.beneficiaries) {
 
 // 2 — discover what is actually investable, on-chain
 console.log('\n  discovering investable universe on X Layer…');
-const universe = await serial(XSTOCK_SEEDS, async (a: Address) => {
+const universe = await serial(XSTOCKS, async (a: Address) => {
   const t = await loadToken(a);
   return { symbol: t.symbol, name: t.name, address: t.address };
 });

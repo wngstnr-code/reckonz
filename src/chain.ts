@@ -71,26 +71,54 @@ export const USDT0 = {
 };
 
 /**
- * The tokenised equities this system currently models — **8 of the 30** that
- * have USDG pools on X Layer (full list in docs/01-xlayer-reality.md).
+ * Every tokenised equity with a USDG pool on X Layer — all 30, enumerated from
+ * GeckoTerminal and spot-checked on-chain 2026-08-11 (docs/01-xlayer-reality.md).
  *
- * This is the investable universe as far as the allocator is concerned, and
- * that is a real limitation, not a design: a thesis about Apple or TSMC is
- * currently told "no matching asset", which is false — wAAPLx and wTSMx exist
- * and trade. The eight are the ones with a verified reference market in
- * `ASSETS` (src/fairvalue.ts), which is what the oracle needs to defend a
- * price. Widening the universe means separating "what trades" from "what we
- * can price". See D33.
+ * This is the **investable** universe: what the chain will let you trade. It is
+ * deliberately not the same list as `ASSETS` in src/fairvalue.ts, which is what
+ * the oracle can defend a fair value for and is smaller by design — a verified
+ * reference market is hand-made work, and publishing a number without one is the
+ * exact failure this system exists to prevent.
+ *
+ * Conflating the two produced a refusal that was factually false: a thesis about
+ * Apple was told "no matching asset" while wAAPLx traded in a $197k pool. Now it
+ * maps, gets sized against its real depth, and is refused at the guard for the
+ * true reason — no reference market we can defend yet. See D33.
+ *
+ * Addresses only. Symbols are read from the chain by `loadToken`, so this list
+ * cannot drift out of agreement with what is actually deployed.
  */
-export const XSTOCK_SEEDS: Address[] = [
-  '0xe7e553cd128f0011777323a0b44a7b96ea1cb540', // wSPYx  — Wrapped SP500 xStock
-  '0xa8ddb5cd96b5222afe198316e9a57caa642850d5', // wNVDAx — Wrapped NVIDIA xStock
-  '0x8e2eed8b8b5e13ea7bf38e50d7821d2c57309072', // wSPCXx — Wrapped SpaceX xStock
-  '0xb11134f14d5b94db60d4599dfdc3bf1bba2150e8', // wCRCLx
-  '0x33aa35b0271fffe2048cc093ab7fe60931786719', // wINTCx
-  '0xe2047ee3bddb5c99ae428ab83df63f8730698e30', // wMUx
-  '0x6215a58ed045d71f2561aaabe54f4c885c522998', // wSKHYx
-  '0x75e82e2884ea10f72fca777449b73377f4646219', // wSNDKx
+export const XSTOCKS: Address[] = [
+  '0x943bf64d566c32a2bcd41ac92fb63c111cc9de8f', // wAAPLx  — Apple
+  '0xee7ccb0d37a12862e7f92f6c92a93d9c2d304266', // wAMDx   — AMD
+  '0x910cabde3eba7fc1ce64fd14bd680b9f60fa0f90', // wAMZNx  — Amazon
+  '0x9147b03c16b18fc4f686f610f189f91ddf4347b4', // wASMLx  — ASML
+  '0xe89572bfe500ac7e8ecd8dc8119d274214e06f14', // wAVGOx  — Broadcom
+  '0x44c7ed7ffdf8465c9d27f60aec845eed3d49d56e', // wCOINx  — Coinbase
+  '0xb11134f14d5b94db60d4599dfdc3bf1bba2150e8', // wCRCLx  — Circle          (modelled)
+  '0x04db4384013664baa627c1a3fa4ff0c50f37cfd3', // wDELLx  — Dell
+  '0x021b40617982074748c81a19d22046cc2548c3be', // wEWYx   — MSCI Korea ETF
+  '0x735f1509bff25e27cd442b9bfb231324648ead9b', // wGLDx   — Gold (commodity)
+  '0xf8c5308f80e459bb53d9ebe689854d9cbb2caa6f', // wGOOGLx — Alphabet
+  '0x59801175a9b2248f9bf4ba7f82e17045c4672ec8', // wHOODx  — Robinhood
+  '0xbf69d85055642a9c6450bdfde3c49baac50f8286', // wIBMx   — IBM
+  '0x33aa35b0271fffe2048cc093ab7fe60931786719', // wINTCx  — Intel           (modelled)
+  '0x25d218f19b706c8680aa26fb64e676cf84b58f65', // wIWMx   — Russell 2000 ETF
+  '0xe840946ffebcd66b7c4e95095effafadfa0d0e56', // wMETAx  — Meta
+  '0xb4ee60b6b817ca7386422ef1a0f45eaddea13275', // wMRVLx  — Marvell
+  '0x166fbe68274b6a47e025f4ba17388c539f1fa1d0', // wMSFTx  — Microsoft
+  '0x30987adf0b11dc698438a99ba04ec3a1ab2c7eab', // wMSTRx  — MicroStrategy
+  '0xe2047ee3bddb5c99ae428ab83df63f8730698e30', // wMUx    — Micron          (modelled)
+  '0xa8ddb5cd96b5222afe198316e9a57caa642850d5', // wNVDAx  — NVIDIA          (modelled)
+  '0x1349456830ddc3d8599e4d6a63698883eca67ada', // wORCLx  — Oracle
+  '0x4a2df09536f62341c9f946427d16414c04e21342', // wPLTRx  — Palantir
+  '0x4c1ae29c159838fc1b224636e28e086eb69101f7', // wQQQx   — Nasdaq 100 ETF
+  '0x6215a58ed045d71f2561aaabe54f4c885c522998', // wSKHYx  — SK Hynix        (modelled)
+  '0x75e82e2884ea10f72fca777449b73377f4646219', // wSNDKx  — SanDisk         (modelled)
+  '0x8e2eed8b8b5e13ea7bf38e50d7821d2c57309072', // wSPCXx  — SpaceX, private (modelled)
+  '0xe7e553cd128f0011777323a0b44a7b96ea1cb540', // wSPYx   — S&P 500 ETF     (modelled)
+  '0xc3fdbe3a68ee5de461d30415a8165cf9aefe1171', // wTSLAx  — Tesla
+  '0x27d62249488fc66ecbb92c8da3f56f700b8e8501', // wTSMx   — TSMC
 ];
 
 /** Fee tiers to probe when discovering pools. */
