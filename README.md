@@ -33,17 +33,18 @@ publishing is a separate key that can do nothing else.
 Settlement is real USDG, `0x4ae46a509F6b1D9056937BA4500cb143933D2dc8`. A testnet stack
 (chain 1952) is deployed and verified too; addresses in `src/deployments.ts`.
 
-**Three real fills, not a simulation:**
+**Four real fills, not a simulation:**
 
 ```
-0x7240759d327d468f9a7086ed439abf42dead17887105d986ca0870ebf46d6545   0.5 USDG -> wSPYx
-0x5710894e80baddfb35ab12321642b16c8cc8ab0b8f9a90a837f7c1e3ee9d1a23   0.5 USDG -> wSPYx, 15 bps fee
-                                                                     third fill carries a thesis hash
+#0  0x7240759d327d468f9a7086ed439abf42dead17887105d986ca0870ebf46d6545   0.5 USDG -> wSPYx
+#1  0x5710894e80baddfb35ab12321642b16c8cc8ab0b8f9a90a837f7c1e3ee9d1a23   0.5 USDG -> wSPYx, 15 bps fee
+#2  0x300870192316392ff062c4f890ab1cb616a1e5e5e2ce2b43aebb3f8df2b27af5   carries thesis 0xc3cd487e…
+#3  0xc9eba0cb05da5f00d71a63486d696a90bddc4a4f7ca3ddaab6b1acdb158f74f8   0.5 USDG -> wTSLAx, 7 bps
 ```
 
-All three were executed through the **previous** guard and executor. The replacements above are
-deployed, verified and wired, and have not yet carried a fill — stated rather than glossed,
-because a contract that has not done the work is not a contract that works (D35).
+`#0`–`#2` ran through the previous guard and executor; `#3` is the first through the contracts
+listed above. All four are in one append-only history, because the migration replaced the oracle,
+guard and executor and **kept the registry**.
 
 In each, the swap, the policy check and the receipt happen in **one transaction**. The
 executor holds nothing when it returns, and asserts that rather than assuming it.
