@@ -20,6 +20,7 @@ other already made.
 | `docs/02-product.md` | Product shape, revenue model, scope boundaries. |
 | `docs/00-hackathon.md` | Rules, prize strategy, how the judges actually score. |
 | `docs/06-assessment.md` | The honest read on whether this is a business. |
+| `docs/09-design.md` | Before touching `app/` visuals. Palette semantics, the four surfaces, references. |
 
 ## Two people, one repo
 
