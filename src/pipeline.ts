@@ -74,6 +74,17 @@ export type RunEvent =
   | { done: true }
   | { error: string };
 
+/** `maxAge` is a setting, not a constant, so it is read — once. */
+let maxAgeCache: Promise<bigint> | null = null;
+function oracleMaxAge(oracle: Address): Promise<bigint> {
+  maxAgeCache ??= client.readContract({
+    address: oracle,
+    abi: FAIR_VALUE_ORACLE_ABI,
+    functionName: 'maxAge',
+  });
+  return maxAgeCache;
+}
+
 /**
  * Let the deployed oracle override an optimistic off-chain verdict.
  *
@@ -89,21 +100,49 @@ export type RunEvent =
  * a demo must not break because an RPC node was slow — but a run that could not
  * check says so in the notes rather than staying silent.
  */
-async function applyOnchainWithholding(asset: Address, report: FairValueReport): Promise<void> {
+async function applyOnchainWithholding(
+  asset: Address,
+  report: FairValueReport,
+  now: number,
+): Promise<void> {
   const deployment = MAINNET;
   if (!deployment || !report.publishable) return;
+  const oracle = deployment.contracts.FairValueOracle as Address;
   try {
-    const o = await client.readContract({
-      address: deployment.contracts.FairValueOracle as Address,
-      abi: FAIR_VALUE_ORACLE_ABI,
-      functionName: 'peek',
-      args: [asset],
-    });
+    const [o, maxAge] = await Promise.all([
+      client.readContract({
+        address: oracle,
+        abi: FAIR_VALUE_ORACLE_ABI,
+        functionName: 'peek',
+        args: [asset],
+      }),
+      oracleMaxAge(oracle),
+    ]);
     if (o.updatedAt === 0n) {
       report.publishable = false;
       report.notes.push('no observation published on chain for this asset — the guard would reject NO_DATA');
       return;
     }
+
+    // Staleness is noted, never used to flip the verdict — and the difference
+    // matters. A withheld value is a statement about the *asset*: we cannot
+    // defend a price for it. A stale observation is a statement about **us**:
+    // nobody has published recently. Turning the second into a rejection would
+    // make the page say "this trade is refused" when the truth is "our
+    // publisher has not run for twenty minutes", which is a different sentence
+    // about a different thing — and with publishing currently manual it would
+    // refuse every asset on the page for a reason no user caused.
+    //
+    // So the verdict stays what the guard would decide about this market, and
+    // the note says what a real fill would need first.
+    const age = BigInt(now) - o.updatedAt;
+    if (age > maxAge) {
+      report.notes.push(
+        `the on-chain observation is ${age}s old against a ${maxAge}s limit — executing for real ` +
+          'would need the oracle republished first, though the verdict above still holds',
+      );
+    }
+
     if (!o.hasValue) {
       report.publishable = false;
       report.notes.push(
@@ -228,7 +267,7 @@ export async function* runPipeline(
     // refuses a move it cannot confirm yet (D41) — and without this the page
     // would answer ALLOW where the chain answers NO_REFERENCE. Optimistic is
     // the wrong direction for a guard to be wrong in.
-    await applyOnchainWithholding(address, report);
+    await applyOnchainWithholding(address, report, now);
 
     const q = venues.length ? bestQuote(venues, amountIn) : null;
     const decision: Decision = q

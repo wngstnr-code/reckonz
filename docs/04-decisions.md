@@ -1271,3 +1271,51 @@ Checked before running anything: no repository secret, no variable, and no envir
 different store with a similarly-named field. Worth writing down because the workflow would have
 failed on its first line and the obvious reading — "the workflow is broken" — would have been
 wrong.
+
+---
+
+## D47 — The worker ships with the repo and runs near submission, not now
+
+Asked what the publish worker is actually *for*, and whether the gas is worth it. Both fair, and
+the honest answer changed the plan.
+
+**The cost, measured rather than felt.** OKB is ~$95 (USD₮0/WOKB pool). One publish is 886,895 gas
+at 0.02 gwei — 0.0000177 OKB, about **$0.0017**. Ten-minute publishing is **$0.24/day**. Not
+expensive in absolute terms; expensive relative to a publisher holding $0.27 of OKB, which is the
+real constraint and a different problem from the one "the gas is expensive" describes.
+
+**Continuous publishing serves two things that need completely different cadences.**
+
+| Purpose | Needs a publish every | Cost |
+|---|---|---|
+| Oracle fresh enough to execute against (`maxAge`) | 15 minutes | ~$0.24/day |
+| The publish bound staying bound (`ANCHOR_MAX_AGE`) | 1 day | ~$0.003/day |
+
+The security property is nearly free. Only execution-freshness is expensive, and **the web app does
+not need it** — `pipeline.ts` computes fair value off-chain, so reckonz.vercel.app is correct with
+zero publishing. What needs a fresh on-chain oracle is a real fill, and those are manual.
+
+**Decision: deploy the worker near submission, not now.** Publish by hand around demos, the video
+and any real fill. The worker stays in the repo because it is the answer to "how does this run in
+production", which is worth something to a judge reading it — but running it for ten days so that
+nothing observes it is burning money for an empty room.
+
+I had framed the worker as closing an audit finding, which made it read as mandatory. It closes
+D44's finding 2, and that finding is a **production** concern. Correcting my own framing rather
+than leaving it to imply a deadline it does not have.
+
+### The consequence that had to be handled
+
+With publishing manual, the on-chain observation is stale most of the time, and `pipeline.ts` now
+reads it. The obvious move — mark a stale observation unpublishable, since the chain would reject
+`STALE` — is wrong, and nearly shipped.
+
+**A withheld value is a statement about the asset: we cannot defend a price for it. A stale
+observation is a statement about us: nobody published recently.** Turning the second into a
+rejection would have made the page refuse *every* asset for a reason no user caused, and called it
+a risk verdict. The demo would have died, which is how the mistake surfaced — but it would have
+been wrong even if it had looked fine.
+
+So staleness is a **note**, never a verdict: the decision stays what the guard would say about that
+market, and the note says a real fill needs a republish first. Withholding still flips the verdict,
+because that one really is about the asset.
