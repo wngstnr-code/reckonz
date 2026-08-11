@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Reckonz">
+  <title>Reckonz</title>
+  <!--
+    Traced from public/logo-reckonz.png by measuring the pixels, not by eye.
+    Four tally strokes; the fourth turns into a tick. Stroke weight is 31 on a
+    1024 canvas for all five strokes, including the diagonal — its horizontal
+    run measures 37, which is 31 perpendicular at this angle. Bars sit at
+    x 350 / 416 / 482 / 549 (pitch 66), spanning y 254 to 761.
+
+    No background rect, deliberately: the PNG bakes in #0b0d10 and renders as a
+    dark tile anywhere the page is not exactly that colour. `currentColor` lets
+    the mark take the surrounding text colour instead.
+  -->
+  <g fill="none" stroke="currentColor" stroke-width="31" stroke-linecap="butt" stroke-linejoin="miter">
+    <path d="M365.5 254.5V761.5" />
+    <path d="M431.5 254.5V761.5" />
+    <path d="M497.5 254.5V761.5" />
+    <path d="M563.5 254.5V745L725 514" />
+  </g>
+</svg>

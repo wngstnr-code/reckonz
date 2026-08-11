@@ -136,13 +136,24 @@ question now that the data exists.
 
 ### Known gaps BE owns
 
-- Claude provider is typechecked but has never executed. Gemini is the default.
-- Yahoo Finance is not a production data source.
-- The oracle prices 8 of the 30 xStocks. All 30 are investable (D33), but a thesis about Apple
-  is refused at the guard with `NO_REFERENCE` — true, and still a limit on what can execute.
-- The oracle has one admin key that can publish any fair value, and the guard believes it.
-  Stated openly rather than hidden; fixing it properly is multisig plus publish-time bounds.
-- `wSKHYx` quotes in KRW and does not reconcile; the oracle correctly withholds.
+Updated 2026-08-11 after D38–D42.
+
+- **Claude provider is typechecked and has never executed.** Gemini Flash 3.6 is the default and
+  works. Bring-your-own-key was considered as a way to have someone else's key run it and
+  **deferred** — see D43. It would not have closed this gap anyway: the path is unproven until it
+  runs once, whoever pays.
+- **Yahoo Finance is not a production data source.** The blocker is licensing, not engineering.
+- ~~The oracle prices 8 of the 30 xStocks~~ — **28 of 30** now, admitted by a measured test
+  (D38). The two refusals are measured, not pending.
+- ~~One admin key that can publish any fair value~~ — admin is a **2-of-3 Safe**, publishing is a
+  separate hot key, and the deployer administers nothing (D40, D42).
+- **The publisher is still a hot key, and that is structural.** `publish()` runs every fifteen
+  minutes from a machine, so consent cannot gate it; the contract bounds it instead (D41). A
+  bound caps the rate of change and forces an event trail — it does not prevent a determined
+  holder from walking a value in confirmed steps.
+- ~~`wSKHYx` quotes in KRW and does not reconcile~~ — the FX leg is built; it now fails on
+  **basis, at −86.4%**, which is a measurement rather than a missing capability (D39). What that
+  pool is actually pricing is unknown and we do not guess.
 
 ---
 
@@ -208,11 +219,33 @@ mirrors the Solidity enum and cannot be reordered.
 `dryRun(mandateId, fills)` is a read that returns the guard's verdict without spending gas.
 Call it before every write and show the answer — refusing early *is* the feature.
 
-### 4. The logo
+### 4. The logo — asset ready, drop-in is yours
 
-Four directions were drafted 2026-08-11 (the cut / the narrowing / the guard / the reckoning);
-none chosen, nothing drawn. The header still uses a bare `◇`. `logo-reckonz.png` is in the repo
-root as a starting point.
+Drawn 2026-08-11. Four tally strokes, the fourth turning into a tick: reckoning, then the verdict.
+Both files are committed.
+
+| File | Use |
+|---|---|
+| `public/logo-reckonz.svg` | the header mark — `currentColor`, no background |
+| `public/logo-reckonz.png` | 1024×1024 source, dark background baked in |
+
+**Use the SVG in the header, not the PNG.** The PNG has `#0b0d10` filled behind the mark, so
+anywhere the page is not exactly that colour it renders as a dark tile rather than a mark. The SVG
+carries no background and inherits `currentColor`, so `text-signal` on the wrapper colours it the
+same green (`#6EE7B7`) the PNG uses.
+
+The SVG is traced from measured pixels, not by eye: strokes at x 350 / 416 / 482 / 549, pitch 66,
+y 254 → 761, weight 31 throughout — the diagonal's horizontal run measures 37, which is 31
+perpendicular at that angle, so the weight is uniform. Adjust freely; the numbers are there so a
+change is a decision rather than a guess.
+
+Two places to land it:
+
+- `app/page.tsx:24` — replace `<span className="text-[26px] leading-none text-signal">◇</span>`.
+- `app/icon.png` — the favicon. Verified against `node_modules/next/dist/docs` for **this** Next
+  (16.3): `app/icon.(ico|jpg|jpeg|png|svg)` is picked up automatically, and `apple-icon.png` too.
+  `favicon` must be `.ico` and only at the top level of `app/`. The PNG works as `app/icon.png`
+  as-is — a dark square is correct for a tab icon.
 
 ### 5. Demo video
 

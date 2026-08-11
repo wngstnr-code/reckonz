@@ -1018,3 +1018,44 @@ the failure would only have appeared the first time an asset actually gapped.
 and forces an event trail; it does not prevent a determined holder from walking the price in
 confirmed steps. The Safe covers admin only, because `publish()` runs every fifteen minutes from a
 machine and consent cannot gate it. Both facts stay in the gap list.
+
+---
+
+## D43 — Bring-your-own-key, considered and deferred
+
+Raised as the cheap way to close the "Claude provider has never executed" gap: let users supply
+their own API key, so the path runs on someone else's account. Owner declined paying for it from
+our side, which is fair. The idea is good. It is deferred anyway, for reasons worth writing down
+so it is not re-argued from scratch.
+
+**It would not have closed that gap.** The gap is not "we lack a Claude option" — it is that the
+code path has never been executed. A user's key running it changes who pays, not whether it has
+been proven. Marking the gap closed because BYOK exists would be the exact species of claim this
+project's credibility rests on not making. (For the record, the cost objection is also not the
+strong argument: a thesis compilation is 2–3k tokens, well under a cent. The strong argument is
+that our shared Gemini free tier can rate-limit on demo day, and BYOK is a valve for that.)
+
+**It crosses the seam, so it is not ten minutes.** The FE streams with `EventSource`, which can
+only issue a GET and cannot set headers. A key would therefore have to travel in the query
+string — into Vercel's access logs and the browser's history. Doing it safely means moving to
+`fetch` + a header + manual stream reading in `app/components/useRun.ts`, which is FE-owned, plus
+a settings surface. That is a Nabil-sized piece of work, and **wallet connect is worth more**: it
+turns the demo from "this system computes" into "this system executes, and you press the button".
+
+**If it is picked up later, four things are load-bearing:**
+
+1. `pickProvider()` must take credentials as an argument instead of reading `process.env`. One
+   server process serves many requests; a key read from the environment can be one user's key
+   answering another user's request. That bug only appears once two people use the site at
+   once — which is demo day.
+2. The provider must be an **enum we compile**, never a base URL from the client. Accept a URL and
+   the server becomes an open proxy to anywhere.
+3. Errors must be scrubbed before they reach the client or our logs. `app/api/run/route.ts`
+   currently forwards `e.message` verbatim, and provider SDKs sometimes include key fragments.
+4. `sessionStorage`, not `localStorage`. For someone else's paid credential the shorter-lived
+   default is the correct one.
+
+**And it sits against our own positioning.** The product's claim is that we never hold your keys.
+Asking for a bearer credential that can spend money is in tension with that even when the handling
+is clean. If it ships, it ships behind an "advanced" disclosure with Gemini still the default —
+never as a field on the front page. We do not ask.
