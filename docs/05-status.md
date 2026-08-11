@@ -172,7 +172,7 @@ That single run exercises every claim the product makes. It is the demo.
 | Item | Why it matters |
 |---|---|
 | **The submission post** | The account exists (see Project identity above); what is still required is a post from it mentioning `@XLayerOfficial` **at submission time**. Not done until that post is up. |
-| **Mainnet deployment** | **Hard requirement** ("testnet during, mainnet after") *and* the only place a real fill can be proven. Needs OKB for gas on chain 196 and a decision on caps. |
+| ~~Mainnet deployment~~ | ✅ **Done 2026-08-11.** Addresses in `src/deployments.ts`; oracle seeded, mandate #1 live, one real fill. |
 | **Google Form submission** | Required by 21 Aug 23:59 UTC. Link in `00-hackathon.md`. |
 | **Repo visibility decision** | The repo is private. The rules do not demand a public one, but judges scoring "product completeness" will want to read it. Decide before submitting: make it public, or grant access. |
 
@@ -200,8 +200,14 @@ That single run exercises every claim the product makes. It is the demo.
   maps to wAAPLx (D33), but the other 22 are refused at the guard with `NO_REFERENCE`. That
   refusal is true, and it is a real limit on what the system can execute — widening it means
   verifying, per wrapper, which listed security it tracks.
-- **`.env` holds a live Gemini key** pasted in chat. Rotate at
-  [aistudio.google.com/apikey](https://aistudio.google.com/apikey) before publishing anything.
+- **The testnet stack is stale.** `Executor` at `0xA9c7423A…` was deployed with the router-era
+  constructor, so it does not match `src/abi.ts` (which now has `factory()` and a `Leg` carrying a
+  fee tier) and cannot swap — the X Layer v3 factory has no code on 1952 either. Mainnet is the
+  live stack; testnet needs redeploying for the two to agree, and it costs nothing.
+- **Contracts are not verified on the explorer.** Judges opening OKLink see bytecode. Verified
+  source is what lets them read `validateAndRecord` and check the central claim without cloning.
+- **`.env` holds a live Gemini key** pasted in chat. Owner assessed the exposure as acceptable
+  2026-08-11; the key is in Vercel's environment too. Recorded rather than re-argued.
 - **No logo.** Four prompt directions were drafted on 2026-08-11 (the cut / the narrowing / the
   guard / the reckoning); none chosen, nothing drawn. The header still uses a bare `◇`.
 
