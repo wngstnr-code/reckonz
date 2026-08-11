@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "verify": "tsx src/verify.ts",
+    "verify:abi": "forge build && tsx src/verify-abi.ts",
     "plan": "tsx src/demo.ts",
     "capacity": "tsx src/capacity.ts",
     "typecheck": "tsc --noEmit",
