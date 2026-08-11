@@ -43,6 +43,22 @@ console.log('  ' + '─'.repeat(94));
 const admitted = results.filter((r) => r.verdict === 'ADMIT');
 console.log(`\n  ${admitted.length} of ${results.length} admitted\n`);
 
+// Converted prices must never be silently indistinguishable from native ones.
+const converted = results.filter((r) => r.fxRate != null);
+if (converted.length) {
+  console.log(
+    '  Converted through a live FX leg\n' +
+      converted
+        .map(
+          (r) =>
+            `      ${r.symbol.padEnd(9)} ${r.candidate} quoted in ${r.currency}, ` +
+            `at ${r.fxRate!.toFixed(2)} ${r.currency}/USD`,
+        )
+        .join('\n') +
+      '\n',
+  );
+}
+
 console.log('  Why each rejection stands\n');
 for (const r of results) {
   if (r.verdict === 'ADMIT') continue;

@@ -14,16 +14,18 @@
  *
  *   1. a candidate reference exists at all                     — NO_CANDIDATE
  *   2. the reference resolves and prints a price               — NO_QUOTE
- *   3. it quotes in USD, so a basis is computable at all       — FX_REQUIRED
+ *   3. a USD rate exists for the currency it quotes in         — FX_REQUIRED
  *   4. the wrapper has a live pool to compare against          — NO_VENUE
  *   5. the on-chain price reconciles with the reference        — BASIS
  *   6. enough aligned history to fit a carry-forward beta      — NO_HISTORY
  *
- * Step 5 is the one that matters. wSKHYx names a real, correct reference —
- * SK Hynix, 000660.KS — and still fails, because the listing quotes in KRW and
- * the raw basis comes out near −99%. That rejection is the proof the test has
- * teeth, and it is why the list this produces is *measured* rather than
- * asserted. An asset outside it is outside it for a reason we can print.
+ * Step 5 is the one that matters, and wSKHYx is what it is for. The candidate
+ * is right — SK Hynix, 000660.KS — and the KRW leg is no longer the obstacle:
+ * the listing converts to USD and the comparison runs. It still fails, at
+ * −86%, because X Layer quotes the wrapper at ~$137 against a share worth
+ * ~$1,008. That rejection is the proof the test has teeth, and it is why the
+ * list this produces is *measured* rather than asserted. An asset outside it is
+ * outside it for a reason we can print. See D39.
  *
  * What this test does NOT do is judge the quality of the resulting fair value.
  * A reference with a weak beta fit is admitted, then carries a wide band, a
@@ -32,7 +34,7 @@
  */
 import type { Address } from 'viem';
 import { serial } from './chain';
-import { alignedReturns, byDate, daily, intraday } from './marketdata';
+import { alignedReturns, byDate, daily, intraday, toUsd } from './marketdata';
 import { regress } from './fairvalue';
 import { loadVenues } from './planner';
 import { addressBySymbol } from './pool';
@@ -80,8 +82,8 @@ export const SIGNAL_CANDIDATES = ['NQ=F', 'ES=F', 'BTC-USD'] as const;
  * that is not a listing.
  */
 const REFERENCE_OVERRIDES: Record<string, string | null> = {
-  // Seoul listing, quoted in KRW. Named correctly and still fails the test —
-  // see the FX_REQUIRED path, and D38.
+  // Seoul listing, quoted in KRW and converted through KRW=X. Named correctly,
+  // converted correctly, and still rejected on basis — see D39.
   wSKHYx: '000660.KS',
   // SpaceX is private. There is no listing to reconcile against, and no amount
   // of engineering produces one.
@@ -119,7 +121,11 @@ export interface ReconcileResult {
   verdict: ReconcileVerdict;
   reason?: ReconcileReason;
   detail?: string;
+  /** the currency the reference venue quotes in, before conversion */
   currency?: string;
+  /** units of `currency` per USD used to convert, when one was needed */
+  fxRate?: number;
+  /** the reference's last print, in USD */
   referencePrice?: number;
   onchainPrice?: number;
   /** on-chain price vs the reference's own last print, in bps */
@@ -152,11 +158,11 @@ export async function reconcile(
     };
   }
 
-  let refIntra;
-  let refDaily;
+  let refIntraRaw;
+  let refDailyRaw;
   try {
-    refIntra = await intraday(candidate);
-    refDaily = await daily(candidate);
+    refIntraRaw = await intraday(candidate);
+    refDailyRaw = await daily(candidate);
   } catch (e) {
     return {
       ...base,
@@ -167,7 +173,7 @@ export async function reconcile(
     };
   }
 
-  if (!(refIntra.last > 0)) {
+  if (!(refIntraRaw.last > 0)) {
     return {
       ...base,
       candidate,
@@ -177,9 +183,14 @@ export async function reconcile(
     };
   }
 
-  // Fit the carry-forward signals before the currency gate, so an asset blocked
-  // on FX still reports how well it *would* model. That is what turns "blocked
-  // on an FX leg" into a sized piece of work rather than a shrug.
+  // Everything past this point is in USD. A foreign listing is converted rather
+  // than refused, so `FX_REQUIRED` now means the rate is genuinely unavailable —
+  // not that we had not built the leg. Converting first also means the identity
+  // test still has to pass afterwards: the FX leg makes the comparison possible,
+  // it does not make it succeed.
+  const refIntra = (await toUsd(refIntraRaw)) ?? refIntraRaw;
+  const refDaily = (await toUsd(refDailyRaw)) ?? refDailyRaw;
+
   const refByDate = byDate(refDaily);
   const fits: SignalFit[] = [];
   for (const sig of SIGNAL_CANDIDATES) {
@@ -190,7 +201,16 @@ export async function reconcile(
     fits.push({ symbol: sig, beta, r2, alignedDays: ra.length });
   }
   fits.sort((a, b) => b.r2 - a.r2);
-  const withFits = { ...base, candidate, fits, currency: refIntra.currency, referencePrice: refIntra.last };
+  const withFits = {
+    ...base,
+    candidate,
+    fits,
+    // The native currency, not the converted one — a price that used to be KRW
+    // must stay visibly a converted price in the output.
+    currency: refIntraRaw.currency,
+    fxRate: refIntra.fxRate,
+    referencePrice: refIntra.last,
+  };
 
   if (refIntra.currency !== 'USD') {
     return {
@@ -198,8 +218,9 @@ export async function reconcile(
       verdict: 'REJECT',
       reason: 'FX_REQUIRED',
       detail:
-        `${candidate} quotes in ${refIntra.currency}; the basis against a USDG pool ` +
-        'is not computable without an FX leg',
+        `${candidate} quotes in ${refIntraRaw.currency} and no ` +
+        `${refIntraRaw.currency}/USD rate is available, so the basis against a ` +
+        'USDG pool cannot be computed',
     };
   }
 
@@ -223,9 +244,13 @@ export async function reconcile(
       verdict: 'REJECT',
       reason: 'BASIS',
       detail:
-        `chain quotes ${onchainPrice.toFixed(2)} against ${candidate} at ` +
-        `${refIntra.last.toFixed(2)} — ${(basisBps / 100).toFixed(1)}%, too far apart ` +
-        'to be the same security',
+        `chain quotes ${onchainPrice.toFixed(2)} USD against ${candidate} at ` +
+        `${refIntra.last.toFixed(2)} USD` +
+        (refIntra.nativeCurrency
+          ? ` (${refIntraRaw.last.toLocaleString('en-US')} ${refIntra.nativeCurrency} at ` +
+            `${refIntra.fxRate!.toFixed(2)}/USD)`
+          : '') +
+        ` — ${(basisBps / 100).toFixed(1)}%, too far apart to be the same security`,
     };
   }
 

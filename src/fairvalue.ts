@@ -14,9 +14,11 @@
  * It is deliberately not daily volatility scaled across calendar time: an asset
  * sits still over a weekend, and pretending otherwise produces ±19% bands.
  *
- * When there is no reference market (wSPCXx — SpaceX is private), or the
- * reference cannot be proven to match the wrapped security (wSKHYx quotes in
- * KRW), the oracle marks the value unpublishable rather than inventing one.
+ * A reference quoted in another currency is converted through a live FX leg, so
+ * the equity leg is the only thing ever carried forward. When there is no
+ * reference market at all (wSPCXx — SpaceX is private), or the reference does
+ * not reconcile with what the chain quotes (wSKHYx, −86%), the oracle marks the
+ * value unpublishable rather than inventing one.
  */
 import {
   alignedReturns,
@@ -25,6 +27,7 @@ import {
   gapStats,
   intraday,
   priceAt,
+  toUsd,
   type Series,
 } from './marketdata';
 
@@ -110,17 +113,19 @@ export const ASSETS: AssetSpec[] = [
   { symbol: 'wORCLx', reference: 'ORCL', signals: ['NQ=F'], admittedOn: '2026-08-11' },
   { symbol: 'wPLTRx', reference: 'PLTR', signals: ['NQ=F'], admittedOn: '2026-08-11' },
   { symbol: 'wQQQx', reference: 'QQQ', signals: ['NQ=F'], admittedOn: '2026-08-11' },
-  // Named correctly and still not admitted. The Seoul listing quotes in KRW, so
-  // the basis against a USDG pool comes out near −99% and the test cannot tell
-  // a currency mismatch from a wrapper that tracks something else. The reference
-  // stays on the record because the block is one FX leg, not an unknown.
+  // Named correctly, converted correctly, and still not admitted. The KRW leg is
+  // built and live, so this is no longer a gap in our tooling: X Layer quotes
+  // wSKHYx at ~$137 against a share worth ~$1,008 on two independent venues that
+  // agree within 1.6%. Whatever that pool is pricing, the test cannot call it a
+  // claim on an SK Hynix share, so the oracle withholds. See D39.
   {
     symbol: 'wSKHYx',
     reference: '000660.KS',
     signals: ['NQ=F'],
     noReferenceNote:
-      'reference market identified (SK Hynix, 000660.KS) but it quotes in KRW — ' +
-      'fair value withheld until a KRW/USD leg makes the basis computable',
+      'reference market identified (SK Hynix, 000660.KS) and converted to USD, but ' +
+      'the X Layer pool quotes ~86% below the share — the wrapper does not reconcile ' +
+      'with the listing, so fair value is withheld',
   },
   { symbol: 'wSNDKx', reference: 'SNDK', signals: ['NQ=F'], admittedOn: '2026-08-11' },
   // SpaceX is private. There is no close to carry forward, and no engineering
@@ -309,8 +314,30 @@ export async function computeFairValue(
     };
   }
 
-  const refIntra = await intraday(spec.reference);
-  const refDaily = await daily(spec.reference);
+  // A reference quoted in another currency is converted to USD once, here, so
+  // every calculation downstream is currency-blind. Where the FX leg is
+  // unavailable the raw series is kept and the basis is marked unverifiable —
+  // the same refusal as before, now reached only when it is actually true.
+  const refIntraRaw = await intraday(spec.reference);
+  const refDailyRaw = await daily(spec.reference);
+  const refIntraUsd = await toUsd(refIntraRaw);
+  const refDailyUsd = await toUsd(refDailyRaw);
+  const fxUnavailable = refIntraUsd == null || refDailyUsd == null;
+  const refIntra = refIntraUsd ?? refIntraRaw;
+  const refDaily = refDailyUsd ?? refDailyRaw;
+
+  if (refIntra.nativeCurrency) {
+    notes.push(
+      `reference quotes in ${refIntra.nativeCurrency}, converted at ` +
+        `${refIntra.fxRate!.toFixed(2)} ${refIntra.nativeCurrency}/USD — the FX leg is live, ` +
+        'so only the equity component is carried forward',
+    );
+  } else if (fxUnavailable) {
+    notes.push(
+      `reference quotes in ${refIntraRaw.currency} and no ${refIntraRaw.currency}/USD rate ` +
+        'is available — basis withheld',
+    );
+  }
 
   const state = classifySession(refIntra, now);
   const anchorAt = refIntra.lastRegularPrintAt;
@@ -397,20 +424,14 @@ export async function computeFairValue(
   // and the reference genuinely corresponds to the wrapped security. Where that
   // is unproven, withhold the number rather than print a misleading one.
   let basisBps: number | undefined;
-  if (opts.onchainPrice && fairValue) {
-    if (refIntra.currency !== 'USD') {
-      notes.push(
-        `reference quoted in ${refIntra.currency}; basis withheld until an FX leg and the wrapper's reference security are verified`,
-      );
-    } else {
-      basisBps = (opts.onchainPrice / fairValue - 1) * 10_000;
-    }
+  if (opts.onchainPrice && fairValue && !fxUnavailable) {
+    basisBps = (opts.onchainPrice / fairValue - 1) * 10_000;
   }
 
   // An unverifiable basis is the riskiest state of all — it means we cannot
   // tell whether the pool is mispriced. It must score higher than a known
   // small basis, never zero.
-  const basisUnverified = refIntra.currency !== 'USD';
+  const basisUnverified = fxUnavailable;
 
   const parts: GapRiskBreakdown = {
     staleness: clamp01(stalenessHours / 72),

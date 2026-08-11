@@ -776,3 +776,57 @@ said we had no reference market, and that was not true.
 Also removed while here: `ADDRESS_BY_SYMBOL` was copied into `src/publish.ts` and
 `src/oracle-demo.ts`, eight entries each. Both now call `addressBySymbol()` in `src/pool.ts`,
 which joins `XSTOCKS` to the symbols the chain reports — one source, and it cannot drift.
+
+---
+
+## D39 — The FX leg is built, and wSKHYx still does not reconcile
+
+wSKHYx was the one asset D38 left blocked on infrastructure rather than on evidence: the reference
+was correct, the currency was KRW, and the basis against a USDG pool was not computable. That is a
+real, sized piece of work, so it was done.
+
+**The FX leg.** `toUsd()` in `src/marketdata.ts` re-expresses any foreign-quoted series in USD, and
+the engine is currency-blind after it. Two details are load-bearing:
+
+- **Yahoo quotes `C=X` as units of C per USD** — `KRW=X` is ~1418, `EUR=X` is ~0.87. Prices are
+  divided by it, never multiplied. Getting that backwards is wrong by six orders of magnitude in
+  one direction and plausible-looking in the other.
+- **History converts at each bar's own rate; the last print converts at the rate now.** When Seoul
+  is shut the equity leg is stale and the FX leg is not, so a Seoul close marked at the current
+  rate is the honest USD anchor and only the equity component is carried forward.
+
+**A daily-bar alignment defect, found and fixed while measuring.** A timestamp walk pairs a Seoul
+equity bar stamped `D 00:00` with the FX bar stamped `D−1 23:00` — one session behind. Checked
+rather than assumed: a daily FX bar's close matches the intraday rate at *its own* timestamp
+(bar `2026-08-09 23:00` closes 1407.00, intraday there is 1407.45; 24h later it is 1417.90), so
+the bar stamped `D 23:00` is the session *ending* on D, which is the one containing the Seoul
+session of D. Daily conversion now matches on the date label, the same rule `alignedReturns` uses.
+
+An earlier reading claimed this fix doubled the R² of 000660.KS against NQ=F. It did not — that
+number came from a smaller sample, not a better alignment. Measured like for like, KRW returns fit
+at R² 0.058 and USD returns at 0.060. **The FX conversion is correct and it barely moves the fit.**
+Recorded because the wrong version is the more flattering one.
+
+**The result the work was for: wSKHYx still fails, at −86.4%.** X Layer quotes it at **$136.93**
+against an SK Hynix share worth **$1,004.97** — 1,425,000 KRW at 1417.95/USD. The reference is not
+the doubtful part: Seoul and Frankfurt (`HY9H.F`, EUR) agree within **1.6%** on ~$1,008–1,025.
+
+What that pool is pricing, we do not know, and the honest position is not to guess. One
+observation, offered as evidence and not as an explanation: the wSKHYx pool holds a **single
+full-range position** between ticks 210640 and 242840 with no tick structure from trading, at ~$137
+— while wSPCXx, a pool with 31 initialised ticks, sits at ~$136.79. A price nobody has arbitraged
+is consistent with what we see; so are other things.
+
+**Why this is a better outcome than closing the gap.** wSKHYx moves from *"blocked on an FX leg we
+have not built"* to *"converted, compared, and refused at −86.4%"*. It is the first asset to fail on
+the gate that actually matters, and it makes D38's threshold argument checkable rather than
+rhetorical: the widest reconciling basis is **2.0%** and the narrowest failing one is **86.4%**, a
+factor of 43. `MAX_IDENTITY_BASIS_BPS` could sit anywhere across more than an order of magnitude
+and admit exactly the same 28 assets.
+
+`FX_REQUIRED` survives as a rejection reason and now means what it says — no USD rate exists for
+that currency — rather than "we did not build the leg".
+
+**Anyone holding wSKHYx on X Layer should read the number.** The system's job is to refuse, and it
+does: `PolicyGuard` rejects with the sentence above attached, and `pnpm reconcile` re-checks it
+every run.

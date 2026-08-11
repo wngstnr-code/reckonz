@@ -78,7 +78,7 @@ can append receipts. `Executor.permit2/router/guard/oracle/cash` all correct.
 | Uniswap V3 core math (BigInt) | `src/v3math.ts` | ✅ validated vs `slot0`, drift 0.0016% |
 | Pool loader + multi-tick exact-input simulation | `src/pool.ts` | ✅ |
 | Routing, capacity search, slicing, basket planning | `src/planner.ts` | ✅ |
-| Market data — references, 24/7 signals, gap stats | `src/marketdata.ts` | ✅ Yahoo + Coinbase |
+| Market data — references, 24/7 signals, gap stats, FX | `src/marketdata.ts` | ✅ Yahoo + Coinbase; `toUsd()` converts foreign-quoted references (D39) |
 | Reference-market admission test | `src/reconcile.ts` | ✅ **28 of 30 admitted**, re-runnable as a regression check (D38) |
 | Fair-value engine — β, band, gap risk | `src/fairvalue.ts` | ✅ |
 | Off-chain mirror of the on-chain guard | `src/guard.ts` | ✅ |
@@ -149,12 +149,11 @@ slippage (28% of the basket). Sized to capacity it pays $28, and reports the $24
 force into the market.
 
 **Reference-market admission test** (`pnpm reconcile`, 2026-08-11) — **28 of 30 xStocks
-admitted**. Every admitted asset reconciles with its reference inside 2.0%; nothing failed on
-basis, so the admitted set and the refusals are separated by orders of magnitude rather than by
-the threshold. wSKHYx rejects `FX_REQUIRED` (KRW), wSPCXx rejects `NO_CANDIDATE` (private). With
-that in place, `pnpm oracle 2000` refuses assets for **`PRICE_IMPACT` at 86–121 bp against a
-50 bp mandate** — a real chain-side limit — where 22 of those refusals used to say `NO_REFERENCE`.
-See D38.
+admitted**. Widest reconciling basis **2.0%** (wIBMx); narrowest failing one **86.4%** (wSKHYx).
+A factor of 43 between them, so the threshold could sit anywhere across an order of magnitude and
+admit the same 28. wSPCXx rejects `NO_CANDIDATE` (private). With that in place, `pnpm oracle 2000`
+refuses assets for **`PRICE_IMPACT` at 86–121 bp against a 50 bp mandate** — a real chain-side
+limit — where 22 of those refusals used to say `NO_REFERENCE`. See D38 and D39.
 
 **Oracle live on-chain** (`pnpm oracle:publish` — ~582k gas for 8 cold slots, ~186k to refresh them):
 
@@ -231,9 +230,14 @@ That single run exercises every claim the product makes. It is the demo.
   The two refusals are now measured rather than pending — **wSKHYx** blocked on a KRW/USD leg,
   **wSPCXx** because SpaceX is private. The test re-runs against live data and fails if an
   admitted mapping stops reconciling.
-- **wSKHYx still needs an FX leg.** The reference is correct and identified; the basis against a
-  USDG pool is not computable in KRW. This is the one remaining unpriced asset with a public
-  listing, and it is a sized piece of work rather than an unknown.
+- ~~**wSKHYx still needs an FX leg**~~ — ✅ **Built 2026-08-11 (D39).** `toUsd()` converts any
+  foreign-quoted reference through a live rate, and the engine is currency-blind after it.
+  **wSKHYx still fails, now at −86.4%**: X Layer quotes it at $136.93 against a share worth
+  $1,004.97, with Seoul and Frankfurt agreeing within 1.6% on the reference. The refusal moved
+  from *"we have not built the FX leg"* to a measured basis, which is the stronger statement.
+- **What the wSKHYx pool is actually pricing is unknown.** We refuse it and say the number; we do
+  not claim to know why. Its pool holds a single full-range position with no tick structure from
+  trading. Anyone holding wSKHYx on X Layer should read that −86.4%.
 - **`.env` holds a live Gemini key** pasted in chat. Owner assessed the exposure as acceptable
   2026-08-11; the key is in Vercel's environment too. Recorded rather than re-argued.
 - **No logo.** Four prompt directions were drafted on 2026-08-11 (the cut / the narrowing / the
