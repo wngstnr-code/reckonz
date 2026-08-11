@@ -125,6 +125,17 @@ if (!quoted) throw new Error('no venue could quote this size');
 const token = await loadToken(asset);
 const feeTier = quoted.venue.pool.fee;
 
+// A simulation that ran past its prefetched tick window stopped early and
+// priced only the input it managed to consume, so `minAmountOut` derived from
+// it would be far too low — slippage protection that protects nothing. D34 was
+// the same mistake in `capacity()`; refuse the quote rather than ship it.
+if (quoted.result.exhaustedWindow) {
+  throw new Error(
+    `the quote for ${AMOUNT_USDG} USDG ran past the prefetched tick window, so it is a lower ` +
+      `bound rather than a price. Execute a smaller size.`,
+  );
+}
+
 const minAmountOut =
   (quoted.result.amountOut * BigInt(10_000 - SLIPPAGE_TOLERANCE_BPS)) / 10_000n;
 
@@ -133,7 +144,26 @@ console.log(
     `  @ ${quoted.effectivePrice.toFixed(4)}  (fee tier ${feeTier}, impact ${(quoted.impactBps / 100).toFixed(2)}%)`,
 );
 console.log(`  min out   ${formatUnits(minAmountOut, token.decimals)} ${token.symbol}`);
-console.log(`  fee tier  ${feeTier} (${feeTier / 10_000}%) — the executor derives the pool from it`);
+// The executor derives the pool from (cash, asset, fee); we quoted against a
+// pool found through the factory. They must be the same pool or the fill happens
+// somewhere the quote never looked. Asking the contract is a free read, and it
+// is the check that would have caught D35 before it cost a transaction.
+const derivedPool = await ownerWallet.readContract({
+  address: EXECUTOR,
+  abi: EXECUTOR_ABI,
+  functionName: 'poolFor',
+  args: [cash, asset, feeTier],
+});
+if (derivedPool.toLowerCase() !== quoted.venue.pool.address.toLowerCase()) {
+  throw new Error(
+    `the executor would swap in ${derivedPool} but this quote came from ` +
+      `${quoted.venue.pool.address}. Refusing to execute against a pool we did not price.`,
+  );
+}
+
+console.log(
+  `  fee tier  ${feeTier} (${feeTier / 10_000}%) -> pool ${derivedPool}, matches the quote`,
+);
 
 // ------------------------------------------------------ 2. the mandate
 

@@ -213,6 +213,7 @@ export const EXECUTOR_ABI = parseAbi([
   'error ResidualBalance(address token, uint256 amount)',
   'error InsufficientOutput(uint256 received, uint256 minimum)',
   'error PoolHasNoCode(address pool)',
+  'error AmountInTooLarge(uint256 amountIn)',
   'error UnexpectedCallback(address caller)',
   'error ZeroAmountIn()',
 ]);

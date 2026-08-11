@@ -27,6 +27,9 @@ const GUARD = (process.env.GUARD_ADDRESS ?? deployment.contracts.PolicyGuard) as
 
 const wMUx = '0xe2047ee3bddb5c99ae428ab83df63f8730698e30' as Address;
 const wNVDAx = '0xa8ddb5cd96b5222afe198316e9a57caa642850d5' as Address;
+// Lowest gap risk of the eight priced assets, so it is the one a first mainnet
+// fill should use. It has to be allowed here or the guard rejects it.
+const wSPYx = '0xe7e553cd128f0011777323a0b44a7b96ea1cb540' as Address;
 
 const account = accountFrom('OWNER_KEY', 'PRIVATE_KEY');
 const client = walletFor(account, t);
@@ -35,18 +38,34 @@ console.log(`\n  PolicyGuard ${GUARD}  (${deployment.name}, chain ${chain.id})`)
 console.log(`  owner/agent/executor ${account.address}\n`);
 
 // 1 — create the mandate
+//
+// `maxNotionalPerTrade` and `maxFillsPerEpoch` are the blast radius: the most
+// this mandate can ever spend if a key leaks, an agent misbehaves, or a bug in
+// our own sizing gets through. On testnet the money is fake and a wide cap keeps
+// the demo unobstructed. On mainnet it is real, so the default is deliberately
+// smaller than anything we intend to trade and has to be raised on purpose.
+const maxNotionalUsdg = BigInt(
+  process.env.MAX_NOTIONAL_USDG ?? (t === 'mainnet' ? '25' : '5000'),
+);
+const maxFills = Number(process.env.MAX_FILLS_PER_EPOCH ?? (t === 'mainnet' ? 3 : 8));
+
 const policy = {
   maxWeightBps: 4000,
   minCashBufferBps: 500,
   maxSlippageBps: 50,
   maxDeviationBps: 100,
   maxGapRisk: 60,
-  maxNotionalPerTrade: 5_000_000000n,
-  maxFillsPerEpoch: 8,
+  maxNotionalPerTrade: maxNotionalUsdg * 1_000_000n,
+  maxFillsPerEpoch: maxFills,
   epochDuration: 86_400,
   minRebalanceInterval: 0,
   enforceWeights: false,
 } as const;
+
+console.log(
+  `  blast radius  ${maxNotionalUsdg} USDG per trade, ${maxFills} fills per 24h` +
+    `${process.env.MAX_NOTIONAL_USDG ? '' : ' (default — set MAX_NOTIONAL_USDG to change)'}`,
+);
 
 const mandateId = await client.readContract({
   address: GUARD,
@@ -58,7 +77,7 @@ let hash = await client.writeContract({
   address: GUARD,
   abi: POLICY_GUARD_ABI,
   functionName: 'createMandate',
-  args: [account.address, account.address, policy, [wMUx, wNVDAx]],
+  args: [account.address, account.address, policy, [wMUx, wNVDAx, wSPYx]],
 });
 await client.waitForTransactionReceipt({ hash });
 
