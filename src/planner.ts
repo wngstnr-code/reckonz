@@ -85,15 +85,38 @@ export function bestQuote(venues: Venue[], usdgAmount: bigint): Quote | null {
  */
 export function capacity(venues: Venue[], maxBps: number): bigint {
   const unit = 10n ** BigInt(USDG.decimals);
-  let lo = 0n;
-  let hi = 1_000_000n * unit;
 
   const impactAt = (n: bigint): number => {
     const q = bestQuote(venues, n);
-    return q ? q.impactBps : Number.POSITIVE_INFINITY;
+    if (!q) return Number.POSITIVE_INFINITY;
+    // A swap that ran past the prefetched tick window stopped early, so its
+    // impact is a *lower bound* — the real number is worse by an unknown
+    // amount. Treating it as a measurement would let an unprovable size pass
+    // the limit. We cannot defend it, so it does not count as capacity.
+    if (q.result.exhaustedWindow) return Number.POSITIVE_INFINITY;
+    return q.impactBps;
   };
 
-  if (impactAt(hi) <= maxBps) return hi;
+  // Find a size the pool demonstrably cannot absorb, rather than assuming one.
+  //
+  // This used to start at a fixed 1,000,000 USDG ceiling and return that ceiling
+  // whenever impact was still inside the limit there — so a pool deeper than the
+  // guess reported the guess. wGLDx did exactly that at 5% once the universe
+  // widened past the eight seeds, printing a round 1,000,000 that was the search
+  // bound wearing a measurement's clothes.
+  //
+  // Doubling terminates because impact rises with size until one of two things
+  // stops it: the pool runs out of liquidity, or the simulation runs out of
+  // prefetched ticks. Both are Infinity above, and the second is why the naive
+  // "impact is monotonic, just keep doubling" version of this loop hangs —
+  // impact plateaus once every quote is truncated at the window edge.
+  let hi = 1_000n * unit;
+  while (impactAt(hi) <= maxBps) {
+    hi *= 2n;
+  }
+
+  let lo = hi / 2n;
+  if (lo > 0n && impactAt(lo) > maxBps) lo = 0n;
 
   // 40 iterations of bisection gets us to sub-cent precision on any sane range
   for (let i = 0; i < 40; i++) {
