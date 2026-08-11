@@ -22,7 +22,7 @@ explorer  https://www.oklink.com/xlayer
 ```
 Uniswap V3 Factory   0x4b2ab38dbf28d31d467aa8993f6c2585981d6804   ← NOT the canonical address
 Permit2              0x000000000022D473030F116dDEE9F6B43aC78BA3   ✅ canonical
-Universal Router     0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af   ✅ canonical
+Universal Router     0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af   ⛔ CANNOT SWAP — see D35
 Multicall3           0xcA11bde05977b3631167028862bE2a173976CA11   ✅ canonical
 Aave V3 Pool         0xE3F3Caefdd7180F884c01E57f65Df979Af84f116
 ```

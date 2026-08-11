@@ -582,3 +582,55 @@ allowed to print.
 unrelated reasons stacked together — 22 more assets (D33) and one honest ceiling (this). Both are
 corrections to the same habit: describing a partial measurement as a complete one. The business
 conclusion in D6 and D7 does not move.
+
+---
+
+## D35 — The Universal Router on X Layer cannot swap, and we shipped against it anyway
+
+Found 2026-08-11 while trying to swap OKB into USDG to fund the mainnet deployer. Every
+`V3_SWAP_EXACT_IN` through `0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af` reverts with no data —
+single hop, multi hop, `payerIsUser` either way, every fee tier.
+
+**The cause.** Uniswap's router does not look a pool up; it *derives* the address, CREATE2 from a
+factory and an init-code hash both fixed at deploy time. Grepping the router's own bytecode:
+
+```
+PRESENT  canonical v3 factory  0x1F98431c8aD98523631AE4a59f267346ea31F984
+PRESENT  uniswap init code hash
+absent   X Layer v3 factory    0x4b2ab38dbf28d31d467aa8993f6c2585981d6804
+```
+
+X Layer uses the standard init-code hash but a **non-canonical factory** — the fact already
+recorded in D1. Confirmed by deriving the WOKB/USD₮0 pool address both ways: the X Layer factory
+reproduces the live pool `0xe3BE6A01…` exactly, the canonical factory produces
+`0xf429D6ED…`, which has no code. So the router computes an empty address and the call reverts
+with nothing to read.
+
+**This router cannot execute a V3 swap on this chain at all.** Not a configuration we can pass
+around; it is baked into deployed bytecode.
+
+**Why it survived until now.** `01-xlayer-reality.md` listed it as "✅ canonical" and D31 recorded
+it as verified. What was actually checked was that the address holds 39,001 bytes and exposes
+`execute(bytes,bytes[],uint256)`. Both true, and neither is evidence that a swap works.
+`Executor.t.sol` passes 9/9 against a **mock** router, which was known and written down — the gap
+was treating "deployed and shaped right" as "works".
+
+This is D1 and D5 for the third time: on this chain, a canonical address is a hypothesis. The
+rule has to be that an external dependency is unverified until a call that *does the actual work*
+succeeds against it — not a selector, not a codesize.
+
+**Consequence — this blocks the mainnet fill.** `Executor._swap` funds this router and calls
+`V3_SWAP_EXACT_IN`. On mainnet it will revert 100% of the time. The contract is deployed on
+testnet where the router has 0 bytes, so the failure has never had a chance to appear.
+
+**The fix.** `Executor` should call the pool directly and implement `uniswapV3SwapCallback`. It is
+already a contract, so it can be its own callback recipient; the router was buying nothing that
+justifies a dependency this fragile. This removes the external router entirely rather than hunting
+for a correctly-configured one — and the pool address comes from the factory we have verified,
+which is the same source `src/pool.ts` already uses.
+
+**Also worth keeping:** `SWEEP` (command `0x04`) *does* work, because it never touches a pool.
+That is how 0.0396 WOKB was recovered after a funding transfer landed and the swap did not. Any
+value sent to that router is sweepable by anyone, so it must never sit there between transactions
+— which is exactly the invariant `Executor`'s residual-balance check already enforces.
+

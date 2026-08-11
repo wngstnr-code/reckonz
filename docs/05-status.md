@@ -179,7 +179,7 @@ That single run exercises every claim the product makes. It is the demo.
 
 | Item | Notes |
 |---|---|
-| **Real fill on mainnet** | The Universal Router has **0 bytes** on testnet (39,000 on mainnet) and no xStock pools exist there. `Executor`'s swap path is proven only against a mock router. |
+| **Real fill on mainnet** | 🔴 **Blocked by D35.** The Universal Router on mainnet cannot execute a V3 swap at all — canonical factory baked into its bytecode, X Layer's factory is non-canonical, so it derives empty pool addresses and reverts. `Executor._swap` calls exactly that. Fix: call the pool directly and implement `uniswapV3SwapCallback`, then redeploy. |
 | **Demo video / walkthrough** | Not started. The web app is now the thing to record. |
 | **Deploy the web app** | Runs locally only. Judges will not `pnpm dev`. |
 | **Wallet connect + mandate creation in the UI** | The page reads and decides; it cannot yet sign. Everything on-chain still happens through `pnpm mandate` / `pnpm oracle:publish`. |
@@ -260,6 +260,14 @@ If time remains after all four: `FeeCollector`, then `ThesisRegistry`. Not befor
 ---
 
 ## Log
+
+**2026-08-11 (latest, fourth)** — D35, found while funding the mainnet deployer: the Universal
+Router at `0x66a9…` **cannot execute a V3 swap on X Layer**. Its bytecode carries the canonical v3
+factory, X Layer's is non-canonical (D1), so every swap derives an empty pool address and reverts
+with no data. `Executor._swap` uses that router, so the mainnet fill is blocked until `Executor`
+calls the pool directly. Previous "verification" of the router checked codesize and a selector,
+neither of which is evidence a swap works. `src/swap.ts` written and blocked on the same cause;
+0.0396 WOKB recovered from the router with `SWEEP`.
 
 **2026-08-11 (latest, third)** — D33 closed: the investable universe is all 30 xStocks, read
 from the chain, and separated from the 8 the oracle can price. A thesis about Apple now maps to
