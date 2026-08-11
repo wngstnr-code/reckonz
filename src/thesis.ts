@@ -11,6 +11,7 @@
  * marked `observable: false` and surfaced to the user as a manual watch item
  * rather than quietly becoming a rule that never fires.
  */
+import { keccak256, toHex } from 'viem';
 import { z } from 'zod';
 
 /**
@@ -87,6 +88,35 @@ export const ThesisSchema = z.object({
 });
 
 export type Thesis = z.infer<typeof ThesisSchema>;
+
+/**
+ * The canonical hash of a thesis — what gets published to `ThesisRegistry` and
+ * stamped into every receipt the thesis produces.
+ *
+ * Canonical means key order cannot change the answer. `JSON.stringify` walks an
+ * object in insertion order, so the same thesis rebuilt from a different code
+ * path — parsed from a fixture rather than a model response, say — would hash
+ * differently and silently break the link between a thesis and its fills. Keys
+ * are sorted at every depth; arrays keep their order, because the order of a
+ * causal chain is part of the argument.
+ *
+ * The on-chain half is `ThesisRegistry.publish(contentHash, cid)`. If this
+ * function changes, every previously published thesis becomes unverifiable, so
+ * it must not change casually.
+ */
+export function thesisHash(thesis: Thesis): `0x${string}` {
+  return keccak256(toHex(canonicalise(thesis)));
+}
+
+/** Deterministic JSON: sorted keys at every depth, arrays left alone. */
+function canonicalise(value: unknown): string {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value) ?? 'null';
+  if (Array.isArray(value)) return `[${value.map(canonicalise).join(',')}]`;
+  const entries = Object.entries(value as Record<string, unknown>)
+    .filter(([, v]) => v !== undefined)
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${canonicalise(v)}`).join(',')}}`;
+}
 export type DisconfirmingCondition = z.infer<typeof DisconfirmingCondition>;
 export type ExitTrigger = z.infer<typeof ExitTrigger>;
 

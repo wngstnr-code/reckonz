@@ -164,8 +164,9 @@ snapshot, fair value / gap risk, thesis→basket compilation.
 5. Thesis Compiler ✅ — live on Gemini, refuses to substitute unmapped names
 6. Mainnet with small caps ✅ — two real fills, 25→1 USDG blast radius, receipts #0 and #1
 7. `FeeCollector` ✅ — 15 bps, taking a real fee ← **done ahead of order**
-8. Simple mode + `ThesisRegistry` ← **next**
-9. ASP / x402
+8. `ThesisRegistry` ✅ — deployed, loop closed on mainnet (receipt #2 → thesis #0)
+9. Simple mode ← **next**
+10. ASP / x402
 
 `Executor` swaps by calling the pool directly (`V3Swapper`). The Universal Router was in
 this design until it turned out it cannot swap on X Layer at all — see D35, and note that

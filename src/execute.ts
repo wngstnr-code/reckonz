@@ -28,6 +28,7 @@ import {
   PERMIT2_ABI,
   POLICY_GUARD_ABI,
   RECEIPT_REGISTRY_ABI,
+  THESIS_REGISTRY_ABI,
 } from './abi';
 import { ADDR, USDG } from './chain';
 import { bestQuote, loadVenues } from './planner';
@@ -43,6 +44,8 @@ import {
 
 const SYMBOL_OR_ADDRESS = process.argv[2];
 const AMOUNT_USDG = process.argv[3] ?? '1';
+
+const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000' as const;
 /** How far below the simulated output the router may fill before it reverts. */
 const SLIPPAGE_TOLERANCE_BPS = Number(process.env.SLIPPAGE_TOLERANCE_BPS ?? 100);
 const MANDATE_ID = process.env.MANDATE_ID ? BigInt(process.env.MANDATE_ID) : null;
@@ -136,6 +139,16 @@ if (quoted.result.exhaustedWindow) {
   );
 }
 
+/**
+ * The thesis this fill expresses, if any.
+ *
+ * A fill with a zero hash is not a lie, it is just an untethered trade — the
+ * receipt records what happened without claiming a reason. A fill *with* a hash
+ * is a claim that reasoning published earlier produced this trade, and that
+ * claim is checkable: `ThesisRegistry.publishedAt < receipt.timestamp`.
+ */
+const THESIS_HASH = (process.env.THESIS_HASH ?? ZERO_HASH) as `0x${string}`;
+
 const minAmountOut =
   (quoted.result.amountOut * BigInt(10_000 - SLIPPAGE_TOLERANCE_BPS)) / 10_000n;
 
@@ -164,6 +177,40 @@ if (derivedPool.toLowerCase() !== quoted.venue.pool.address.toLowerCase()) {
 console.log(
   `  fee tier  ${feeTier} (${feeTier / 10_000}%) -> pool ${derivedPool}, matches the quote`,
 );
+
+// The receipt will carry this hash forever, so check now that it resolves to a
+// published thesis. A hash that is not in the registry would produce a receipt
+// pointing at reasoning nobody can read — worse than an untethered fill, because
+// it looks like evidence.
+if (THESIS_HASH !== ZERO_HASH) {
+  const REGISTRY = deployment.contracts.ThesisRegistry as Address | undefined;
+  if (!REGISTRY) throw new Error('THESIS_HASH set but no ThesisRegistry deployed on this chain');
+
+  const [thesisId, exists] = await ownerWallet.readContract({
+    address: REGISTRY,
+    abi: THESIS_REGISTRY_ABI,
+    functionName: 'idOf',
+    args: [THESIS_HASH],
+  });
+  if (!exists) {
+    throw new Error(
+      `thesis ${THESIS_HASH} is not published on ${deployment.name}. ` +
+        `Run \`pnpm thesis:publish\` first — a receipt must not point at reasoning nobody can read.`,
+    );
+  }
+  const thesis = await ownerWallet.readContract({
+    address: REGISTRY,
+    abi: THESIS_REGISTRY_ABI,
+    functionName: 'get',
+    args: [thesisId],
+  });
+  console.log(
+    `\n  thesis    #${thesisId} by ${thesis.author}` +
+      `\n            published ${new Date(Number(thesis.publishedAt) * 1000).toISOString()} — before this fill`,
+  );
+} else {
+  console.log(`\n  thesis    none (THESIS_HASH unset — this fill claims no reasoning)`);
+}
 
 // ------------------------------------------------------ 2. the mandate
 
@@ -361,8 +408,8 @@ const hash = await agentWallet.writeContract({
     [{ asset, amountInUsdg: amountIn, minAmountOut, fee: feeTier }],
     { permitted: [{ token: cash, amount: amountIn }], nonce, deadline },
     signature,
-    '0x0000000000000000000000000000000000000000000000000000000000000000',
-    '0x0000000000000000000000000000000000000000000000000000000000000000',
+    THESIS_HASH,
+    ZERO_HASH, // evidenceHash — the bundle is not pinned yet
     '',
   ],
 });

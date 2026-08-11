@@ -46,6 +46,7 @@ FairValueOracle  0x3659E05Fbbaafb7bA868171aB98327b62831Cd75
 ReceiptRegistry  0x9D04575894F570C3638Bc1f6ECaD6EF36D479Fa6
 PolicyGuard      0x481e0A60c5E105708b86e804811F8fc98a43bEFd
 Executor         0xdc2f34A220D4cd7c098D7927454F30AEf3157681
+ThesisRegistry   0xD4b503d002Fb77019d7BB1a26DCe1d60F32dfa1E
 FeeCollector     0x3A1D6b9129E69fEF189E538996B18cebd56C3Dd0   15 bps, ceiling 50
 PoolSwapper      0x1f3b67d8209060eC68d0eDCD6E60Ba53A8e9ac28
 cash (real USDG) 0x4ae46a509F6b1D9056937BA4500cb143933D2dc8
@@ -91,6 +92,7 @@ can append receipts. `Executor.permit2/router/guard/oracle/cash` all correct.
 | `Executor` — Permit2 → swap → settle → submit | `contracts/Executor.sol` | ✅ **two real mainnet fills** |
 | `V3Swapper` — direct pool swaps, derived addresses | `contracts/V3Swapper.sol` | ✅ the Universal Router cannot swap here (D35) |
 | `FeeCollector` — 15 bps, ceiling 50 in code | `contracts/FeeCollector.sol` | ✅ took a real fee |
+| `ThesisRegistry` — append-only, no admin | `contracts/ThesisRegistry.sol` | ✅ receipt #2 resolves to thesis #0 |
 | Test suite | `test/*.t.sol` | ✅ 64/64 |
 | Chain selection + Permit2 helpers | `src/wallet.ts` | ✅ `TARGET=mainnet\|testnet` |
 | ABIs, one source, browser-safe | `src/abi.ts` | ✅ `pnpm verify:abi` checks every selector vs bytecode |
@@ -278,6 +280,28 @@ If time remains after all four: `FeeCollector`, then `ThesisRegistry`. Not befor
 ---
 
 ## Log
+
+**2026-08-11 (latest, twelfth)** — `ThesisRegistry` deployed on both chains and **the loop is
+closed on mainnet**:
+
+```
+thesis #0   published 05:08:46   0xc3cd487e…
+receipt #2  filled    05:09:33   carries the same hash
+            -> reasoning predates the outcome, checkable by anyone
+```
+
+`ReceiptRegistry` already made the executions unfalsifiable. This is the other half: a record of
+trades proves what you did, not that you meant to. `thesisHash()` in `src/thesis.ts` hashes a
+canonical serialisation — keys sorted at every depth, so the same thesis rebuilt from a different
+code path hashes identically — and `execute.ts` refuses to send a hash the registry does not know,
+because a receipt pointing at unreadable reasoning is worse than one claiming none.
+
+Three absences do the work: no update or delete, one author per hash (first to publish keeps the
+claim), and no admin at all. There is deliberately **no paid-following mechanism** — that is the
+part `06-assessment.md` says needs a legal answer first.
+
+Receipts #0 and #1 correctly resolve to *no* thesis. They were untethered fills and the registry
+says so rather than inventing a link.
 
 **2026-08-11 (latest, eleventh)** — `FeeCollector` shipped and **taking a real fee on mainnet**.
 

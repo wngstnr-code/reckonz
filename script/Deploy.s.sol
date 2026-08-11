@@ -5,6 +5,7 @@ import {Script} from "forge-std/Script.sol";
 import {console2} from "forge-std/console2.sol";
 import {Executor, ISignatureTransfer} from "../contracts/Executor.sol";
 import {FeeCollector} from "../contracts/FeeCollector.sol";
+import {ThesisRegistry} from "../contracts/ThesisRegistry.sol";
 import {FairValueOracle} from "../contracts/FairValueOracle.sol";
 import {IFairValueOracle} from "../contracts/interfaces/IFairValueOracle.sol";
 import {PolicyGuard} from "../contracts/PolicyGuard.sol";
@@ -100,6 +101,10 @@ contract Deploy is Script {
             console2.log("WARNING: Executor cannot swap on this chain. Oracle/guard/receipts only.");
         }
 
+        // No constructor arguments and no admin, on purpose: a registry someone
+        // can rewrite is a database with extra steps.
+        ThesisRegistry theses = new ThesisRegistry();
+
         FairValueOracle oracle = new FairValueOracle(deployer);
         ReceiptRegistry receipts = new ReceiptRegistry(deployer);
         PolicyGuard guard =
@@ -128,5 +133,6 @@ contract Deploy is Script {
         console2.log("PolicyGuard    ", address(guard));
         console2.log("Executor       ", address(executor));
         console2.log("FeeCollector   ", address(fees), "15 bps");
+        console2.log("ThesisRegistry ", address(theses));
     }
 }

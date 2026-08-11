@@ -200,6 +200,7 @@ export const EXECUTOR_ABI = parseAbi([
   'function permit2() view returns (address)',
   'function factory() view returns (address)',
   'function cash() view returns (address)',
+  'function feeCollector() view returns (address)',
   'function poolFor(address tokenA, address tokenB, uint24 fee) view returns (address)',
 
   'event Executed(uint256 indexed mandateId, uint256 indexed receiptId, uint256 legs)',
@@ -245,6 +246,60 @@ export const RECEIPT_REGISTRY_ABI = parseAbi([
   'error NoFills()',
   'error NotAdmin()',
   'error NotWriter()',
+]);
+
+/**
+ * `FeeCollector` — where the execution fee lands.
+ *
+ * `MAX_FEE_BPS` is a constant in the contract, not a setting, so a consumer can
+ * bound their worst case by reading it rather than trusting the admin.
+ */
+export const FEE_COLLECTOR_ABI = parseAbi([
+  'function feeOn(uint256 notionalUsdg) view returns (uint256)',
+  'function feeBps() view returns (uint16)',
+  'function MAX_FEE_BPS() view returns (uint16)',
+  'function treasury() view returns (address)',
+  'function admin() view returns (address)',
+
+  'function setFeeBps(uint16 newFeeBps)',
+  'function setTreasury(address newTreasury)',
+  'function setAdmin(address newAdmin)',
+  'function withdraw(address token) returns (uint256 amount)',
+  'function record(uint256 mandateId, address asset, uint256 notionalUsdg, uint256 feeUsdg)',
+
+  'event FeeTaken(uint256 indexed mandateId, address indexed asset, uint256 notionalUsdg, uint256 feeUsdg)',
+  'event FeeBpsSet(uint16 feeBps)',
+  'event TreasurySet(address indexed treasury)',
+  'event AdminSet(address indexed admin)',
+  'event Withdrawn(address indexed token, address indexed to, uint256 amount)',
+
+  'error NotAdmin()',
+  'error FeeTooHigh(uint16 requested, uint16 maximum)',
+  'error ZeroAddress()',
+]);
+
+/**
+ * `ThesisRegistry` — append-only, no admin, one author per hash.
+ *
+ * Resolve a receipt's `thesisHash` here to find who published the reasoning and
+ * when. If `publishedAt` precedes the receipt's timestamp, the thesis existed
+ * before the outcome did — which is the entire claim.
+ */
+export const THESIS_REGISTRY_ABI = parseAbi([
+  'struct Thesis { address author; bytes32 contentHash; uint64 publishedAt; uint64 blockNumber; string cid; }',
+
+  'function publish(bytes32 contentHash, string cid) returns (uint256 thesisId)',
+
+  'function get(uint256 thesisId) view returns (Thesis)',
+  'function idOf(bytes32 contentHash) view returns (uint256 thesisId, bool exists)',
+  'function authorOf(bytes32 contentHash) view returns (address)',
+  'function thesesOf(address author) view returns (uint256[])',
+  'function count() view returns (uint256)',
+
+  'event ThesisPublished(uint256 indexed thesisId, address indexed author, bytes32 indexed contentHash, string cid)',
+
+  'error AlreadyPublished(uint256 thesisId, address author)',
+  'error EmptyHash()',
 ]);
 
 // --------------------------------------------------------------------- enums

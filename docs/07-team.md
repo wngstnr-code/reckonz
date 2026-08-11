@@ -120,11 +120,19 @@ chain, capacity-limited plan, one of two assets refused at the guard.
 records what was *traded*, not what was pulled — see D37 for why that distinction protects the
 guard's slippage check.
 
-### 5. Next up
+### 5. `ThesisRegistry` ✅ done
 
-`ThesisRegistry` — append-only, hash + pointer, closing the thesis → execution → record loop the
-pitch rests on. Note `06-assessment.md` argues for a legal answer *before* people can pay to follow
-a thesis; the registry itself is fine, the paid-following on top of it is the question.
+`0xD4b503d002Fb77019d7BB1a26DCe1d60F32dfa1E`. Publish a thesis, execute against it, and the receipt
+carries the same hash — receipt #2 resolves to thesis #0, published 47 seconds earlier. Anyone can
+check that ordering.
+
+Deliberately **no paid-following mechanism**: `06-assessment.md` argues that needs a legal answer
+first, and the record is useful without the market on top of it.
+
+### 6. Next up
+
+Simple mode — browse published theses with their real on-chain track records. Mostly an FE
+question now that the data exists.
 
 ### Known gaps BE owns
 

@@ -18,8 +18,10 @@ import { toEventSelector, toFunctionSelector, type Abi } from 'viem';
 import {
   EXECUTOR_ABI,
   FAIR_VALUE_ORACLE_ABI,
+  FEE_COLLECTOR_ABI,
   POLICY_GUARD_ABI,
   RECEIPT_REGISTRY_ABI,
+  THESIS_REGISTRY_ABI,
 } from './abi';
 
 type AbiEntry = Abi[number];
@@ -45,6 +47,8 @@ const contracts: { name: string; ours: Abi; artifact: string }[] = [
   { name: 'FairValueOracle', ours: FAIR_VALUE_ORACLE_ABI as Abi, artifact: 'out/FairValueOracle.sol/FairValueOracle.json' },
   { name: 'Executor', ours: EXECUTOR_ABI as Abi, artifact: 'out/Executor.sol/Executor.json' },
   { name: 'ReceiptRegistry', ours: RECEIPT_REGISTRY_ABI as Abi, artifact: 'out/ReceiptRegistry.sol/ReceiptRegistry.json' },
+  { name: 'ThesisRegistry', ours: THESIS_REGISTRY_ABI as Abi, artifact: 'out/ThesisRegistry.sol/ThesisRegistry.json' },
+  { name: 'FeeCollector', ours: FEE_COLLECTOR_ABI as Abi, artifact: 'out/FeeCollector.sol/FeeCollector.json' },
 ];
 
 console.log('\n  src/abi.ts vs out/ — selector by selector\n');

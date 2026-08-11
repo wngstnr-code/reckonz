@@ -27,6 +27,7 @@ export const TESTNET: Deployment = {
     ReceiptRegistry: '0xBb63b9733Ba33117326479F42cd66B7a1B5Fae38',
     PolicyGuard: '0xf3a06c9f0F1AABf01080475E420DD7A1092E1e1B',
     Executor: '0xC4df2F5e72804843DBa0931813e827C67fbE1dDF',
+    ThesisRegistry: '0x15c04f77560673F88220c1328f976ECCdA6D53F0',
     'TestUSDG (settlement)': '0x3F58df45FcB5D1074bA5D046D4928CF5efde5f4d',
   },
 };
@@ -58,6 +59,7 @@ export const MAINNET: Deployment | null = {
     PolicyGuard: '0x481e0A60c5E105708b86e804811F8fc98a43bEFd',
     Executor: '0xdc2f34A220D4cd7c098D7927454F30AEf3157681',
     FeeCollector: '0x3A1D6b9129E69fEF189E538996B18cebd56C3Dd0',
+    ThesisRegistry: '0xD4b503d002Fb77019d7BB1a26DCe1d60F32dfa1E',
     USDG: '0x4ae46a509F6b1D9056937BA4500cb143933D2dc8',
     PoolSwapper: '0x1f3b67d8209060eC68d0eDCD6E60Ba53A8e9ac28',
   },
