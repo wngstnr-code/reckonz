@@ -97,7 +97,16 @@ await waitUntil(
   (m) => m.owner.toLowerCase() === account.address.toLowerCase(),
   { attempts: 30, delayMs: 500, what: 'the mandate' },
 );
-console.log(`  mandate #${mandateId} created — allows wMUx, wNVDAx`);
+// Read the list back rather than restating the argument: this line said
+// "allows wMUx, wNVDAx" for one commit after a third asset was added, which is
+// how a log stops being evidence and becomes decoration.
+const allowed = await client.readContract({
+  address: GUARD,
+  abi: POLICY_GUARD_ABI,
+  functionName: 'allowedAssets',
+  args: [mandateId],
+});
+console.log(`  mandate #${mandateId} created — allows ${allowed.length} assets: ${allowed.join(', ')}`);
 
 // 2 — install triggers compiled from the thesis
 //     "Liquidity thins to the point the position cannot be exited sanely."
