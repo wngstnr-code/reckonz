@@ -22,7 +22,7 @@ so they can be disagreed with but not disputed.
 **The architectural claim is real, not marketing, and it is now on mainnet.** "The AI holds no key
 that can move funds" is easy to say. Here the enforcement is inside the trade's own transaction:
 break the mandate and the whole thing unwinds. 89 tests exist because that claim has to survive
-contact with an adversary — and two real fills exist because tests are not the same as contact.
+contact with an adversary — and three real fills exist because tests are not the same as contact.
 Receipt `#1` records a price the agent did not author, stamped by the guard from the oracle.
 
 **The revenue line stopped being a diagram.** `FeeCollector` took 15 bps on a real fill. The amount
@@ -70,12 +70,21 @@ Yahoo Finance cannot be used in production, and the obstacle is licensing rather
 Equity price data is paid and contractually restricted. Republishing equity prices on-chain, where
 anyone can read them, likely needs its own licence. That is an uncosted fixed expense.
 
-### 4 — The oracle has a single point of trust 🟠
+### 4 — The oracle has a single point of trust 🟡
 
-One admin key can publish any fair value, and PolicyGuard believes it. Fine for a hackathon and
-stated openly. For a product touching real money it is both a single point of failure and an
-attack surface. Fixing it — multisig, publish-time sanity bounds, multiple publishers — is real
-work. See D31.
+Was 🟠, and the work named here as "real work" was done on 2026-08-11: admin of the oracle, the
+receipt registry and the fee collector is a **2-of-3 Safe** (D40, D42), and the publisher is
+**bounded by the contract** — a value more than 20% from the last one that took effect is withheld
+until confirmed 30 minutes later (D41).
+
+It is amber rather than green because two things remain, and both are structural rather than
+unfinished. **Publishing is still a hot key**: `publish()` runs on a schedule from a machine, so
+human consent cannot gate it and a multisig never could. And **the bound caps the rate of change,
+not the outcome** — twelve confirmed steps is an 8x, which is in the test suite as
+`test_APatientAttackerStillGetsThere` rather than in a footnote. A third: the bound re-anchors
+freely once publishing has lapsed a day, and publishing is currently manual (D44).
+
+See D31 for the original statement, D40–D42 for what changed.
 
 ### 5 — The regulatory line is thin 🟠
 
@@ -114,7 +123,7 @@ The application was built to justify the infrastructure. The infrastructure is t
 
 ## Verdict
 
-**As a hackathon project:** strong. It runs for real on mainnet — deployed, verified, two fills, a
+**As a hackathon project:** strong. It runs for real on mainnet — deployed, verified, three fills, a
 fee collected, a public URL — the numbers are striking, the positioning is clear, and the AI-RWA
 track is thinly contested.
 

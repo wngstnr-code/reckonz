@@ -67,17 +67,20 @@ jump ahead of it.
 ### 1. Mainnet deploy + one real fill ✅ done 2026-08-11
 
 ```
-FairValueOracle  0x3659E05Fbbaafb7bA868171aB98327b62831Cd75
+FairValueOracle  0xDB7949c99e6d234C0eD374a71966d9e6CbfcfD09  (replaced 2026-08-11, D42)
 ReceiptRegistry  0x9D04575894F570C3638Bc1f6ECaD6EF36D479Fa6
-PolicyGuard      0x481e0A60c5E105708b86e804811F8fc98a43bEFd
-Executor         0xdc2f34A220D4cd7c098D7927454F30AEf3157681
+PolicyGuard      0x3F58df45FcB5D1074bA5D046D4928CF5efde5f4d  (replaced)
+Executor         0xf3a06c9f0F1AABf01080475E420DD7A1092E1e1B  (replaced)
 FeeCollector     0x3A1D6b9129E69fEF189E538996B18cebd56C3Dd0
 PoolSwapper      0x1f3b67d8209060eC68d0eDCD6E60Ba53A8e9ac28
 cash             0x4ae46a509F6b1D9056937BA4500cb143933D2dc8  (real USDG)
 ```
 
-Two fills, receipts `#0` and `#1`. All nine contracts across both chains verified on Sourcify.
-`MAINNET` in `src/deployments.ts` is populated, so the FE header chip lights up on its own.
+Three fills, receipts `#0`–`#2`, all through the **previous** guard and executor — the
+replacements have not yet carried one. Everything deployed and listed in `src/deployments.ts` is
+verified on Sourcify. `MAINNET` is populated, so the FE header chip lights up on its own.
+**Read addresses with the chain id**: the new mainnet guard and executor reuse addresses the old
+*testnet* TestUSDG and PolicyGuard had — same deployer, same nonce sequence, two chains.
 
 The route there is worth knowing about, because it changed the contracts: **the Universal Router
 cannot swap on X Layer**. It carries the canonical v3 factory in its bytecode and X Layer's is not

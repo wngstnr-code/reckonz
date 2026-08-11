@@ -1059,3 +1059,80 @@ turns the demo from "this system computes" into "this system executes, and you p
 Asking for a bearer credential that can spend money is in tension with that even when the handling
 is clean. If it ships, it ships behind an "advanced" disclosure with Gemini still the default —
 never as a field on the front page. We do not ask.
+
+---
+
+## D44 — Full-project audit, 2026-08-11: four real findings and a stale front page
+
+Asked for a deep audit of the whole project after D38–D43. Everything below was checked against
+the live chain or the code, not read back off these documents.
+
+### What is verifiably correct
+
+- **Mainnet wiring.** `guard.oracle`, `guard.receipts`, `guard.cash`, and all five of
+  `executor.{guard,oracle,cash,feeCollector,permit2}` point where they should.
+- **Write permission.** `isWriter` is true for the new guard only — false for the old guard, the
+  deployer and the Safe. Receipts count 3, unchanged by the migration.
+- **Admin.** Oracle, receipts and fees all read the Safe. Fee 15 bps, treasury the deployer.
+- **The new executor derives the USDG/wSPYx pool to the same address the factory reports** — the
+  D35 check, repeated on the replacement rather than assumed from the old one.
+- **No secrets in the repo.** Every 64-hex string in tracked files is a transaction hash or the
+  pool init-code hash. `.env` is ignored, the Safe owner keys live outside the repo.
+- **`pnpm verify` still passes** against live pool state, and 89 Foundry tests pass.
+
+### Finding 1 — the new guard and executor have never carried a fill 🟠
+
+All three real fills went through the **previous** guard and executor, which no longer hold write
+permission. The replacements are deployed, verified, correctly wired, and **unproven**. This is
+precisely the shape of D35: the Universal Router was deployed, correctly shaped, carried the right
+selector, and could not do the work.
+
+The swap path itself is the same compiled `V3Swapper` logic and its pool derivation checks out, so
+the risk is concentrated in the parts that are genuinely new — `validateAndRecord` on the new guard
+against the new oracle's data. One 1 USDG fill settles it. Until then, every claim of the form
+"the loop closes on mainnet" is true of contracts that are no longer the ones deployed.
+
+### Finding 2 — the publish bound is often in genesis mode, because publishing is manual 🟠
+
+`ANCHOR_MAX_AGE` is 1 day: past it, the next value re-anchors freely. That is correct as designed —
+a one-day tolerance cannot police a week of price movement — but it assumes a feed that is actually
+being published. **Ours is published by hand.** Between demo sessions the anchor expires, and the
+first publication of the next session is unbounded.
+
+So D41's protection is real while the feed is live and absent when it is not, and the honest
+reading is that the bound currently protects much less than the contract makes it look like. The
+fix is not a contract change: it is publishing on a schedule. Recorded rather than quietly relied
+upon.
+
+### Finding 3 — the off-chain pipeline does not model the on-chain bound 🟡
+
+`src/guard.ts` still mirrors `checkExecution` exactly, and `checkExecution` did not change. But the
+*inputs* can now diverge: the contract may withhold a value the off-chain engine considers
+publishable, so the web app can show ALLOW where the chain would answer `NO_REFERENCE`. The chain
+is binding and the page is advisory, so nothing unsafe follows — but the page can be optimistic,
+and that should be said rather than discovered.
+
+### Finding 4 — the previous mainnet stack is still live, with the deployer as admin 🟡
+
+The old oracle (`0x3659E05F…`) still exists and its admin is still the deployer, not the Safe.
+Nothing consumes it — the new guard points at the new oracle, and the old guard cannot write — so
+the exposure is not to us. It is that a contract bearing our name can still be written to by a
+single key, and a stale integrator reading the old address would see a live, publishable oracle.
+Either hand its admin to the Safe or say plainly that it is abandoned. It is now said here.
+
+### Documentation drift, fixed
+
+The front page was the worst of it: **README listed all five mainnet addresses as the old ones**,
+claimed two fills where there are three, and described an oracle covering eight assets. A judge
+reads that first. Also corrected: `03-architecture` (build order and risk list), `01-xlayer-reality`
+(the `*` legend on the capacity table marked the pre-D38 eight), `06-assessment` (risk 4 was still
+"one admin key can publish any fair value"), `07-team` (addresses, fill count).
+
+`docs/04-decisions.md` is append-only, so its earlier entries still describe the world as it was.
+That is the design — D31 says the admin key is accepted-not-fixed, and D40–D42 are the correction.
+
+### Watch, not yet a finding
+
+The oracle stage now takes **55s** for 30 assets, and the universe read another 7s. The API route's
+`maxDuration` is 300s. The margin is real but thinner than before D38 doubled the number of
+reference markets fetched; if Yahoo slows down, the run is what breaks.

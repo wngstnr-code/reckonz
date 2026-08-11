@@ -114,9 +114,10 @@ TVL is misleading here; the liquidity is spread wide, not concentrated at price.
 matters is absorbable size, measured by simulating swaps against live pool state
 (`pnpm capacity`):
 
-All 30, measured 2026-08-11. `*` marks the eight with a verified reference market in
-`ASSETS` — the ones the oracle can price. The other 22 trade, and are refused at the
-guard for a reason that is true (D33).
+All 30, measured 2026-08-11. The `*` marks below are **stale**: they were the eight assets
+`ASSETS` covered before D38. The oracle now prices **28 of 30** — every asset here except
+**wSKHYx** (does not reconcile with SK Hynix, −86.4%, D39) and **wSPCXx** (SpaceX is private).
+The capacity numbers themselves are unaffected; they measure the pools, not the oracle.
 
 ```
 asset       spot           0.50%     1.00%     2.00%     5.00%
