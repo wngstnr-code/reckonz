@@ -1319,3 +1319,55 @@ been wrong even if it had looked fine.
 So staleness is a **note**, never a verdict: the decision stays what the guard would say about that
 market, and the note says a real fill needs a republish first. Withholding still flips the verdict,
 because that one really is about the asset.
+
+---
+
+## D48 — The worker gets a date, a budget, and an end
+
+D47 said "near submission" without saying when, which is how a dated item becomes an undated one.
+Fixing that, with the arithmetic in the open.
+
+**Deploy 18–19 Aug 2026**, two to three days before submission closes. **Fund the publisher with
+~$5**, as a plain transfer — the publisher is not an admin, so this needs no Safe signatures.
+
+```
+886,895 gas per publish (30 warm slots) × 0.02 gwei = 0.0000177 OKB   (D47, measured)
+× 144 publishes/day                                  = 0.00255 OKB/day   ~$0.24
+$5 ≈ 0.053 OKB                                       → ~21 days
+```
+
+From 19 Aug that ends around **9 Sep**. Winners are announced two to four weeks after submission,
+so **the four-week case is deliberately not funded.** That is a choice, not an oversight: by
+September the video is recorded, the fills are on chain, and nothing is executing. A reminder sits
+at 5 Sep to top up or shut it down, because the failure we refuse is not "it stopped" but "it
+stopped and nobody knew".
+
+### Two cheaper shapes, declined
+
+**Publish only the mandate's allowlist.** The guard never reads an observation for an asset outside
+the allowlist, and the web app computes fair value off-chain, so 27 of the 30 slots have no reader
+once the demo is done. Three assets is ~103k gas instead of 886,895 — an 8x, and $5 would last
+months. Declined because `publish.ts` iterates all of `ASSETS` with no filter, and a
+`PUBLISH_SYMBOLS` env var is a code change inside the last ten days for money we can simply pay.
+**This is the thing to build if the worker ever needs to run past September**, and it is written
+down here so it is not re-derived from scratch.
+
+**Stretch the interval past 600s.** `maxAge` is 15 minutes and a publish cycle itself takes a
+minute or two, so 600s exists to hold a five-minute margin against RPC lag (D18). Going to 720s
+saves 17% and spends the margin. The margin is the reason the number is 600; trading it for $0.40
+is the wrong direction.
+
+### What running dry actually costs
+
+Nothing breaks. `publish.ts` prints its runway every run and exits non-zero under 20 runs left;
+`publish-loop.ts` gives up after six consecutive failures and hands the decision to the host's
+restart policy. Downstream, D47 already made staleness a **note rather than a verdict**, so the
+page stays correct and merely says a real fill needs a republish first. An empty publisher is a
+degradation with a sentence attached, not an outage — which is the only reason a funded-to-9-Sep
+plan is acceptable at all.
+
+One caveat on the warning threshold: 20 runs is ~3.3 hours at 600s. That is fine for an attended
+week and thin for an unattended month. Raising `REFUEL_AT_RUNS` to a full day was considered and
+folded into the same "no code changes this close to the deadline" call; the 5 Sep reminder is the
+substitute, and a human diary entry is a worse mechanism than a threshold. Recorded as a known
+weakness rather than pretended away.

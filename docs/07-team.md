@@ -76,9 +76,11 @@ PoolSwapper      0x1f3b67d8209060eC68d0eDCD6E60Ba53A8e9ac28
 cash             0x4ae46a509F6b1D9056937BA4500cb143933D2dc8  (real USDG)
 ```
 
-Three fills, receipts `#0`–`#2`, all through the **previous** guard and executor — the
-replacements have not yet carried one. Everything deployed and listed in `src/deployments.ts` is
-verified on Sourcify. `MAINNET` is populated, so the FE header chip lights up on its own.
+**Four fills, receipts `#0`–`#3`** — `receipts.count()` reads 4 on chain. `#0`–`#2` went through
+the previous guard and executor; `#3` (`0xc9eba0cb…`, 0.5 USDG into wTSLAx) is the first through
+the replacements, so the D42 stack is proven and not merely deployed. All four sit in one
+append-only history because `ReceiptRegistry` was kept across both migrations. Everything deployed
+and listed in `src/deployments.ts` is verified on Sourcify. `MAINNET` is populated, so the FE header chip lights up on its own.
 **Read addresses with the chain id**: the new mainnet guard and executor reuse addresses the old
 *testnet* TestUSDG and PolicyGuard had — same deployer, same nonce sequence, two chains.
 
@@ -95,7 +97,7 @@ client. They must stay that way.
 | Module | Exports |
 |---|---|
 | `src/abi.ts` | `POLICY_GUARD_ABI`, `FAIR_VALUE_ORACLE_ABI`, `EXECUTOR_ABI`, `RECEIPT_REGISTRY_ABI`, `ERC20_ABI`, `PERMIT2_ABI`, plus `TRIGGER_METRICS` / `TRIGGER_COMPARATORS` / `MARKET_STATES` and their encode/decode helpers |
-| `src/deployments.ts` | `TESTNET`, `MAINNET` (still `null` until the mainnet deploy) |
+| `src/deployments.ts` | `TESTNET`, `MAINNET` — both populated since the D42 migration; `MAINNET` is no longer `null` |
 | `src/chain.ts` | `xLayer`, `xLayerTestnet` — viem chain objects, ready for wagmi |
 
 `pnpm verify:abi` checks every exported selector against the compiled bytecode, so an ABI that
@@ -132,7 +134,20 @@ check that ordering.
 Deliberately **no paid-following mechanism**: `06-assessment.md` argues that needs a legal answer
 first, and the record is useful without the market on top of it.
 
-### 6. Next up
+### 6. Deploy the publish worker — scheduled 18–19 Aug 2026
+
+The last BE item with a date on it. `pnpm publish:loop` and `railway.json` are built and
+deliberately idle until then; the reasoning, the funding and the runway are in
+`05-status.md § Not done`. Two things to do in order: **fund the publisher `0x40101A49…` with ~$5
+of OKB** (a plain transfer, no Safe signatures), then bring the worker up with `TARGET=mainnet`,
+`PUBLISHER_KEY`, `PUBLISH_INTERVAL_SEC=600`.
+
+That $5 lasts ~21 days at 30 assets, so it runs dry around **9 Sep** — a reminder sits at 5 Sep in
+the status doc. If it ever needs to run longer, the fix is a `PUBLISH_SYMBOLS` filter in
+`publish.ts` so it publishes the mandate's allowlist instead of all 30; that is an 8x saving and
+it is not built.
+
+### 7. Next up
 
 Simple mode — browse published theses with their real on-chain track records. Mostly an FE
 question now that the data exists.

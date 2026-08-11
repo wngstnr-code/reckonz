@@ -24,10 +24,20 @@ pnpm dev                            # the web app, port 3000 (falls back if take
 Nothing is half-finished in the tree. Every unfinished thing is in **Not done** below, not
 lurking in the code.
 
-Deployer `0xD7360Dc3ED4fE01bEbB8477594A76CBFb5c79BA5` holds **0.1995 OKB** on testnet —
+Deployer `0xD7360Dc3ED4fE01bEbB8477594A76CBFb5c79BA5` holds **0.1932 OKB** on testnet —
 hundreds of deploys' worth. Faucet: [web3.okx.com/faucet](https://web3.okx.com/faucet) → X Layer
 → Testnet; verify with `cast balance <addr> --rpc-url https://testrpc.xlayer.tech`, never the
 faucet UI.
+
+Mainnet gas is the scarce one and there is no faucet for it. Checked 2026-08-11:
+
+```
+publisher  0x40101A4932dEb95f0A5951BB7fB0fFa7c17e3Ab8   0.002871 OKB   ~1.6 days of publishing
+deployer   0xD7360Dc3ED4fE01bEbB8477594A76CBFb5c79BA5   0.002492 OKB   + 1.763878 USDG
+```
+
+Read those from the chain, not from here — two fills moved the deployer's USDG after an earlier
+version of this file recorded it, and a balance in a document is stale the moment it is written.
 
 ---
 
@@ -93,8 +103,10 @@ ThesisRegistry   0x5A2e03eb2B07464Da0821a95411e6614ab16C694
 TestUSDG (cash)  0xE2D6d2BBA5Ece46A90F5ab5656664D4182332c32
 ```
 
-**Mainnet still runs the pre-D41 oracle.** The bound is built, tested and proven on testnet; the
-mainnet redeploy is a separate decision and is not done.
+~~**Mainnet still runs the pre-D41 oracle.**~~ — no longer true as of D42, the same day it was
+written. Mainnet runs `0xDB7949c9…`, which carries the publish-time jump bound; the testnet
+deployment above is no longer ahead of it. Left visible rather than deleted, because a reader who
+saw the old sentence needs to know it was superseded.
 
 `Executor` on 1952 cannot swap and is not meant to: the X Layer v3 factory has no code there, so
 there are no pools to derive. `Deploy.s.sol` prints that rather than deploying quietly (D36).
@@ -286,19 +298,47 @@ That single run exercises every claim the product makes. It is the demo.
   pipeline reads the deployed observation and respects a withhold.
 - ~~The previous mainnet oracle is writable by one key~~ — ✅ **closed (D45).** Publisher revoked,
   admin handed to the Safe.
-- **Continuous publishing is built and deliberately not running** (D45–D47). `pnpm publish:loop`
-  plus `railway.json` are ready; GitHub Actions is the manual button only, because its `schedule`
-  is best-effort and a five-minute lag against a 15-minute `maxAge` is a stale oracle.
+- **Continuous publishing is built and deliberately not running until 18–19 Aug** (D45–D47).
+  `pnpm publish:loop` plus `railway.json` are ready; GitHub Actions is the manual button only,
+  because its `schedule` is best-effort and a five-minute lag against a 15-minute `maxAge` is a
+  stale oracle.
 
-  **Deploy it near submission, not before.** The web app needs no publishing at all — fair value is
-  computed off-chain — and only a real fill needs a fresh on-chain oracle. Ten-minute publishing is
-  ~$0.24/day against a publisher holding $0.27; running it for ten days so nothing observes it is
-  the wrong trade. Before a demo, the video or a fill: run `pnpm oracle:publish`, or deploy the
-  worker with `TARGET=mainnet`, `PUBLISHER_KEY`, `PUBLISH_INTERVAL_SEC=600`.
+  **Scheduled: deploy the worker 18–19 Aug 2026**, two to three days before submission closes, and
+  leave it up through judging. Not before — the web app needs no publishing at all, since fair
+  value is computed off-chain, and only a real fill needs a fresh on-chain oracle. Running it from
+  now so that nothing observes it is the wrong trade.
 
-  While it is off, the on-chain observation is stale between manual publishes. The page says so in
-  a note and does **not** turn it into a rejection — that would be refusing assets for something no
-  user caused. See D47.
+  ```
+  TARGET=mainnet PUBLISHER_KEY=… PUBLISH_INTERVAL_SEC=600 pnpm publish:loop
+  ```
+
+  **Funding: ~$5 into the publisher `0x40101A49…`, before the worker goes up.** A plain transfer;
+  it needs no Safe signatures. The runway, at the current gas floor:
+
+  ```
+  884k gas per publish (30 warm slots) × 0.02 gwei = 0.0000177 OKB
+  × 144 publishes/day                              = 0.00255 OKB/day  (~$0.24)
+  $5 ≈ 0.053 OKB                                   → ~21 days
+  ```
+
+  **From 19 Aug that runs dry around 9 Sep.** Winners are announced two to four weeks after
+  submission, so the four-week case is *not* covered. **Put a reminder at 5 Sep** to either top up
+  again or shut the worker down — by then the video and the fills are long done, and nothing is
+  executing. `publish.ts` warns at 20 runs left, which is only ~3.3 hours; do not rely on it as
+  the reminder for a month-long run.
+
+  Two cheaper shapes were considered and **declined for this submission**, recorded so nobody
+  re-derives them: publishing only the mandate's allowlist (3–4 assets instead of 30 — 884k gas
+  falls to ~103k, and $5 would last months) needs a `PUBLISH_SYMBOLS` filter that `publish.ts`
+  does not have; and stretching the interval past 600s eats the five-minute margin that 600s
+  exists to hold against RPC lag (D18) and a publish cycle that itself takes a minute or two.
+  Neither is worth code changes at this point in the calendar. The first is the one to build if
+  the worker ever needs to run past September.
+
+  While it is off — and after it runs dry — the on-chain observation is stale between manual
+  publishes. The page says so in a note and does **not** turn it into a rejection, which would be
+  refusing assets for something no user caused. See D47. That is what makes running dry a
+  degradation rather than an outage.
 - **The bound slows a compromise; it does not prevent one.** Twelve confirmed steps is an 8x, and
   `test_APatientAttackerStillGetsThere` says so in the suite rather than in a comment. This entry
   stays even after the multisig lands.
@@ -327,37 +367,32 @@ left is not architecture; it is a video, a form, and a decision about who can re
 
 ## Suggested order
 
-**1. Mainnet deploy + one small real fill.** The single item that unblocks the most. It satisfies
-the hard mainnet requirement *and* turns `Executor`'s swap path from unit-tested into proven.
+Everything that was on this list as engineering is done: mainnet deploy, four real fills, the fee,
+the thesis registry, the web app, the multisig. What is left is a calendar, not an architecture.
 
-Concretely, and in this order:
+**Now → 17 Aug — the only items that can still fail.**
 
-- Fund a mainnet deployer with OKB for gas on chain 196. Check with
-  `cast balance <addr> --rpc-url https://rpc.xlayer.tech`.
-- `CASH` must be the **real USDG** `0x4ae46a509F6b1D9056937BA4500cb143933D2dc8`, not a mock —
-  `Deploy.s.sol` only stands up `TestUSDG` when the configured address has no code, so on mainnet
-  it will correctly leave it alone.
-- `forge script script/Deploy.s.sol --tc Deploy --rpc-url xlayer --broadcast`.
-- `TARGET=mainnet pnpm oracle:publish` to seed fair values. Every on-chain script now takes its
-  chain from `TARGET`, so none of them can write to testnet while reporting mainnet.
-- `TARGET=mainnet pnpm mandate` to create the mandate. **Decide the caps first**:
-  `maxNotionalPerTrade` and `maxFillsPerEpoch` are the blast radius if anything goes wrong.
-- Then the fill itself: `TARGET=mainnet pnpm execute wMUx 25` — one leg, tens of USDG. It quotes
-  live depth, calls `dryRun` and refuses to spend gas on a trade the guard would revert, signs a
-  Permit2 authorisation scoped to that one amount and to the executor alone, and executes.
-- Expect RPC lag between dependent transactions (D18) — poll until state is visible.
-- Record the addresses in `src/deployments.ts` (`MAINNET`, currently `null`); the web app header
-  reads it and will show the chip automatically.
+- **Wallet connect + mandate creation in the UI** (FE). The one thing that changes the demo from
+  *this system computes* to *this system executes, and you press the button*. Ranked above every
+  visual item in `09-design.md`, and that document says so itself.
+- **Demo video.** The evidence block above is the script. It cannot be recorded until the FE
+  decides whether wallet connect makes it in, so the fork is: with wallet, or without.
+- **Repo visibility decision.** Private today. The rules do not demand public, but a judge scoring
+  "product completeness" will want to read `04-decisions.md`. Decide, do not drift into a default.
 
-**2. Deploy the web app** so the submission is a link, not a checkout. It needs `GEMINI_API_KEY`
-in the host's environment and a runtime that allows a ~2-minute streamed response.
+**18–19 Aug — deploy the publish worker.** Fund the publisher with ~$5 *first*, then bring up
+`pnpm publish:loop` on Railway with `TARGET=mainnet` and `PUBLISH_INTERVAL_SEC=600`. Full reasoning
+and the runway arithmetic are under **Not done → Known gaps**. Confirm it is actually publishing
+before trusting it: `pnpm oracle` should show a fresh observation, not a stale one.
 
-**3. Demo video** — record one run of the web app end to end; the evidence block above is the
-script.
+**20 Aug — record the video against a live oracle**, with the worker up. Leave a day of slack;
+21 Aug is the deadline, not the plan.
 
-**4. Repo visibility decision**, then the `@XLayerOfficial` post and the Google Form.
+**21 Aug, before 23:59 UTC** — the `@XLayerOfficial` post from @reckonz_xyz, then the Google Form.
+Both are hard requirements and neither takes long, which is exactly how they get missed.
 
-If time remains after all four: `FeeCollector`, then `ThesisRegistry`. Not before.
+**~5 Sep — decide whether to keep publishing.** The $5 runs out around 9 Sep. Top up, or shut the
+worker down; either is fine, silently running dry is not.
 
 ---
 
