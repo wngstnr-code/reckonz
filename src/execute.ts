@@ -36,7 +36,6 @@ import {
   accountFrom,
   chainFor,
   deploymentFor,
-  encodePath,
   target,
   waitUntil,
   walletFor,
@@ -125,7 +124,7 @@ if (!quoted) throw new Error('no venue could quote this size');
 
 const token = await loadToken(asset);
 const feeTier = quoted.venue.pool.fee;
-const path = encodePath(cash, feeTier, asset);
+
 const minAmountOut =
   (quoted.result.amountOut * BigInt(10_000 - SLIPPAGE_TOLERANCE_BPS)) / 10_000n;
 
@@ -134,7 +133,7 @@ console.log(
     `  @ ${quoted.effectivePrice.toFixed(4)}  (fee tier ${feeTier}, impact ${(quoted.impactBps / 100).toFixed(2)}%)`,
 );
 console.log(`  min out   ${formatUnits(minAmountOut, token.decimals)} ${token.symbol}`);
-console.log(`  path      ${path}`);
+console.log(`  fee tier  ${feeTier} (${feeTier / 10_000}%) — the executor derives the pool from it`);
 
 // ------------------------------------------------------ 2. the mandate
 
@@ -329,7 +328,7 @@ const hash = await agentWallet.writeContract({
   functionName: 'execute',
   args: [
     mandateId,
-    [{ asset, amountInUsdg: amountIn, minAmountOut, path }],
+    [{ asset, amountInUsdg: amountIn, minAmountOut, fee: feeTier }],
     { permitted: [{ token: cash, amount: amountIn }], nonce, deadline },
     signature,
     '0x0000000000000000000000000000000000000000000000000000000000000000',

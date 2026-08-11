@@ -177,13 +177,19 @@ export const FAIR_VALUE_ORACLE_ABI = parseAbi([
 // ------------------------------------------------------------------ Executor
 
 /**
- * `Executor` — Permit2 pull, route, settle, submit, all in one transaction.
+ * `Executor` — Permit2 pull, swap, settle, submit, all in one transaction.
  *
  * `execute` is callable only by the mandate's agent, and the guard runs inside
  * it: a policy breach unwinds the swap rather than reporting it afterwards.
+ *
+ * A leg names a fee tier, not an encoded route: the executor derives the pool
+ * from the pair and that tier, because the Universal Router cannot swap on this
+ * chain (D35). `uniswapV3SwapCallback` is deliberately absent — only a pool
+ * calls it, mid-swap, and `pnpm verify:abi` reports the omission so it stays a
+ * choice rather than an oversight.
  */
 export const EXECUTOR_ABI = parseAbi([
-  'struct Leg { address asset; uint128 amountInUsdg; uint256 minAmountOut; bytes path; }',
+  'struct Leg { address asset; uint128 amountInUsdg; uint256 minAmountOut; uint24 fee; }',
   'struct TokenPermissions { address token; uint256 amount; }',
   'struct PermitBatchTransferFrom { TokenPermissions[] permitted; uint256 nonce; uint256 deadline; }',
 
@@ -192,8 +198,9 @@ export const EXECUTOR_ABI = parseAbi([
   'function guard() view returns (address)',
   'function oracle() view returns (address)',
   'function permit2() view returns (address)',
-  'function router() view returns (address)',
+  'function factory() view returns (address)',
   'function cash() view returns (address)',
+  'function poolFor(address tokenA, address tokenB, uint24 fee) view returns (address)',
 
   'event Executed(uint256 indexed mandateId, uint256 indexed receiptId, uint256 legs)',
 
@@ -204,6 +211,10 @@ export const EXECUTOR_ABI = parseAbi([
   'error NothingReceived(address asset)',
   'error PermitMismatch()',
   'error ResidualBalance(address token, uint256 amount)',
+  'error InsufficientOutput(uint256 received, uint256 minimum)',
+  'error PoolHasNoCode(address pool)',
+  'error UnexpectedCallback(address caller)',
+  'error ZeroAmountIn()',
 ]);
 
 // ----------------------------------------------------------- ReceiptRegistry

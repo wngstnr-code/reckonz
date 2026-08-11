@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {ExitTriggers} from "./ExitTriggers.sol";
+import {V3Swapper} from "./V3Swapper.sol";
 import {IFairValueOracle} from "./interfaces/IFairValueOracle.sol";
 import {PolicyGuard} from "./PolicyGuard.sol";
 import {ReceiptRegistry} from "./ReceiptRegistry.sol";
@@ -37,12 +38,6 @@ interface ISignatureTransfer {
     ) external;
 }
 
-interface IUniversalRouter {
-    function execute(bytes calldata commands, bytes[] calldata inputs, uint256 deadline)
-        external
-        payable;
-}
-
 /// @title Executor
 /// @notice Pulls the user's settlement currency for exactly one batch of swaps,
 ///         routes them, delivers the output straight back to the user, and then
@@ -63,12 +58,8 @@ interface IUniversalRouter {
 ///      Non-custodial: funds are pulled per execution against a signed,
 ///      amount-bounded, expiring Permit2 authorisation — never a standing
 ///      allowance — and the contract asserts it holds nothing when it returns.
-contract Executor {
-    /// @dev Universal Router command for an exact-input V3 swap.
-    uint8 private constant V3_SWAP_EXACT_IN = 0x00;
-
+contract Executor is V3Swapper {
     ISignatureTransfer public immutable permit2;
-    IUniversalRouter public immutable router;
     PolicyGuard public immutable guard;
     IFairValueOracle public immutable oracle;
     address public immutable cash;
@@ -78,10 +69,13 @@ contract Executor {
         address asset;
         /// @dev settlement currency to spend on this leg
         uint128 amountInUsdg;
-        /// @dev floor for the router; the guard applies the real limits after
+        /// @dev floor on this leg's output; the guard applies the real limits after
         uint256 minAmountOut;
-        /// @dev Uniswap V3 path, cash -> ... -> asset
-        bytes path;
+        /// @dev fee tier of the cash/asset pool. Was a Uniswap path when this
+        ///      contract went through the Universal Router; the pool is now
+        ///      derived from the pair and this tier, so there is no encoded
+        ///      route left to get wrong.
+        uint24 fee;
     }
 
     error NotAgent(address caller, address agent);
@@ -96,13 +90,12 @@ contract Executor {
 
     constructor(
         ISignatureTransfer permit2_,
-        IUniversalRouter router_,
+        address factory_,
         PolicyGuard guard_,
         IFairValueOracle oracle_,
         address cash_
-    ) {
+    ) V3Swapper(factory_) {
         permit2 = permit2_;
-        router = router_;
         guard = guard_;
         oracle = oracle_;
         cash = cash_;
@@ -180,40 +173,28 @@ contract Executor {
     }
 
     /// @dev Output is measured as the owner's balance delta, so the recorded
-    ///      amount is what the user actually received — not what the router
+    ///      amount is what the user actually received — not what a pool
     ///      returned, and not what the agent said.
     function _swap(Leg calldata leg, address owner)
         internal
         returns (ReceiptRegistry.Fill memory fill)
     {
         uint256 before = IERC20(leg.asset).balanceOf(owner);
-        // Funds handed to the router are outside this contract, so the
-        // end-of-call residual check cannot see them. Measure what the router
-        // holds before and after: anything it keeps is the user's money that
-        // silently did not become a position.
-        uint256 routerBefore = IERC20(cash).balanceOf(address(router));
 
-        // The router spends from its own balance, so fund it for exactly this leg.
-        IERC20(cash).transfer(address(router), leg.amountInUsdg);
-
-        bytes memory commands = abi.encodePacked(V3_SWAP_EXACT_IN);
-        bytes[] memory inputs = new bytes[](1);
-        inputs[0] = abi.encode(
-            owner, // recipient — output never touches this contract
-            uint256(leg.amountInUsdg),
-            leg.minAmountOut,
-            leg.path,
-            false // payerIsUser: funds already sit with the router
-        );
-        router.execute(commands, inputs, block.timestamp);
-
-        uint256 routerAfter = IERC20(cash).balanceOf(address(router));
-        if (routerAfter > routerBefore) {
-            revert ResidualBalance(cash, routerAfter - routerBefore);
-        }
+        // Straight to the pool. This used to fund the Universal Router and hand
+        // it a command; that router derives pool addresses from the canonical
+        // v3 factory, X Layer's is not canonical, and every swap through it
+        // reverts with no data (D35). Deriving the pool here from the factory we
+        // verified removes the dependency rather than repairing it — and with it
+        // the window where this contract's money sat in a contract anyone could
+        // sweep.
+        _swapHop(cash, leg.asset, leg.fee, leg.amountInUsdg, owner, address(this));
 
         uint256 received = IERC20(leg.asset).balanceOf(owner) - before;
         if (received == 0) revert NothingReceived(leg.asset);
+        // The pool enforces no floor of its own on an exact-input swap, so the
+        // leg's minimum is checked here or nowhere.
+        if (received < leg.minAmountOut) revert InsufficientOutput(received, leg.minAmountOut);
         // Solidity does not check explicit casts. A truncated amount here would
         // be written into the receipt and into the position the exit triggers
         // are measured against — wrong numbers that look deliberate.

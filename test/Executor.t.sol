@@ -2,7 +2,8 @@
 pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
-import {Executor, ISignatureTransfer, IUniversalRouter} from "../contracts/Executor.sol";
+import {Executor, ISignatureTransfer} from "../contracts/Executor.sol";
+import {V3Swapper} from "../contracts/V3Swapper.sol";
 import {ExitTriggers} from "../contracts/ExitTriggers.sol";
 import {FairValueOracle} from "../contracts/FairValueOracle.sol";
 import {IFairValueOracle} from "../contracts/interfaces/IFairValueOracle.sol";
@@ -49,35 +50,55 @@ contract MockPermit2 is ISignatureTransfer {
     }
 }
 
-/// Swaps at a settable price and can be told to under-spend, so the executor's
-/// residual-balance assertion is reachable in a test.
-contract MockRouter is IUniversalRouter {
+/// A Uniswap V3 pool, reduced to what the executor actually depends on: it pays
+/// the recipient first and then calls back for payment. That ordering is the
+/// whole reason a wallet cannot swap V3 unaided, and the reason the executor
+/// needs a callback at all — so the mock has to preserve it rather than settle
+/// both sides at once.
+///
+/// `spendBps` lets the pool charge less than it was offered, which is how the
+/// executor's residual-balance assertion stays reachable now that no router
+/// holds funds.
+contract MockPool {
     Token public immutable cash;
-    mapping(address => uint256) public priceE8; // cash per whole asset unit
-    uint256 public spendBps = 10_000;
+    Token public immutable asset;
+    uint256 public priceE8; // cash per whole asset unit
+    uint256 public spendBps;
 
-    constructor(Token cash_) {
+    constructor(Token cash_, Token asset_) {
         cash = cash_;
+        asset = asset_;
     }
 
-    function setPrice(address asset, uint256 p) external {
-        priceE8[asset] = p;
+    function setPrice(uint256 p) external {
+        priceE8 = p;
     }
 
     function setSpendBps(uint256 b) external {
         spendBps = b;
     }
 
-    function execute(bytes calldata, bytes[] calldata inputs, uint256) external payable {
-        (address recipient, uint256 amountIn,, bytes memory path,) =
-            abi.decode(inputs[0], (address, uint256, uint256, bytes, bool));
-        address asset = address(bytes20(path));
-
-        uint256 spent = (amountIn * spendBps) / 10_000;
+    function swap(
+        address recipient,
+        bool zeroForOne,
+        int256 amountSpecified,
+        uint160,
+        bytes calldata data
+    ) external returns (int256 amount0, int256 amount1) {
+        uint256 offered = uint256(amountSpecified);
+        uint256 spent = (offered * (spendBps == 0 ? 10_000 : spendBps)) / 10_000;
         // cash: 6dp, asset: 18dp, price 8dp
-        uint256 out = (spent * 1e18 * 1e8) / (priceE8[asset] * 1e6);
-        cash.transfer(address(0xdead), spent);
-        Token(asset).mint(recipient, out);
+        uint256 out = (spent * 1e18 * 1e8) / (priceE8 * 1e6);
+
+        asset.mint(recipient, out);
+
+        (amount0, amount1) = zeroForOne
+            ? (int256(spent), -int256(out))
+            : (-int256(out), int256(spent));
+
+        uint256 held = cash.balanceOf(address(this));
+        V3Swapper(msg.sender).uniswapV3SwapCallback(amount0, amount1, data);
+        require(cash.balanceOf(address(this)) >= held + spent, "pool was not paid");
     }
 }
 
@@ -87,7 +108,7 @@ contract ExecutorTest is Test {
     PolicyGuard guard;
     Executor executor;
     MockPermit2 permit2;
-    MockRouter router;
+    MockPool pool;
 
     Token usdg;
     Token wNVDAx;
@@ -98,6 +119,9 @@ contract ExecutorTest is Test {
 
     uint256 mandateId;
     uint128 constant NVDA_FV = 223_51000000;
+    uint24 constant FEE = 500;
+    /// @dev Arbitrary here — what matters is that the executor derives from it.
+    address constant V3_FACTORY = address(0xFAC7);
 
     function setUp() public {
         vm.warp(1_786_368_600);
@@ -111,16 +135,22 @@ contract ExecutorTest is Test {
         receipts.setWriter(address(guard), true);
 
         permit2 = new MockPermit2();
-        router = new MockRouter(usdg);
-        router.setPrice(address(wNVDAx), NVDA_FV);
 
         executor = new Executor(
             permit2,
-            IUniversalRouter(address(router)),
+            V3_FACTORY,
             guard,
             IFairValueOracle(address(oracle)),
             address(usdg)
         );
+
+        // The executor derives the pool address rather than being handed one, so
+        // the mock has to live at the derived address. Immutables ride along in
+        // the bytecode; storage does not, hence the setters afterwards.
+        MockPool impl = new MockPool(usdg, wNVDAx);
+        pool = MockPool(executor.poolFor(address(usdg), address(wNVDAx), FEE));
+        vm.etch(address(pool), address(impl).code);
+        pool.setPrice(NVDA_FV);
 
         _publish(NVDA_FV, 5_000_000000);
 
@@ -169,7 +199,7 @@ contract ExecutorTest is Test {
             asset: address(wNVDAx),
             amountInUsdg: amountIn,
             minAmountOut: 0,
-            path: abi.encodePacked(address(wNVDAx))
+            fee: FEE
         });
     }
 
@@ -260,7 +290,7 @@ contract ExecutorTest is Test {
 
     function test_SlippageBeyondTheMandateUnwindsEverything() public {
         // Router fills 5% worse than fair value; the mandate allows 2%.
-        router.setPrice(address(wNVDAx), (NVDA_FV * 105) / 100);
+        pool.setPrice( (NVDA_FV * 105) / 100);
 
         uint256 cashBefore = usdg.balanceOf(owner);
         vm.expectRevert();
@@ -308,7 +338,7 @@ contract ExecutorTest is Test {
     // -------------------------------------------------- non-custodial claim
 
     function test_RefusesToEndTheCallHoldingAnything() public {
-        router.setSpendBps(9_000); // router leaves 10% behind
+        pool.setSpendBps(9_000); // the pool takes 90%, leaving cash in the executor
 
         vm.expectRevert(
             abi.encodeWithSelector(Executor.ResidualBalance.selector, address(usdg), 100_000000)
@@ -321,7 +351,7 @@ contract ExecutorTest is Test {
     function test_PriceAndShortfallComeFromTheMeasuredDelta() public {
         // Fill 1% worse than fair value — inside the mandate, so it settles.
         uint128 worse = uint128((uint256(NVDA_FV) * 101) / 100);
-        router.setPrice(address(wNVDAx), worse);
+        pool.setPrice( worse);
 
         uint256 receiptId = _exec(1_000_000000);
         (, ReceiptRegistry.Fill[] memory f) = receipts.get(receiptId);

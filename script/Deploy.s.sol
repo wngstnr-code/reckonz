@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import {Script} from "forge-std/Script.sol";
 import {console2} from "forge-std/console2.sol";
-import {Executor, ISignatureTransfer, IUniversalRouter} from "../contracts/Executor.sol";
+import {Executor, ISignatureTransfer} from "../contracts/Executor.sol";
 import {FairValueOracle} from "../contracts/FairValueOracle.sol";
 import {IFairValueOracle} from "../contracts/interfaces/IFairValueOracle.sol";
 import {PolicyGuard} from "../contracts/PolicyGuard.sol";
@@ -49,7 +49,11 @@ contract Deploy is Script {
     address constant MAINNET_USDG = 0x4ae46a509F6b1D9056937BA4500cb143933D2dc8;
     // Canonical on X Layer — verified on-chain, unlike the Uniswap V3 factory.
     address constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
-    address constant UNIVERSAL_ROUTER = 0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af;
+    /// @dev X Layer's Uniswap V3 factory is **not** at the canonical address, and
+    ///      that is load-bearing: the Universal Router has the canonical one baked
+    ///      into its bytecode, which is why it cannot swap here and why Executor
+    ///      derives pool addresses itself. See D1 and D35.
+    address constant V3_FACTORY = 0x4B2ab38DBF28D31D467aA8993f6c2585981D6804;
 
     function run() external {
         uint256 pk = vm.envUint("PRIVATE_KEY");
@@ -81,7 +85,7 @@ contract Deploy is Script {
 
         Executor executor = new Executor(
             ISignatureTransfer(PERMIT2),
-            IUniversalRouter(UNIVERSAL_ROUTER),
+            V3_FACTORY,
             guard,
             IFairValueOracle(address(oracle)),
             cash
