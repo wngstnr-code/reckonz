@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import {Script} from "forge-std/Script.sol";
 import {console2} from "forge-std/console2.sol";
 import {Executor, ISignatureTransfer} from "../contracts/Executor.sol";
+import {FeeCollector} from "../contracts/FeeCollector.sol";
 import {FairValueOracle} from "../contracts/FairValueOracle.sol";
 import {IFairValueOracle} from "../contracts/interfaces/IFairValueOracle.sol";
 import {PolicyGuard} from "../contracts/PolicyGuard.sol";
@@ -107,12 +108,17 @@ contract Deploy is Script {
         // PolicyGuard is the only contract permitted to append receipts.
         receipts.setWriter(address(guard), true);
 
+        // 15 bps — the middle of the published 10–20 range. The contract's own
+        // MAX_FEE_BPS caps it at 50 regardless of who ends up holding admin.
+        FeeCollector fees = new FeeCollector(deployer, deployer, 15);
+
         Executor executor = new Executor(
             ISignatureTransfer(PERMIT2),
             factory,
             guard,
             IFairValueOracle(address(oracle)),
-            cash
+            cash,
+            fees
         );
 
         vm.stopBroadcast();
@@ -121,5 +127,6 @@ contract Deploy is Script {
         console2.log("ReceiptRegistry", address(receipts));
         console2.log("PolicyGuard    ", address(guard));
         console2.log("Executor       ", address(executor));
+        console2.log("FeeCollector   ", address(fees), "15 bps");
     }
 }

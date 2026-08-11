@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {ExitTriggers} from "./ExitTriggers.sol";
+import {FeeCollector} from "./FeeCollector.sol";
 import {V3Swapper} from "./V3Swapper.sol";
 import {IFairValueOracle} from "./interfaces/IFairValueOracle.sol";
 import {PolicyGuard} from "./PolicyGuard.sol";
@@ -60,6 +61,9 @@ interface ISignatureTransfer {
 ///      allowance — and the contract asserts it holds nothing when it returns.
 contract Executor is V3Swapper {
     ISignatureTransfer public immutable permit2;
+    /// @dev Zero disables fees entirely. Immutable so the fee path cannot be
+    ///      switched on after users have read the contract they are trusting.
+    FeeCollector public immutable feeCollector;
     PolicyGuard public immutable guard;
     IFairValueOracle public immutable oracle;
     address public immutable cash;
@@ -93,9 +97,11 @@ contract Executor is V3Swapper {
         address factory_,
         PolicyGuard guard_,
         IFairValueOracle oracle_,
-        address cash_
+        address cash_,
+        FeeCollector feeCollector_
     ) V3Swapper(factory_) {
         permit2 = permit2_;
+        feeCollector = feeCollector_;
         guard = guard_;
         oracle = oracle_;
         cash = cash_;
@@ -124,7 +130,7 @@ contract Executor is V3Swapper {
 
         ReceiptRegistry.Fill[] memory fills = new ReceiptRegistry.Fill[](legs.length);
         for (uint256 i; i < legs.length; ++i) {
-            fills[i] = _swap(legs[i], m.owner);
+            fills[i] = _swap(legs[i], m.owner, mandateId);
         }
 
         // Nothing may rest here. Asserted rather than assumed: a residual
@@ -175,11 +181,29 @@ contract Executor is V3Swapper {
     /// @dev Output is measured as the owner's balance delta, so the recorded
     ///      amount is what the user actually received — not what a pool
     ///      returned, and not what the agent said.
-    function _swap(Leg calldata leg, address owner)
+    function _swap(Leg calldata leg, address owner, uint256 mandateId)
         internal
         returns (ReceiptRegistry.Fill memory fill)
     {
         uint256 before = IERC20(leg.asset).balanceOf(owner);
+
+        // The execution fee, taken off the top before anything reaches a pool.
+        //
+        // The receipt records what was actually traded, not what was pulled: the
+        // fee never enters the market, so folding it into `amountInUsdg` would
+        // make `executionPriceE8` describe a price no pool quoted and push the
+        // guard's slippage check into rejecting fills for a cost that is ours,
+        // not the market's. The fee is a separate fact, and `FeeTaken` carries
+        // it with the mandate it came from.
+        uint128 swapAmount = leg.amountInUsdg;
+        if (address(feeCollector) != address(0)) {
+            uint256 fee = feeCollector.feeOn(leg.amountInUsdg);
+            if (fee > 0) {
+                swapAmount = leg.amountInUsdg - uint128(fee);
+                IERC20(cash).transfer(address(feeCollector), fee);
+                feeCollector.record(mandateId, leg.asset, leg.amountInUsdg, fee);
+            }
+        }
 
         // Straight to the pool. This used to fund the Universal Router and hand
         // it a command; that router derives pool addresses from the canonical
@@ -188,7 +212,7 @@ contract Executor is V3Swapper {
         // verified removes the dependency rather than repairing it — and with it
         // the window where this contract's money sat in a contract anyone could
         // sweep.
-        _swapHop(cash, leg.asset, leg.fee, leg.amountInUsdg, owner, address(this));
+        _swapHop(cash, leg.asset, leg.fee, swapAmount, owner, address(this));
 
         uint256 received = IERC20(leg.asset).balanceOf(owner) - before;
         if (received == 0) revert NothingReceived(leg.asset);
@@ -200,12 +224,12 @@ contract Executor is V3Swapper {
         // are measured against — wrong numbers that look deliberate.
         if (received > type(uint128).max) revert AmountOverflow(leg.asset, received);
 
-        uint128 priceE8 = _priceE8(leg.amountInUsdg, received, IERC20(leg.asset).decimals());
+        uint128 priceE8 = _priceE8(swapAmount, received, IERC20(leg.asset).decimals());
 
         fill = ReceiptRegistry.Fill({
             asset: leg.asset,
             isExit: false,
-            amountInUsdg: leg.amountInUsdg,
+            amountInUsdg: swapAmount,
             amountOut: uint128(received),
             executionPriceE8: priceE8,
             slippageBps: _shortfallBps(leg.asset, priceE8),

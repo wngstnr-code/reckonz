@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import {Test} from "forge-std/Test.sol";
 import {Executor, ISignatureTransfer} from "../contracts/Executor.sol";
 import {V3Swapper} from "../contracts/V3Swapper.sol";
+import {FeeCollector} from "../contracts/FeeCollector.sol";
 import {ExitTriggers} from "../contracts/ExitTriggers.sol";
 import {FairValueOracle} from "../contracts/FairValueOracle.sol";
 import {IFairValueOracle} from "../contracts/interfaces/IFairValueOracle.sol";
@@ -109,6 +110,7 @@ contract ExecutorTest is Test {
     Executor executor;
     MockPermit2 permit2;
     MockPool pool;
+    FeeCollector fees;
 
     Token usdg;
     Token wNVDAx;
@@ -116,6 +118,7 @@ contract ExecutorTest is Test {
     address owner = address(0xA11CE);
     address agent = address(0xA6E7);
     address stranger = address(0xBAD);
+    address treasury = address(0x7EA5);
 
     uint256 mandateId;
     uint128 constant NVDA_FV = 223_51000000;
@@ -136,12 +139,14 @@ contract ExecutorTest is Test {
 
         permit2 = new MockPermit2();
 
+        fees = new FeeCollector(address(this), treasury, 0); // fee off unless a test turns it on
         executor = new Executor(
             permit2,
             V3_FACTORY,
             guard,
             IFairValueOracle(address(oracle)),
-            address(usdg)
+            address(usdg),
+            fees
         );
 
         // The executor derives the pool address rather than being handed one, so
@@ -358,5 +363,56 @@ contract ExecutorTest is Test {
 
         assertApproxEqAbs(f[0].executionPriceE8, worse, 1, "price follows what was received");
         assertApproxEqAbs(f[0].slippageBps, 100, 1, "shortfall measured against the oracle");
+    }
+
+    // ---------------------------------------------------------------- fees
+
+    /// @dev The fee never reaches a pool, so the receipt must describe the trade
+    ///      that happened rather than the amount that was pulled. Folding the fee
+    ///      into `amountInUsdg` would make `executionPriceE8` a price no pool
+    ///      quoted, and push the guard into rejecting fills for a cost that is
+    ///      ours rather than the market's.
+    function test_FeeIsTakenOffTheTopAndExcludedFromTheReceipt() public {
+        vm.prank(address(this));
+        fees.setFeeBps(15);
+
+        uint128 notional = 1_000_000000; // 1,000 USDG
+        uint256 fee = fees.feeOn(notional); // 1.5 USDG
+
+        vm.prank(agent);
+        uint256 receiptId = executor.execute(
+            mandateId, _legs(notional), _permit(notional), "", bytes32(0), bytes32(0), ""
+        );
+
+        (, ReceiptRegistry.Fill[] memory fills) = receipts.get(receiptId);
+        assertEq(fills[0].amountInUsdg, notional - uint128(fee), "receipt records what was traded");
+        assertEq(usdg.balanceOf(address(fees)), fee, "fee landed in the collector");
+        assertEq(fills[0].executionPriceE8, NVDA_FV, "price is the market's, not inflated by the fee");
+    }
+
+    function test_ZeroFeeLeavesTheFillUntouched() public {
+        uint128 notional = 1_000_000000;
+
+        vm.prank(agent);
+        uint256 receiptId = executor.execute(
+            mandateId, _legs(notional), _permit(notional), "", bytes32(0), bytes32(0), ""
+        );
+
+        (, ReceiptRegistry.Fill[] memory fills) = receipts.get(receiptId);
+        assertEq(fills[0].amountInUsdg, notional);
+        assertEq(usdg.balanceOf(address(fees)), 0);
+    }
+
+    /// @dev The executor must still hold nothing afterwards. A fee that left dust
+    ///      behind would make this contract custodial by accident.
+    function test_ExecutorHoldsNothingAfterAFee() public {
+        fees.setFeeBps(15);
+        uint128 notional = 1_000_000000;
+
+        vm.prank(agent);
+        executor.execute(mandateId, _legs(notional), _permit(notional), "", bytes32(0), bytes32(0), "");
+
+        assertEq(usdg.balanceOf(address(executor)), 0);
+        assertEq(wNVDAx.balanceOf(address(executor)), 0);
     }
 }
