@@ -227,19 +227,16 @@ That single run exercises every claim the product makes. It is the demo.
 
 ### Deliberately not started, and why
 
-Steps 7–8 of the build order in `03-architecture.md`. Each one depends on something that does
-not exist yet, so starting them now would produce a component with nothing to operate on:
-
 | Component | Blocked on | Verdict for this submission |
 |---|---|---|
-| `ThesisRegistry` | receipts that make a track record unfakeable | **Second.** Append-only, hash + pointer. Closes the thesis → execution → record loop the pitch rests on. |
-| Consumer / simple mode | — | Partly covered by the web app already. Low priority. |
-| Indexer | receipts to index (there are zero) | **Skip.** Real work, pays off only with volume. Roadmap item. |
-| ASP / x402 registration | a stable hosted endpoint | **Skip.** Same. Name it as planned ecosystem contribution on the form. |
+| Consumer / simple mode | — | Browse published theses with their on-chain track records. The data now exists (`ThesisRegistry` + `ReceiptRegistry`), so this is mostly an FE question. Last item in the build order. |
+| Indexer | volume | No longer blocked on receipts — there are three — but three receipts do not need an index. Real work that only pays off with volume. Roadmap item. |
+| ASP / x402 registration | a stable hosted endpoint | The endpoint exists now (reckonz.vercel.app), so this is unblocked and simply not started. Worth naming on the form as planned ecosystem contribution. |
 
 The honest summary: depth was chosen over breadth throughout, and that was the right call for
-"product completeness" — but it leaves the **revenue story as a claim rather than a demo**.
-`FeeCollector` is the cheapest way to fix that, and only after a mainnet fill exists.
+"product completeness". As of 2026-08-11 the revenue story is no longer a claim — `FeeCollector`
+took 15 bps on a real fill — and the thesis → execution → record loop closes on chain. What is
+left is not architecture; it is a video, a form, and a decision about who can read the repo.
 
 ---
 
