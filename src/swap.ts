@@ -37,8 +37,13 @@ const WOKB_ABI = [
  * `PoolSwapper`, deployed 2026-08-11. Calls the pools directly, because the
  * Universal Router on this chain derives pool addresses from the canonical
  * factory and reverts on every swap (D35).
+ *
+ * Source is verified on Sourcify. The first deployment was not, and could not
+ * be: it predated the D36 audit by a few hours, so the source no longer matched
+ * its bytecode. An address we publish that nobody can read the source of is
+ * worth less than the redeploy costs.
  */
-const POOL_SWAPPER = '0x20a0fB089094c6b11A7b2de5c042E1f2f50D41f5' as Address;
+const POOL_SWAPPER = '0x1f3b67d8209060eC68d0eDCD6E60Ba53A8e9ac28' as Address;
 
 const POOL_SWAPPER_ABI = [
   {

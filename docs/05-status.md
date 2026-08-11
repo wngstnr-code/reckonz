@@ -46,7 +46,7 @@ FairValueOracle  0x3659E05Fbbaafb7bA868171aB98327b62831Cd75
 ReceiptRegistry  0x9D04575894F570C3638Bc1f6ECaD6EF36D479Fa6
 PolicyGuard      0x481e0A60c5E105708b86e804811F8fc98a43bEFd
 Executor         0xA7acf8428483c0b84081D36893A49fcEB38AA35d
-PoolSwapper      0x20a0fB089094c6b11A7b2de5c042E1f2f50D41f5
+PoolSwapper      0x1f3b67d8209060eC68d0eDCD6E60Ba53A8e9ac28
 cash (real USDG) 0x4ae46a509F6b1D9056937BA4500cb143933D2dc8
 admin/deployer   0xD7360Dc3ED4fE01bEbB8477594A76CBFb5c79BA5
 ```
@@ -214,8 +214,6 @@ That single run exercises every claim the product makes. It is the demo.
   maps to wAAPLx (D33), but the other 22 are refused at the guard with `NO_REFERENCE`. That
   refusal is true, and it is a real limit on what the system can execute — widening it means
   verifying, per wrapper, which listed security it tracks.
-- **Contracts are not verified on the explorer.** Judges opening OKLink see bytecode. Verified
-  source is what lets them read `validateAndRecord` and check the central claim without cloning.
 - **`.env` holds a live Gemini key** pasted in chat. Owner assessed the exposure as acceptable
   2026-08-11; the key is in Vercel's environment too. Recorded rather than re-argued.
 - **No logo.** Four prompt directions were drafted on 2026-08-11 (the cut / the narrowing / the
@@ -278,6 +276,23 @@ If time remains after all four: `FeeCollector`, then `ThesisRegistry`. Not befor
 
 ## Log
 
+**2026-08-11 (latest, tenth)** — testnet redeployed so it matches the code again (the old stack
+still answers, which was the hazard), and **all nine contracts verified on Sourcify**, every one
+an `exact_match` on both creation and runtime bytecode:
+
+```
+mainnet 196   FairValueOracle ReceiptRegistry PolicyGuard Executor PoolSwapper
+testnet 1952  FairValueOracle ReceiptRegistry PolicyGuard Executor
+```
+
+Sourcify needs no API key and X Layer is supported on both chains. `PoolSwapper` had to be
+redeployed first — the original predated the D36 audit by hours, so its source no longer matched
+its bytecode. An address we publish that nobody can read is worth less than the redeploy cost.
+
+Note this is Sourcify, not OKLink: the source is public and checkable at
+`https://repo.sourcify.dev/196/<address>`, but OKLink's own explorer page may still show bytecode
+unless it pulls from Sourcify. Verifying there needs an OKLink API key.
+
 **2026-08-11 (latest, ninth)** — web app live at **https://reckonz.vercel.app**. Full pipeline
 verified against production, not just a 200: six stages, `gemini-3.6-flash (live)` rather than the
 fixture, 30 assets read from the chain, capacity-limited plan, one of two assets refused at the
@@ -319,7 +334,7 @@ FairValueOracle  0x3659E05Fbbaafb7bA868171aB98327b62831Cd75
 ReceiptRegistry  0x9D04575894F570C3638Bc1f6ECaD6EF36D479Fa6
 PolicyGuard      0x481e0A60c5E105708b86e804811F8fc98a43bEFd
 Executor         0xA7acf8428483c0b84081D36893A49fcEB38AA35d
-PoolSwapper      0x20a0fB089094c6b11A7b2de5c042E1f2f50D41f5
+PoolSwapper      0x1f3b67d8209060eC68d0eDCD6E60Ba53A8e9ac28
 cash             0x4ae46a509F6b1D9056937BA4500cb143933D2dc8  (real USDG, not a mock)
 ```
 

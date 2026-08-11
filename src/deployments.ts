@@ -52,6 +52,6 @@ export const MAINNET: Deployment | null = {
     PolicyGuard: '0x481e0A60c5E105708b86e804811F8fc98a43bEFd',
     Executor: '0xA7acf8428483c0b84081D36893A49fcEB38AA35d',
     USDG: '0x4ae46a509F6b1D9056937BA4500cb143933D2dc8',
-    PoolSwapper: '0x20a0fB089094c6b11A7b2de5c042E1f2f50D41f5',
+    PoolSwapper: '0x1f3b67d8209060eC68d0eDCD6E60Ba53A8e9ac28',
   },
 };
