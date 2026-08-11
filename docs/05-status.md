@@ -182,7 +182,7 @@ That single run exercises every claim the product makes. It is the demo.
 |---|---|
 | ~~Real fill on mainnet~~ | ✅ **Done 2026-08-11.** `0x7240759d327d468f9a7086ed439abf42dead17887105d986ca0870ebf46d6545` — 0.5 USDG into wSPYx, guard and receipt in the same transaction. |
 | **Demo video / walkthrough** | Not started. The web app is now the thing to record. |
-| **Deploy the web app** | Runs locally only. Judges will not `pnpm dev`. |
+| ~~Deploy the web app~~ | ✅ **https://reckonz.vercel.app** — verified end to end in production: live Gemini, 30-asset universe, capacity-limited plan, 1/2 assets would execute. |
 | **Wallet connect + mandate creation in the UI** | The page reads and decides; it cannot yet sign. Everything on-chain still happens through `pnpm mandate` / `pnpm oracle:publish`. |
 
 ### Known gaps in the work itself
@@ -261,6 +261,12 @@ If time remains after all four: `FeeCollector`, then `ThesisRegistry`. Not befor
 ---
 
 ## Log
+
+**2026-08-11 (latest, ninth)** — web app live at **https://reckonz.vercel.app**. Full pipeline
+verified against production, not just a 200: six stages, `gemini-3.6-flash (live)` rather than the
+fixture, 30 assets read from the chain, capacity-limited plan, one of two assets refused at the
+guard. `pnpm build` now means `next build` — it pointed at `forge build`, which is what Vercel
+would have run.
 
 **2026-08-11 (latest, eighth)** — **the first real fill on mainnet.**
 
