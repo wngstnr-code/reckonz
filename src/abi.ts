@@ -163,10 +163,12 @@ export const POLICY_GUARD_ABI = parseAbi([
 /**
  * `FairValueOracle` — an estimate, its uncertainty, and a risk score.
  *
- * `peek` reverts when the value is stale or withheld; `observation` returns the
- * raw record and never reverts. Use `observation` to render, `peek` to decide.
- * A UI that renders `peek`'s revert as a failure is showing the user a bug where
- * the oracle is doing its job.
+ * **`peek` returns the raw record and never reverts; `observation` reverts on
+ * `NoData` and `Stale`.** This comment said the opposite until 2026-08-12, when
+ * the browser fill path followed it and got a revert where it expected a record.
+ * Read `FairValueOracle.sol` lines 313 and 334 before trusting either name — the
+ * one that sounds safer is the one that throws. Use `peek` to render, and
+ * `fairValue`/`checkExecution` to decide.
  */
 export const FAIR_VALUE_ORACLE_ABI = parseAbi([
   'struct Observation { uint128 fairValueE8; uint32 confidenceBps; int32 basisBps; uint128 capacityUsdg; uint8 gapRisk; uint8 state; uint64 anchorAt; uint64 updatedAt; bool hasValue; }',
