@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { Ref, ReactNode } from 'react';
 
 export const usd = (n: number) =>
   n.toLocaleString('en-US', { maximumFractionDigits: 0 });
@@ -10,13 +10,16 @@ export function Card({
   step,
   title,
   children,
+  /** For scrolling a card into view. A plain prop — React 19 needs no forwardRef. */
+  ref,
 }: {
   step?: number;
   title?: string;
   children: ReactNode;
+  ref?: Ref<HTMLElement>;
 }) {
   return (
-    <section className="mb-4 rounded-xl border border-line bg-panel px-6 py-5">
+    <section ref={ref} className="mb-4 rounded-xl border border-line bg-panel px-6 py-5">
       {title && (
         <h2 className="mb-4 text-[15px] font-semibold tracking-tight">
           {step != null && <span className="text-faint">{step} · </span>}

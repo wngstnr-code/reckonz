@@ -7,6 +7,8 @@ import { POLICY_GUARD_ABI, TRIGGER_METRICS, comparatorIndex, metricIndex,
 import { USDG } from '@/src/chain';
 import type { UniverseEntry } from '@/src/pipeline';
 import { describeOnchainTrigger, scaleThreshold, type OnchainTrigger } from '@/src/triggers';
+import { awaitReceipt } from './awaitReceipt';
+import { FILLED_EVENT, MANDATES_CHANGED_EVENT } from './follow';
 import { Card, Legend, Note, Num, Pill } from './ui';
 import { useWallet } from './useWallet';
 
@@ -156,6 +158,19 @@ export function MandateManage() {
     void load();
   }, [load]);
 
+  // A mandate created above, or a fill placed below, changes what this panel is
+  // describing — a new mandate, or a position that just moved. Re-read rather
+  // than show a number the chain has already left behind.
+  useEffect(() => {
+    const reload = () => void load();
+    window.addEventListener(MANDATES_CHANGED_EVENT, reload);
+    window.addEventListener(FILLED_EVENT, reload);
+    return () => {
+      window.removeEventListener(MANDATES_CHANGED_EVENT, reload);
+      window.removeEventListener(FILLED_EVENT, reload);
+    };
+  }, [load]);
+
   async function write(id: bigint, what: string, send: (guard: Address) => Promise<`0x${string}`>) {
     if (!walletClient || !publicClient || !option) return;
     const guard = option.deployment.contracts.PolicyGuard as Address;
@@ -163,7 +178,7 @@ export function MandateManage() {
     setError(null);
     try {
       const hash = await send(guard);
-      await publicClient.waitForTransactionReceipt({ hash });
+      await awaitReceipt(publicClient, hash);
       // A confirmed write is not immediately readable on this chain (D18), so
       // the reload below can still show the old value — it is polled by being
       // re-run rather than trusted once.

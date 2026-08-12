@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { parseUnits, type Address } from 'viem';
 import { POLICY_GUARD_ABI } from '@/src/abi';
 import { USDG } from '@/src/chain';
 import type { UniverseEntry } from '@/src/pipeline';
+import { awaitReceipt } from './awaitReceipt';
+import { FOLLOW_EVENT, MANDATES_CHANGED_EVENT, type FollowRequest } from './follow';
 import { Card, Legend, Note, Num } from './ui';
 import { useWallet } from './useWallet';
 
@@ -62,10 +64,36 @@ export function Mandate() {
   const [picked, setPicked] = useState<Address[]>([]);
   const [draft, setDraft] = useState<Draft>(() => draftFor(196));
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
+  const [follow, setFollow] = useState<FollowRequest | null>(null);
+  const panel = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (option) setDraft(draftFor(option.chain.id));
   }, [option]);
+
+  /**
+   * Follow, arriving from a published thesis below (D50). It preselects the
+   * assets and nothing else: the caps stay at the deliberately small mainnet
+   * defaults, and the follower still sizes and signs it themselves.
+   */
+  useEffect(() => {
+    const onFollow = (e: Event) => {
+      setFollow((e as CustomEvent<FollowRequest>).detail);
+      panel.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+    window.addEventListener(FOLLOW_EVENT, onFollow);
+    return () => window.removeEventListener(FOLLOW_EVENT, onFollow);
+  }, []);
+
+  // Matched against the universe rather than trusted: the picker renders from
+  // the universe, so an address that is not in it would be silently selected and
+  // never visible. Runs again when the universe arrives, so a follow that lands
+  // first is not lost.
+  useEffect(() => {
+    if (!follow || !universe) return;
+    const wanted = new Set(follow.assets.map((a) => a.toLowerCase()));
+    setPicked(universe.filter((u) => wanted.has(u.address.toLowerCase())).map((u) => u.address));
+  }, [follow, universe]);
 
   useEffect(() => {
     let live = true;
@@ -128,7 +156,7 @@ export function Mandate() {
       });
 
       setPhase({ kind: 'mining', hash });
-      await publicClient.waitForTransactionReceipt({ hash });
+      await awaitReceipt(publicClient, hash);
 
       const mandateId = await confirmMandate(guard);
       const allowed = await publicClient.readContract({
@@ -139,6 +167,9 @@ export function Mandate() {
       });
 
       setPhase({ kind: 'done', hash, mandateId, allowed });
+      // The fill panel enumerates what this wallet can execute against, and it
+      // read the chain before this mandate existed. Tell it to look again.
+      window.dispatchEvent(new Event(MANDATES_CHANGED_EVENT));
     } catch (e) {
       const code = (e as { code?: number })?.code;
       if (code === 4001) {
@@ -195,7 +226,7 @@ export function Mandate() {
   const explorer = option?.deployment.explorer;
 
   return (
-    <Card step={7} title="Create a mandate">
+    <Card ref={panel} step={7} title="Create a mandate">
       <Note>
         The mandate is yours: you are <code className="font-mono text-dim">owner</code> because you
         send this transaction, your funds never leave your wallet, and the policy below is what
@@ -203,6 +234,23 @@ export function Mandate() {
         if one breaches it. You are also the <code className="font-mono text-dim">agent</code>, so
         no key of ours can propose anything against it.
       </Note>
+
+      {follow && (
+        <div className="mb-4 rounded-lg border border-signal-deep bg-signal/6 px-4 py-2.5">
+          <p className="text-[12.5px] leading-relaxed text-ink">
+            Following thesis <Num>#{follow.thesisId}</Num> — its executed basket (
+            {follow.symbols.join(', ')}) is what gets allowed here. Nothing else is copied: the caps
+            are yours, and so is the size. Weights are not a policy field, and the planner sizes
+            legs against the depth that exists for <em>your</em> notional.
+          </p>
+          {universe && address && option && picked.length < follow.assets.length && (
+            <p className="mt-1 text-[12px] text-caution">
+              {follow.assets.length - picked.length} of its assets are not in the universe this page
+              can read, and were not selected.
+            </p>
+          )}
+        </div>
+      )}
 
       {!address ? (
         <p className="text-[13px] text-dim">Connect a wallet to create one.</p>
