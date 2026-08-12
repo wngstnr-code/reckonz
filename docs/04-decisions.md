@@ -2998,7 +2998,7 @@ permit exists rather than after.
 
 ## D65 — The browser placed a fill, and two bugs stood between it and ever doing so
 
-2026-08-12. **Receipt #15 on X Layer mainnet**: 0.49925 USDG into wSPYx at 776.8877 against a fair
+2026-08-12. **Receipt #15 on X Layer mainnet** (tx `0xcdb607a89c8ccc3a4999257b2f547dc962c19f540644f6624937386b0d25bbc5`, 634,455 gas): 0.49925 USDG into wSPYx at 776.8877 against a fair
 value of 776.9450 — **0 bps slippage**, gap risk 4 — carrying `thesisHash`
 `0xc3cd487e…` (thesis #0, published 2026-08-11) and `evidenceHash` `0xf0e8df15…`, which `pnpm
 evidence` re-derives from the stored bundle. Quote, oracle read and `dryRun` from `POST /api/fill`;

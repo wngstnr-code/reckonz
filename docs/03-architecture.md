@@ -211,11 +211,13 @@ snapshot, fair value / gap risk, thesis→basket compilation.
   under `observations/`: `issuer-marks.jsonl`, the price history sampled from the issuer (D62),
   and `registry.jsonl`, the receipts and theses read once and kept (D66). Neither is a database
   and neither is authoritative — the chain and the issuer are.
-- Evidence: IPFS, hash on-chain. **Not built.** `evidenceHash` is written as zero and
-  `evidenceCID` as `''` by every path that produces a receipt, exactly as `ThesisRegistry.cid` is.
-  Publishing a CID that resolves to nothing is worse than publishing none, so the field stays empty
-  until there is somewhere to pin — see D50, where the same problem was routed around by deriving
-  the basket from settled fills instead.
+- Evidence: **the hash is built, the pinning is not.** Every path that produces a receipt now
+  writes a real `evidenceHash` over a bundle in `evidence/` (D57, D58) — including the browser fill
+  (D64) — and `pnpm evidence <hash>` re-derives it. `evidenceCID` stays `''`, exactly as
+  `ThesisRegistry.cid` does: publishing a CID that resolves to nothing is worse than publishing
+  none, so the field waits until there is somewhere to pin. The repo is the pinning in the
+  meantime, which is why `evidence/` is committed (D67). Receipts `#0`–`#4` predate this and carry
+  a zero hash.
 - LLM: **Gemini** with structured output for the `Thesis` object. A Claude provider existed here
   and was deleted 2026-08-12 without ever having run — see D59, where the hazard turns out to be
   automatic provider selection rather than the unused code.
@@ -228,7 +230,7 @@ snapshot, fair value / gap risk, thesis→basket compilation.
    publish-time jump bound and a 2-of-3 Safe on admin (D41, D42)
 4. `PolicyGuard` + `ReceiptRegistry` ✅ — deployed and verified on both chains
 5. Thesis Compiler ✅ — live on Gemini, refuses to substitute unmapped names
-6. Mainnet with small caps ✅ — four real fills, 25→1 USDG blast radius, receipts #0–#3
+6. Mainnet with small caps ✅ — sixteen real fills, 25→1 USDG blast radius, receipts #0–#15
 7. `FeeCollector` ✅ — 15 bps, taking a real fee ← **done ahead of order**
 8. `ThesisRegistry` ✅ — deployed, loop closed on mainnet (receipt #2 → thesis #0)
 9. Simple mode — read layer ✅ (`src/track-record.ts`, `GET /api/theses`) and browse surface ✅

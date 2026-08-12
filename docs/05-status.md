@@ -32,9 +32,14 @@ faucet UI.
 Mainnet gas is the scarce one and there is no faucet for it. Checked 2026-08-11:
 
 ```
-publisher  0x40101A4932dEb95f0A5951BB7fB0fFa7c17e3Ab8   0.002871 OKB   ~1.6 days of publishing
-deployer   0xD7360Dc3ED4fE01bEbB8477594A76CBFb5c79BA5   0.002492 OKB   + 1.763878 USDG
+publisher  0x40101A4932dEb95f0A5951BB7fB0fFa7c17e3Ab8   0.002755 OKB   + 0 USDG
+deployer   0xD7360Dc3ED4fE01bEbB8477594A76CBFb5c79BA5   0.002152 OKB   + 2.649781 USDG
 ```
+
+Re-read 2026-08-12 after the browser fill and two oracle publishes. The publisher's runway is no
+longer "~1.6 days": with `PUBLISH_SYMBOLS` (D63) one symbol costs 53,739 gas, so that balance is
+**~1,532 runs at one symbol, ~766 at the mandate's four** — about five days at a 600s interval. The
+"$5 for ~21 days" in `07-team.md` was sized for all thirty and predates the filter.
 
 Read those from the chain, not from here — two fills moved the deployer's USDG after an earlier
 version of this file recorded it, and a balance in a document is stale the moment it is written.
@@ -313,7 +318,7 @@ That single run exercises every claim the product makes. It is the demo.
 | ~~**Mandate creation in the UI**~~ — **built 2026-08-12** | `app/components/Mandate.tsx`: set the blast radius, pick assets from `GET /api/universe`, `createMandate` from the user's own wallet, then poll until the mandate is readable (D18) and show its id with an explorer link. The user is `owner` *and* `agent`; `executor` is the deployed `Executor`, which is what `Executor.execute` checks before it will pull funds. **Not yet exercised against a real wallet extension** — see below. |
 
 | ~~**Simple mode in the UI**~~ — **built 2026-08-12** | `app/components/Theses.tsx`: every published thesis with its basket derived from settled fills, its notional-weighted slippage, whether it was published before every fill, and the receipts underneath — plus the unattributed receipts and any orphaned hashes, rendered rather than dropped. It reads `GET /api/theses`, so the page and `pnpm track-record` cannot disagree (D28). **Follow** hands the executed basket to the mandate form (`app/components/follow.ts`, a one-way DOM event) which preselects those assets and nothing else — the caps, the size and the signature stay with the follower. A followed thesis's hash is carried into the fill below, so a follower's execution lands back in that thesis's track record. |
-| ~~**Fill from the browser**~~ — **done 2026-08-12, receipt #15 on mainnet** | `app/components/Fill.tsx` + `POST /api/fill` + `src/fill.ts` (D64). The server quotes, checks the pool the executor derives, reads the oracle, runs `dryRun` and hashes the evidence; the browser approves Permit2, signs an authorisation scoped to one token/amount/spender/20 minutes, and sends `execute`. **No key on the server.** **Exercised end to end against the OKX extension** (D65): receipt **#15**, 0.49925 USDG into wSPYx at 776.8877 against fair value 776.9450 — 0 bps slippage, gap 4 — carrying thesis #0's hash and evidence `0xf0e8df15…`, which `pnpm evidence` re-derives. It appears in thesis #0's track record on the same page. Two bugs were in the way and are fixed: `useWallet` gave every component its own connection, and `waitForTransactionReceipt` never returned through the injected provider — the replacement is `app/components/awaitReceipt.ts`, proven by tripping and releasing the breaker from the browser (two writes, no funds moved). The connection now survives a reload, and Follow re-points the asset at the thesis's basket. |
+| ~~**Fill from the browser**~~ — **done 2026-08-12, receipt #15 on mainnet** | `app/components/Fill.tsx` + `POST /api/fill` + `src/fill.ts` (D64). The server quotes, checks the pool the executor derives, reads the oracle, runs `dryRun` and hashes the evidence; the browser approves Permit2, signs an authorisation scoped to one token/amount/spender/20 minutes, and sends `execute`. **No key on the server.** **Exercised end to end against the OKX extension** (D65): receipt **#15**, tx `0xcdb607a8…`, 0.49925 USDG into wSPYx at 776.8877 against fair value 776.9450 — 0 bps slippage, gap 4 — carrying thesis #0's hash and evidence `0xf0e8df15…`, which `pnpm evidence` re-derives. It appears in thesis #0's track record on the same page. Two bugs were in the way and are fixed: `useWallet` gave every component its own connection, and `waitForTransactionReceipt` never returned through the injected provider — the replacement is `app/components/awaitReceipt.ts`, proven by tripping and releasing the breaker from the browser (two writes, no funds moved). The connection now survives a reload, and Follow re-points the asset at the thesis's basket. |
 
 ### Known gaps in the work itself
 
@@ -438,9 +443,11 @@ left is not architecture; it is a video, a form, and a decision about who can re
 
 ## Suggested order
 
-Everything that was on this list as engineering is done: mainnet deploy, five real fills including
-the first exit, the fee,
-the thesis registry, the web app, the multisig. What is left is a calendar, not an architecture.
+Everything that was on this list as engineering is done: mainnet deploy, **sixteen real fills**
+including the first exit and the first placed from a browser, the fee, the thesis registry, the web
+app, the multisig, the Simple mode surface and the registry index. What is left is a calendar, not
+an architecture — the publish worker on its date, and the ASP/x402 registration, which is the only
+item never started.
 
 **Now → 17 Aug — the only items that can still fail.**
 
@@ -498,8 +505,9 @@ and a recorded number nothing reads is a number nobody checks.
 was gated on wallet connect; wallet connect shipped and the flow did not move, so the stated blocker
 was not the real one — nothing in `app/` could produce a Permit2 signature. `src/execute.ts` was
 rewired through the new module, so every mainnet fill exercises the code the browser will run.
-Proven by placing one: **receipt #14**, 0.6 USDG into wTSLAx, 614,433 gas. **The browser has still
-never placed a fill** and nothing here says otherwise.
+Proven by placing one: **receipt #14**, 0.6 USDG into wTSLAx, 614,433 gas. ~~**The browser has still
+never placed a fill** and nothing here says otherwise.~~ — **superseded the same day: receipt #15
+was placed from the browser** (D65).
 
 **2026-08-12 (fifteenth)** — **the price source has no licence, and the issuer turns out to
 have better data than the one we are using** (D62). Nothing changed in what the oracle publishes.

@@ -114,7 +114,7 @@ A table, not cards — cross-asset comparison is the entire point. Compact densi
 
 ### 4. Provenance
 
-Four receipts on mainnet. They are small in number and large in meaning, so give them room.
+Sixteen receipts on mainnet. Still small in number and large in meaning, so give them room.
 
 - Each receipt links to the explorer and to Sourcify. The affordance is boring on purpose;
   "verified" is a claim someone should be able to check in one click.
@@ -194,7 +194,7 @@ Leave behind: their chrome. All three are protocol dashboards; we are one page w
 | Reference | Take |
 |---|---|
 | Safe{Wallet} | Transaction queue with a signature threshold — directly relevant now that the oracle admin is 2-of-3. |
-| Sourcify, OKLink | The boring, credible "verified" affordance. Our four receipts should click through to it. |
+| Sourcify, OKLink | The boring, credible "verified" affordance. Every receipt should click through to it. |
 
 ### Avoided on purpose
 

@@ -33,7 +33,8 @@ publishing is a separate key that can do nothing else.
 Settlement is real USDG, `0x4ae46a509F6b1D9056937BA4500cb143933D2dc8`. A testnet stack
 (chain 1952) is deployed and verified too; addresses in `src/deployments.ts`.
 
-**Nine real fills, not a simulation — including a sale, and four bound to the evidence they rest on:**
+**Sixteen real fills, not a simulation — including sales, one placed from a browser, and five bound
+to the evidence they rest on:**
 
 ```
 #0  0x7240759d327d468f9a7086ed439abf42dead17887105d986ca0870ebf46d6545   0.5 USDG -> wSPYx
@@ -45,9 +46,18 @@ Settlement is real USDG, `0x4ae46a509F6b1D9056937BA4500cb143933D2dc8`. A testnet
 #6  0xca141f6d9803992376eab5dd0ac74e97d0aaa4a0a5bee6218ee4ae5b29830cf9   thesis #1, wNVDAx, 28 bps
 #7  0x04685035a0251848d4c0580b30e4c5569236eaeaa62f42023615cfccada00933   thesis #2, wTSLAx, 0 bps
 #8  0xdf2d5564292d50623054ed8d0bb59093a84ce522f58ac60d67cfe8303666842a   thesis #2, wNVDAx, 27 bps
+#9–#13                                                                 five exits, priced by the issuer
+#14 0xfbcdb2282d862941c0b386faa725e01f17957d557349e79a8da4fac310f0c552   0.6 USDG -> wTSLAx
+#15 0xcdb607a89c8ccc3a4999257b2f547dc962c19f540644f6624937386b0d25bbc5   0.5 USDG -> wSPYx, from a browser
 ```
 
-`#5`–`#8` each carry an `evidenceHash`: the quote, the oracle's value *and its age in seconds*,
+`#15` is the one to look at. It was placed from the web app against the OKX extension — the server
+quoted it, read the oracle and asked the guard, and the **wallet** produced the Permit2 signature and
+sent the transaction. It settled at 776.8877 against a fair value of 776.9450: **0 bps of shortfall**,
+gap risk 4. It carries thesis #0's hash, so it lands in that thesis's public track record, which is
+the loop this project exists to close.
+
+`#5`–`#8` and `#15` each carry an `evidenceHash`: the quote, the oracle's value *and its age in seconds*,
 and the guard's verdict, hashed before signing and checkable with `pnpm evidence`. A fifth fill was
 attempted and **refused** — wSPYx quoted 59 bps above fair value against a 50 bps ceiling, so the
 guard rejected it in `dryRun` and no gas was spent. That refusal is the product working, and it is
@@ -55,7 +65,7 @@ why thesis #1's basket holds two of the three assets it names.
 
 `#0`–`#2` ran through the previous guard and executor; `#3` is the first through the guard listed
 above. `#4` is the first **exit** — the executor was redeployed on 2026-08-12 because until then it
-could only ever buy (D51). All five are in one append-only history, because every migration
+could only ever buy (D51). All sixteen are in one append-only history, because every migration
 replaced contracts around the registry and **kept the registry**.
 
 In each, the swap, the policy check and the receipt happen in **one transaction**. The
@@ -107,6 +117,9 @@ pnpm plan [usdg] [maxBps]    # a thesis basket: naive execution vs planned
 pnpm capacity                # what every xStock can absorb, by impact limit
 pnpm oracle [usdg]           # fair value, gap risk, and the guard's decision per asset
 pnpm thesis "free text"      # thesis -> assets -> sizing -> mandate
+pnpm track-record            # every published thesis and what it actually did
+pnpm index [--verify]        # keep the registry index current; --verify re-reads it from the chain
+pnpm evidence <hash>         # re-derive a receipt's evidence bundle and compare
 pnpm test:sol                # 105 tests
 ```
 
@@ -132,6 +145,10 @@ TARGET=mainnet pnpm execute wSPYx 0.5  # quote -> dryRun -> Permit2 -> one real 
 | `src/thesis.ts` | Thesis Compiler — schema, prompts, mandate compilation |
 | `src/pipeline.ts` | The whole product as one streamed run; shared by CLI and web |
 | `src/abi.ts` | The contract surface, one source, browser-safe |
+| `src/permit.ts` | The Permit2 authorisation, browser-safe so a wallet can produce one |
+| `src/fill.ts` | Quote, pool check, oracle read, `dryRun` and evidence — everything before a signature |
+| `src/track-record.ts` | The registry join: a thesis, and what executed against it |
+| `src/indexer.ts` | The registries read once and kept, so a page load is not an enumeration |
 | `contracts/PolicyGuard.sol` | Mandate, policy, exit triggers, and the binding check |
 | `contracts/FairValueOracle.sol` | On-chain observations + `checkExecution` |
 | `contracts/Executor.sol` | Permit2 pull → swap → settle → submit, one transaction |
@@ -155,7 +172,9 @@ Pool state is prefetched into two multicalls, so the simulation is pure and sync
 - **A confirmed write is not immediately readable.** The public RPC load-balances, so a
   read straight after a write can hit an unsynced node and return **zeroes, not an
   error** — and gas estimation for a dependent transaction reverts for reasons that make
-  no sense. Poll until the state is visible.
+  no sense. Poll until the state is visible. In a browser this bites twice: `viem`'s
+  `waitForTransactionReceipt` never returned through the injected provider either, so the
+  page polls for the receipt itself.
 - **There are no Chainlink equity feeds on X Layer.** Any fair-value layer has to be
   built, not consumed.
 - `TICK_RATIOS` in `v3math.ts` was derived numerically (`2^128 · 1.0001^(-2^(k-1))`), not

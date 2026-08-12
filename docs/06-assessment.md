@@ -28,7 +28,7 @@ so they can be disagreed with but not disputed.
 **The architectural claim is real, not marketing, and it is now on mainnet.** "The AI holds no key
 that can move funds" is easy to say. Here the enforcement is inside the trade's own transaction:
 break the mandate and the whole thing unwinds. 105 tests exist because that claim has to survive
-contact with an adversary — and three real fills exist because tests are not the same as contact.
+contact with an adversary — and sixteen real fills exist because tests are not the same as contact.
 Receipt `#1` records a price the agent did not author, stamped by the guard from the oracle.
 
 **The revenue line stopped being a diagram.** `FeeCollector` took 15 bps on a real fill. The amount
@@ -177,7 +177,8 @@ The application was built to justify the infrastructure. The infrastructure is t
 ## Verdict
 
 **As a hackathon project:** strong, and stronger after D49 than before it. It runs for real on
-mainnet — deployed, verified, three fills, a fee collected, a public URL — the numbers are striking
+mainnet — deployed, verified, sixteen fills including one placed from the browser, a fee
+collected, a public URL — the numbers are striking
 and the AI-RWA track is thinly contested. What the landscape check added is timing: the layer this
 occupies on X Layer is measurably empty, and OKX has just tied itself to tokenised equities at the
 company level, with ICE alongside. Being the non-custodial application layer for the host's own

@@ -84,7 +84,8 @@ PoolSwapper      0x1f3b67d8209060eC68d0eDCD6E60Ba53A8e9ac28
 cash             0x4ae46a509F6b1D9056937BA4500cb143933D2dc8  (real USDG)
 ```
 
-**Nine fills, receipts `#0`–`#8`** — `receipts.count()` reads 9 on chain. `#4` is the first
+**Sixteen fills, receipts `#0`–`#15`** — `receipts.count()` reads 16 on chain. `#15` is the first
+placed from a browser (D65); `#9`–`#13` are exits under the issuer-priced model and `#14` an entry. `#4` is the first
 **exit** (D51), and `#5`–`#8` are the seeded baskets for theses #1 and #2, each carrying an
 `evidenceHash` that verifies against a bundle on disk (D57, D58). They sit in one append-only
 history because `ReceiptRegistry` was kept across every migration — three of them now. Everything deployed
@@ -196,9 +197,9 @@ What is not done is the follow itself. **The stated blocker was wrong**: this wa
 connect", wallet connect shipped 2026-08-12, and the flow did not move — because the real gap was
 that nothing in `app/` could produce a Permit2 signature. `src/permit.ts` closes that half (D63) and
 is exercised by every CLI fill, so it is proven rather than merely written. What remains is a
-component that quotes, shows the guard's verdict, calls `signTypedData` and sends. **The browser has
-still never placed a fill.** Auto-DCA was
-dropped for this submission; the reasoning is D50.
+component that quotes, shows the guard's verdict, calls `signTypedData` and sends. ~~**The browser
+has still never placed a fill.**~~ — **built and run 2026-08-12: receipt #15** (D64, D65). Auto-DCA
+was dropped for this submission; the reasoning is D50.
 
 Be warned what the data looks like: **one** thesis, and only **one** receipt bound to it — a
 single wSPYx entry of $0.50. Three further receipts carry no thesis hash and are returned

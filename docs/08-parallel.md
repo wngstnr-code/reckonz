@@ -43,7 +43,33 @@ Thesis    Allocation  CompiledMandate
 BasketPlan  Decision  FairValueReport
 ```
 
-**Endpoint:** `GET /api/run?thesis=&notional=&maxImpactBps=` → `text/event-stream`.
+**Endpoints:**
+
+| | |
+|---|---|
+| `GET /api/run?thesis=&notional=&maxImpactBps=` | `text/event-stream`, one `RunEvent` per line |
+| `GET /api/universe` | `UniverseEntry[]` |
+| `GET /api/theses[?id=]` | the registry join — `RegistrySnapshot` from `src/track-record.ts` |
+| `POST /api/fill` | quote + oracle + `dryRun` + evidence hash for one leg; returns `FillPlan` from `src/fill.ts`, inert until the wallet signs |
+
+**BigInt crosses as a decimal string on all of them**, not just `/api/run`.
+
+`POST /api/fill` answers **200 with `verdict.allow === false`** when the guard refuses. That is not
+an error path: a refusal with its reason is the product, and rendering it as a failure is the one
+mistake `09-design.md` names outright.
+
+**Cross-panel events** (`app/components/follow.ts`) — added 2026-08-12 by BE inside FE territory,
+so they are announced here rather than discovered:
+
+```
+reckonz:follow             CustomEvent<FollowRequest>  a thesis hands its basket + hash onward
+reckonz:mandates-changed   Event                       a mandate was created; re-read the chain
+reckonz:filled             Event                       a fill settled; re-read the registries
+```
+
+One way, no payload on the last two — the reader already knows how to enumerate, and a payload
+would be a second description of a mandate that could disagree with the first. Rename or repurpose
+one and both panels on either side of it go quiet, which is the failure mode worth knowing about.
 
 **Chain surface, once BE ships it:** `src/abi.ts`, `src/deployments.ts`, `src/chain.ts`.
 
@@ -101,6 +127,14 @@ FE should not sit idle waiting for BE. Two unblocks:
 ## 3. Branches and pushing
 
 `main` is the branch that must always run. Do not push directly to it.
+
+> **Broken once, on purpose, 2026-08-12.** Wangsit pushed seven commits straight to `main` —
+> the Simple mode surface, the browser fill, the registry index, and the docs behind them. Recorded
+> here rather than left for someone to find in the log, because the rule exists so that neither
+> branch silently loses: **six files under `app/` changed, five of which already existed**
+> (`page.tsx`, `ui.tsx`, `useWallet.ts`, `Mandate.tsx`, `MandateManage.tsx`). Every crossing is
+> listed file by file in `07-team.md § 3`. If you have any of them open on a branch, read that
+> before you rebase.
 
 ```bash
 git switch -c fe/wallet-connect     # FE prefix: fe/
