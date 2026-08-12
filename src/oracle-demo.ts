@@ -54,24 +54,19 @@ const reports = await serial(ASSETS, async (spec) => {
 
 console.log('  ' + '─'.repeat(94));
 
-console.log('\n  How each fair value was carried forward\n');
+// Nothing is carried forward any more — the issuer marks the token live, so the
+// oracle reads rather than predicts (D62). What is worth printing is where each
+// number came from and how wide it is, which is what the notes now say.
+console.log('\n  Where each fair value came from\n');
 for (const r of reports) {
-  if (r.signals.length === 0) {
-    console.log(`  ${r.symbol.padEnd(9)} ${r.notes.join('; ')}`);
-    continue;
-  }
-  const parts = r.signals
-    .map(
-      (s) =>
-        `${s.symbol} ${s.returnPct >= 0 ? '+' : ''}${s.returnPct.toFixed(2)}% ` +
-        `× β${s.beta.toFixed(2)} (R²${s.r2.toFixed(2)}) → ${s.contributionBps >= 0 ? '+' : ''}${s.contributionBps.toFixed(0)}bp`,
-    )
-    .join('   ');
-  console.log(`  ${r.symbol.padEnd(9)} ${parts}`);
-  if (r.notes.length) console.log(`  ${''.padEnd(9)} ${r.notes.join('; ')}`);
+  console.log(`  ${r.symbol.padEnd(9)} ${r.notes.join('; ') || '—'}`);
 }
 
-console.log('\n  Gap-risk components (staleness / displacement / uncertainty / basis)\n');
+console.log(
+  '\n  Gap-risk components (not quoting / open gap / band / basis)\n\n' +
+    '  The second column is what the position is exposed to at the open, and it stays in\n' +
+    '  the score while the mark is live — a good price at 3am still carries the gap.\n',
+);
 for (const r of reports) {
   const p = r.gapRiskParts;
   const bar = (v: number) => '█'.repeat(Math.round(v * 10)).padEnd(10, '·');

@@ -1,35 +1,47 @@
 /**
  * FairValueOracle — the off-chain engine.
  *
- * It does NOT predict prices. It carries the last official print forward using
- * instruments that are still trading, and states how wide the resulting band is.
- * Everything it publishes is a risk signal and an execution guard, never a claim
- * about the true price. That distinction is the whole defensibility argument.
+ * It does NOT predict prices. It reads the mark the issuer of the token is
+ * making, adjusts for how many shares that token is a claim on, and states how
+ * wide the uncertainty is. Everything it publishes is a risk signal and an
+ * execution guard, never a claim about the true price. That distinction is the
+ * whole defensibility argument.
  *
- *     FV = P_close × (1 + Σ βᵢ · rᵢ)     rᵢ = signal return since P_close
+ *     FV = issuer mid × shares/token
  *
- * β comes from OLS on a year of aligned daily returns. The band comes from the
- * security's own realised close-to-open jumps — weekend gaps sampled separately
- * from overnight gaps — shrunk by however much of that jump the signals explain.
- * It is deliberately not daily volatility scaled across calendar time: an asset
- * sits still over a weekend, and pretending otherwise produces ±19% bands.
+ * **This used to predict, and stopping is the change made in D62.** The old
+ * model took the last New York close from an undocumented Yahoo endpoint and
+ * carried it forward with betas against index futures. It had two problems, and
+ * only one of them was the licence.
  *
- * A reference quoted in another currency is converted through a live FX leg, so
- * the equity leg is the only thing ever carried forward. When there is no
- * reference market at all (wSPCXx — SpaceX is private), or the reference does
- * not reconcile with what the chain quotes (wSKHYx, −86%), the oracle marks the
- * value unpublishable rather than inventing one.
+ * The other was that the prediction was unnecessary. Backed quotes these tokens
+ * live through the night — a two-sided market they will transact in, minimum
+ * $1,000, up to $20M overnight — and sampled 91 seconds apart, four of eight
+ * names had moved more than a basis point. Regressing index futures onto a
+ * stale close was re-deriving, badly, something a dealer was already publishing
+ * with money behind it.
+ *
+ * The multiplier is the term that is easy to miss. A token is not one share:
+ * xStock dividends are reinvested rather than paid out, so the claim grows, and
+ * the issuer publishes the ratio. Measured across all thirty assets, a
+ * regression of (chain vs issuer mid) on (multiplier − 1) gives slope 1.09,
+ * R² 0.82 — the issuer quotes the share, the chain prices the token, and this is
+ * the difference.
+ *
+ * Two quantities that used to be one, now separated:
+ *
+ *   - **the band** is uncertainty about the value *now*. While the issuer is
+ *     quoting, it is that market's own spread. When nobody is quoting, it is
+ *     the security's realised close-to-open jump distribution, recorded in
+ *     `MEASURED`.
+ *   - **gap risk** is what the position is exposed to, and keeps the jump
+ *     distribution in it even while the mark is live — buying at 3am really
+ *     does carry the open, however good the price is.
+ *
+ * Where the issuer will not quote — halted, or a token it does not carry — the
+ * value is withheld rather than invented.
  */
-import {
-  alignedReturns,
-  byDate,
-  daily,
-  gapStats,
-  intraday,
-  priceAt,
-  toUsd,
-  type Series,
-} from './marketdata';
+import { issuerBook, type IssuerQuote } from './issuer';
 
 export type MarketState =
   | 'OPEN'
@@ -45,11 +57,6 @@ export interface AssetSpec {
   /** reference listing, or null for assets with no public market */
   reference: string | null;
   /**
-   * The 24/7 instrument used to carry the close forward, chosen as the best
-   * R² among the candidates in src/reconcile.ts rather than assigned by eye.
-   */
-  signals: string[];
-  /**
    * The date the admission test in src/reconcile.ts admitted this mapping.
    *
    * Its presence — not membership of `ASSETS` — is what makes a fair value
@@ -58,6 +65,29 @@ export interface AssetSpec {
    * live data and fails if an admitted mapping stops reconciling.
    */
   admittedOn?: string;
+  /**
+   * **Shares per token.** An xStock dividend is not paid to holders in cash — it
+   * is reinvested by the custodian, so each token becomes a claim on slightly
+   * more stock, and the issuer tracks that as a multiplier. One token stopped
+   * being one share the first time the underlying paid a dividend.
+   *
+   * Recorded here rather than fetched at publish time, deliberately, for the
+   * same reason `admittedOn` is: it is a slow-moving fact that should be
+   * auditable in the repo with a date, and the oracle must not acquire a
+   * new runtime dependency on somebody else's uptime to price anything. The
+   * measurement run for these values had three transient failures out of thirty,
+   * which is exactly the argument.
+   *
+   * `pnpm reconcile` re-reads the live value and reports drift, the same way it
+   * reports a signal that now fits better elsewhere. Absent means never
+   * measured — which is not the same statement as 1.0, and is treated as 1.0
+   * only because there is nothing better to do with an unmeasured field.
+   *
+   * Direction was measured, not read: across the 16 assets whose multiplier is
+   * not 1.0, mean |basis| against the chain is 1.10% untreated, 0.73% multiplied
+   * and 1.55% divided. See D62.
+   */
+  multiplier?: number;
   /**
    * Why the value is withheld for an asset the test did not admit. The cases
    * look identical to a consumer — all unpublishable — but they are not the
@@ -80,61 +110,210 @@ export interface AssetSpec {
  * filtered on: a weak fit is admitted and then pays for itself with a wide band
  * and a high uncertainty term in gap risk, which the guard acts on. Hiding a
  * measurable answer behind a missing one would be the worse trade.
+ *
+ * **`multiplier` measured 2026-08-12** against the issuer, all thirty, rounded to
+ * 1e-6 — 0.01bp on a $300 share, which is below anything this system can act on.
+ * Fourteen assets sit at exactly 1.0 and that is recorded rather than omitted,
+ * because "measured and unchanged" and "never measured" must not look the same.
  */
+export const MULTIPLIERS_MEASURED_ON = '2026-08-12';
 export const ASSETS: AssetSpec[] = [
-  { symbol: 'wAAPLx', reference: 'AAPL', signals: ['ES=F'], admittedOn: '2026-08-11' },
-  { symbol: 'wAMDx', reference: 'AMD', signals: ['NQ=F'], admittedOn: '2026-08-11' },
-  { symbol: 'wAMZNx', reference: 'AMZN', signals: ['ES=F'], admittedOn: '2026-08-11' },
-  { symbol: 'wASMLx', reference: 'ASML', signals: ['NQ=F'], admittedOn: '2026-08-11' },
-  { symbol: 'wAVGOx', reference: 'AVGO', signals: ['NQ=F'], admittedOn: '2026-08-11' },
+  { symbol: 'wAAPLx', reference: 'AAPL', multiplier: 1.003269, admittedOn: '2026-08-11' },
+  { symbol: 'wAMDx', reference: 'AMD', multiplier: 1, admittedOn: '2026-08-11' },
+  { symbol: 'wAMZNx', reference: 'AMZN', multiplier: 1, admittedOn: '2026-08-11' },
+  { symbol: 'wASMLx', reference: 'ASML', multiplier: 1.002866, admittedOn: '2026-08-11' },
+  { symbol: 'wAVGOx', reference: 'AVGO', multiplier: 1.004884, admittedOn: '2026-08-11' },
   // The crypto-linked names fit BTC-USD better than either equity index, which
   // is the test choosing the signal rather than a human deciding Coinbase is a
   // crypto stock. wCRCLx used to carry NQ=F *and* BTC-USD; the engine sums
   // univariate betas, so two correlated signals counted the same move twice.
-  { symbol: 'wCOINx', reference: 'COIN', signals: ['BTC-USD'], admittedOn: '2026-08-11' },
-  { symbol: 'wCRCLx', reference: 'CRCL', signals: ['BTC-USD'], admittedOn: '2026-08-11' },
-  { symbol: 'wDELLx', reference: 'DELL', signals: ['NQ=F'], admittedOn: '2026-08-11' },
-  { symbol: 'wEWYx', reference: 'EWY', signals: ['NQ=F'], admittedOn: '2026-08-11' },
+  { symbol: 'wCOINx', reference: 'COIN', multiplier: 1, admittedOn: '2026-08-11' },
+  { symbol: 'wCRCLx', reference: 'CRCL', multiplier: 1, admittedOn: '2026-08-11' },
+  { symbol: 'wDELLx', reference: 'DELL', multiplier: 1.003317, admittedOn: '2026-08-11' },
+  { symbol: 'wEWYx', reference: 'EWY', multiplier: 1, admittedOn: '2026-08-11' },
   // Gold against a tech index is a poor fit by construction (R² 0.10). Admitted
   // anyway: the mapping is sound, and the weak carry-forward shows up honestly
   // as a wide band instead of as a missing asset.
-  { symbol: 'wGLDx', reference: 'GLD', signals: ['NQ=F'], admittedOn: '2026-08-11' },
-  { symbol: 'wGOOGLx', reference: 'GOOGL', signals: ['ES=F'], admittedOn: '2026-08-11' },
-  { symbol: 'wHOODx', reference: 'HOOD', signals: ['BTC-USD'], admittedOn: '2026-08-11' },
-  { symbol: 'wIBMx', reference: 'IBM', signals: ['ES=F'], admittedOn: '2026-08-11' },
-  { symbol: 'wINTCx', reference: 'INTC', signals: ['NQ=F'], admittedOn: '2026-08-11' },
-  { symbol: 'wIWMx', reference: 'IWM', signals: ['ES=F'], admittedOn: '2026-08-11' },
-  { symbol: 'wMETAx', reference: 'META', signals: ['ES=F'], admittedOn: '2026-08-11' },
-  { symbol: 'wMRVLx', reference: 'MRVL', signals: ['NQ=F'], admittedOn: '2026-08-11' },
-  { symbol: 'wMSFTx', reference: 'MSFT', signals: ['ES=F'], admittedOn: '2026-08-11' },
-  { symbol: 'wMSTRx', reference: 'MSTR', signals: ['BTC-USD'], admittedOn: '2026-08-11' },
-  { symbol: 'wMUx', reference: 'MU', signals: ['NQ=F'], admittedOn: '2026-08-11' },
-  { symbol: 'wNVDAx', reference: 'NVDA', signals: ['NQ=F'], admittedOn: '2026-08-11' },
-  { symbol: 'wORCLx', reference: 'ORCL', signals: ['NQ=F'], admittedOn: '2026-08-11' },
-  { symbol: 'wPLTRx', reference: 'PLTR', signals: ['NQ=F'], admittedOn: '2026-08-11' },
-  { symbol: 'wQQQx', reference: 'QQQ', signals: ['NQ=F'], admittedOn: '2026-08-11' },
-  // Named correctly, converted correctly, and still not admitted. The KRW leg is
-  // built and live, so this is no longer a gap in our tooling: X Layer quotes
-  // wSKHYx at ~$137 against a share worth ~$1,008 on two independent venues that
-  // agree within 1.6%. Whatever that pool is pricing, the test cannot call it a
-  // claim on an SK Hynix share, so the oracle withholds. See D39.
-  {
-    symbol: 'wSKHYx',
-    reference: '000660.KS',
-    signals: ['NQ=F'],
-    noReferenceNote:
-      'reference market identified (SK Hynix, 000660.KS) and converted to USD, but ' +
-      'the X Layer pool quotes ~86% below the share — the wrapper does not reconcile ' +
-      'with the listing, so fair value is withheld',
-  },
-  { symbol: 'wSNDKx', reference: 'SNDK', signals: ['NQ=F'], admittedOn: '2026-08-11' },
+  { symbol: 'wGLDx', reference: 'GLD', multiplier: 1, admittedOn: '2026-08-11' },
+  { symbol: 'wGOOGLx', reference: 'GOOGL', multiplier: 1.001927, admittedOn: '2026-08-11' },
+  { symbol: 'wHOODx', reference: 'HOOD', multiplier: 1, admittedOn: '2026-08-11' },
+  { symbol: 'wIBMx', reference: 'IBM', multiplier: 1.020403, admittedOn: '2026-08-11' },
+  { symbol: 'wINTCx', reference: 'INTC', multiplier: 1, admittedOn: '2026-08-11' },
+  { symbol: 'wIWMx', reference: 'IWM', multiplier: 1.0029, admittedOn: '2026-08-11' },
+  { symbol: 'wMETAx', reference: 'META', multiplier: 1.002298, admittedOn: '2026-08-11' },
+  { symbol: 'wMRVLx', reference: 'MRVL', multiplier: 1.001665, admittedOn: '2026-08-11' },
+  { symbol: 'wMSFTx', reference: 'MSFT', multiplier: 1.004582, admittedOn: '2026-08-11' },
+  { symbol: 'wMSTRx', reference: 'MSTR', multiplier: 1, admittedOn: '2026-08-11' },
+  { symbol: 'wMUx', reference: 'MU', multiplier: 1.000402, admittedOn: '2026-08-11' },
+  { symbol: 'wNVDAx', reference: 'NVDA', multiplier: 1.000918, admittedOn: '2026-08-11' },
+  { symbol: 'wORCLx', reference: 'ORCL', multiplier: 1.009319, admittedOn: '2026-08-11' },
+  { symbol: 'wPLTRx', reference: 'PLTR', multiplier: 1, admittedOn: '2026-08-11' },
+  { symbol: 'wQQQx', reference: 'QQQ', multiplier: 1.002725, admittedOn: '2026-08-11' },
+  // **`SKHY`, not `000660.KS`.** Withheld from D39 until 2026-08-12 because the
+  // pool quoted ~86% below the Seoul share even after a live KRW leg, and the
+  // conclusion drawn was "whatever that pool is pricing, it is not a claim on an
+  // SK Hynix share". The rejection was right and the reason was wrong.
+  //
+  // The issuer's own metadata gives `underlyingIsin: US78392B2060` — a **US**
+  // ISIN. The token references the US-listed depositary receipt, not the Seoul
+  // ordinary share, and a DR ratio is exactly what a ~7× price difference looks
+  // like. The answer sat in a field called `underlyingIsin` for the whole day we
+  // spent calling this asset unpriceable.
+  //
+  // That is the argument for referencing the issuer in one line: the mapping was
+  // never something to infer from a ticker. See D62.
+  { symbol: 'wSKHYx', reference: 'SKHY', multiplier: 1, admittedOn: '2026-08-12' },
+  { symbol: 'wSNDKx', reference: 'SNDK', multiplier: 1, admittedOn: '2026-08-11' },
   // SpaceX is private. There is no close to carry forward, and no engineering
   // produces one.
-  { symbol: 'wSPCXx', reference: null, signals: [] },
-  { symbol: 'wSPYx', reference: 'SPY', signals: ['ES=F'], admittedOn: '2026-08-11' },
-  { symbol: 'wTSLAx', reference: 'TSLA', signals: ['NQ=F'], admittedOn: '2026-08-11' },
-  { symbol: 'wTSMx', reference: 'TSM', signals: ['NQ=F'], admittedOn: '2026-08-11' },
+  // SpaceX is private and there is no listing, which is why this was withheld
+  // from the beginning. It is the clearest case for referencing the issuer: no
+  // exchange can price it, and the party that mints the token marks it anyway.
+  // Chain agrees to ~30bp. See D62.
+  { symbol: 'wSPCXx', reference: 'SPCX', multiplier: 1, admittedOn: '2026-08-12' },
+  { symbol: 'wSPYx', reference: 'SPY', multiplier: 1.005715, admittedOn: '2026-08-11' },
+  { symbol: 'wTSLAx', reference: 'TSLA', multiplier: 1, admittedOn: '2026-08-11' },
+  { symbol: 'wTSMx', reference: 'TSM', multiplier: 1.004065, admittedOn: '2026-08-11' },
 ];
+
+/** The security's own realised close-to-open jumps, measured once and recorded. */
+export interface RecordedGaps {
+  overnightSd: number;
+  nOvernight: number;
+  longSd: number;
+  nLong: number;
+}
+
+export interface Measured {
+  gaps: RecordedGaps;
+}
+
+/**
+ * The statistics behind every fair value, **measured once and written down**.
+ *
+ * This used to hold betas too. They priced nothing after the carry-forward was
+ * retired, and a recorded number that nothing reads is a number nobody checks,
+ * so they are gone — D59's lesson applied to data instead of code.
+ *
+ * What remains is the close-to-open jump distribution, which the band falls back
+ * to when nobody is quoting. It was measured from Yahoo once and is now
+ * re-derived by `pnpm measure` from `observations/`, the store `pnpm sample`
+ * builds out of the issuer's own marks. Borrowing history was the last tie to a
+ * source with no licence; building it is the fix.
+ *
+ * The cost, stated rather than hidden: **these go stale, slowly.** The date is
+ * beside them so anyone can see how old they are, and `pnpm reconcile` re-fits
+ * against live data and reports the drift. That is the same contract as
+ * `admittedOn` and `multiplier`: a recorded fact with a date and a check,
+ * rather than a computed one with a dependency.
+ *
+ * Kept beside `ASSETS` rather than inside it on purpose. `ASSETS` is a table a
+ * human scans — which wrapper, which reference, which signal — and burying four
+ * statistics per line would destroy that. `pnpm reconcile` checks the two stay
+ * in step, so the split cannot rot quietly.
+ */
+export const MEASURED_ON = '2026-08-12';
+
+/**
+ * The widest open-gap band recorded across admitted assets — wSNDKx at 853bp,
+ * against a median of 447 and a narrowest of 98 (wSPYx). Used to normalise the
+ * open-gap term in gap risk so the term spans the range it actually has.
+ *
+ * Re-derive it, do not adjust it by feel: it is `max(overnightSd × 1.96)` over
+ * the admitted set, and `pnpm reconcile` re-measures every σ behind it.
+ */
+export const WIDEST_RECORDED_BAND_BPS = 853;
+
+export const MEASURED: Record<string, Measured> = {
+  wAAPLx: {
+    gaps: { overnightSd: 0.00925, nOvernight: 198, longSd: 0.00843, nLong: 52 },
+  },
+  wAMDx: {
+    gaps: { overnightSd: 0.02974, nOvernight: 198, longSd: 0.04839, nLong: 52 },
+  },
+  wAMZNx: {
+    gaps: { overnightSd: 0.01708, nOvernight: 198, longSd: 0.0127, nLong: 52 },
+  },
+  wASMLx: {
+    gaps: { overnightSd: 0.02279, nOvernight: 198, longSd: 0.01839, nLong: 52 },
+  },
+  wAVGOx: {
+    gaps: { overnightSd: 0.02319, nOvernight: 198, longSd: 0.0203, nLong: 52 },
+  },
+  wCOINx: {
+    gaps: { overnightSd: 0.02322, nOvernight: 198, longSd: 0.02533, nLong: 52 },
+  },
+  wCRCLx: {
+    gaps: { overnightSd: 0.02787, nOvernight: 198, longSd: 0.02982, nLong: 52 },
+  },
+  wDELLx: {
+    gaps: { overnightSd: 0.02945, nOvernight: 198, longSd: 0.01853, nLong: 52 },
+  },
+  wEWYx: {
+    gaps: { overnightSd: 0.02814, nOvernight: 198, longSd: 0.02701, nLong: 52 },
+  },
+  wGLDx: {
+    gaps: { overnightSd: 0.01393, nOvernight: 198, longSd: 0.01414, nLong: 52 },
+  },
+  wGOOGLx: {
+    gaps: { overnightSd: 0.01453, nOvernight: 198, longSd: 0.01405, nLong: 52 },
+  },
+  wHOODx: {
+    gaps: { overnightSd: 0.02444, nOvernight: 198, longSd: 0.02572, nLong: 52 },
+  },
+  wIBMx: {
+    gaps: { overnightSd: 0.02331, nOvernight: 198, longSd: 0.0139, nLong: 52 },
+  },
+  wINTCx: {
+    gaps: { overnightSd: 0.03579, nOvernight: 198, longSd: 0.02769, nLong: 52 },
+  },
+  wIWMx: {
+    gaps: { overnightSd: 0.00728, nOvernight: 198, longSd: 0.00828, nLong: 52 },
+  },
+  wMETAx: {
+    gaps: { overnightSd: 0.01886, nOvernight: 198, longSd: 0.01149, nLong: 52 },
+  },
+  wMRVLx: {
+    gaps: { overnightSd: 0.03392, nOvernight: 198, longSd: 0.03052, nLong: 52 },
+  },
+  wMSFTx: {
+    gaps: { overnightSd: 0.01433, nOvernight: 198, longSd: 0.00999, nLong: 52 },
+  },
+  wMSTRx: {
+    gaps: { overnightSd: 0.02518, nOvernight: 198, longSd: 0.0326, nLong: 52 },
+  },
+  wMUx: {
+    gaps: { overnightSd: 0.03439, nOvernight: 198, longSd: 0.03153, nLong: 52 },
+  },
+  wNVDAx: {
+    gaps: { overnightSd: 0.01327, nOvernight: 198, longSd: 0.0146, nLong: 52 },
+  },
+  wORCLx: {
+    gaps: { overnightSd: 0.03148, nOvernight: 198, longSd: 0.01841, nLong: 52 },
+  },
+  wPLTRx: {
+    gaps: { overnightSd: 0.02029, nOvernight: 198, longSd: 0.01853, nLong: 52 },
+  },
+  wQQQx: {
+    gaps: { overnightSd: 0.00786, nOvernight: 198, longSd: 0.00884, nLong: 52 },
+  },
+  wSKHYx: {
+    gaps: { overnightSd: 0.04311, nOvernight: 189, longSd: 0.04375, nLong: 53 },
+  },
+  wSNDKx: {
+    gaps: { overnightSd: 0.04354, nOvernight: 198, longSd: 0.03233, nLong: 52 },
+  },
+  wSPYx: {
+    gaps: { overnightSd: 0.005, nOvernight: 198, longSd: 0.00626, nLong: 52 },
+  },
+  wTSLAx: {
+    gaps: { overnightSd: 0.01444, nOvernight: 198, longSd: 0.01692, nLong: 52 },
+  },
+  wTSMx: {
+    gaps: { overnightSd: 0.01889, nOvernight: 198, longSd: 0.0163, nLong: 52 },
+  },
+};
+
 
 /**
  * The spec for any xStock, admitted or not.
@@ -151,7 +330,6 @@ export function specFor(symbol: string): AssetSpec {
     ASSETS.find((a) => a.symbol === symbol) ?? {
       symbol,
       reference: null,
-      signals: [],
       noReferenceNote:
         'tradable on X Layer, but the reference-market admission test has not ' +
         'been run on it — fair value withheld until it is',
@@ -162,16 +340,6 @@ export function specFor(symbol: string): AssetSpec {
 /** True when the admission test admitted this asset's reference market. */
 export function isModelled(symbol: string): boolean {
   return ASSETS.some((a) => a.symbol === symbol && a.admittedOn != null);
-}
-
-export interface SignalContribution {
-  symbol: string;
-  beta: number;
-  /** signal return since the equity's last official print */
-  returnPct: number;
-  /** contribution to the fair-value move, in bps */
-  contributionBps: number;
-  r2: number;
 }
 
 export interface GapRiskBreakdown {
@@ -185,14 +353,19 @@ export interface FairValueReport {
   symbol: string;
   state: MarketState;
   reference: string | null;
-  /** last official regular-session print */
+  /** last official regular-session print — of **one share**, not of the token */
   anchorPrice: number | null;
   anchorAt: number | null;
   stalenessHours: number;
+  /**
+   * Shares per token, from the issuer's corporate-action multiplier. `fairValue`
+   * already has it applied; it is reported so the difference between "the share
+   * moved" and "the token holds more shares" stays visible to a reader.
+   */
+  sharesPerToken: number;
   fairValue: number | null;
   /** half-width of the 95% band, in bps */
   confidenceBps: number | null;
-  signals: SignalContribution[];
   /** price observed on X Layer, if supplied */
   onchainPrice?: number;
   /** on-chain price vs fair value, in bps */
@@ -254,35 +427,61 @@ export function regress(
   };
 }
 
-// ----------------------------------------------------------------- session
-
-export function classifySession(ref: Series, now: number): MarketState {
-  const s = ref.session;
-  if (!s) return 'CLOSED_OVERNIGHT';
-  if (now >= s.regularStart && now < s.regularEnd) return 'OPEN';
-  if (now >= s.preStart && now < s.regularStart) return 'PRE';
-  if (now >= s.regularEnd && now < s.postEnd) return 'POST';
-
-  // More than ~2 days since the last regular print means a weekend or holiday
-  // rather than an ordinary overnight gap.
-  const gapHours = (now - ref.lastRegularPrintAt) / 3600;
-  return gapHours > 26 ? 'CLOSED_WEEKEND' : 'CLOSED_OVERNIGHT';
-}
-
 // -------------------------------------------------------------- fair value
 
-const SIGNAL_CACHE = new Map<string, Promise<{ intra: Series; day: Series }>>();
+/**
+ * `wAAPLx` → the issuer's `AAPLx`.
+ *
+ * `pnpm reconcile` resolves this against the wrapper address the issuer
+ * publishes, which is evidence; here it is the mechanical strip, which is a
+ * guess. It resolved 30 of 30 when checked both ways, and the address lookup
+ * costs eight extra requests on a path that runs per asset — so the guess is
+ * used here and the address check stays where it belongs, in the test that
+ * exists to catch exactly this kind of assumption.
+ */
+export const issuerSymbolFor = (onchainSymbol: string) =>
+  onchainSymbol.replace(/^w/, '');
 
-function loadSignal(symbol: string) {
-  let p = SIGNAL_CACHE.get(symbol);
-  if (!p) {
-    p = (async () => ({
-      intra: await intraday(symbol),
-      day: await daily(symbol),
-    }))();
-    SIGNAL_CACHE.set(symbol, p);
+async function issuerQuoteFor(onchainSymbol: string): Promise<IssuerQuote | null> {
+  const book = await issuerBook();
+  return book.get(issuerSymbolFor(onchainSymbol)) ?? null;
+}
+
+/**
+ * The issuer's session vocabulary, mapped onto ours.
+ *
+ * `extended` is its own state rather than being forced into `PRE` or `POST`:
+ * the issuer does not say which side of the session it is on, and picking one
+ * would be wrong half the time. `PRE` and `POST` survive as types because the
+ * FE renders whatever it is given and nothing switches exhaustively on them.
+ */
+const newYorkHour = () =>
+  Number(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      hour: 'numeric',
+      hour12: false,
+    }).format(new Date()),
+  );
+
+function stateFromIssuer(q: IssuerQuote): MarketState {
+  if (q.halted) return 'NO_REFERENCE';
+  switch (q.period) {
+    case 'market':
+      return 'OPEN';
+    case 'extended':
+      // The issuer says 'extended' without saying which side of the day. The
+      // contract's enum has six members and src/guard.ts mirrors it line for
+      // line, so inventing a seventh would move the whole stack — oracle is
+      // immutable in both PolicyGuard and Executor. The side is recoverable
+      // from the clock instead: an extended session never straddles noon in
+      // New York, and what hour it is there is not licensed data.
+      return newYorkHour() < 12 ? 'PRE' : 'POST';
+    case 'overnight':
+      return 'CLOSED_OVERNIGHT';
+    default:
+      return 'CLOSED_WEEKEND';
   }
-  return p;
 }
 
 export async function computeFairValue(
@@ -292,114 +491,111 @@ export async function computeFairValue(
   const now = opts.now ?? Math.floor(Date.now() / 1000);
   const notes: string[] = [];
 
-  if (!spec.reference) {
-    // No public market: publish nothing, flag maximum risk. This is the honest
-    // answer for wSPCXx and it is why a separate private-market price discovery
-    // product is a different problem, not a parameter of this one.
+  // The issuer's live two-sided mark for this token. Measured, not assumed: a
+  // regression of (chain vs issuer mid) on (multiplier − 1) across all thirty
+  // assets gives slope 1.09, R² 0.82, intercept −4bp — so the issuer quotes
+  // **one share** and the chain prices **one token**, and the multiplier below
+  // is the difference rather than a double count. See D62.
+  const quote = await issuerQuoteFor(spec.symbol);
+  if (!quote) {
     return {
       symbol: spec.symbol,
       state: 'NO_REFERENCE',
-      reference: null,
+      reference: spec.reference,
       anchorPrice: null,
       anchorAt: null,
       stalenessHours: Infinity,
+      sharesPerToken: spec.multiplier ?? 1,
       fairValue: null,
       confidenceBps: null,
-      signals: [],
       onchainPrice: opts.onchainPrice,
       publishable: false,
       gapRisk: 100,
       gapRiskParts: { staleness: 1, displacement: 0, uncertainty: 1, basis: 0 },
-      notes: [spec.noReferenceNote ?? 'no public reference market — fair value withheld by design'],
+      notes: ['the issuer is not quoting this token — fair value withheld'],
     };
   }
 
-  // A reference quoted in another currency is converted to USD once, here, so
-  // every calculation downstream is currency-blind. Where the FX leg is
-  // unavailable the raw series is kept and the basis is marked unverifiable —
-  // the same refusal as before, now reached only when it is actually true.
-  const refIntraRaw = await intraday(spec.reference);
-  const refDailyRaw = await daily(spec.reference);
-  const refIntraUsd = await toUsd(refIntraRaw);
-  const refDailyUsd = await toUsd(refDailyRaw);
-  const fxUnavailable = refIntraUsd == null || refDailyUsd == null;
-  const refIntra = refIntraUsd ?? refIntraRaw;
-  const refDaily = refDailyUsd ?? refDailyRaw;
+  const state = stateFromIssuer(quote);
+  const quoting = quote.canQuote && !quote.halted && quote.period !== 'closed';
+  const anchorAt = quote.observedAt;
+  const anchorPrice = quote.mid;
+  const stalenessHours = Math.max(0, (now - anchorAt) / 3600);
 
-  if (refIntra.nativeCurrency) {
+  if (quote.halted) notes.push('the issuer has halted trading in this token');
+  else if (!quoting) notes.push(`the issuer is not quoting — session ${quote.period}`);
+
+  // Shares per token. The issuer prices *one share*; the token is a claim on
+  // `sharesPerToken` of them, and the two stopped being the same number the
+  // first time the underlying paid a dividend.
+  const sharesPerToken = spec.multiplier ?? 1;
+  const fairValue = anchorPrice * sharesPerToken;
+
+  if (sharesPerToken !== 1) {
     notes.push(
-      `reference quotes in ${refIntra.nativeCurrency}, converted at ` +
-        `${refIntra.fxRate!.toFixed(2)} ${refIntra.nativeCurrency}/USD — the FX leg is live, ` +
-        'so only the equity component is carried forward',
-    );
-  } else if (fxUnavailable) {
-    notes.push(
-      `reference quotes in ${refIntraRaw.currency} and no ${refIntraRaw.currency}/USD rate ` +
-        'is available — basis withheld',
+      `token holds ${sharesPerToken.toFixed(6)} shares — ` +
+        `${((sharesPerToken - 1) * 10_000).toFixed(1)}bp of reinvested dividends, ` +
+        `measured ${MULTIPLIERS_MEASURED_ON}`,
     );
   }
 
-  const state = classifySession(refIntra, now);
-  const anchorAt = refIntra.lastRegularPrintAt;
-  const anchorPrice = refIntra.last;
-  const stalenessHours = (now - anchorAt) / 3600;
-
-  // While the reference market is open, its own print is the fair value.
-  if (state === 'OPEN') {
-    notes.push('reference market open — fair value is the live print');
-  }
-
-  const refDailyByDate = byDate(refDaily);
-  const contributions: SignalContribution[] = [];
-  let moveLog = 0;
-  let bestR2 = 0;
-
-  for (const sig of spec.signals) {
-    const { intra, day } = await loadSignal(sig);
-
-    const at = priceAt(intra, anchorAt);
-    const nowPrice = priceAt(intra, now) ?? intra.last;
-    if (at == null || !(at > 0) || !(nowPrice > 0)) {
-      notes.push(`${sig}: no overlapping quote, skipped`);
-      continue;
-    }
-
-    const { ra, rb } = alignedReturns(refDailyByDate, byDate(day));
-    const { beta, r2, residSd } = regress(ra, rb);
-    if (ra.length < 20) notes.push(`${sig}: only ${ra.length} aligned days`);
-
-    const r = Math.log(nowPrice / at);
-    moveLog += beta * r;
-    bestR2 = Math.max(bestR2, Math.max(0, r2));
-    void residSd; // band comes from realised gaps, not from daily residuals
-
-    contributions.push({
-      symbol: sig,
-      beta,
-      returnPct: (Math.exp(r) - 1) * 100,
-      contributionBps: (Math.exp(beta * r) - 1) * 10_000,
-      r2,
-    });
-  }
-
-  const fairValue =
-    state === 'OPEN' ? anchorPrice : anchorPrice * Math.exp(moveLog);
+  const measured = MEASURED[spec.symbol];
+  const fxUnavailable = false;
 
   // The band is the empirical distribution of close-to-open jumps for this very
   // security, using the weekend sample when the gap spans a weekend, shrunk by
   // however much of that jump the signals actually explain. No scaling of daily
   // volatility across calendar time — an asset sits still over a weekend, and
   // pretending otherwise is what produced ±19% bands.
-  const gaps = gapStats(refDaily);
-  const isLongGap = stalenessHours > 48;
-  const sample = isLongGap && gaps.nLong >= 5 ? gaps.longSd : gaps.overnightSd;
-  const unexplained = Math.sqrt(Math.max(0, 1 - bestR2));
-  const confidenceBps = state === 'OPEN' ? 0 : sample * unexplained * 1.96 * 10_000;
+  //
+  // **The band and the gap risk stopped being the same measurement here**, and
+  // separating them is the point of this version.
+  //
+  // The band is uncertainty about the fair value *right now*. While the issuer
+  // is quoting a two-sided market it will actually transact in — minimum
+  // $1,000, up to $20M overnight — the honest width is that market's own
+  // spread. Anything inside it is a price the issuer itself treats as fair.
+  //
+  // The open-gap distribution does not belong there. How far this security has
+  // historically jumped between one session's close and the next session's open
+  // says nothing about whether the current mark is right; it says what the
+  // *position* is exposed to. So it moves to `gapRiskParts.displacement` below,
+  // where a mandate can refuse on it, instead of inflating a band the guard
+  // compares a live price against.
+  //
+  // When nobody is quoting there is no spread to use, and the jump distribution
+  // becomes the only thing left — so it is the band, unshrunk. There is no
+  // carry-forward to explain any part of it away any more.
+  const gaps = measured?.gaps;
+  const isWeekend = state === 'CLOSED_WEEKEND';
+  const sample = gaps ? (isWeekend && gaps.nLong >= 5 ? gaps.longSd : gaps.overnightSd) : 0;
 
-  if (state !== 'OPEN') {
+  // **Unmeasured must not read as zero.** An asset with no recorded gap
+  // statistics — wSPCXx, whose underlying has never had a listing to measure —
+  // briefly scored 2 out of 100 and came out the safest thing in the universe,
+  // because a missing σ multiplied out to a zero open-gap term. Missing data is
+  // the least safe state, not the most.
+  const gapKnown = gaps != null && sample > 0;
+  const gapBandBps = gapKnown ? sample * 1.96 * 10_000 : NaN;
+  if (!gapKnown) {
     notes.push(
-      `band from ${isLongGap && gaps.nLong >= 5 ? `${gaps.nLong} weekend` : `${gaps.nOvernight} overnight`} gaps` +
-        `, σ=${(sample * 100).toFixed(2)}%, ${(unexplained * 100).toFixed(0)}% unexplained`,
+      'no recorded open-gap statistics for this asset — the jump it carries to the ' +
+        'open is unmeasured, and scored as if it were the worst in the universe',
+    );
+  }
+
+  // With nothing quoting and no gap distribution, there is nothing left to build
+  // a width from, and a zero band would be a lie the guard acts on.
+  const confidenceBps = quoting ? quote.spreadBps : gapKnown ? gapBandBps : null;
+
+  if (quoting) {
+    notes.push(
+      `band is the issuer's own ${quote.spreadBps}bp spread for the ${quote.period} session`,
+    );
+  } else if (gaps) {
+    notes.push(
+      `nobody is quoting — band from ${isWeekend && gaps.nLong >= 5 ? `${gaps.nLong} weekend` : `${gaps.nOvernight} overnight`} gaps` +
+        `, σ=${(sample * 100).toFixed(2)}%, recorded ${MEASURED_ON}`,
     );
   }
 
@@ -418,30 +614,37 @@ export async function computeFairValue(
     );
   }
 
-  const displacementBps = (Math.exp(moveLog) - 1) * 10_000;
-
-  // A basis is only meaningful when both legs are quoted in the same currency
-  // and the reference genuinely corresponds to the wrapped security. Where that
-  // is unproven, withhold the number rather than print a misleading one.
+  // A basis is only meaningful when the reference genuinely corresponds to the
+  // wrapped security. The FX leg that used to make this conditional is gone —
+  // the issuer quotes every token in USD, including the Seoul listing that
+  // needed a KRW conversion before.
   let basisBps: number | undefined;
   if (opts.onchainPrice && fairValue && !fxUnavailable) {
     basisBps = (opts.onchainPrice / fairValue - 1) * 10_000;
   }
 
-  // An unverifiable basis is the riskiest state of all — it means we cannot
-  // tell whether the pool is mispriced. It must score higher than a known
-  // small basis, never zero.
-  const basisUnverified = fxUnavailable;
-
   const parts: GapRiskBreakdown = {
-    staleness: clamp01(stalenessHours / 72),
-    displacement: clamp01(Math.abs(displacementBps) / 300),
-    uncertainty: clamp01(confidenceBps / 400),
-    basis: basisUnverified
-      ? 1
-      : basisBps === undefined
-        ? 0
-        : clamp01(Math.abs(basisBps) / 500),
+    // Is anyone making a market at all? Binary on purpose: a token nobody will
+    // quote is not a little bit risky, it is a different situation. This
+    // replaces "hours since the last print", which measured the wrong thing
+    // once the mark became live — the old model scored 0.16 here at 3am purely
+    // because New York had shut eleven hours earlier, while a dealer was
+    // quoting the token the whole time.
+    staleness: quoting ? 0 : 1,
+    // What the *position* is exposed to: how far this security has historically
+    // jumped from one session's close to the next open. It stays in the score
+    // while the issuer is quoting, because taking the position at 3am really
+    // does carry the open, even when the mark is perfect.
+    //
+    // Normalised at the widest band actually recorded across admitted assets
+    // (wSNDKx, 853bp) rather than at a round number, so the term spans its own
+    // measured range instead of saturating. At the 300bp the carry-forward
+    // displacement used, half the universe pinned at maximum and the score
+    // stopped distinguishing wQQQx from wSNDKx — 98bp against 853bp.
+    displacement: gapKnown ? clamp01(gapBandBps / WIDEST_RECORDED_BAND_BPS) : 1,
+    uncertainty: confidenceBps == null ? 1 : clamp01(confidenceBps / 400),
+    basis:
+      basisBps === undefined ? 0 : clamp01(Math.abs(basisBps) / 500),
   };
 
   const gapRisk = Math.round(
@@ -461,12 +664,12 @@ export async function computeFairValue(
     anchorPrice,
     anchorAt,
     stalenessHours,
+    sharesPerToken,
     fairValue,
     confidenceBps,
-    signals: contributions,
     onchainPrice: opts.onchainPrice,
     basisBps,
-    publishable: spec.admittedOn != null && !basisUnverified,
+    publishable: spec.admittedOn != null && !quote.halted && confidenceBps != null,
     gapRisk,
     gapRiskParts: parts,
     notes,

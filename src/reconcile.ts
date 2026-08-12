@@ -15,27 +15,33 @@
  *   1. a candidate reference exists at all                     — NO_CANDIDATE
  *   2. the reference resolves and prints a price               — NO_QUOTE
  *   3. a USD rate exists for the currency it quotes in         — FX_REQUIRED
+ *   1. the issuer carries a token at this address             — NOT_CARRIED
+ *   2. the issuer publishes a price for it                     — NO_QUOTE
+ *   3. the issuer has not halted it                            — HALTED
  *   4. the wrapper has a live pool to compare against          — NO_VENUE
- *   5. the on-chain price reconciles with the reference        — BASIS
- *   6. enough aligned history to fit a carry-forward beta      — NO_HISTORY
+ *   5. the chain agrees with the issuer's mark                 — BASIS
  *
- * Step 5 is the one that matters, and wSKHYx is what it is for. The candidate
- * is right — SK Hynix, 000660.KS — and the KRW leg is no longer the obstacle:
- * the listing converts to USD and the comparison runs. It still fails, at
- * −86%, because X Layer quotes the wrapper at ~$137 against a share worth
- * ~$1,008. That rejection is the proof the test has teeth, and it is why the
- * list this produces is *measured* rather than asserted. An asset outside it is
- * outside it for a reason we can print. See D39.
+ * **The reference is the issuer's mark, not an exchange listing** (D62), and
+ * wSKHYx is why that matters rather than being a licence convenience. The old
+ * test rejected it at −86% against `000660.KS` and concluded the pool was not
+ * pricing a claim on an SK Hynix share. The rejection was right; the reason was
+ * wrong. The issuer's `underlyingIsin` is `US78392B2060` — a US depositary
+ * receipt, not the Seoul ordinary share — and a DR ratio is what a ~7× gap looks
+ * like. No amount of care with the exchange reference would have found that,
+ * because the exchange reference was the thing that was wrong.
+ *
+ * Step 5 is still the one that matters, and it is now like-for-like: the
+ * issuer's mid times shares per token, against the chain. Comparing a token
+ * against one share was measuring the dividend history and calling it basis.
  *
  * What this test does NOT do is judge the quality of the resulting fair value.
- * A reference with a weak beta fit is admitted, then carries a wide band, a
- * high uncertainty term in gap risk, and gets refused at the guard on its own
- * merits. Rejecting it here would hide a measurable answer behind a missing one.
+ * An asset with no recorded gap statistics is admitted, then carries the
+ * maximum open-gap term and a note saying it is unmeasured. Rejecting it here
+ * would hide a measurable answer behind a missing one.
  */
 import type { Address } from 'viem';
 import { serial } from './chain';
-import { alignedReturns, byDate, daily, intraday, toUsd } from './marketdata';
-import { regress } from './fairvalue';
+import { issuerBook, issuerFor, multiplierFor } from './issuer';
 import { loadVenues } from './planner';
 import { addressBySymbol } from './pool';
 
@@ -54,58 +60,19 @@ import { addressBySymbol } from './pool';
  */
 export const MAX_IDENTITY_BASIS_BPS = 2_000;
 
-/**
- * `regress` needs 20 observations before it will return a slope at all. Sixty
- * aligned trading days is roughly a quarter — enough that the beta is a fit
- * rather than a coincidence, and still reachable for a listing that IPO'd
- * inside the last year.
- */
-export const MIN_ALIGNED_DAYS = 60;
-
-/**
- * The 24/7 instruments that can carry a US close forward. Every candidate is
- * fitted against all of them and the best R² wins, so signal choice is measured
- * rather than assigned by eye — the same discipline as the mapping itself.
- *
- * They are correlated with each other, which is exactly why only the winner is
- * kept: the fair-value engine sums univariate betas, so listing two overlapping
- * signals would count the same move twice.
- */
-export const SIGNAL_CANDIDATES = ['NQ=F', 'ES=F', 'BTC-USD'] as const;
-
-/**
- * The reference each wrapper claims to track, before any of it is believed.
- *
- * xStock tickers are `w<TICKER>x`, so the candidate is mechanical — and being
- * mechanical is the point: this table is a guess generator, not a source of
- * truth. Overrides exist only where the mechanical strip produces something
- * that is not a listing.
- */
-const REFERENCE_OVERRIDES: Record<string, string | null> = {
-  // Seoul listing, quoted in KRW and converted through KRW=X. Named correctly,
-  // converted correctly, and still rejected on basis — see D39.
-  wSKHYx: '000660.KS',
-  // SpaceX is private. There is no listing to reconcile against, and no amount
-  // of engineering produces one.
-  wSPCXx: null,
-};
-
-/** `wAAPLx` → `AAPL`. The naive guess, which then has to survive the test. */
-export function candidateReference(symbol: string): string | null {
-  if (symbol in REFERENCE_OVERRIDES) return REFERENCE_OVERRIDES[symbol]!;
-  const m = /^w(.+)x$/.exec(symbol);
-  return m ? m[1]! : null;
-}
-
 export type ReconcileVerdict = 'ADMIT' | 'REJECT';
 
 export type ReconcileReason =
-  | 'NO_CANDIDATE'
+  /** the issuer has no token at this address */
+  | 'NOT_CARRIED'
+  /** carried, but the issuer publishes no price */
   | 'NO_QUOTE'
-  | 'FX_REQUIRED'
+  /** the issuer has stopped trading it */
+  | 'HALTED'
+  /** no USDG pool on X Layer to compare against */
   | 'NO_VENUE'
-  | 'BASIS'
-  | 'NO_HISTORY';
+  /** the chain and the issuer disagree by too much to be the same security */
+  | 'BASIS';
 
 export interface SignalFit {
   symbol: string;
@@ -132,8 +99,49 @@ export interface ReconcileResult {
   basisBps?: number;
   /** every signal that fitted, best R² first */
   fits: SignalFit[];
+  /**
+   * What the issuer says, observed alongside the reference and **used for
+   * nothing**. No verdict below depends on any of these fields.
+   *
+   * They are here to answer one question with measurements instead of opinion:
+   * could Backed replace Yahoo as the reference leg? A third opinion on the same
+   * quantity is also worth having on its own merits — two sources that agree are
+   * a much stronger claim than one source nobody can check. See D62.
+   */
+  issuer?: IssuerObservation;
 }
 
+export interface IssuerObservation {
+  /** the issuer's symbol, resolved by wrapper address where possible */
+  symbol: string;
+  /** midpoint of the issuer's two-sided quote for the token */
+  mid?: number;
+  /** the issuer's own spread for the session it is currently in */
+  spreadBps?: number;
+  period?: string;
+  halted?: boolean;
+  /** shares per token — 1.0 until a dividend or split moves it */
+  multiplier?: number;
+  /** on-chain price vs the issuer's mid, in bps */
+  basisBps?: number;
+  /**
+   * The multiplier direction, decided by measurement rather than by reading the
+   * documentation. Both adjustments are computed against the same on-chain
+   * price; whichever lands closer to zero is the one the chain agrees with.
+   */
+  multiplied?: number;
+  divided?: number;
+  /** `'x'`, `'/'`, or `'—'` when the multiplier is 1 and the question is moot */
+  closer?: 'x' | '/' | '—';
+}
+
+/**
+ * Run the admission test for one wrapper.
+ *
+ * Every gate returns the *measured* reason it failed, so a rejection can be
+ * quoted at a user. "No reference market" with nothing behind it is the answer
+ * this module exists to stop producing.
+ */
 /**
  * Run the admission test for one wrapper.
  *
@@ -146,126 +154,88 @@ export async function reconcile(
   address: Address,
 ): Promise<ReconcileResult> {
   const base = { symbol, address, fits: [] as SignalFit[] };
-  const candidate = candidateReference(symbol);
 
-  if (!candidate) {
+  // Resolved by the wrapper address the issuer publishes, not by stripping the
+  // leading `w`. The strip is a naming convention and this file exists because
+  // a naming convention is a claim rather than evidence.
+  const asset = await issuerFor(symbol, address);
+  if (!asset) {
     return {
       ...base,
       candidate: null,
       verdict: 'REJECT',
-      reason: 'NO_CANDIDATE',
-      detail: 'no public listing to reconcile against',
+      reason: 'NOT_CARRIED',
+      detail: 'the issuer does not carry a token at this address',
     };
   }
 
-  let refIntraRaw;
-  let refDailyRaw;
-  try {
-    refIntraRaw = await intraday(candidate);
-    refDailyRaw = await daily(candidate);
-  } catch (e) {
-    return {
-      ...base,
-      candidate,
-      verdict: 'REJECT',
-      reason: 'NO_QUOTE',
-      detail: `${candidate} did not resolve: ${(e as Error).message}`,
-    };
-  }
-
-  if (!(refIntraRaw.last > 0)) {
-    return {
-      ...base,
-      candidate,
-      verdict: 'REJECT',
-      reason: 'NO_QUOTE',
-      detail: `${candidate} resolved but printed no price`,
-    };
-  }
-
-  // Everything past this point is in USD. A foreign listing is converted rather
-  // than refused, so `FX_REQUIRED` now means the rate is genuinely unavailable —
-  // not that we had not built the leg. Converting first also means the identity
-  // test still has to pass afterwards: the FX leg makes the comparison possible,
-  // it does not make it succeed.
-  const refIntra = (await toUsd(refIntraRaw)) ?? refIntraRaw;
-  const refDaily = (await toUsd(refDailyRaw)) ?? refDailyRaw;
-
-  const refByDate = byDate(refDaily);
-  const fits: SignalFit[] = [];
-  for (const sig of SIGNAL_CANDIDATES) {
-    const sigDaily = await daily(sig);
-    const { ra, rb } = alignedReturns(refByDate, byDate(sigDaily));
-    if (ra.length < MIN_ALIGNED_DAYS) continue;
-    const { beta, r2 } = regress(ra, rb);
-    fits.push({ symbol: sig, beta, r2, alignedDays: ra.length });
-  }
-  fits.sort((a, b) => b.r2 - a.r2);
-  const withFits = {
-    ...base,
-    candidate,
-    fits,
-    // The native currency, not the converted one — a price that used to be KRW
-    // must stay visibly a converted price in the output.
-    currency: refIntraRaw.currency,
-    fxRate: refIntra.fxRate,
-    referencePrice: refIntra.last,
+  const book = await issuerBook();
+  const quote = book.get(asset.symbol);
+  const mult = await multiplierFor(asset.symbol);
+  const issuer: IssuerObservation = {
+    symbol: asset.symbol,
+    mid: quote?.mid,
+    spreadBps: quote?.spreadBps,
+    period: quote?.period ?? asset.period ?? undefined,
+    halted: quote?.halted ?? asset.halted,
+    multiplier: mult?.current,
   };
+  const withIssuer = { ...base, candidate: asset.underlying, issuer, currency: 'USD' };
 
-  if (refIntra.currency !== 'USD') {
+  if (!quote || !(quote.mid > 0)) {
     return {
-      ...withFits,
+      ...withIssuer,
       verdict: 'REJECT',
-      reason: 'FX_REQUIRED',
-      detail:
-        `${candidate} quotes in ${refIntraRaw.currency} and no ` +
-        `${refIntraRaw.currency}/USD rate is available, so the basis against a ` +
-        'USDG pool cannot be computed',
+      reason: 'NO_QUOTE',
+      detail: `${asset.symbol} is carried but the issuer publishes no price for it`,
     };
   }
+  if (quote.halted) {
+    return {
+      ...withIssuer,
+      referencePrice: quote.mid,
+      verdict: 'REJECT',
+      reason: 'HALTED',
+      detail: `the issuer has halted trading in ${asset.symbol}`,
+    };
+  }
+
+  // Shares per token, applied here for the same reason it is applied in the
+  // fair value: the issuer quotes one share and the chain prices one token.
+  // Comparing them without it measures the dividend history and calls it basis.
+  const sharesPerToken = mult?.current ?? 1;
+  const referencePrice = quote.mid * sharesPerToken;
+  const withPrice = { ...withIssuer, referencePrice };
 
   const venues = await loadVenues(address);
   const onchainPrice = venues[0]?.spot;
   if (!onchainPrice || !(onchainPrice > 0)) {
     return {
-      ...withFits,
+      ...withPrice,
       verdict: 'REJECT',
       reason: 'NO_VENUE',
       detail: 'no USDG pool with a readable spot price',
     };
   }
 
-  const basisBps = (onchainPrice / refIntra.last - 1) * 10_000;
+  const basisBps = (onchainPrice / referencePrice - 1) * 10_000;
+  issuer.basisBps = basisBps;
   if (Math.abs(basisBps) > MAX_IDENTITY_BASIS_BPS) {
     return {
-      ...withFits,
+      ...withPrice,
       onchainPrice,
       basisBps,
       verdict: 'REJECT',
       reason: 'BASIS',
       detail:
-        `chain quotes ${onchainPrice.toFixed(2)} USD against ${candidate} at ` +
-        `${refIntra.last.toFixed(2)} USD` +
-        (refIntra.nativeCurrency
-          ? ` (${refIntraRaw.last.toLocaleString('en-US')} ${refIntra.nativeCurrency} at ` +
-            `${refIntra.fxRate!.toFixed(2)}/USD)`
-          : '') +
-        ` — ${(basisBps / 100).toFixed(1)}%, too far apart to be the same security`,
+        `chain quotes ${onchainPrice.toFixed(2)} USD against the issuer's ` +
+        `${quote.mid.toFixed(2)} × ${sharesPerToken.toFixed(6)} shares = ` +
+        `${referencePrice.toFixed(2)} USD — ${(basisBps / 100).toFixed(1)}%, too far apart ` +
+        'to be the same security',
     };
   }
 
-  if (fits.length === 0) {
-    return {
-      ...withFits,
-      onchainPrice,
-      basisBps,
-      verdict: 'REJECT',
-      reason: 'NO_HISTORY',
-      detail: `fewer than ${MIN_ALIGNED_DAYS} aligned days against any signal — no beta to fit`,
-    };
-  }
-
-  return { ...withFits, onchainPrice, basisBps, verdict: 'ADMIT' };
+  return { ...withPrice, onchainPrice, basisBps, verdict: 'ADMIT' };
 }
 
 /** The whole X Layer universe, tested one at a time — the public RPC fans out badly. */
