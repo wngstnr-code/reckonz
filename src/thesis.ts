@@ -109,7 +109,7 @@ export function thesisHash(thesis: Thesis): `0x${string}` {
 }
 
 /** Deterministic JSON: sorted keys at every depth, arrays left alone. */
-function canonicalise(value: unknown): string {
+export function canonicalise(value: unknown): string {
   if (value === null || typeof value !== 'object') return JSON.stringify(value) ?? 'null';
   if (Array.isArray(value)) return `[${value.map(canonicalise).join(',')}]`;
   const entries = Object.entries(value as Record<string, unknown>)
@@ -167,73 +167,6 @@ Rules:
 export interface ThesisProvider {
   compile(text: string): Promise<Thesis>;
   allocate(thesis: Thesis, universe: { symbol: string; name?: string }[]): Promise<Allocation>;
-}
-
-/**
- * Live provider. Uses structured outputs so the response is schema-valid by
- * construction rather than parsed hopefully out of prose.
- */
-export function claudeProvider(): ThesisProvider {
-  return {
-    async compile(text) {
-      const { default: Anthropic } = await import('@anthropic-ai/sdk');
-      const { zodOutputFormat } = await import('@anthropic-ai/sdk/helpers/zod');
-      const client = new Anthropic();
-
-      const metricList = Object.entries(OBSERVABLE_METRICS)
-        .map(([k, v]) => `- ${k}: ${v}`)
-        .join('\n');
-
-      const response = await client.messages.parse({
-        model: 'claude-opus-5',
-        max_tokens: 16000,
-        thinking: { type: 'adaptive' },
-        output_config: { effort: 'high', format: zodOutputFormat(ThesisSchema) },
-        system: COMPILER_SYSTEM,
-        messages: [
-          {
-            role: 'user',
-            content: `Metrics this system can measure at execution time:\n${metricList}\n\nThesis:\n${text}`,
-          },
-        ],
-      });
-
-      if (response.stop_reason === 'refusal') {
-        throw new Error(`compile refused: ${response.stop_details?.category ?? 'unknown'}`);
-      }
-      if (!response.parsed_output) throw new Error('compile returned no structured output');
-      return response.parsed_output;
-    },
-
-    async allocate(thesis, universe) {
-      const { default: Anthropic } = await import('@anthropic-ai/sdk');
-      const { zodOutputFormat } = await import('@anthropic-ai/sdk/helpers/zod');
-      const client = new Anthropic();
-
-      const response = await client.messages.parse({
-        model: 'claude-opus-5',
-        max_tokens: 16000,
-        thinking: { type: 'adaptive' },
-        output_config: { effort: 'high', format: zodOutputFormat(AllocationSchema) },
-        system: ALLOCATOR_SYSTEM,
-        messages: [
-          {
-            role: 'user',
-            content:
-              `Investable universe on X Layer:\n` +
-              universe.map((a) => `- ${a.symbol}${a.name ? ` (${a.name})` : ''}`).join('\n') +
-              `\n\nCompiled thesis:\n${JSON.stringify(thesis, null, 2)}`,
-          },
-        ],
-      });
-
-      if (response.stop_reason === 'refusal') {
-        throw new Error(`allocate refused: ${response.stop_details?.category ?? 'unknown'}`);
-      }
-      if (!response.parsed_output) throw new Error('allocate returned no structured output');
-      return response.parsed_output;
-    },
-  };
 }
 
 // ------------------------------------------------------------- compilation

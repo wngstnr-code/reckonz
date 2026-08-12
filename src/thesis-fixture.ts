@@ -1,5 +1,5 @@
 /**
- * Deterministic provider used by tests and by the demo when no Anthropic
+ * Deterministic provider used by tests and by the demo when no LLM
  * credential is configured.
  *
  * This is a recorded example of what the live compiler produces — it is NOT a

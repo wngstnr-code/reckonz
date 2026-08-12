@@ -1,7 +1,7 @@
 /**
  * Gemini provider for the Thesis Compiler.
  *
- * Same `ThesisProvider` contract as the Claude one — the schema, the prompts,
+ * Implements `ThesisProvider`, the same interface the fixture does — the schema, the prompts,
  * and everything downstream are unchanged. Only the transport differs, which is
  * the point of having the interface: the observable-metric contract (D15) is
  * enforced by the schema, so it holds whichever model is behind it.
