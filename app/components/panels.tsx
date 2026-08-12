@@ -295,28 +295,26 @@ export function OraclePanel({ oracle }: { oracle: NonNullable<RunState['oracle']
                 </Metric>
               </div>
 
+              {/*
+                The four components kept their field names when D62 rewrote the
+                engine, because renaming them would have broken this seam for no
+                gain — but two of them changed meaning, so the labels moved:
+
+                  parts.staleness    → "not quoting": binary now. The mark is
+                                       live, so hours-since-print stopped being
+                                       the question; whether anyone is making a
+                                       market in the token is.
+                  parts.displacement → "open gap": nothing is carried forward
+                                       any more. This is what the position is
+                                       exposed to when the market reopens, and
+                                       it stays in the score even when the price
+                                       is perfect.
+              */}
               <p className="mt-2.5 font-mono text-[11px] text-faint">
-                stale{' '}
-                {Number.isFinite(r.stalenessHours)
-                  ? `${Math.max(0, r.stalenessHours).toFixed(1)}h`
-                  : '—'}{' '}
-                ·
-                gap risk = staleness {parts.staleness.toFixed(2)} / displacement{' '}
-                {parts.displacement.toFixed(2)} / uncertainty {parts.uncertainty.toFixed(2)} / basis{' '}
+                gap risk = not quoting {parts.staleness.toFixed(2)} / open gap{' '}
+                {parts.displacement.toFixed(2)} / band {parts.uncertainty.toFixed(2)} / basis{' '}
                 {parts.basis.toFixed(2)}
               </p>
-
-              {r.signals.length > 0 && (
-                <p className="mt-1 font-mono text-[11px] text-faint">
-                  carried forward by{' '}
-                  {r.signals
-                    .map(
-                      (s) =>
-                        `${s.symbol} ${s.returnPct >= 0 ? '+' : ''}${s.returnPct.toFixed(2)}% × β${s.beta.toFixed(2)} (R²${s.r2.toFixed(2)})`,
-                    )
-                    .join('  ')}
-                </p>
-              )}
 
               {v.decision.detail && (
                 <p

@@ -1,4 +1,7 @@
 import { Console } from './components/Console';
+import { Mandate } from './components/Mandate';
+import { MandateManage } from './components/MandateManage';
+import { Wallet } from './components/Wallet';
 import { MAINNET, TESTNET } from '@/src/deployments';
 import { DEFAULT_MANDATE } from '@/src/guard';
 import { pickProvider } from '@/src/provider';
@@ -38,6 +41,7 @@ export default function Page() {
           </div>
 
           <div className="flex flex-col items-end gap-1.5">
+            <Wallet />
             {deployments.map((d) => (
               <span
                 key={d.chainId}
@@ -60,6 +64,10 @@ export default function Page() {
 
       <main className="mx-auto max-w-[1080px] px-6">
         <Console />
+
+        <Mandate />
+
+        <MandateManage />
 
         <section className="mb-4 rounded-xl border border-line bg-panel px-6 py-5">
           <h2 className="mb-3 text-[15px] font-semibold tracking-tight">
