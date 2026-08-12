@@ -110,7 +110,15 @@ export interface IssuerAsset {
   period: string | null;
 }
 
+/**
+ * The catalogue moves when the issuer lists, delists or halts something —
+ * rarely, but a process running for weeks must not be blind to it. Same lesson
+ * as `BOOK_TTL_MS`, at the timescale this fact actually changes on.
+ */
+const CATALOGUE_TTL_MS = 60 * 60_000;
+
 let cataloguePromise: Promise<IssuerAsset[]> | null = null;
+let catalogueFetchedAt = 0;
 
 /**
  * Every xStock the issuer has deployed to X Layer.
@@ -121,7 +129,8 @@ let cataloguePromise: Promise<IssuerAsset[]> | null = null;
  * are not the same number.
  */
 export function issuerCatalogue(): Promise<IssuerAsset[]> {
-  if (cataloguePromise) return cataloguePromise;
+  if (cataloguePromise && Date.now() - catalogueFetchedAt < CATALOGUE_TTL_MS) return cataloguePromise;
+  catalogueFetchedAt = Date.now();
   cataloguePromise = (async () => {
     const out: IssuerAsset[] = [];
     // The catalogue pages from zero and reports `hasNextPage`; the quote API
@@ -198,11 +207,35 @@ export interface IssuerQuote {
   observedAt: number;
 }
 
+/**
+ * How long a cached book may be reused.
+ *
+ * The issuer says its own quotes are good for 15 seconds. This cache existed to
+ * stop a single script run making seven requests per asset, and an
+ * until-the-process-exits cache was fine while everything here was a script that
+ * exits.
+ *
+ * It stopped being fine the moment a process started living for days. The
+ * sampler inside `publish-loop.ts` calls this every cycle, and with no expiry it
+ * was handed the same book forever: the store would have filled with identical
+ * rows, every close-to-open jump would have been exactly zero, and the σ derived
+ * from it would have been **zero** — a zero band, which is the one thing
+ * `computeFairValue` refuses to publish. Caught by sampling twice three seconds
+ * apart and finding 30 of 30 rows identical.
+ *
+ * Thirty seconds: longer than the issuer's own validity so a burst of calls in
+ * one run still shares a fetch, short enough that nothing long-running ever
+ * reads a stale market.
+ */
+const BOOK_TTL_MS = 30_000;
+
 let bookPromise: Promise<Map<string, IssuerQuote>> | null = null;
+let bookFetchedAt = 0;
 
 /** Every quotable asset, in seven requests rather than 683. */
 export function issuerBook(): Promise<Map<string, IssuerQuote>> {
-  if (bookPromise) return bookPromise;
+  if (bookPromise && Date.now() - bookFetchedAt < BOOK_TTL_MS) return bookPromise;
+  bookFetchedAt = Date.now();
   bookPromise = (async () => {
     const book = new Map<string, IssuerQuote>();
     for (let page = 1; page < 50; page++) {

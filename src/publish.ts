@@ -169,6 +169,21 @@ for (const spec of selected) {
   );
 }
 
+// If nothing can be priced, do not spend gas saying so. The previous
+// observations stay where they are and go stale on their own inside `maxAge`,
+// at which point the guard rejects with STALE — the same outcome as publishing
+// thirty withheld values, for free instead of ~900k gas. Exiting non-zero hands
+// the decision to the loop's failure counter, which is what should escalate a
+// source outage rather than a quiet cycle that looks like it worked.
+if (items.length && !items.some((i) => i.hasValue)) {
+  console.error(
+    '\n  ✗ not one asset could be priced — the issuer is unreachable or carrying nothing.\n' +
+      '    Publishing nothing: the existing observations go stale inside maxAge and the\n' +
+      '    guard refuses on their staleness, which costs no gas to achieve.\n',
+  );
+  process.exit(1);
+}
+
 const assets = items.map((i) => i.asset);
 
 // 2 — publish

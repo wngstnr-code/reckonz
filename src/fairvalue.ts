@@ -442,9 +442,26 @@ export function regress(
 export const issuerSymbolFor = (onchainSymbol: string) =>
   onchainSymbol.replace(/^w/, '');
 
+/**
+ * The issuer's quote, or `null` — **never a throw**.
+ *
+ * This module has exactly two ways to answer: a value it can defend, or a
+ * withheld one. An exception is a third, and it is the worst of the three,
+ * because it propagates out of the per-asset loop in `publish.ts` and takes the
+ * whole run down — including the assets whose data had already arrived.
+ *
+ * Found by pointing `fetch` at a dead host and watching `computeFairValue`
+ * throw `simulated outage` instead of returning a withheld report. An outage at
+ * the source must look exactly like an asset the issuer does not carry: no
+ * value, maximum risk, and a note saying so.
+ */
 async function issuerQuoteFor(onchainSymbol: string): Promise<IssuerQuote | null> {
-  const book = await issuerBook();
-  return book.get(issuerSymbolFor(onchainSymbol)) ?? null;
+  try {
+    const book = await issuerBook();
+    return book.get(issuerSymbolFor(onchainSymbol)) ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -512,7 +529,11 @@ export async function computeFairValue(
       publishable: false,
       gapRisk: 100,
       gapRiskParts: { staleness: 1, displacement: 0, uncertainty: 1, basis: 0 },
-      notes: ['the issuer is not quoting this token — fair value withheld'],
+      notes: [
+        'no quote from the issuer — either it does not carry this token or the ' +
+          'source is unreachable. Both mean the same thing here: no value, and the ' +
+          'guard treats it exactly like missing data.',
+      ],
     };
   }
 

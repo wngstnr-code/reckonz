@@ -2855,3 +2855,45 @@ nothing in the docs may say otherwise until it has.
 a funded extension. It is a person-with-a-laptop task, not an engineering one.
 
 **The licence.** Unchanged and unchangeable by code.
+
+### Two defects a third sweep found, both introduced by D63 itself
+
+**The sampler would have written the same mark forever.** `issuerBook()` cached its promise until
+the process exited, which was correct while everything here was a script that exits. `publish-loop.ts`
+is not: it lives for days and calls the sampler every cycle. It would have been handed the same book
+each time, so `observations/` would have filled with identical rows, every close-to-open jump would
+have been exactly zero, and the σ derived from it would have been **zero** — a zero band, which is
+the one thing `computeFairValue` explicitly refuses to publish.
+
+Found by sampling twice three seconds apart: 30 of 30 rows identical. Both caches now carry a TTL —
+30 seconds for the book, an hour for the catalogue — chosen from how fast each fact actually changes
+rather than from a round number. Verified in both directions: reused inside the window, refetched
+past it.
+
+The shape is worth more than the fix. A cache with no expiry is correct in a script and wrong in a
+daemon, and D63 turned one into the other without revisiting anything it had been true of.
+
+**An issuer outage threw instead of withholding.** Pointing `fetch` at a dead host made
+`computeFairValue` raise `simulated outage`. This module has exactly two ways to answer — a value it
+can defend, or a withheld one — and an exception is a third that propagates out of the per-asset
+loop in `publish.ts` and takes down the whole run, including assets whose data had already arrived.
+
+An outage now looks exactly like a token the issuer does not carry: no value, gap risk 100, and a
+note that says which of the two it was. And `publish.ts` refuses to spend ~900k gas publishing thirty
+withheld observations: the existing ones go stale inside `maxAge` on their own, at which point the
+guard rejects on staleness — the same outcome, for free. It exits non-zero so the loop's failure
+counter escalates a real outage rather than logging a cycle that looks like it worked.
+
+### Known and left alone
+
+`ReceiptRegistry.receiptsOf` / `performance` and `ThesisRegistry.authorOf` / `thesesOf` are public
+views with no off-chain caller. Listed rather than deleted: they are what a Simple-mode surface will
+read, and `src/track-record.ts` already documents why it does not use `performance()` — it is keyed
+by mandate and the join needed is by thesis. A view with a reason is not the same as a function
+nobody could reach, which is what D52 was about.
+
+**`src/` has no unit tests.** 105 Foundry tests cover the contracts; the TypeScript side is covered
+by `pnpm verify`, `pnpm reconcile` and `pnpm check:tests`, which are regression checks against live
+state rather than unit tests. That has been enough to catch real defects — including both above —
+but it means a pure-function bug in `src/issuer.ts` or `src/permit.ts` has nothing standing in front
+of it except the next live run.
