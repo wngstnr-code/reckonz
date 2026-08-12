@@ -54,30 +54,47 @@ pnpm verify:abi              # src/abi.ts vs the compiled contracts — run afte
 pnpm plan [usdg] [maxBps]    # thesis basket: naive vs planned execution
 pnpm capacity                # absorbable size per xStock, by impact limit
 pnpm oracle [usdg]           # fair value, gap risk, PolicyGuard allow/reject
-pnpm reconcile               # reference-market admission test — run before trusting ASSETS
+pnpm reconcile               # admission test vs the issuer's mark — run before trusting ASSETS
+pnpm sample [--loop]         # write the issuer's marks to observations/ — our own price history
+pnpm measure [--multipliers]  # re-derive the recorded multipliers and gap σ from that store
+pnpm evidence [hash]         # verify receipts against the bundles they claim (D57)
 pnpm dev                     # the web app — thesis in, guard verdict out
 pnpm build                   # next build (what Vercel runs); contracts are build:contracts
 pnpm typecheck               # covers src/ and app/
-pnpm test:sol                # 89 Foundry tests
+pnpm test:sol                # 105 Foundry tests
+pnpm check:tests             # that number, checked against every doc that states it (D60)
 ```
 
 Anything that writes on chain takes its chain from `TARGET` (default `testnet`):
 
 ```bash
 TARGET=mainnet pnpm oracle:publish     # run the engine, publish, read back
+PUBLISH_SYMBOLS=wTSLAx,wSPYx …         # publish a subset — 6.4x cheaper at four assets (D63)
 TARGET=mainnet pnpm mandate            # create a mandate, install triggers, hand to Executor
 TARGET=mainnet pnpm execute <sym> [n]  # quote -> dryRun -> Permit2 -> one real fill
+TARGET=mainnet pnpm exit <sym> [usdg]  # the reverse: sell a position back to USDG (D51)
 TARGET=mainnet pnpm swap [okb]         # OKB -> USDG, to fund the deployer
+TARGET=mainnet pnpm safe:admin status  # the 2-of-3, and which owner keys you hold
+TARGET=mainnet pnpm safe:admin treasury|feebps <v>   # admin-only, needs two signatures
+TARGET=mainnet pnpm mandate:create <syms>  # a mandate with a deliberate allowlist
+TARGET=mainnet pnpm mandate:show [id]  # policy, positions, triggers, what is firing
+TARGET=mainnet pnpm mandate:edit <id> <action>   # close|agent|asset|policy|trigger
+TARGET=mainnet pnpm breaker <id> [on|off]  # the owner kill switch; no args = read it
+TARGET=mainnet pnpm fees [withdraw]    # what the fee earned, and sweep it to the treasury
 ```
 
 ## Non-negotiables
 
 - **Non-custodial.** No contract in this repo may take custody of user funds. See D6.
-- **The AI never holds a key that can move funds arbitrarily.** Agent keys call
-  `proposeRebalance()` only; `PolicyGuard` bounds execution and reverts in the same
-  transaction as the trade. Off-chain checks are decoration.
-- **The oracle is a guard, not a price.** It publishes an estimate, its uncertainty, and a
-  risk score so consumers can refuse to execute. When it cannot defend a number it marks
+- **The AI never holds a key that can move funds arbitrarily.** There is no
+  `proposeRebalance()` — that function was in the docs for weeks and never in the code (D52).
+  What actually enforces this is **Permit2**: `Executor.execute` / `Executor.exit` pull against a
+  signature the *owner* produced, scoped to one token, capped in amount, expiring in 20 minutes.
+  An agent key with no fresh signature moves nothing. `PolicyGuard` then bounds the trade and
+  reverts in the same transaction. Off-chain checks are decoration.
+- **The oracle is a guard, not a price.** It reads the issuer's mark for the token, adjusts for
+  shares per token, and publishes it with its uncertainty and a risk score so consumers can refuse
+  to execute. It does not forecast — that stopped with D62. When it cannot defend a number it marks
   the value unpublishable rather than inventing one. Never weaken this.
 - **Tooling, not investment advice.** The user writes the thesis; the system maps and
   executes it. Never invert.
@@ -137,15 +154,18 @@ TARGET=mainnet pnpm swap [okb]         # OKB -> USDG, to fund the deployer
 
 - After changing `v3math.ts` or `pool.ts`, run `pnpm verify` — it is the regression test.
 - **Never hand-add an asset to `ASSETS` in `src/fairvalue.ts`.** A mapping is admitted by
-  `pnpm reconcile`, which reconciles the wrapper's on-chain price against its candidate
-  reference; `admittedOn` records that it passed, and it is what makes a fair value publishable.
+  `pnpm reconcile`, which reconciles the wrapper's on-chain price against **the issuer's own mark**
+  for that token, multiplied by shares per token; `admittedOn` records that it passed, and it is
+  what makes a fair value publishable.
   Adding a line because the ticker is obvious is the exact assertion this oracle refuses to make.
   See D38.
 - Log real direction changes and corrections in `docs/04-decisions.md`; update
   `docs/05-status.md` when something starts or finishes working. Both are read by the other
   person, so they are part of the change, not paperwork after it.
 - `pnpm typecheck` before every PR — it covers `src/` and `app/` together, so it is the one check
-  that catches a break across the FE/BE seam. `forge test` too if you touched Solidity.
+  that catches a break across the FE/BE seam. `forge test` too if you touched Solidity — and
+  `pnpm check:tests` when the suite changes size, because the count is stated in five docs and
+  drifted in all five at once when nothing compared them (D60).
 - Do not commit private keys. Deployment reads them from the environment. `docs/` is public now:
   no key, no seed phrase, no unrotated API key may appear in it.
 - **Contracts are verified on Sourcify** (`forge verify-contract <addr> <path>:<name> --chain 196

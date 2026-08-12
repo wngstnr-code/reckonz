@@ -19,8 +19,8 @@ bytecode.
 |---|---|
 | `FairValueOracle` | [`0xDB7949c99e6d234C0eD374a71966d9e6CbfcfD09`](https://repo.sourcify.dev/196/0xDB7949c99e6d234C0eD374a71966d9e6CbfcfD09) |
 | `ReceiptRegistry` | [`0x9D04575894F570C3638Bc1f6ECaD6EF36D479Fa6`](https://repo.sourcify.dev/196/0x9D04575894F570C3638Bc1f6ECaD6EF36D479Fa6) |
-| `PolicyGuard` | [`0x3F58df45FcB5D1074bA5D046D4928CF5efde5f4d`](https://repo.sourcify.dev/196/0x3F58df45FcB5D1074bA5D046D4928CF5efde5f4d) |
-| `Executor` | [`0xf3a06c9f0F1AABf01080475E420DD7A1092E1e1B`](https://repo.sourcify.dev/196/0xf3a06c9f0F1AABf01080475E420DD7A1092E1e1B) |
+| `PolicyGuard` | [`0x9C8F1af1cF0FaD14C46617c573bFed8C90a783be`](https://repo.sourcify.dev/196/0x9C8F1af1cF0FaD14C46617c573bFed8C90a783be) |
+| `Executor` | [`0xD3d4aeD69f045dAb75390b2a1431A2161C02fBE2`](https://repo.sourcify.dev/196/0xD3d4aeD69f045dAb75390b2a1431A2161C02fBE2) |
 | `FeeCollector` | [`0x3A1D6b9129E69fEF189E538996B18cebd56C3Dd0`](https://repo.sourcify.dev/196/0x3A1D6b9129E69fEF189E538996B18cebd56C3Dd0) |
 | `ThesisRegistry` | [`0xD4b503d002Fb77019d7BB1a26DCe1d60F32dfa1E`](https://repo.sourcify.dev/196/0xD4b503d002Fb77019d7BB1a26DCe1d60F32dfa1E) |
 
@@ -33,18 +33,30 @@ publishing is a separate key that can do nothing else.
 Settlement is real USDG, `0x4ae46a509F6b1D9056937BA4500cb143933D2dc8`. A testnet stack
 (chain 1952) is deployed and verified too; addresses in `src/deployments.ts`.
 
-**Four real fills, not a simulation:**
+**Nine real fills, not a simulation — including a sale, and four bound to the evidence they rest on:**
 
 ```
 #0  0x7240759d327d468f9a7086ed439abf42dead17887105d986ca0870ebf46d6545   0.5 USDG -> wSPYx
 #1  0x5710894e80baddfb35ab12321642b16c8cc8ab0b8f9a90a837f7c1e3ee9d1a23   0.5 USDG -> wSPYx, 15 bps fee
 #2  0x300870192316392ff062c4f890ab1cb616a1e5e5e2ce2b43aebb3f8df2b27af5   carries thesis 0xc3cd487e…
 #3  0xc9eba0cb05da5f00d71a63486d696a90bddc4a4f7ca3ddaab6b1acdb158f74f8   0.5 USDG -> wTSLAx, 7 bps
+#4  0x769edd3bb8e2765f7cc4c46cf69f7894d51a9e7bff1dcf58234c421a92d10b0a   wSPYx -> 0.1004 USDG, isExit
+#5  0x7e680f64844532819e9687b4cbe5b2a102811c66b8f9d56157a243b8c61b4ecf   thesis #1, wQQQx, 39 bps
+#6  0xca141f6d9803992376eab5dd0ac74e97d0aaa4a0a5bee6218ee4ae5b29830cf9   thesis #1, wNVDAx, 28 bps
+#7  0x04685035a0251848d4c0580b30e4c5569236eaeaa62f42023615cfccada00933   thesis #2, wTSLAx, 0 bps
+#8  0xdf2d5564292d50623054ed8d0bb59093a84ce522f58ac60d67cfe8303666842a   thesis #2, wNVDAx, 27 bps
 ```
 
-`#0`–`#2` ran through the previous guard and executor; `#3` is the first through the contracts
-listed above. All four are in one append-only history, because the migration replaced the oracle,
-guard and executor and **kept the registry**.
+`#5`–`#8` each carry an `evidenceHash`: the quote, the oracle's value *and its age in seconds*,
+and the guard's verdict, hashed before signing and checkable with `pnpm evidence`. A fifth fill was
+attempted and **refused** — wSPYx quoted 59 bps above fair value against a 50 bps ceiling, so the
+guard rejected it in `dryRun` and no gas was spent. That refusal is the product working, and it is
+why thesis #1's basket holds two of the three assets it names.
+
+`#0`–`#2` ran through the previous guard and executor; `#3` is the first through the guard listed
+above. `#4` is the first **exit** — the executor was redeployed on 2026-08-12 because until then it
+could only ever buy (D51). All five are in one append-only history, because every migration
+replaced contracts around the registry and **kept the registry**.
 
 In each, the swap, the policy check and the receipt happen in **one transaction**. The
 executor holds nothing when it returns, and asserts that rather than assuming it.
@@ -69,11 +81,17 @@ never touched.
 
 **The oracle is a guard, not a price.** It carries each equity's last official print
 forward using instruments still trading, publishes a band and a gap-risk score, and
-**refuses to publish at all** when it cannot defend a number. It prices **28 of the 30**
-xStocks on X Layer, and which 28 is not a judgement call: a test reconciles each wrapper's
-on-chain price against the listing it claims to track, and admits the mapping only if they
-agree. The two it refuses are refused with a number — wSKHYx trades 86% below an SK Hynix
-share, and SpaceX is private.
+**refuses to publish at all** when it cannot defend a number. It prices **30 of the 30**
+xStocks on X Layer, and which 30 is not a judgement call: a test reconciles each wrapper's
+on-chain price against the mark its **issuer** publishes for that token, and admits the
+mapping only if they agree.
+
+It priced 28 until 2026-08-12, when the reference moved from exchange listings to the issuer
+(D62). The two it used to refuse are the reason that change was right rather than merely
+convenient: wSKHYx traded 86% below an SK Hynix share because it tracks a **US depositary
+receipt**, not the Seoul ordinary — the issuer had published that identifier all along — and
+SpaceX is private, so no exchange can price it while the party minting the token marks it
+every day.
 
 **Funds are pulled per execution** against a signed, amount-bounded, expiring Permit2
 authorisation — never a standing allowance.
@@ -89,7 +107,7 @@ pnpm plan [usdg] [maxBps]    # a thesis basket: naive execution vs planned
 pnpm capacity                # what every xStock can absorb, by impact limit
 pnpm oracle [usdg]           # fair value, gap risk, and the guard's decision per asset
 pnpm thesis "free text"      # thesis -> assets -> sizing -> mandate
-pnpm test:sol                # 89 tests
+pnpm test:sol                # 105 tests
 ```
 
 On-chain writes take their chain from `TARGET` (`testnet` by default), so nothing can
@@ -108,7 +126,8 @@ TARGET=mainnet pnpm execute wSPYx 0.5  # quote -> dryRun -> Permit2 -> one real 
 | `src/v3math.ts` | Uniswap V3 core math in BigInt — TickMath, SqrtPriceMath, SwapMath, TickBitmap |
 | `src/pool.ts` | Pool snapshot loader + exact-input multi-tick swap simulation |
 | `src/planner.ts` | Routing, capacity search, slicing schedule, basket planning |
-| `src/fairvalue.ts` | Fair-value engine — β estimation, confidence band, gap-risk score |
+| `src/fairvalue.ts` | Fair-value engine — issuer mark × shares per token, band, gap-risk score |
+| `src/issuer.ts` | The issuer's own view: quote, per-session spread, corporate-action multiplier |
 | `src/guard.ts` | Off-chain mirror of the on-chain execution check |
 | `src/thesis.ts` | Thesis Compiler — schema, prompts, mandate compilation |
 | `src/pipeline.ts` | The whole product as one streamed run; shared by CLI and web |
@@ -187,14 +206,19 @@ The three moments that make the case, from one run of the web app:
 ```
 allocate  Samsung -> unmapped, "no matching asset"      ← it will not substitute an adjacent name
 capacity  $250,000 asked -> $2,191 executable           ← and it hands back the $247,809
-guard     wSKHYx REJECT NO_REFERENCE                    ← KRW basis will not reconcile; value withheld
+guard     wSKHYx ALLOW                                  ← resolved: it tracks a US DR, not the Seoul share (D62)
 ```
 
-The third is worth dwelling on. `wSKHYx`'s reference quotes in KRW and does not reconcile
-with the on-chain price, so the oracle marks it unpublishable rather than printing a
-−99.99% basis. `wSPCXx` has no reference market at all — SpaceX is private — and is
-withheld by design. Those two are the only withholdings: the other 28 of the 30 are priced,
-and each was admitted by a reconciliation rather than by a judgement that the ticker looked
-obvious. A thesis about Apple maps to wAAPLx, is sized against its real depth, and — where it
-is refused — is refused for the true reason rather than the false claim that the asset does
-not exist.
+The third is worth dwelling on, because it was wrong for a day and the wrongness is the point.
+`wSKHYx` was refused at −86% against the Seoul listing, and the oracle marked it unpublishable
+rather than printing a basis it could not defend. That refusal was correct. The *reason* was
+not: the token tracks a US depositary receipt, and the ~7× gap was a DR ratio rather than a
+broken pool. Referencing the issuer found in one query what no amount of care with the
+exchange mapping would have found, because the exchange mapping was the thing that was wrong.
+
+All 30 are now priced, each admitted by a reconciliation rather than by a judgement that the
+ticker looked obvious. `wSPCXx` is priced and carries a caveat no other asset does: SpaceX is
+private, so the issuer's mark is the **only** opinion in existence and nothing can falsify it.
+A thesis about Apple maps to wAAPLx, is sized against its real depth, and — where it is
+refused — is refused for the true reason rather than the false claim that the asset does not
+exist.

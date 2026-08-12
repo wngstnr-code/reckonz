@@ -27,7 +27,7 @@ so they can be disagreed with but not disputed.
 
 **The architectural claim is real, not marketing, and it is now on mainnet.** "The AI holds no key
 that can move funds" is easy to say. Here the enforcement is inside the trade's own transaction:
-break the mandate and the whole thing unwinds. 89 tests exist because that claim has to survive
+break the mandate and the whole thing unwinds. 105 tests exist because that claim has to survive
 contact with an adversary — and three real fills exist because tests are not the same as contact.
 Receipt `#1` records a price the agent did not author, stamped by the guard from the oracle.
 
@@ -99,7 +99,7 @@ Not a competing venue. The discipline layer above one.
 
 ### 4 — The reference data problem is unsolved 🟠
 
-Yahoo Finance cannot be used in production, and the obstacle is licensing rather than engineering.
+~~Yahoo Finance cannot be used in production, and the obstacle is licensing rather than engineering.~~ — **closed 2026-08-12 (D62).** The reference moved to the token's own issuer, which sidesteps exchange redistribution entirely and turned out to price better: 30 of 30 assets against 28, and every basis inside ±0.4%. Yahoo is **deleted** as of D63 — the gap σ it was still being borrowed for now comes from `observations/`, our own store of the issuer's marks. The open question is now the issuer's own API terms, which unlike Yahoo's is answerable.
 Equity price data is paid and contractually restricted. Republishing equity prices on-chain, where
 anyone can read them, likely needs its own licence. That is an uncosted fixed expense.
 

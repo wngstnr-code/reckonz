@@ -1,6 +1,6 @@
 # Status — resume here
 
-Last updated **2026-08-11**. Submission deadline **2026-08-21 23:59 UTC** (10 days).
+Last updated **2026-08-12**. Submission deadline **2026-08-21 23:59 UTC** (9 days).
 
 Repo: **github.com/wngstnr-code/reckonz** — private, `main`. `docs/` is **in the repo** as of
 2026-08-11; it used to be gitignored, which stopped working once the project became two people.
@@ -16,15 +16,15 @@ colliding. `06-assessment.md` is the honest read on whether this is a business.
 ```bash
 cd /Users/mac/Desktop/okxai
 set -a && source .env && set +a     # PRIVATE_KEY, GEMINI_API_KEY, CASH
-pnpm typecheck && forge test        # expect: clean, 89 passed
-git status --short                  # expect: clean; docs/ is ignored, not missing
+pnpm typecheck && forge test        # expect: clean, 105 passed
+git status --short                  # expect: clean; docs/ is tracked now, not ignored
 pnpm dev                            # the web app, port 3000 (falls back if taken)
 ```
 
 Nothing is half-finished in the tree. Every unfinished thing is in **Not done** below, not
 lurking in the code.
 
-Deployer `0xD7360Dc3ED4fE01bEbB8477594A76CBFb5c79BA5` holds **0.1932 OKB** on testnet —
+Deployer `0xD7360Dc3ED4fE01bEbB8477594A76CBFb5c79BA5` holds **0.1830 OKB** on testnet —
 hundreds of deploys' worth. Faucet: [web3.okx.com/faucet](https://web3.okx.com/faucet) → X Layer
 → Testnet; verify with `cast balance <addr> --rpc-url https://testrpc.xlayer.tech`, never the
 faucet UI.
@@ -57,15 +57,18 @@ history. `receipts.count()` was 3 before and 3 after.
 
 ```
 FairValueOracle  0xDB7949c99e6d234C0eD374a71966d9e6CbfcfD09   new — publish-time jump bound
-PolicyGuard      0x3F58df45FcB5D1074bA5D046D4928CF5efde5f4d   new
-Executor         0xf3a06c9f0F1AABf01080475E420DD7A1092E1e1B   new
-ReceiptRegistry  0x9D04575894F570C3638Bc1f6ECaD6EF36D479Fa6   kept — 3 fills
+PolicyGuard      0x9C8F1af1cF0FaD14C46617c573bFed8C90a783be   redeployed 2026-08-12 — D56 exit fix
+Executor         0xD3d4aeD69f045dAb75390b2a1431A2161C02fBE2   redeployed 2026-08-12 with the guard
+ReceiptRegistry  0x9D04575894F570C3638Bc1f6ECaD6EF36D479Fa6   kept — 15 fills, #9-#13 exits and #14 an entry, all under D62/D63
 ThesisRegistry   0xD4b503d002Fb77019d7BB1a26DCe1d60F32dfa1E   kept
 FeeCollector     0x3A1D6b9129E69fEF189E538996B18cebd56C3Dd0   kept — 15 bps, ceiling 50
 PoolSwapper      0x1f3b67d8209060eC68d0eDCD6E60Ba53A8e9ac28
 cash (real USDG) 0x4ae46a509F6b1D9056937BA4500cb143933D2dc8
 
 Safe (2-of-3)    0x98d19BE6e810bEEfC8A0a408D4AEf164B7F1391e   admin of oracle, receipts, fees
+  owner 1        0xD7360Dc3ED4fE01bEbB8477594A76CBFb5c79BA5   the deployer
+  owner 2        0x75d120B0CC9B9FC3A4bEC6e442BE74ad0E511fBd
+  owner 3        0x832ebF3d6b96e3A4c53b243F6107BbBEFC25582f
 publisher        0x40101A4932dEb95f0A5951BB7fB0fFa7c17e3Ab8   hot key, publish() only
 deployer         0xD7360Dc3ED4fE01bEbB8477594A76CBFb5c79BA5   admin of nothing now
 ```
@@ -78,30 +81,69 @@ wrong, but an address alone no longer identifies a contract. Read the chain id w
 revoked, because two contracts able to append to one append-only history is two places trust can
 leak from. Its receipts stand; new activity runs on the new guard.
 
-**The live mandate is #3 on the new guard** — 1 USDG per trade, 3 fills per 24h, allowing wMUx,
-wNVDAx and wSPYx, with the capacity exit trigger installed and already firing for wMUx. Mandates
-#1, #2, #4 and #5 on the new guard are closed: they were duplicates created while seeding, two by
-runs that sent `createMandate` and then died waiting for the receipt, two by a retry loop whose
-break condition was wrong. Closing them is the only cleanup available — `nextMandateId` never goes
-backwards, so the gap in the numbering is permanent and is recorded here rather than explained
-away.
+**The live mandate is #1 on the 2026-08-12 guard** — 1 USDG per trade, 12 fills per 24h, allowing
+wTSLAx, wNVDAx, wQQQx and wSPYx, with `capacityUsdg < 1,000` installed basket-wide. It was created
+fresh because **mandates do not migrate**: everything on the previous guard, including #3 and its
+recorded positions, stayed in that contract's storage. The receipts did not move, so the track
+record is continuous across every migration. Mandates #1–#5 on the previous guard are dead — that
+guard's write permission was revoked, so they can no longer record anything.
 
-### Deployed and verified — X Layer testnet (chain 1952), redeployed 2026-08-11 for D41
+### ~~⚠️ The testnet stack is two contract generations behind mainnet~~ — fixed 2026-08-12
 
-All six `exact_match` on Sourcify. The whole stack moved, not just the oracle: `oracle` is
+It was, for about half a day. Measured then by comparing deployed bytecode, not by reading dates:
+
+```
+Executor      testnet  7,491 bytes    mainnet 10,221 bytes   — no exit() (D51)
+PolicyGuard   testnet 13,626 bytes    mainnet 14,170 bytes   — no exit fix (D56)
+```
+
+Both mainnet contracts were replaced on the 12th and testnet was not. It mattered because of what
+testnet is best at: it is the right place to exercise wallet connect — gas is free and mistakes are
+cheap — and `createMandate`, `setTriggers`, `setCircuitBreaker`, `closeMandate` and `updatePolicy`
+were all unchanged by D51/D56, so testing those there stayed valid throughout. What could not be
+tested was **anything to do with exits**: the function did not exist on that executor, and the
+guard would have refused it anyway.
+
+Both are now redeployed and byte-identical in size to their mainnet counterparts (see below), so
+the rig runs the same contracts production does. Left visible rather than deleted, because the
+gap is the kind that reappears: a rig only stays a rig while somebody re-measures it after each
+mainnet move.
+
+`Executor` on 1952 still cannot swap — the X Layer v3 factory has no code there (D36) — so testnet
+remains an oracle/guard/registry/mandate rig rather than an execution one. That boundary is
+unchanged; what moved is everything on the near side of it.
+
+### Deployed and verified — X Layer testnet (chain 1952)
+
+All `exact_match` on Sourcify. The stack was redeployed 2026-08-11 for D41 — `oracle` is
 `immutable` in `PolicyGuard` and `Executor`, so a new oracle cannot be pointed at from the old
 ones. That is deliberate — a guard whose oracle can be swapped is a guard whose price source can
 be swapped — and the redeploy is what it costs.
 
+**The guard and the executor moved again 2026-08-12**, to close the gap with mainnet described
+above. Only those two: `guard` is `immutable` in `Executor`, which is why the executor came along,
+and the oracle did not move because it already implemented `peek`. Nothing was stranded — the old
+guard's `nextMandateId` was still 1, so it held no mandates, and the registry holds no receipts.
+
 ```
 FairValueOracle  0x20a30E6fe3e3C2aCad4180EbeEeAD8BC9aB32B5c   + publish-time jump bound
 ReceiptRegistry  0xc5589899556749c2D56fD08c7214739c0bA2bF94
-PolicyGuard      0x92aF161Ac20177b49FE498f3fFb0e0DC062a6278
-Executor         0xE127C36390c0Ee6c4eB1632b514BA498696c883b
+PolicyGuard      0xD9d04Bc1324ed4fb23D171893BFACb1c99FD581b   28,343 bytes — same as mainnet
+Executor         0xf1b73Fb49CEfcB7CEd27b667c8Ea14bD8f3871D9   20,445 bytes — same as mainnet
 FeeCollector     0x40B494716a60e2348eD7470BEF789365DF4d36b5
 ThesisRegistry   0x5A2e03eb2B07464Da0821a95411e6614ab16C694
 TestUSDG (cash)  0xE2D6d2BBA5Ece46A90F5ab5656664D4182332c32
 ```
+
+Exercised rather than assumed: **mandate #1 exists on the new guard** — created with the new
+executor set at creation and `TestUSDG` as its allowed asset — and `setCircuitBreaker` was
+toggled on and back off against it. That is the loop the FE needs from this chain. `mandate:create`
+itself is still mainnet-only: it resolves symbols through `addressBySymbol()`, and no xStock is
+deployed on 1952.
+
+Previous guard `0x92aF161A…` and executor `0xE127C363…` are still live and still answer, which is
+the hazard the D41 note already named: they match `src/abi.ts` closely enough to call and not
+closely enough to be the contracts anyone means.
 
 ~~**Mainnet still runs the pre-D41 oracle.**~~ — no longer true as of D42, the same day it was
 written. Mainnet runs `0xDB7949c9…`, which carries the publish-time jump bound; the testnet
@@ -111,9 +153,13 @@ saw the old sentence needs to know it was superseded.
 `Executor` on 1952 cannot swap and is not meant to: the X Layer v3 factory has no code there, so
 there are no pools to derive. `Deploy.s.sol` prints that rather than deploying quietly (D36).
 
-Checked on-chain: `PolicyGuard.oracle/receipts/cash` point at the right addresses,
-`ReceiptRegistry.isWriter(PolicyGuard) == true` and `isWriter(deployer) == false` — only the guard
-can append receipts. `Executor.permit2/router/guard/oracle/cash` all correct.
+Checked on-chain after the 08-12 redeploy: `PolicyGuard.oracle/receipts/cash` point at the right
+addresses, `ReceiptRegistry.isWriter(newGuard) == true`, `isWriter(oldGuard) == false` and
+`isWriter(deployer) == false` — only the current guard can append receipts. The registry's admin
+on 1952 is a 2-of-3 Safe as it is on mainnet, so both `setWriter` calls went through it, granted
+before revoked. `Executor.permit2/factory/guard/oracle/cash/feeCollector` all read back correct,
+and `exit()`'s selector `0xac1b7ade` is present in the new runtime bytecode and absent from the
+old one.
 
 ### Components
 
@@ -123,24 +169,27 @@ can append receipts. `Executor.permit2/router/guard/oracle/cash` all correct.
 | Uniswap V3 core math (BigInt) | `src/v3math.ts` | ✅ validated vs `slot0`, drift 0.0016% |
 | Pool loader + multi-tick exact-input simulation | `src/pool.ts` | ✅ |
 | Routing, capacity search, slicing, basket planning | `src/planner.ts` | ✅ |
-| Market data — references, 24/7 signals, gap stats, FX | `src/marketdata.ts` | ✅ Yahoo + Coinbase; `toUsd()` converts foreign-quoted references (D39) |
-| Reference-market admission test | `src/reconcile.ts` | ✅ **28 of 30 admitted**, re-runnable as a regression check (D38) |
+| ~~Market data from Yahoo~~ | ~~`src/marketdata.ts`~~ | **Deleted 2026-08-12 (D63).** The last unlicensed source. What it was still being borrowed for — a year of close-to-open jumps — is now built rather than borrowed. |
+| Our own price history | `src/observations.ts`, `pnpm sample` | ✅ append-only store of the issuer's marks in `observations/`, written every cycle by the publish worker. `pnpm measure` derives the gap σ from it and **refuses below 30 jumps per asset**, reporting how far along it is rather than deriving a σ from a short series (D63). |
+| Permit2 authorisation, browser-safe | `src/permit.ts` | ✅ the piece the web app was missing. Exercised by every CLI fill — `src/execute.ts` routes through it — so the browser half is proven rather than merely written (D63). |
+| The issuer's own view of an xStock | `src/issuer.ts` | ✅ read-only. Backed's two-sided quote, per-session spread, corporate-action multiplier and X Layer wrapper address. Observed in `pnpm reconcile`; **nothing from it is published on chain** and no verdict depends on it (D62). |
+| Admission test, against the issuer's mark | `src/reconcile.ts` | ✅ **30 of 30 admitted** (D62; 28 under the old exchange reference), re-runnable as a regression check |
 | Fair-value engine — β, band, gap risk | `src/fairvalue.ts` | ✅ |
 | Off-chain mirror of the on-chain guard | `src/guard.ts` | ✅ |
 | Thesis Compiler — schema, prompts, mandate compilation | `src/thesis.ts` | ✅ |
 | Gemini provider (free tier) | `src/thesis-gemini.ts` | ✅ **run live**, `gemini-3.6-flash` |
-| Claude provider | `src/thesis.ts` | ⚠️ typechecked only, never executed |
+| ~~Claude provider~~ | — | **Removed 2026-08-12 (D59).** Gemini is the only live provider; the fixture is the floor. The risk was selection, not dead code: `pickProvider` took whichever credential was present, so a stray `ANTHROPIC_API_KEY` would have routed the compiler through a path nobody had ever run. |
 | Deterministic fixture provider | `src/thesis-fixture.ts` | ✅ |
 | `FairValueOracle` | `contracts/FairValueOracle.sol` | ✅ + basis, capacity, publish-time jump bound (D41) |
-| Safe 2-of-3 over the oracle admin | `src/safe.ts` | ✅ proven on testnet (D40); mainnet handover pending |
+| Safe 2-of-3 over the oracle admin | `src/safe.ts`, `src/safe-admin.ts` | ✅ proven on testnet (D40), handover done on mainnet, and **exercised on mainnet 2026-08-12** — `setTreasury` through the Safe, nonce 0 → 1. `treasury` is the Safe itself now, not the deployer EOA (D55). |
 | `ReceiptRegistry` | `contracts/ReceiptRegistry.sol` | ✅ append-only |
 | `PolicyGuard` | `contracts/PolicyGuard.sol` | ✅ triggers + position accounting |
 | `ExitTriggers` — all 7 metrics | `contracts/ExitTriggers.sol` | ✅ |
-| `Executor` — Permit2 → swap → settle → submit | `contracts/Executor.sol` | ✅ **four real mainnet fills**, receipts #0–#3 |
+| `Executor` — Permit2 → swap → settle → submit | `contracts/Executor.sol` | ✅ **14 real mainnet fills**, receipts #0–#13. #9–#13 are the first executions priced by the issuer-referenced oracle (D62) — five exits, all `dryRun ALLOW`, clearing the deployer's four positions back to USDG. #4 is the first **exit** — 0.1 USDG of wSPYx sold back, `isExit: true` (D51). Redeployed 2026-08-12 for the exit path, and again the same day for D56 — mainnet now runs `0xD3d4aeD6…`, testnet `0xf1b73Fb4…`. `0x09af5194…` was the in-between one; the one before that could only ever buy. |
 | `V3Swapper` — direct pool swaps, derived addresses | `contracts/V3Swapper.sol` | ✅ the Universal Router cannot swap here (D35) |
 | `FeeCollector` — 15 bps, ceiling 50 in code | `contracts/FeeCollector.sol` | ✅ took a real fee |
 | `ThesisRegistry` — append-only, no admin | `contracts/ThesisRegistry.sol` | ✅ receipt #2 resolves to thesis #0 |
-| Test suite | `test/*.t.sol` | ✅ 89/89 |
+| Test suite | `test/*.t.sol` | ✅ 105/105 — `pnpm check:tests` fails if this number drifts |
 | Chain selection + Permit2 helpers | `src/wallet.ts` | ✅ `TARGET=mainnet\|testnet` |
 | ABIs, one source, browser-safe | `src/abi.ts` | ✅ `pnpm verify:abi` checks every selector vs bytecode |
 | **One real fill, end to end** | `src/execute.ts` | ✅ **run on mainnet twice**; refuses truncated quotes and pool mismatches |
@@ -169,6 +218,7 @@ pnpm dev                     # the web app — thesis in, guard verdict out
 pnpm build                   # production build of the web app (what Vercel runs)
 pnpm build:contracts         # forge build
 pnpm typecheck && pnpm test:sol
+pnpm check:tests             # the suite size, compared against every doc that states it (D60)
 ```
 
 `pnpm typecheck` now covers `src/` and `app/` together.
@@ -195,7 +245,7 @@ mistaken for a measurement — see D33 and D34.
 slippage (28% of the basket). Sized to capacity it pays $28, and reports the $244k it refused to
 force into the market.
 
-**Reference-market admission test** (`pnpm reconcile`, 2026-08-11) — **28 of 30 xStocks
+**Reference-market admission test** (`pnpm reconcile`, 2026-08-11, superseded by D62 — now 30 of 30 against the issuer) — **28 of 30 xStocks
 admitted**. Widest reconciling basis **2.0%** (wIBMx); narrowest failing one **86.4%** (wSKHYx).
 A factor of 43 between them, so the threshold could sit anywhere across an order of magnitude and
 admit the same 28. wSPCXx rejects `NO_CANDIDATE` (private). With that in place, `pnpm oracle 2000`
@@ -259,49 +309,14 @@ That single run exercises every claim the product makes. It is the demo.
 | ~~Real fill on mainnet~~ | ✅ **Done 2026-08-11.** `0x7240759d327d468f9a7086ed439abf42dead17887105d986ca0870ebf46d6545` — 0.5 USDG into wSPYx, guard and receipt in the same transaction. |
 | **Demo video / walkthrough** | Not started. The web app is now the thing to record. **Script it from the corrected positioning (D49), not from memory** — two of the three "nobody does this" claims are dead, and the ICE/OKX context is the strongest card available. |
 | ~~Deploy the web app~~ | ✅ **https://reckonz.vercel.app** — verified end to end in production: live Gemini, 30-asset universe, capacity-limited plan, 1/2 assets would execute. |
-| **Wallet connect + mandate creation in the UI** | The page reads and decides; it cannot yet sign. Everything on-chain still happens through `pnpm mandate` / `pnpm oracle:publish`. |
+| ~~**Wallet connect**~~ — **built 2026-08-12** | The header connects, switches between 1952 and 196, and hands out a viem `WalletClient`. EIP-6963 + viem's `custom()` transport, so no wallet library and no change to `package.json`. No WalletConnect, therefore no mobile QR path. Taken over from FE, see `07-team.md`. |
+| ~~**Mandate creation in the UI**~~ — **built 2026-08-12** | `app/components/Mandate.tsx`: set the blast radius, pick assets from `GET /api/universe`, `createMandate` from the user's own wallet, then poll until the mandate is readable (D18) and show its id with an explorer link. The user is `owner` *and* `agent`; `executor` is the deployed `Executor`, which is what `Executor.execute` checks before it will pull funds. **Not yet exercised against a real wallet extension** — see below. |
 
 ### Known gaps in the work itself
 
-- **Claude provider never executed** — typechecked only. Gemini is the default and works; this is
-  a fallback path that has never run.
-- **Yahoo Finance is not a production data source.** Fine for proving the model, must be replaced
-  before mainnet.
-- **Gemini output varies run to run** — two live runs of the same input produced 1 and 2 exit
-  triggers; the fixture produces 3. Trigger coverage must be reviewed per compilation, not
-  assumed.
-- ~~**Reference mapping unverified for some assets**~~ / ~~**The oracle prices 8 of the 30
-  xStocks**~~ — ✅ **Closed 2026-08-11 (D38).** `pnpm reconcile` is an admission test, not a
-  hand-written list: it reconciles each wrapper's on-chain price against its candidate reference
-  and admits the mapping only if they agree. **28 of 30 admitted**, widest reconciling basis 2.0%.
-  The two refusals are now measured rather than pending — **wSKHYx** blocked on a KRW/USD leg,
-  **wSPCXx** because SpaceX is private. The test re-runs against live data and fails if an
-  admitted mapping stops reconciling.
-- ~~**wSKHYx still needs an FX leg**~~ — ✅ **Built 2026-08-11 (D39).** `toUsd()` converts any
-  foreign-quoted reference through a live rate, and the engine is currency-blind after it.
-  **wSKHYx still fails, now at −86.4%**: X Layer quotes it at $136.93 against a share worth
-  $1,004.97, with Seoul and Frankfurt agreeing within 1.6% on the reference. The refusal moved
-  from *"we have not built the FX leg"* to a measured basis, which is the stronger statement.
-- **What the wSKHYx pool is actually pricing is unknown.** We refuse it and say the number; we do
-  not claim to know why. Its pool holds a single full-range position with no tick structure from
-  trading. Anyone holding wSKHYx on X Layer should read that −86.4%.
-- ~~**The oracle's admin, publisher and treasury are one key**~~ — ✅ **Closed 2026-08-11 (D42).**
-  Admin of the oracle, receipts and fees is a **2-of-3 Safe**; publishing is a separate hot key;
-  the deployer administers nothing and `setAdmin` from it reverts `NotAdmin`, checked after the
-  fact. Rehearsed on testnet with the same owners before the mainnet run.
-- **The publisher is still a hot key, and that is structural.** `publish()` runs every fifteen
-  minutes from a machine, so consent cannot gate it — the contract bounds it instead (D41). A
-  multisig cannot close this half, and no amount of key hygiene changes that.
-- ~~The new guard and executor have never carried a fill~~ — ✅ **closed (D45).** Receipt **#3**,
-  `0xc9eba0cb…`, 0.5 USDG into wTSLAx, 7 bps shortfall, executor residual 0.
-- ~~The off-chain pipeline does not model the on-chain publish bound~~ — ✅ **closed (D45).** The
-  pipeline reads the deployed observation and respects a withhold.
-- ~~The previous mainnet oracle is writable by one key~~ — ✅ **closed (D45).** Publisher revoked,
-  admin handed to the Safe.
-- **Continuous publishing is built and deliberately not running until 18–19 Aug** (D45–D47).
-  `pnpm publish:loop` plus `railway.json` are ready; GitHub Actions is the manual button only,
-  because its `schedule` is best-effort and a five-minute lag against a 15-minute `maxAge` is a
-  stale oracle.
+- ~~**Claude provider never executed**~~ — **deleted 2026-08-12 (D59)**. Gemini is the only live
+  provider; the fixture is the floor. The risk was never the unused code, it was that
+  `pickProvider` selected on whichever credential happened to be present.
 
   **Scheduled: deploy the worker 18–19 Aug 2026**, two to three days before submission closes, and
   leave it up through judging. Not before — the web app needs no publishing at all, since fair
@@ -348,14 +363,67 @@ That single run exercises every claim the product makes. It is the demo.
   background) and `public/logo-reckonz.png` (1024² source). **Not yet wired in**: the header still
   shows `◇`, and dropping it into `app/` is FE-owned. Ticket with the spec is in `07-team.md § FE 4`.
 - **Bring-your-own-key deferred**, not rejected — see D43. Wallet connect is worth more of the FE's
-  remaining time, and BYOK would not have closed the Claude gap regardless.
+  remaining time, and BYOK would not have closed the Claude gap regardless — deleting the provider
+  did (D59).
+
+### Built into the contracts, unreachable from the product (D52)
+
+Found by the 2026-08-12 sweep, which enumerated every external function and checked whether any
+path in `src/` or `app/` reaches it. This is the shape D51 had before someone tried to sell.
+
+Both were **exercised on mainnet 2026-08-12**, not just written: the breaker tripped and released
+on mandate #3 (`0xd205be47…`, `0xd57d1756…`, 30,593 and 30,581 gas, state read back both ways),
+and the fee swept (`0x5004b6fa…`) — `FeeCollector` went to **0 USDG** and the treasury received
+0.0024. The first revenue this project has actually collected rather than accrued.
+
+- ~~**`setCircuitBreaker` cannot be pressed**~~ — **`pnpm breaker <id> [on|off]`**, 2026-08-12.
+  No args reads the state; it refuses when the caller is not the owner, before spending gas, and
+  polls the state back after writing because "probably tripped" is not an answer for a safety
+  control. **Tripping stops exits as well as entries**, which is deliberate and now pinned by
+  `test_CircuitBreakerStopsExitsToo` — see D53 for why that is not the D51 mistake repeated.
+- ~~**`FeeCollector.withdraw` has no caller**~~ — **`pnpm fees [withdraw]`**, 2026-08-12. Reports
+  the rate, the ceiling, the admin, the treasury and the balance; sweeps only when asked. `withdraw`
+  is callable by anyone because the destination is fixed in storage, so this needs no Safe
+  signatures. ⚠️ **Still open: `treasury` is the deployer EOA** while `admin` is the 2-of-3 Safe —
+  the control moved in D42 and the payout address did not. `setTreasury` is admin-only, so fixing
+  it is a Safe transaction, not a script.
+- ~~**`closeMandate`, `updatePolicy`, `setAgent`, `setAssetAllowed`, `setTriggers` have no path**~~
+  — **`pnpm mandate:edit <id> close|agent|asset|policy|trigger`**, plus the browser panel below.
+  Every one is owner-checked before gas, read back after writing, and `trigger add` appends to the
+  existing set rather than replacing it, because `setTriggers` replaces wholesale on chain.
+- ~~**`getPosition` and `getTriggers` are never surfaced**~~ — **`pnpm mandate:show [id]`** and
+  `app/components/MandateManage.tsx`: policy, allowed assets with recorded positions, decoded
+  triggers, what is firing, and which assets have a stale oracle.
+- ~~**`setFeeBps` and `setTreasury` have no path**~~ — **`pnpm safe:admin status|treasury|feebps`**,
+  2026-08-12. It reads the Safe from the contract it administers rather than from a constant,
+  reports which owner keys are present locally, approves with those, and prints the exact hash a
+  co-signer must approve when there are not enough. **`setTreasury` was executed 2026-08-12** —
+  the fee now lands in the Safe (`0xb49827b1…`, the Safe's first mainnet transaction ever, nonce
+  0 → 1). ⚠️ Both signing keys sat in one `.env` for that run, which made the 2-of-3 a 1-of-1 for
+  its duration; `SAFE_OWNER_2_KEY` should live elsewhere between admin actions. See D55.
+
+The remaining unused view surface — `ReceiptRegistry.performance` / `receiptsOf`,
+`ThesisRegistry.thesesOf` / `authorOf` — is deliberate, not a gap. `performance()` is keyed by
+mandate and Simple mode needs per-thesis aggregation (D50); the others are conveniences for
+consumers we do not have yet.
+
+### The encoder nobody had written
+
+Found while making `setTriggers` reachable, and worth its own line: **`compileMandate` never
+produced on-chain triggers.** It emitted `ResolvedTrigger[]` — a metric name, a plain `number`
+threshold and *symbols* — while `setTriggers` takes `{uint8, uint8, int256, address[]}`, and
+nothing joined the two. `mandate-demo.ts` hand-wrote `{ metric: 5, comparator: 1, threshold:
+1_000_000000n }` and any second caller would have hand-written its own scaling. `src/triggers.ts`
+is now the single place that scales a threshold and resolves symbols, imported by the CLI and the
+browser alike. Only `capacityUsdg` is cash-denominated; getting that wrong installs a rule off by
+a million that silently never fires.
 
 ### Deliberately not started, and why
 
 | Component | Blocked on | Verdict for this submission |
 |---|---|---|
-| Consumer / simple mode | — | Browse published theses with their on-chain track records. The data now exists (`ThesisRegistry` + `ReceiptRegistry`), so this is mostly an FE question. Last item in the build order. |
-| Indexer | volume | No longer blocked on receipts — there are **four** — but four receipts do not need an index. Real work that only pays off with volume. Roadmap item. |
+| Consumer / simple mode — follow-once | wallet connect in the UI | The **read half is built**: `src/track-record.ts` joins both registries and derives each thesis's basket from its settled fills; `GET /api/theses` serves it; `pnpm track-record` is the terminal view. What is left is the follow itself — a follower's `createMandate` + Permit2 signature, both of which are browser-side and land with wallet connect. Auto-DCA was dropped, see D50. |
+| Indexer | volume | No longer blocked on receipts — there are **five** — but five receipts do not need an index. Real work that only pays off with volume. Roadmap item. |
 | ASP / x402 registration | a stable hosted endpoint | The endpoint exists now (reckonz.vercel.app), so this is unblocked and simply not started. Worth naming on the form as planned ecosystem contribution. |
 
 The honest summary: depth was chosen over breadth throughout, and that was the right call for
@@ -367,16 +435,22 @@ left is not architecture; it is a video, a form, and a decision about who can re
 
 ## Suggested order
 
-Everything that was on this list as engineering is done: mainnet deploy, four real fills, the fee,
+Everything that was on this list as engineering is done: mainnet deploy, five real fills including
+the first exit, the fee,
 the thesis registry, the web app, the multisig. What is left is a calendar, not an architecture.
 
 **Now → 17 Aug — the only items that can still fail.**
 
-- **Wallet connect + mandate creation in the UI** (FE). The one thing that changes the demo from
-  *this system computes* to *this system executes, and you press the button*. Ranked above every
-  visual item in `09-design.md`, and that document says so itself.
-- **Demo video.** The evidence block above is the script. It cannot be recorded until the FE
-  decides whether wallet connect makes it in, so the fork is: with wallet, or without.
+- ~~**Wallet connect + mandate creation in the UI**~~ — **built 2026-08-12** (BE, taken over from
+  FE). This is the half that changes the demo from *this system computes* to *this system
+  executes, and you press the button*.
+  **It is written and it builds; it has never been run against a wallet.** No extension exists in
+  the environment it was written in, so the connect handshake, the `createMandate` signature and
+  the revert-decoding path are all unexercised. D35 is the whole lesson here: code that compiles
+  against an external dependency proves nothing until a call that does the real work succeeds.
+  **Do this first, on testnet, before anything else on this list.**
+- **Demo video.** The evidence block above is the script. The fork it was waiting on is resolved:
+  wallet connect is in, so record *with* wallet.
 - **Repo visibility decision.** Private today. The rules do not demand public, but a judge scoring
   "product completeness" will want to read `04-decisions.md`. Decide, do not drift into a default.
 
@@ -398,7 +472,205 @@ worker down; either is fine, silently running dry is not.
 
 ## Log
 
-**2026-08-11 (latest, thirteenth)** — the competitive landscape checked for the first time, and
+**2026-08-12 (latest, sixteenth)** — **the last unlicensed source is deleted, and the gaps D62 left
+are closed** (D63). Four things, none of them large on their own.
+
+**`PUBLISH_SYMBOLS`** narrows what the publisher writes. Measured on chain, not estimated: 919,563
+gas for thirty assets against **142,872 for four** — 6.4x, turning three weeks of runway on $5 into
+about four and a half months. A symbol that is not in `ASSETS` is a hard error, because a typo that
+quietly publishes twenty-nine is drift nobody notices until a mandate cannot execute. The runway
+printed each run now scales with the set being published.
+
+**`src/marketdata.ts` is gone.** Not quarantined — deleted. What it was still being borrowed for is
+the close-to-open jump σ behind the band, and the fix was to stop borrowing: `pnpm sample` writes
+the issuer's marks to `observations/issuer-marks.jsonl` and the publish worker does it every cycle,
+one HTTP call, no gas, no key. `pnpm measure` derives σ from that store and **refuses below 30 jumps
+per asset**, printing how far along it is. A σ from six hours of samples would look fresher than the
+number it replaced and be worse.
+
+**`MEASURED.fits` deleted** — the recorded betas priced nothing after the carry-forward was retired,
+and a recorded number nothing reads is a number nobody checks.
+
+**`src/permit.ts`** is the piece the browser was actually missing. `07-team.md` said the follow flow
+was gated on wallet connect; wallet connect shipped and the flow did not move, so the stated blocker
+was not the real one — nothing in `app/` could produce a Permit2 signature. `src/execute.ts` was
+rewired through the new module, so every mainnet fill exercises the code the browser will run.
+Proven by placing one: **receipt #14**, 0.6 USDG into wTSLAx, 614,433 gas. **The browser has still
+never placed a fill** and nothing here says otherwise.
+
+**2026-08-12 (fifteenth)** — **the price source has no licence, and the issuer turns out to
+have better data than the one we are using** (D62). Nothing changed in what the oracle publishes.
+
+The Yahoo endpoint behind every fair value is undocumented and unlicensed — no terms page exists to
+accept, so there is no permission to point at. Pyth is not the escape: its terms are equally
+restrictive (*"private, non-commercial informational purposes"*, no automated extraction) and its
+licensed tier is $10,000/month, and it is **not deployed on X Layer** — three canonical addresses
+probed against RPC 196, all empty. OKX's public spot API carries zero tokenised equities. Exchange
+redistribution runs $20k–35k/month and no vendor plan substitutes for it.
+
+The way out is to stop consuming exchange data and take the number from the issuer. `src/issuer.ts`
+reads Backed's public API, and `pnpm reconcile` now prints a third column beside the reference and
+the chain. Read-only: no verdict depends on it and nothing from it is published.
+
+What it measured:
+
+- **A defect we have been absorbing since D38.** xStock dividends are reinvested into the token via
+  a multiplier — `IBMx` is at 1.02040, `SPYx` 1.00571, `AAPLx` 1.00327, all larger than the guard's
+  100bp deviation tolerance — and nothing here knew the field existed, so it landed in `basisBps` as
+  noise. Direction measured rather than read: mean |basis| is 1.10% untreated, **0.73% multiplied**,
+  1.55% divided. Non-payers (TSLA, GLD, COIN) read exactly 1.0, which is what makes it believable.
+- **The chain agrees with the issuer, not with Yahoo.** Chain vs issuer mid is inside ±0.7% for every
+  asset with a pool; chain vs Yahoo runs to 2.7%.
+- **The two withheld assets have a mark.** `wSKHYx` — rejected at −86% in D39 — sits **−0.10%** from
+  the issuer's price. D39's conclusion was right; our reference for it was wrong. `wSPCXx` is marked
+  too, and SpaceX has no listing at all. Issuer-referenced would be 30 of 30, not 28.
+- **717 xStocks are deployed on X Layer**, not 30. Thirty is the set with a pool, which is the more
+  useful number — but it was never the same statement.
+- **A unit trap, caught by the first run.** The two issuer endpoints publish in different units and
+  neither says so; issuer quotes came back 100× the reference. A wrong scale here would be quiet and
+  catastrophic, because every proportional check in the guard compares ratios. The constant is
+  derived across two assets three orders of magnitude apart, and re-measured at runtime.
+
+**The multiplier correction is applied.** `FV = P_close × (1 + Σ βᵢ · rᵢ) × shares/token`, with
+shares per token recorded in `AssetSpec` for all thirty assets and re-checked for drift by
+`pnpm reconcile`. Recorded rather than fetched at publish time on purpose: the oracle must not need
+somebody else's uptime to price anything, and the measurement run itself had three transient
+failures out of thirty. Mean |basis| across the sixteen assets carrying a multiplier fell from 1.12%
+to 0.73%; `wIBMx` went from roughly 2% to −0.20%. All 28 admitted assets still reconcile.
+
+**β and the gap distribution are now recorded too**, in `MEASURED` beside `ASSETS`, for the 29
+assets that have a reference. Both came from the same year of Yahoo daily bars — the band's source
+was missed in the first plan for this migration, which called it one number per asset when it is two.
+Recording changed nothing: bands across the swap are identical to the last basis point
+(wAAPLx 1.68%, wINTCx 5.71%, wSKHYx 8.19%), and fair values moved only by the signal's own movement.
+The cost is slow staleness, so `pnpm reconcile` re-fits live every run and reports drift past 0.05 on
+β or 10% on σ, stating which way the error runs — a σ that has grown means the published band is that
+much too narrow. It also flags an admitted asset missing from `MEASURED`, because that silently falls
+back to the live regression this was meant to remove. All three verified by breaking them on purpose.
+
+**One correction to the plan:** the issuer's per-session spread was going to replace the band. It
+cannot — a dealing spread is a transaction cost, the band is a forecast uncertainty, and swapping
+them would narrow wAAPLx sevenfold *while the market is shut*, making the guard most permissive at
+its most dangerous hour. The spread becomes a **floor** on the band instead.
+
+**And the reference leg is migrated.** `FV = issuer mid × shares/token`. Two measurements settled it
+first: a regression of (chain vs issuer mid) on (multiplier − 1) across all thirty assets gives
+slope 1.090, R² 0.816 — the issuer quotes the share, the chain prices the token, so the multiplier
+is the difference and not a double count. And the issuer's overnight mark is *live*: sampled 91
+seconds apart at 04:20 New York, four of eight names moved more than a basis point.
+
+That retires the carry-forward, which is better than the plan promised — the overnight direction
+guess is not lost, it is replaced by a dealer doing the same job with money behind it. The signal
+machinery is deleted rather than left dormant (D59). `src/fairvalue.ts` no longer imports
+`marketdata` at all.
+
+**Band and gap risk are now two measurements, not one.** The band is uncertainty about the value
+now — the issuer's own spread while it quotes, the recorded jump distribution when nobody does. Gap
+risk keeps the jump distribution even while the mark is live, because buying at 3am carries the open
+however good the price is. The old model conflated them and scored staleness at 3am purely because
+New York had shut, while a dealer was quoting the whole time.
+
+The effect, same minute before and after: every asset now sits inside **±0.40%** of fair value
+against up to 2.7% before, with bands of 10–30bp against 0.2–8%. The guard got *tighter* — tolerance
+is `maxDeviationBps + band`, and the band collapsed because fair value stopped being a forecast.
+
+Nothing newly publishes: `admittedOn` still gates and the admission test is still exchange-
+referenced, so wSKHYx and wSPCXx stay withheld — though wSKHYx now sits 2bp from the chain under the
+issuer rather than −86%, and its withholding note was corrected to stop giving a reason that has
+stopped being true. Yahoo has exactly one consumer left, `src/reconcile.ts`, and nothing that
+publishes touches it.
+
+**And admission moved too — the universe is now 30 of 30.** `pnpm reconcile` asks whether the chain
+agrees with the issuer's mark rather than whether the wrapper reconciles with an exchange listing.
+Two gates disappeared and neither is a relaxation: `FX_REQUIRED`, because the issuer quotes every
+token in USD (the whole KRW leg behind D39 is gone), and `NO_HISTORY`, because there is no beta to
+fit. The comparison is finally like-for-like — issuer mid × shares per token against the chain.
+
+```
+wSKHYx   issuer × shares 146.28   chain 146.16   -0.1%    (was -86.3% against 000660.KS)
+wSPCXx   issuer × shares 134.69   chain 134.34   -0.3%    (was: no listing exists)
+```
+
+D39's rejection of `wSKHYx` was right about the mapping and wrong as a statement about the token.
+`wSPCXx` is the clearest case for the issuer: SpaceX is private, no exchange can price it, and the
+party minting the token marks it anyway. The exchange-referenced oracle defended 28 of 30; this one
+defends all 30, with a tighter basis on every asset.
+
+Admitting `wSPCXx` exposed a bug worth naming: it scored **gap risk 2 of 100**, the safest thing in
+the universe, because it has no recorded open-gap statistics and a missing σ multiplied out to zero.
+Unmeasured now scores as maximum on that term, and where nothing is quoting *and* nothing is
+recorded the band is null and the value unpublishable — a zero band is a lie the guard acts on.
+
+**Yahoo is quarantined, not deleted.** `src/marketdata.ts` has one importer left: `src/measure.ts`,
+a bench tool run by hand as `pnpm measure`. Nothing that publishes or admits touches it. Deleting it
+outright was the plan and was the wrong call — the open-gap distribution has no free licensed
+replacement and the issuer publishes no history, so removing the code would leave the recorded σ
+values permanently unauditable, which is D5 in reverse. The real fix is to build the history rather
+than borrow it: sample the issuer's own marks into a store. That is the indexer in
+`03-architecture.md`, and it does not exist yet.
+
+**Exercised end to end, same day.** Five exits and one entry under the new model — receipts #9–#13, all
+`dryRun ALLOW`, clearing wQQQx/wNVDAx/wTSLAx/wSPYx back to USDG at 0.25/0.40/0.80/0.95/0.44 USDG.
+Deployer USDG went 0.9166 → 3.7498 and the five fills cost 0.00006 OKB in total. The point was not
+the money: it is the first execution path priced by the issuer rather than by an exchange, and
+`shortfall 12 bps below fair value` on the first one is the guard measuring against a mark that is
+now live rather than eleven hours old. wSPYx needed two slices because `maxNotionalPerTrade` on
+mandate #1 is 1 USDG and the position was worth 1.40.
+
+**Published to mainnet 2026-08-12**: 30 observations in one transaction, block 67756404, 968,736
+gas, success. A second publication followed at block 67758469 before the exits, and the read-back
+fix held — no false `REJECT STALE`, all 30 ALLOW. On-chain bands came back at **10–25bp** against the 168bp the previous observation
+carried for the same asset, and 30 of 30 read back with `hasValue: true`.
+
+The read-back reported three of them as `REJECT STALE` and was wrong — D18 through a guard that was
+already there. `publish.ts` waited for `updatedAt !== 0` before reading back, which any
+previously-published asset satisfies forever, so the wait passed instantly against a node still
+serving the old block. The bound is now the timestamp of the block the write landed in, and every
+asset waits on its own read. A guard whose predicate is always true is worse than no guard, because
+it is also reassuring.
+
+⚠️ **Nothing is publishing on a schedule.** Before this run the on-chain observation was **12.9
+hours old** against a `maxAge` of 15 minutes, which means no entry could execute on mainnet at all.
+`src/publish-loop.ts` exists and is the right tool — the GitHub workflow is deliberately manual,
+because `schedule` is best-effort and a five-minute delay is enough to go stale — but it is not
+deployed anywhere. The binding constraint is gas, not hosting: the publisher holds 0.0028 OKB, and
+30 assets every 10 minutes is 144 cycles a day.
+
+The licence question is still not settled: the API describes itself as being for "integrators" but
+grants nothing explicitly. That is now the only thing standing between this and a defensible answer
+to "where does your price come from".
+
+**2026-08-12 (fourteenth)** — **testnet realigned with mainnet** (D60). The second sweep
+measured the deployed bytecode instead of trusting the deploy dates and found the 1952 stack two
+generations behind: an `Executor` with no `exit()` (D51) and a `PolicyGuard` without the exit fix
+(D56), on the chain this file tells people to test wallet connect on.
+
+Redeployed with `MigrateGuard.s.sol` — the same script that made the mainnet move, which first had
+to stop hard-requiring a live v3 factory. That factory has no code on 1952 and never will, so the
+requirement is now the one `Deploy.s.sol` already applied under D36: refuse on mainnet, warn
+elsewhere. Refusing everywhere is precisely what kept the rig stale.
+
+```
+PolicyGuard  0xD9d04Bc1324ed4fb23D171893BFACb1c99FD581b   28,343 bytes — mainnet: 28,343
+Executor     0xf1b73Fb49CEfcB7CEd27b667c8Ea14bD8f3871D9   20,445 bytes — mainnet: 20,445
+```
+
+Both `exact_match` on Sourcify, creation and runtime. Immutables read back against the same
+oracle, registry, cash, collector, Permit2 and factory. `exit()`'s selector is in the new bytecode
+and not the old. The registry's write permission moved through the testnet Safe — 2-of-3 there
+too — granted to the new guard before being revoked from the old, which needed owner 2 funded
+first: it held zero OKB, so its `approveHash` could not pay for itself. Nothing was stranded; the
+old guard held no mandates and the registry holds no receipts.
+
+D60's four smaller findings are closed in the same pass. Three were text — provider comments
+naming a file that no longer exists, `03-architecture.md` still saying "Claude", and two surface
+claims listed without a marker — and are fixed where they were written, marked rather than
+deleted. The fifth got a script: **`pnpm check:tests`** runs `forge test` and compares its total
+against every count stated in the docs, six of them today, so the number cannot be stale in five
+files at once again. Also corrected while in there: this file was still naming `0x09af5194…` as
+the current mainnet executor, two redeploys behind.
+
+**2026-08-11 (thirteenth)** — the competitive landscape checked for the first time, and
 four docs corrected against it (**D49**). No code changed; nothing in `src/` or `contracts/` was
 wrong.
 

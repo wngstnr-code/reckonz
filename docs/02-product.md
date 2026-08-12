@@ -103,11 +103,17 @@ Not a competing venue. The discipline layer above one (D49).
 
 ## The pitch line
 
-> The AI's key can only call `proposeRebalance()`, and `PolicyGuard` bounds the execution
-> **on whether the price can be defended and the depth is actually there** — not on where
-> the funds may go and how much. The worst case from a hallucinating or prompt-injected
-> agent is a rebalance *within* the mandate: a bounded loss, not a drained wallet, and not a
-> fill into a market that could not take it.
+> The AI's key cannot move a cent without a signature the user just produced, and
+> `PolicyGuard` bounds what it does with one **on whether the price can be defended and the
+> depth is actually there** — not merely on where the funds may go and how much. The worst
+> case from a hallucinating or prompt-injected agent is a trade *within* the mandate, for at
+> most the amount the user signed for: a bounded loss, not a drained wallet, and not a fill
+> into a market that could not take it.
+
+Until 2026-08-12 this line said "can only call `proposeRebalance()`". There is no such
+function and there never was (D52). The mechanism is Permit2 — one token, a capped amount, a
+twenty-minute expiry, signed by the owner per execution — which is a stronger claim than the
+one we had been making, and it has the advantage of being checkable.
 
 The second half of that sentence is the load-bearing half, and it was not always written this
 way. "The agent's key is bounded" separated us from nothing by 2026: smart account plus

@@ -1542,3 +1542,1316 @@ X Layer × xStocks announcement is unconfirmed — the primary write-up 403s, an
 only by secondary coverage plus the CEO post. Whether **dHEDGE**, **Enzyme** and **Reserve Index
 DTFs** are still live as comparables for the thesis-subscription model is unchecked; they are cited
 from memory, not from a source.
+
+---
+
+## D50 — Follow copies the fills, not the thesis text; auto-DCA is dropped
+
+Simple mode was one line in the build order — "browse published theses with real on-chain track
+records, one-tap follow in USDG, auto-DCA" — and it hid two very different problems.
+
+### The basket comes from `ReceiptRegistry`, not from IPFS
+
+Every thesis published so far carries `cid = ""`. `thesis-publish.ts` writes an empty CID on
+purpose: there is nowhere to pin, and publishing a CID that resolves to nothing is worse than
+publishing none. That looked like a blocker for Follow — a follower cannot copy reasoning they
+cannot read.
+
+It is not one. Every `Fill` records its `asset` and `amountInUsdg`, so the set of fills under a
+`thesisHash` **is** the basket, and its weights fall out of the notional. A follower copies what
+was actually executed rather than what was claimed, which is both the cheaper implementation and
+the stronger one: the text is a claim, the fills are the half that cannot be rewritten.
+
+`src/track-record.ts` therefore derives weights from settled entry fills, and pinning becomes an
+enhancement to the *display* rather than a dependency of the *feature*.
+
+Two rules fell out of writing it. Weights are computed over **entries only** — an exit is a
+decision to leave, not a smaller allocation, and putting it in the denominator misreports what a
+follower is being asked to copy. And slippage is weighted by notional, not averaged per fill: a
+$0.25 fill and a $2,000 fill are not one datum each.
+
+`performance()` on `ReceiptRegistry` is not used, because it is keyed by `mandateId`. It answers
+"how did this mandate do". Simple mode asks "how did this *thesis* do", across every mandate that
+followed it — so the aggregation groups by hash and ignores mandates entirely.
+
+### Follow needs no new contract
+
+The mandate architecture already is what Follow wants. A follower calls `createMandate` from their
+own wallet, so they are `owner`; their funds never move to us; `PolicyGuard` bounds them under
+their own `Policy`, not the author's. The agent sizes legs to *their* notional through the planner
+— mandatory, not ceremonial, since the original thesis executed at $0.50 and the depth that
+absorbs $0.50 is not the depth that absorbs $2,000. The resulting receipt carries the same
+`thesisHash`, so a follower's execution lands back in the same track record. The loop closes.
+
+`Policy` has no weights field. It holds bounds. Anyone reading "copy the weights into the policy"
+has the wrong model.
+
+### Auto-DCA is dropped, and the reason is infrastructure
+
+`Executor._pull` uses Permit2 **SignatureTransfer**: single-use nonce, deadline, a fresh EIP-712
+signature per execution. `execute.ts` sets a 20-minute deadline. Recurring unattended execution
+cannot sit on that.
+
+The fix is *not* migrating to AllowanceTransfer — that trades a per-execution spending cap for a
+standing allowance, which is a real weakening of the one safety property this system leads with,
+in a contract with live mainnet fills. The cheaper path is pre-signing: Permit2 nonces are an
+unordered bitmap and deadlines are free, so a user could sign twelve permits in one sitting with
+staggered deadlines, each capped in amount, each revocable by invalidating its nonce.
+
+That path needs somewhere to store twelve signatures and a worker to spend them. This repo has no
+database, and the publish worker — the one scheduled process we already planned — is not running
+yet. Building storage plus a scheduler before 21 Aug, to serve a feature whose UX is "sign twelve
+times" rather than the "one-tap" the architecture doc promised, is the wrong use of the remaining
+days.
+
+**Consequence:** Simple mode for this submission is *browse a track record, then follow it once at
+your own size*. Auto-DCA leaves the build order and becomes a roadmap item. `03-architecture.md`
+is corrected accordingly — it had promised one-tap follow and auto-DCA in the same breath, and only
+the first is real.
+
+### What the chain actually holds, as of 2026-08-12
+
+Worth writing down, because the feature was scoped against an imagined dataset and the real one is
+thinner: **one** thesis, and of four receipts only **#2** carries its hash — a single wSPYx entry
+of 0.49925 USDG at 45 bps. The other three were executed before there was a thesis to bind them to,
+and `loadRegistry()` reports them as `unattributed` rather than folding them in. A track record
+page that showed only the attributed fills would claim more discipline than the chain shows.
+
+---
+
+## D51 — The executor could never sell, and the guard's own comment said that was unacceptable
+
+Found 2026-08-12 while trying to prove an exit with $0.10 of wSPYx.
+
+`Executor` had no exit path at all. Not a bug in one — there was none:
+
+- `Leg` carries only `amountInUsdg`, "settlement currency to spend". No field ever named a
+  quantity of the asset.
+- `_pull` reverts `PermitMismatch` for any permitted token that is not `cash`.
+- `_swap` calls `_swapHop(cash, leg.asset, …)` — the direction is written into the call.
+- `fill.isExit` was the literal `false`.
+
+Everything *around* it was built for exits and had been for weeks. `ReceiptRegistry.Fill` has
+`isExit`. `ExitTriggers.applyFill` decrements a position when it is set. `PolicyGuard.
+validateAndRecord` accepts it, and skips the trigger check for exits with this comment already in
+the file:
+
+> Exits are never blocked: a mandate whose triggers fire but which cannot sell would be worse than
+> having no triggers at all.
+
+Which is exactly what we had shipped. The triggers fired into `firedTriggers()` and nothing could
+act on them. A guard that can only ever say *do not buy more* is not risk tooling, and the page
+header has been claiming "enforces the exits on chain" throughout.
+
+**Consequence:** `Executor.exit()` — the mirror of `execute()`. `ExitLeg` denominates the amount in
+the asset; `_pullAssets` permits the asset and explicitly refuses `cash`, so an exit signature can
+never move the user's settlement currency; proceeds route through the contract so the fee can be
+split off them, and the residual-balance assertion that already existed now covers a path that
+genuinely does hold cash for an instant. `PolicyGuard` needed no change. Nine tests, suite 89 → 98.
+
+### The inverted comparison, which would have been invisible
+
+`_shortfallBps` returns 0 when `priceE8 <= fairValue`. That is right for a buy — paying *above*
+fair value is the harm. Reused for an exit it is exactly backwards: a position dumped 30% under
+fair value would have recorded **0 bps** of slippage, and `PolicyGuard`'s `maxSlippageBps` would
+never once have bound on an exit while appearing to work. `_exitShortfallBps` inverts it, and
+`test_ExitShortfallIsMeasuredBelowFairValue` is the regression.
+
+Third defect of the same family after D31 and D36: the code was reachable, plausible, and wrong in
+a direction no test was looking in.
+
+### Still open, and worse than it looks: the oracle can block an exit
+
+`validateAndRecord` calls `oracle.checkExecution` for **every** fill, exits included. So an exit is
+refused when the observation is `STALE`, `NO_REFERENCE`, or `gapRisk > maxGapRisk`.
+
+Two consequences we have not fixed:
+
+1. **A gap-risk trigger fires precisely when the gap-risk check refuses the exit.** The mandate
+   tells you to leave and the guard will not let you.
+2. **When the publisher runs dry, nobody can sell.** D47 called running dry "a degradation rather
+   than an outage" because the guard refuses *new* fills. That was only half the story: after
+   `maxAge` the exits stop too. The funding date in `05-status.md` is therefore not just about
+   entering positions.
+
+Fixing this means changing `PolicyGuard`, and `guard` is `immutable` in `Executor` — so it is a
+two-contract redeploy plus a `setWriter` on the registry and a `setExecutor` on every live mandate.
+Recorded here rather than done in the same change as the exit path, and rather than being
+discovered by a user who could not get out.
+
+**Observed the same hour it was written down.** The first real exit attempt — $0.10 of wSPYx on
+mainnet, 2026-08-12 — never reached the guard. `FairValueOracle.observation` reverted `Stale`:
+
+```
+updatedAt 1786440877   now 1786493595   age 14.7h   maxAge 900s
+```
+
+The value itself was in good shape — `hasValue`, fair value 772.93, gapRisk 9, confidence 20 bps.
+Only its age was wrong, because nothing publishes yet: the worker is written, the publisher key
+`0x40101A49…` holds 0.00287 OKB and is authorised, and it has simply never been brought up.
+
+So the position could not be sold, and the reason had nothing to do with the market. `pnpm
+capacity` says the pool absorbs $1 at a flat 40 bps with zero ticks crossed. The chain was ready;
+our own oracle was the thing standing in the way.
+
+That is the argument for funding the publisher stated more sharply than D47 or D48 managed:
+**an oracle that stops publishing does not merely pause new positions, it traps the open ones.**
+
+`src/exit.ts` now reads through `peek` and refuses with that sentence rather than letting viem
+throw a stack trace — a refusal this system is supposed to explain is not an exception.
+
+### Then it worked, on mainnet
+
+One `pnpm oracle:publish` later — 30 observations, one transaction, 893,360 gas — the same command
+went through. **Receipt #4**, tx `0x769edd3b…`:
+
+| | |
+|---|---|
+| `isExit` | **true** — the first exit fill that has ever existed here |
+| sold | 0.000129742860900606 wSPYx |
+| received | 0.100466 USDG gross, **0.100316 net** of the 15 bps fee |
+| price | 774.347 against a fair value of 770.755 — *above* it |
+| `slippageBps` | **0**, and that is the correct answer: selling above fair value is not a shortfall |
+| executor residuals | 0 USDG, 0 wSPYx — the non-custodial assertion held on the new path too |
+
+The inverted comparison earned its place immediately: this fill landed above fair value, and
+`_shortfallBps` would also have returned 0 here. The two only disagree below fair value, which is
+exactly where a test rather than a lucky first trade has to be the evidence —
+`test_ExitShortfallIsMeasuredBelowFairValue`.
+
+**One thing this did not prove.** The position it decremented was already zero: the wSPYx was
+bought under mandate #1 and sold under mandate #3, and `ExitTriggers.applyFill` clamps rather than
+underflowing. So the execution path is proven end to end on mainnet; the position accounting for
+this particular fill was a no-op, and it is the unit tests that cover that half.
+
+---
+
+## D52 — A sweep for more exits: what is claimed, what is reachable, what is fiction
+
+D51 was found by trying to do something the docs said the system did. That is a bad way to find
+out. So on 2026-08-12 every external contract function was checked against whether any product
+path reaches it, and every load-bearing claim in `README.md`, `CLAUDE.md` and `03-architecture.md`
+was checked against the code. Method, so it can be repeated: enumerate `function` declarations per
+contract, grep `src/` and `app/` for each name, and treat "only referenced in `abi.ts` and tests"
+as unreachable.
+
+### Fiction — described in the docs, never in the code
+
+**`proposeRebalance()` does not exist and never did.** It is named in `CLAUDE.md` under
+**Non-negotiables** — "Agent keys call `proposeRebalance()` only" — and in `03-architecture.md` as
+the invariant of the whole agent design. `grep -rn proposeRebalance contracts src app test script`
+returns nothing.
+
+The security property it describes is real, and is arguably stronger than the sentence claimed.
+What enforces it is Permit2: `execute` and `exit` pull against a signature the **owner** produced,
+scoped to one token, capped in amount, expiring in twenty minutes. An agent key holding no fresh
+signature can move nothing whatsoever. But an auditor reading our own non-negotiables would go
+looking for a function that is not there, and finding it missing is a worse first impression than
+never having claimed it.
+
+Two more of the same kind, both in `03-architecture.md`:
+
+- The `PolicyGuard` field list named `maxTradesPerEpoch`, `maxOracleStaleness` and
+  `maxGapRiskScore`. The real names are `maxFillsPerEpoch`, `maxGapRisk`, and *nothing* — staleness
+  is `maxAge` on the oracle, global rather than per-mandate. `maxDeviationBps` and `enforceWeights`
+  were missing entirely.
+- The `ReceiptRegistry` entry was described as `basketId, epoch, actionType, targetWeights[]`. None
+  of those four fields exist. The real record is per-fill.
+
+### Built, but no product path reaches it
+
+Not bugs. Each is a capability the contracts have and no user can invoke, which is precisely the
+shape D51 had before anyone tried.
+
+| Function | Why it matters |
+|---|---|
+| `PolicyGuard.setCircuitBreaker` | The **owner kill switch**, and its own comment calls it that. Reachable from tests only. A user who wants to stop their mandate right now cannot. |
+| `FeeCollector.withdraw` | **The revenue has no way out.** 0.0024 USDG has accrued and there is no script or button that collects it. |
+| `FeeCollector.setFeeBps` / `setTreasury` | No path. Related: **`treasury` is still the deployer EOA** while admin is the Safe — the control moved and the payout address did not. |
+| `PolicyGuard.closeMandate` / `updatePolicy` / `setAgent` / `setAssetAllowed` | Mandates are create-only from the UI. Every later adjustment is a `cast send`. |
+| `PolicyGuard.getPosition` / `getTriggers` | Nothing surfaces a user's own position or the rules bounding it. `pnpm mandate` prints them once at creation and never again. |
+| `ReceiptRegistry.performance` / `receiptsOf`, `ThesisRegistry.thesesOf` / `authorOf` | Unused view surface. Harmless, but `performance()` in particular reads like the track-record API and is not the one Simple mode uses — see D50 for why. |
+
+`setTriggers` is reachable from `pnpm mandate` only, so **exit triggers cannot be installed or
+changed from the web app** — the rules that bound a mandate are CLI-only.
+
+### Stale claims, now corrected
+
+- `README.md` listed the **old executor address**, "four real fills", and "89 tests".
+- `05-status.md` said the **Safe mainnet handover was pending**. It is done — read back
+  2026-08-12, `admin()` on the oracle, the receipt registry and the fee collector all return the
+  Safe. The doc was claiming *less* than the truth, which is rarer and still wrong.
+- `05-status.md` said the capacity trigger was "already firing for wMUx". `firedTriggers(3)`
+  returns empty after the 2026-08-12 publish, because capacity on every allowed asset is above the
+  1,000 USDG threshold.
+- `03-architecture.md` promised "Evidence: IPFS, hash on-chain". `evidenceHash` is zero and
+  `evidenceCID` is `''` in every receipt ever written.
+- `03-architecture.md` said Yahoo "must be replaced before mainnet". Mainnet has been live since
+  2026-08-11 on Yahoo-derived values. The rule was broken rather than kept, and now says so.
+
+### Checked and sound
+
+Recorded so the next sweep does not redo them. All seven `ExitTriggers` metrics are implemented,
+not just enumerated. `src/guard.ts` still mirrors `checkExecution` faithfully — it models no
+`isExit` because `checkExecution` itself does not branch on direction. Every `pnpm` command in
+`CLAUDE.md` exists in `package.json`. `pnpm verify` passes against live pool state and
+`pnpm verify:abi` reports every exported selector present.
+
+**Consequence:** the kill switch and the fee withdrawal are the two that should not ship
+unreachable — one is a safety control we advertise, the other is the revenue story. Both are small
+scripts. Neither is done yet, and they are listed in `05-status.md § Not done` rather than left
+implied by a contract that happens to have the function.
+
+---
+
+## D53 — The kill switch stops exits too, and that is the right answer
+
+Making `setCircuitBreaker` reachable (D52) raised the question D51 had just made unavoidable: does
+the breaker block exits? It does — `if (m.circuitBreaker) revert Tripped();` sits at the top of
+`validateAndRecord`, above the loop that skips the trigger check for exits.
+
+The first instinct was that this is D51 again. It is not, and the difference is worth stating
+because someone will later be tempted to "fix" it.
+
+**A fired trigger must never block an exit.** The trigger is the mandate saying *leave*. A rule
+that fires and then prevents you acting on it is worse than no rule, which is what `PolicyGuard`'s
+own comment has said all along.
+
+**A tripped breaker is the owner saying stop everything**, and the threat it exists for is an
+agent that has gone wrong — compromised key, prompt injection, a bug in our sizing. An attacker
+who can only sell is still an attacker: they can dump a position into a market of their choosing
+at a moment of their choosing. A breaker that let exits through would leave that door open in
+exactly the situation it was pressed for.
+
+What makes it acceptable is custody, and only custody. The assets are in the owner's own wallet
+(D6). Any DEX will still trade them. The breaker stops *this system* acting on the owner's behalf;
+it does not stop the owner. That sentence is now printed by `pnpm breaker` at the moment of
+pressing, because a user tripping a switch deserves to know what it does before the transaction
+rather than after.
+
+Pinned by `test_CircuitBreakerStopsExitsToo`, which also asserts that releasing it puts the exit
+back within reach. Suite 98 → 99.
+
+**Consequence:** two safety semantics that look identical from outside are now distinguished in
+the tests and in the docs. Trigger fires → exits always allowed. Breaker tripped → nothing allowed,
+and the owner keeps their tokens regardless.
+
+**Proven on mainnet the same day.** `pnpm breaker 3 on` then `off` — `0xd205be47…` and
+`0xd57d1756…`, 30,593 and 30,581 gas, each confirmed by reading the state back rather than
+trusting the receipt. `pnpm fees withdraw` swept `0x5004b6fa…`: the collector went to **0 USDG**
+and 0.0024 landed at the treasury. Small money, and the first this project has collected rather
+than merely accrued — the revenue path is now closed end to end, from a 15 bps fill to a balance
+somewhere that is not a contract.
+
+---
+
+## D54 — A mandate you cannot see or change is not a mandate
+
+D52 listed five owner-only functions with no caller — `closeMandate`, `updatePolicy`, `setAgent`,
+`setAssetAllowed`, `setTriggers` — and two views nothing read, `getPosition` and `getTriggers`.
+Together they meant a mandate was **create-once**: the rules bounding it could never be tightened,
+the agent could never be rotated, it could never be shut, and its owner could not see what it held
+or what governed it. `pnpm mandate` printed the triggers at creation and never again.
+
+**Consequence:** `pnpm mandate:show` (read-only, never sends a transaction), `pnpm mandate:edit`
+(every mutation, owner-checked before gas, state polled back after), and
+`app/components/MandateManage.tsx` for the browser. The read/write split is two files on purpose —
+a typo while looking at a mandate should not be able to change one.
+
+### `setTriggers` replaces wholesale, so "add" had to mean add
+
+The contract has no append. A naive `setTriggers(id, [newOne])` silently deletes every rule already
+installed, and the user's mandate quietly stops having exit rules at the moment they thought they
+were adding one. Both the CLI and the panel read the existing set first and write it back with the
+new entry appended. `trigger clear` is the only path that removes anything, and it prints what it
+is about to remove.
+
+### The encoder that was never written
+
+The larger find. `compileMandate` produces `ResolvedTrigger[]` — metric *name*, a `number`
+threshold, and entity *symbols*. `setTriggers` takes `{uint8 metric, uint8 comparator, int256
+threshold, address[] assets}`. **Nothing in the repo converted between them.** `mandate-demo.ts`
+hand-wrote `{ metric: 5, comparator: 1, threshold: 1_000_000000n, assets: [] }`, and the second
+caller would have hand-written its own.
+
+So the product's central claim — *the same LLM output produces the entry and the risk rules* —
+stopped one step short of the chain, in the same way `Executor` stopped one step short of an exit
+(D51). Same shape: two sides built, no join.
+
+`src/triggers.ts` is that join, and it is the only place a threshold is scaled. **Only
+`capacityUsdg` is denominated in the settlement currency**; every other metric in
+`ExitTriggers.evaluate` compares against a raw integer — a 0–100 score, basis points, hours. A
+capacity threshold scaled wrong is off by a factor of a million and simply never fires, which is
+the worst failure mode available: a rule that exists, reads correctly in the UI, and does nothing.
+
+One deliberate refusal in the encoder: a compiled trigger scoped to assets that are all outside the
+mandate's allowlist is **dropped and reported**, never emptied to `[]`. An empty `assets` array
+means basket-wide to the contract, so quietly emptying one would widen a rule from a single asset
+to every asset — the opposite of what the thesis said.
+
+### Verified
+
+`pnpm mandate:show 3` against mainnet reads the live policy, all five allowed assets with their
+recorded positions, the one installed trigger decoded back to `basket: exit when capacityUsdg <
+1000 USDG` — which round-trips the scaling against a threshold written by a different code path —
+and the D51 staleness warning, which was already true again an hour after publishing. Every refusal
+path in `mandate:edit` was exercised: unknown action, closed mandate, unknown metric, an asset off
+the allowlist, an unknown policy key.
+
+---
+
+## D55 — The fee now lands in the Safe, and the multisig is no longer decorative
+
+`FeeCollector.setTreasury` and `setFeeBps` are `onlyAdmin`, admin became the 2-of-3 Safe in D42,
+and nothing in this repo could produce a Safe transaction. So the payout address was never moved:
+D42 relocated the *control* and left the *money* pointing at the deployer's EOA, and D52 found it
+only by enumerating functions nobody called.
+
+Worse than the gap itself was what the chain showed underneath it. **The Safe's `nonce()` was 0.**
+It had administered three contracts since 2026-08-11 and had never executed a single transaction.
+A multisig that has never been exercised is a multisig nobody has proved they can still sign with —
+and both co-owner addresses were undocumented in `docs/`, `src/` and `script/`, while
+`safe-prove.ts` builds its co-owners from `generatePrivateKey()`. If mainnet had been set up the
+same way, two of three keys would have been gone and every admin function frozen for good. It had
+not been; the owner holds all three. The question was worth asking before assuming.
+
+**Consequence:** `pnpm safe:admin status|treasury|feebps`. It reads the Safe *from the contract it
+administers* rather than from a constant, so it cannot approve hashes against a Safe that is no
+longer the admin. Owner keys come from the environment only — a private key on a command line
+survives in shell history. Whatever keys are present approve on chain; when that is not enough it
+prints the exact hash a co-signer must approve and changes nothing, which is the real multisig
+workflow rather than a pretence that two keys on one laptop are two people.
+
+Run 2026-08-12, and it is the Safe's first mainnet transaction ever:
+
+```
+setTreasury(0x98d19BE6…)   safe nonce 0 -> 1
+approve owner 1  0xe4170827…
+approve owner 2  0xf3830dee…
+execute          0xb49827b1…
+FeeCollector.treasury = 0x98d19BE6e810bEEfC8A0a408D4AEf164B7F1391e   (the Safe)
+```
+
+`withdraw()` stays callable by anyone, so fees can still be swept by anybody — they now land in
+the 2-of-3 rather than in one key. The cost is symmetric and worth stating: getting money *out*
+of the Safe needs two signatures too. That is the trade, and it is the right one for an address
+that accumulates other people's fees.
+
+`setFeeBps` was left at 15, which is where it should be. It shares this path exactly; the refusal
+cases are covered instead — over `MAX_FEE_BPS` it refuses before spending the Safe's nonce on a
+transaction that would revert, and setting the value it already has does nothing.
+
+### The part that is still not solved
+
+Both keys used above sat in one `.env` on one machine. For the duration of that run the 2-of-3 was
+a 1-of-1: one compromised laptop is the whole threshold. The multisig's value comes entirely from
+the keys being in different places, and nothing in the code can enforce that. `SAFE_OWNER_2_KEY`
+should come out of `.env` and live somewhere else between admin actions — recorded here because it
+is an operational discipline, and those are exactly the ones that quietly lapse.
+
+---
+
+## D56 — The oracle stops being able to trap a position, and one incident on the way
+
+D51 recorded that `validateAndRecord` ran `oracle.checkExecution` on every fill including exits, so
+a stale or high-gap-risk observation refused the sale as well as the purchase. Two consequences
+were named there: a gap-risk trigger fires exactly when the gap-risk check blocks the exit it is
+demanding, and an unfunded publisher stops people getting **out**, not merely in. This is the fix.
+
+**The rule now:** the oracle binds on entry and is advisory on exit. What still bounds an exit is
+`maxSlippageBps` against the shortfall the executor measured, `maxNotionalPerTrade` against the
+proceeds, the allowlist, the circuit breaker, and the `minAmountOutUsdg` floor the owner signed
+into the leg. That last one is the only protection that does not depend on the oracle at all, and
+when there is no defensible fair value it is the whole of the price protection — a weaker guarantee
+than an entry gets, and a far better outcome than being unable to sell.
+
+### Three versions of the same trap, found by writing the tests
+
+1. **`peek` hands back a stale value with `hasValue` still true.** The first draft of
+   `_exitShortfallBps` measured against it, which computes a shortfall from a price the oracle
+   refuses to stand behind. If the value is stale *because the market moved*, that shortfall is
+   enormous and false, and `maxSlippageBps` locks the position in. The trap rebuilt one layer down.
+   Now `try observation()`: if the oracle will not vouch for it, nothing is measured against it.
+2. **`_checkWeights` prices the portfolio through `fairValue`, which reverts on stale.** Left
+   running, any mandate with `enforceWeights` on would still have been unable to exit. It is now
+   skipped when every fill is an exit — selling reduces an asset's weight and raises cash, so
+   neither bound can be breached by leaving. A mixed batch still runs it.
+3. **An entry against a stale oracle reverted with a raw `Stale()` from inside the executor**,
+   before the guard could produce `OracleRejected(asset, "STALE")`. Same refusal, worse sentence.
+   `_shortfallBps` now tolerates the revert and lets the guard do the rejecting.
+
+`IFairValueOracle` gained `peek()`. The deployed oracle has always implemented it — only the
+interface omitted it — so **the oracle does not move**. `PolicyGuard` and `Executor` do, because
+`guard` is `immutable` in the executor.
+
+Suite 99 → 105. The tests that matter are `test_ExitSurvivesAStaleOracle` and
+`test_ExitSurvivesGapRiskAboveTheMandateCeiling`: both assert the entry is *still* refused in the
+same conditions, because a fix that opened the entry path would be a much worse bug than the one
+being fixed.
+
+### The incident: production broken by a command typed to read output
+
+While testing the new `pnpm safe:admin writer` action, `writer <liveGuard> off` was run to inspect
+its output. It was not a dry run. Both Safe keys were in `.env`, the threshold was met, and it
+executed: **the live `PolicyGuard` lost its append rights on `ReceiptRegistry`** (Safe nonce 1 → 2).
+For the minutes that followed, every fill and every exit on mandate #3 would have reverted inside
+`receipts.append`.
+
+Restored with `writer <liveGuard> on` (`0xbcb1c1c9…`, nonce 2 → 3), confirmed by reading
+`isWriter` back. `receipts.count()` was 5 before and 5 after — the append-only history was never at
+risk, only the ability to add to it.
+
+Two things follow, and only one of them is about the tool. The script did exactly what it was told;
+the mistake was running a mutating command to look at its output. But a destructive action that
+executes straight from arguments, with no second word, is a loaded tool — so `writer … off` now
+requires `--yes`, and when the target is the current writer it prints what revoking does before
+refusing. Nothing else here is gated, because nothing else here breaks a working system in one
+transaction.
+
+The general rule this earns: **in this repo, a command that can write is never a way to inspect
+output.** Read with `status`, `mandate:show`, or a `--dry` path; if none exists, add one.
+
+---
+
+## D57 — Evidence: record the hash now, admit there is no CID
+
+`ReceiptRegistry.Fill` has carried `evidenceHash` and `evidenceCID` since it was written and
+`03-architecture.md` promised "Evidence: IPFS, hash on-chain". Every receipt through #4 records a
+**zero hash and an empty string** (D52). So the audit claim was not true: a reader could see what
+was traded and never why that size, at that moment, was the right one.
+
+The two halves are separable and only one of them needed infrastructure.
+
+**Integrity is free.** `src/evidence.ts` assembles the numbers the decision actually used — the
+quote and its impact, the oracle's published value *and its age in seconds*, the guard's `dryRun`
+verdict, the leg's floor — hashes them with the same `canonicalise` that `thesisHash` uses, writes
+`evidence/<hash>.json`, and puts the keccak on chain in the same transaction as the fill. The
+bundle is assembled **before** signing, because the interesting claim is what was known beforehand;
+rebuilding it afterwards from the receipt would prove nothing.
+
+**Retrievability is not.** `evidenceCID` stays empty, for the reason D50 already gave for
+`ThesisRegistry.cid`: a CID names content on a network that will serve it, and writing one we
+cannot pin is a pointer to nothing. When there is somewhere to pin, the same bundle produces the
+same hash and the CID can be added for fills from then on. Nothing has to be recomputed.
+
+`pnpm evidence` walks every receipt and reports honestly: today **0 of 5** carry a hash, because
+every fill so far predates this. `pnpm evidence <hash>` re-derives the hash from the stored file, so
+a bundle edited after the fact fails the check rather than passing quietly. Sharing `canonicalise`
+with `thesisHash` is deliberate — two hashing conventions in one repo is one convention that will
+drift.
+
+### A coupling this exposed
+
+`src/exit.ts` refused outright when the oracle was stale. After D56 that is wrong: the new guard
+lets the position out. The script now **warns and continues**, and `dryRun` gives the authoritative
+answer — because deciding in the script which guard is deployed is the script guessing at the
+chain's rules. It also says plainly that sizing used a stale estimate and that the real protection
+on such a fill is the min-out floor, not the oracle.
+
+---
+
+## D58 — D56 deployed, and the seed that gave the track record something to show
+
+The guard change from D56 is live, and the seed it unblocked is done. Recorded together because
+the order mattered: seeding before the migration would have left every position orphaned in the
+old guard's storage, so the baskets would have shown weights the new mandate knew nothing about.
+
+### The migration
+
+```
+PolicyGuard  0x9C8F1af1cF0FaD14C46617c573bFed8C90a783be   new, exits survive a stale oracle
+Executor     0xD3d4aeD69f045dAb75390b2a1431A2161C02fBE2   new, guard is immutable in it
+```
+
+Both `exact_match` on Sourcify, creation and runtime. 7,033,727 gas, ~0.00028 OKB. The oracle did
+not move — it always implemented `peek`; only the interface omitted it. The registry did not move,
+which is the whole point: `count()` was 5 before and 5 after.
+
+Write permission was handed over as two separate Safe transactions, **grant first, then revoke** —
+a moment of two writers is safer than a moment of none, and a guard with no write access reverts on
+every fill. Old guard `0x3F58df45…` is now `isWriter = false`, so mandates #1–#5 on it are dead by
+decision rather than by accident.
+
+Mandate #1 on the new guard replaces #3: 1 USDG per trade, 12 fills per day, allowing wTSLAx,
+wNVDAx, wQQQx, wSPYx, with `capacityUsdg < 1,000` basket-wide. Created with `pnpm mandate:create`,
+which resolves symbols through `addressBySymbol()` and sets the executor at creation — `pnpm
+mandate` does neither, and that is why it stays a demo.
+
+### The seed, and the fill that was refused
+
+Two theses, compiled live by Gemini and published before any money moved:
+
+| Thesis | Basket, derived from settled fills | Weighted slippage |
+|---|---|---|
+| #1 — index plus the AI layer beneath it | 55.55% wQQQx, 44.44% wNVDAx | 34 bps |
+| #2 — autonomy and the silicon under it | 60.00% wTSLAx, 40.00% wNVDAx | 10 bps |
+
+Thesis #1 names three beneficiaries — S&P 500, Nasdaq 100, NVIDIA — and its basket holds **two**.
+wSPYx quoted 59 bps above fair value against the mandate's 50 bps ceiling, `dryRun` returned
+`SLIPPAGE`, and the script refused without spending gas. That is not a gap in the seed data; it is
+the clearest demonstration in the repo of what this system is for, and it happened on its own.
+
+Loosening `maxSlippageBps` would have filled it. Doing that to make demo data look tidier would
+have meant weakening the exact guarantee the product is sold on, which is worth naming as a
+temptation that was declined rather than a thought nobody had.
+
+### Evidence, proven rather than claimed
+
+All four seeded fills carry an `evidenceHash` and all four verify against the bundle on disk
+(`pnpm evidence`): **4 of 9 receipts**, the other five predating D57. Each bundle records what the
+oracle said *and how old it was at the moment of decision* — 27s, 50s, 16s, 38s. `evidenceCID`
+stays empty, as D57 decided.
+
+The track record page now has two browsable baskets with real weights instead of one thesis holding
+a single ticker at $0.50. Cost: 0.95 USDG of the 1.87 available, plus gas.
+
+---
+
+## D59 — The Claude provider is deleted, because an unexercised path is chosen automatically
+
+Owner's decision 2026-08-12: Gemini is the provider. That settles which model runs and raises a
+second question the status docs had been carrying since the beginning — what to do with a provider
+that is typechecked, looks finished, and has never once executed.
+
+Deleted, and the reason is not tidiness. `pickProvider` selected **whichever credential happened to
+be present**: `GEMINI_API_KEY` won when set, `ANTHROPIC_API_KEY` won otherwise. So the hazard was
+never the dead code, it was the selection. One environment variable in the wrong place — a Vercel
+project, a shell profile, a teammate's machine — would have routed the thesis compiler through a
+path nobody had ever run, silently, and the first sign would have been a failed compile in front of
+a judge.
+
+Removed: `claudeProvider()` from `src/thesis.ts` (63 lines), the branch in `src/provider.ts`, and
+`@anthropic-ai/sdk` from `package.json`.
+
+`pickProvider` now **refuses an unknown `LLM_PROVIDER` out loud** rather than falling through to the
+fixture — `LLM_PROVIDER=claude` returns *"not a provider this build has"*. Falling back silently
+would swap a live model for a recorded fixture, which is the same class of failure the deletion
+exists to prevent: a system quietly answering from somewhere other than where the operator thinks.
+
+The fixture stays the floor, so the pipeline runs with no credential at all. `ThesisProvider` stays
+an interface, so a second provider can be added when there is a reason to run one — the objection
+was never to having a choice, it was to making the choice implicitly on the strength of an
+environment variable.
+
+---
+
+## D60 — Second sweep: the testnet stack had drifted two generations behind
+
+D52's sweep checked contract functions against callers and doc claims against code. This one
+re-ran that and added the angle it had missed: **the things changed since**. Findings, in order of
+how much they mattered.
+
+### The testnet stack is not the mainnet stack
+
+Measured from deployed bytecode rather than inferred from dates:
+
+```
+Executor      testnet  7,491 bytes    mainnet 10,221   — no exit() (D51)
+PolicyGuard   testnet 13,626 bytes    mainnet 14,170   — no exit fix (D56)
+```
+
+Mainnet moved twice on 2026-08-12 and testnet did not. This matters because of what testnet is
+*for*: `05-status.md` tells the reader to exercise wallet connect there, where gas is free. That
+advice is still right — `createMandate`, `setTriggers`, `setCircuitBreaker`, `closeMandate` and
+`updatePolicy` are untouched by D51 and D56, so testing them on 1952 is valid. What cannot be
+tested there is anything to do with exits: the function is not on that executor, and the guard
+would refuse it regardless.
+
+A rig that differs from production in a way nobody has written down is worse than one that differs
+openly. Now written down — and, later the same day, closed. See D61.
+
+### Four smaller ones
+
+- **`src/thesis-fixture.ts` and `src/thesis-gemini.ts` still referred to "Anthropic" and "the
+  Claude one"** hours after D59 deleted that provider. Comments describing a file that no longer
+  exists are how the next reader learns something false.
+- **`03-architecture.md` still said "LLM: Claude with structured output"** — the same lag, in the
+  document most likely to be read first.
+- **"Public basket page" was listed as a product surface with no marker.** It is not built.
+  `GET /api/theses` already returns everything it needs, so it is a page rather than a system —
+  but an unmarked line in a surface list reads as shipped. Same defect class as the Evidence/IPFS
+  claim D52 found.
+- **The "Pro" surface claimed `execute → receipt` in the browser.** The browser can compile, map,
+  size, show the guard's verdict, and now create and govern a mandate — it has never placed a fill.
+  Execution is `pnpm execute` / `pnpm exit`.
+- **Test count was stale in five files** (89/98/99 against an actual 105). Trivial individually and
+  the reason it is listed: it drifted in five places at once because nothing checks it.
+
+### Checked and clean
+
+`pnpm` scripts all resolve to files that exist. No `TODO`/`FIXME`/`XXX` anywhere in `src/`, `app/`,
+`contracts/`, `script/` or `test/`. No stale contract addresses outside deliberate historical
+mentions. `evidence/` is tracked rather than ignored. The `RunEvent` contract frozen in
+`08-parallel.md` is intact. The unreachable-function list is unchanged from D52 and is the same
+benign set: contract-to-contract calls, the reverting oracle variants the UI correctly avoids, and
+interface members that are not functions of the contract they appear in.
+
+---
+
+## D61 — Testnet realigned with mainnet, and the check that was refusing to let it happen
+
+D60 measured the deployed bytecode on 1952 and found the rig two generations behind production.
+This is the fix, and the reason it had not already happened.
+
+### The migration script refused to run on the chain that needed it
+
+`MigrateGuard.s.sol` is the script that made the mainnet move, and it opened with:
+
+```solidity
+require(V3_FACTORY.code.length > 0, "V3_FACTORY has no code");
+```
+
+On 1952 that is a permanent revert. The X Layer v3 factory has no code there and is not going to
+grow any, so every path to a matching testnet stack went through editing the script first —
+which is the kind of small obstacle that turns "cheap and worth doing" into "not done".
+
+`Deploy.s.sol` had already worked out the right rule under D36: **require on mainnet, warn
+elsewhere.** A factory with no code on 196 makes the deployment worthless. On a testnet it is
+expected, and the oracle, the guard and the whole mandate lifecycle are still worth exercising on
+a chain that cannot swap. `MigrateGuard` now applies the same rule and prints the same warning.
+
+Refusing everywhere looks like the stricter, safer choice. It was the one that produced a stale
+rig — a check that cannot distinguish "this is broken" from "this chain is like that" does not
+buy safety, it buys a stack nobody updates.
+
+### What moved
+
+```
+PolicyGuard  0x92aF161A… → 0xD9d04Bc1324ed4fb23D171893BFACb1c99FD581b   28,343 bytes
+Executor     0xE127C363… → 0xf1b73Fb49CEfcB7CEd27b667c8Ea14bD8f3871D9   20,445 bytes
+```
+
+Both byte-for-byte the size of their mainnet counterparts, both `exact_match` on Sourcify for
+creation and runtime bytecode. Only those two: `guard` is `immutable` in `Executor`, which is why
+the executor came along, and the oracle did not move because it already implemented `peek` — the
+same shape the mainnet migration had.
+
+The old guard's `nextMandateId` was still 1 and the registry's `count()` is 0, so the loss
+`MigrateGuard` warns about — mandates do not migrate, and positions reset — cost nothing here.
+That is luck about timing, not a property of the migration.
+
+### The Safe step, and the owner who could not pay to sign
+
+`ReceiptRegistry.setWriter` is `onlyAdmin`, and admin on 1952 is a 2-of-3 Safe exactly as it is on
+mainnet (D42). So the handover ran through `pnpm safe:admin writer`, new guard granted before old
+guard revoked — a moment of two writers is recoverable, a moment of none is a guard that reverts
+on every fill.
+
+Owner 2 held **zero OKB on testnet**, so its `approveHash` could not pay its own gas and the first
+attempt failed with `gas required exceeds allowance (0)`. Approvals are recorded on chain rather
+than collected as signatures, which is deliberate — it is what lets a co-signer on another machine
+approve the same hash — and the cost is that every owner needs gas of its own, on every chain the
+Safe exists on. Funding it took one transfer. Worth stating because a 2-of-3 whose second owner is
+broke is a 1-of-3 that fails closed, and it fails at the moment you need it.
+
+### What this does and does not buy
+
+Testnet is now the same contracts production runs, so exercising wallet connect, `createMandate`,
+`setTriggers`, `setCircuitBreaker`, `closeMandate`, `updatePolicy` and the exit *interface* there
+tests what mainnet will actually do — and it was exercised, not assumed: mandate #1 was created on
+the new guard with `TestUSDG` allowed, and its circuit breaker toggled on and off. `mandate:create`
+still cannot be pointed at 1952, because it resolves symbols through `addressBySymbol()` and no
+xStock exists there; the mandate above went in by direct call. It still cannot swap — no factory, no pools — so a real fill
+and a real exit remain mainnet-only, as they always were. The boundary did not move; the drift on
+the near side of it did.
+
+The recurrence is the part worth naming: this gap opened because mainnet moved twice in a day and
+nothing re-measured testnet afterwards. Nothing checks it now either. The cheap habit is the one
+D60 used — compare `code.length` on both chains — and it belongs immediately after any mainnet
+redeploy, not in a sweep some days later.
+
+### The four smaller ones from D60, closed
+
+Three of them were text and were fixed where they were written: the provider comments in
+`src/thesis-fixture.ts` and `src/thesis-gemini.ts` no longer name a provider that does not exist,
+`03-architecture.md` says **Gemini** with a line recording that a Claude provider was deleted, and
+both unmarked surface claims now carry markers — "Public basket page" is **Not built** and the
+"Pro" surface says plainly that execution is `pnpm execute` / `pnpm exit` and the browser has never
+placed a fill. Marking beats deleting: a reader who saw the old sentence needs to know it was
+superseded.
+
+The stale test count got a script instead of an edit. `pnpm check:tests` runs `forge test`, takes
+the total from its output, and compares it against every count stated in `CLAUDE.md`, `README.md`,
+`05-status.md`, `06-assessment.md` and `08-parallel.md` — six claims today. It scans by pattern
+rather than by a list of known sentences, so a seventh claim is checked from the moment it is
+written, and it stops at each file's `## Log` heading because a log entry saying "45/45 tests" on
+2026-08-10 is *correct*.
+
+The count itself was never the problem. Five copies of one number with nothing comparing them is
+the problem, and it is the same shape as D5: derive it, do not recall it. Verified by breaking it
+on purpose — a doc edited to claim 98 fails with the file, the line and both numbers.
+
+While in there, `05-status.md` was still naming `0x09af5194…` as the current mainnet executor. That
+address was superseded hours later by D56 and is now two behind. Same defect class, same sweep.
+
+---
+
+## D62 — The price source has no licence to point at, and the issuer does have the data
+
+`src/marketdata.ts` calls `query1.finance.yahoo.com/v8/finance/chart/…`. Every fair value this
+project has ever published to a chain came from there: the reference close for all 28 admitted
+assets, the intraday carry signal, the year of daily bars behind every beta, and the session
+windows. It works, it is free, and there is **no licence to point at** — the endpoint is not a
+documented API, so there is no terms page to accept. Absence of a stated prohibition is not
+permission.
+
+That is survivable for a demo and not survivable for a product moving user funds on mainnet. The
+risk is not a lawsuit. It is (1) an IP block, which for datacentre ranges is routine, and after D56
+means entries stop while exits keep working; and (2) being unable to answer *"where does your price
+come from, and are you licensed for it?"* — the question that ends a conversation with an exchange,
+an issuer, or anyone doing diligence.
+
+### Pyth is not the escape, measured twice
+
+The obvious answer is Pyth, and it fails on both legs.
+
+**Its terms are as restrictive as Yahoo's.** Verbatim: a *"limited, nonexclusive license to display
+and otherwise use portions of the Site solely for your own private, non-commercial informational
+purposes"*, plus *"You shall not extract or copy Pyth Network price feed data, including asset
+prices, confidence intervals, or related metadata, from the Site in amounts exceeding what a human
+could reasonably manually achieve"*. Swapping Yahoo for Hermes changes the hostname and nothing
+else. The licensed tier is **Pyth Pro at $10,000/month**.
+
+**And Pyth is not on X Layer.** Three canonical addresses probed against RPC 196 — `0x4305FB66…`,
+`0x2880aB15…`, `0xff1a0f47…` — all zero bytes, and chain 196 appears nowhere in their contract
+address list.
+
+Worth keeping from the dig: Hermes lists **1,772 equity feeds**, 27 of our 28 references live and
+publishing. **EWY is listed and has never published** — price 0, publish time 0 — which is D35's
+lesson in a new costume: listed is not live. Every `.ON` overnight equity feed is marked
+`DEPRECATED`, so Pyth would not have solved the 24/7 carry problem either.
+
+### Neither is OKX
+
+`GET /api/v5/public/instruments?instType=SPOT` returns 1,337 instruments and **zero** tokenised
+equities. Whatever settles on X Layer, the public spot API does not expose it.
+
+### What a licence actually costs, and why it is the wrong question
+
+Exchange redistribution fees, from the published schedules: **Nasdaq enterprise $34,990/month**,
+**NYSE display redistribution $20,000/month**, non-display $4,500/month per category. These are paid
+to the exchange and are vendor-agnostic — paying a vendor does not substitute. Polygon.io's terms
+make that explicit: data is *"strictly for display use only"*, with redistribution, commercial use,
+non-display use and derivative works all prohibited absent a separate licence. A $79/month plan buys
+the right to put a number on a screen, not to publish it to a blockchain.
+
+Publishing to a public chain is the most aggressive redistribution there is: unbounded recipients,
+anonymous, permanent, irrevocable. It is priced accordingly.
+
+Which is why the answer is not to buy a cheaper licence. It is to **stop consuming exchange data at
+all** — take the number from the party that issues the token.
+
+### The issuer has it, and has more than we do
+
+`api.backed.fi` and `api.xstocks.fi` are public, need no key, and publish their rate limit in the
+response headers. Pulled and verified rather than read about:
+
+- **A two-sided quote per token** — `bid`/`ask`, not a proxy listing.
+- **The issuer's own spread per session** — 10bp open, 15bp extended, 25bp overnight, 50bp closed.
+  That is the uncertainty this oracle models as gap risk, published by the party taking the other
+  side of it.
+- **The corporate-action multiplier**, with history and reasons.
+- **`wrapperAddressV2` per chain** — the `w…x` token `ASSETS` already holds, from the issuer rather
+  than from our own guess. Four spot-checked against RPC 196: `0x9d275685…` is `AAPLx` and
+  `0x943bf64d…` is `wAAPLx`, likewise TSLA.
+- **717 xStocks with an X Layer deployment.** Our universe of 30 is the set with a *pool*, which is
+  the more useful question — but "30 xStocks exist on X Layer" was never the true sentence.
+
+What it does **not** give: no timestamp on the quote, and no history at all. So it replaces the
+reference leg, not `marketdata.ts` entirely. The beta regression has no source there, and
+`observedAt` in `src/issuer.ts` is stamped by us on receipt — a weaker fact than
+`lastRegularPrintAt`, named so that nobody confuses the two.
+
+### The multiplier: a defect we have been absorbing since D38
+
+An xStock dividend is not paid to holders in cash. It is reinvested, and each token becomes a claim
+on slightly more stock, tracked as a multiplier. **Nothing in this repo knew that number existed.**
+`pnpm reconcile` compares the on-chain price against an unadjusted reference, so the entire dividend
+history has been landing in `basisBps` and being read as market noise.
+
+It is not small. `IBMx` is at **1.02040**. `SPYx` 1.00571, `MSFTx` 1.00458, `AAPLx` 1.00327 — larger
+than the 100bp deviation tolerance in `checkExecution`. The field is believable before any of that,
+because it behaves: dividend payers move (AAPL, SPY, MSFT, IBM), non-payers read exactly 1.0 (TSLA,
+GLD, COIN, MSTR).
+
+**The direction was measured, not read.** Both treatments are computed against the same on-chain
+price and printed side by side, because guessing which way to apply someone else's multiplier is how
+a 33bp error becomes permanent. Across the 16 assets whose multiplier is not 1.0:
+
+```
+per-asset vote        15 ×  versus  1 ÷
+mean |basis| × mult   0.73%
+mean |basis| ÷ mult   1.55%
+untreated             1.10%
+```
+
+Multiply. The per-asset vote is not unanimous and should not be: where the multiplier is 1.0009 the
+two treatments differ by 9bp and the winner is whichever way the pool is leaning that minute. The
+mean is the honest statistic, and it is dominated by the assets that carry real information.
+
+### The result that changes what is publishable
+
+The chain agrees with the issuer far more closely than it agrees with Yahoo. Chain versus issuer mid
+is inside ±0.7% for **every** asset that has a pool. Chain versus Yahoo reference runs to 2.7%.
+
+Including the two we withhold:
+
+```
+wSKHYx   chain 145.12   issuer 145.29   -0.10%      vs Yahoo/000660.KS: -86.3%
+wSPCXx   chain     —    issuer 134.08        —      no listing exists
+```
+
+D39 rejected `wSKHYx` on an 86% basis and concluded the wrapper does not track one SK Hynix share.
+That conclusion was right. What was missing is that **the issuer publishes a mark for it, and the
+chain matches that mark to 10bp**. The asset is not unpriceable; our reference for it was wrong.
+`wSPCXx` is the same story — SpaceX is private, no listing exists, and the issuer marks it anyway.
+
+An issuer-referenced oracle would have a defensible number for 30 of 30, where the exchange-
+referenced one has 28.
+
+### The unit trap, and why it is worth a paragraph
+
+The two issuer endpoints publish the same price in different units: `quotes/assets` in minor units,
+`price-data` in dollars. Nothing in either response says so. The first run reported every issuer
+quote at 100× the reference, which is the useful kind of wrong.
+
+A wrong scale here would be catastrophic and quiet, because **every proportional check in the guard
+compares ratios** — a fair value 100× too high passes deviation, band and gap-risk tests that are
+all expressed as percentages, and fails only at the point where real money moves. So the constant is
+derived across two assets three orders of magnitude apart (AAPLx at $305, BANKCx at $0.66; both
+×100), and `quoteScaleCheck` re-measures it at runtime rather than trusting the constant. D5, in a
+new place.
+
+### Status: observed, not adopted
+
+`src/issuer.ts` is read-only and `pnpm reconcile` prints a third column beside the first two. **No
+verdict depends on any of it**, every issuer call is swallowed on failure, and nothing from this
+source has been published on chain. The 28 admitted assets are admitted on exactly the evidence they
+were admitted on yesterday.
+
+The licence question is not settled and is not being pretended settled. The docs describe the API as
+being for *"integrators such as exchanges, protocols, and developers"* — a statement of intent, not
+a grant. No explicit redistribution clause was found. The difference from Yahoo is that this one is
+answerable: it is their data about their own product, and the ask is one email. Until it is answered
+in writing, this stays a measurement tool.
+
+What it would take to adopt: freeze the betas as recorded constants with their measurement date and
+delete `marketdata.ts` (the issuer has no history, and a beta moves over months, so re-fitting on
+every publish was always overkill); replace direction-guessing overnight with the issuer's published
+spread, which is the oracle stating uncertainty instead of predicting — the shape it should have had
+anyway; and apply the multiplier. That is a real migration and it is not started.
+
+### Applied: the multiplier is now in the fair value
+
+The measurement above settled the direction, so the correction landed rather than waiting.
+
+```
+FV = P_close × (1 + Σ βᵢ · rᵢ) × shares/token
+```
+
+`AssetSpec.multiplier` records shares per token for all thirty assets, measured 2026-08-12 and
+rounded to 1e-6 — 0.01bp on a $300 share, below anything this system can act on. The fourteen assets
+sitting at exactly 1.0 are recorded explicitly rather than omitted, because *measured and unchanged*
+and *never measured* must not look the same in a file that is read as evidence.
+
+**Recorded, not fetched at publish time.** This was the design decision worth arguing about. Reading
+the multiplier live would keep it perfectly fresh and would also make the oracle unable to price
+anything when someone else's API is down — and the measurement run that produced these numbers had
+**three transient failures out of thirty**, which settles it. It is a slow-moving fact that changes
+on dividend dates, so it belongs in the repo with a date beside it, exactly like `admittedOn`.
+`pnpm reconcile` re-reads the live value and warns on drift, with the size of the error stated in
+bps of fair value, because a stale multiplier is not a matter of taste like signal drift — it is a
+wrong number being multiplied into a published price. Verified by breaking it deliberately:
+`wIBMx` set to 1.0104 prints `recorded 1.010400 → issuer 1.020403 (99.0bp of fair value, on every
+publish)`.
+
+It is applied in both branches, open and closed, because it is a property of the wrapper rather than
+of the session — a token does not stop holding 1.0204 IBM shares because New York is open.
+
+The effect, on the same run: mean |basis| across the sixteen assets that carry a multiplier goes
+from **1.12% untreated to 0.73%**. On `wIBMx` specifically the basis moves from roughly 2% to
+−0.20%. `anchorPrice` still reports the price of one share and `sharesPerToken` is reported beside
+it, so "the share moved" and "the token holds more shares" stay two different sentences.
+
+All 28 admitted assets still reconcile. Nothing about admission changed — this corrects the price of
+assets that were already publishable, and it corrects it downward toward the chain.
+
+### Applied: β and the gap distribution are recorded, not re-fitted
+
+Step one of the reference-leg migration, and it changes nothing about what is published — it moves
+two statistics from *computed on every run* to *written down with a date*.
+
+Both came from the same place: a year of daily bars from Yahoo. β is the OLS slope of the
+reference's daily returns on its signal's. The band is the standard deviation of that security's own
+realised close-to-open jumps, sampled separately for weekends. **The band's source was the thing
+missed in the first plan for this migration** — it was described as freezing one number per asset
+and it is two, because a band built from history is history whether or not it is called a beta.
+
+`MEASURED` in `src/fairvalue.ts` now holds `{ fits, gaps }` for the 29 assets that have a reference,
+beside `ASSETS` rather than inside it: `ASSETS` is a table a human scans and four statistics per line
+would ruin it, so `pnpm reconcile` checks the two stay in step instead.
+
+Proof that recording changed nothing, from runs nineteen minutes apart across the swap:
+
+```
+                band before    band after
+wAAPLx            1.68%          1.68%
+wAMDx             4.16%          4.16%
+wQQQx             0.28%          0.28%
+wINTCx            5.71%          5.71%
+wSKHYx            8.19%          8.19%
+```
+
+Fair values moved only by the signal's own movement in between, which is the point.
+
+**The cost is staleness, so staleness is measured.** `pnpm reconcile` re-fits against live data every
+run and reports how far the recorded copy has moved — β past 0.05, gap σ past 10% — and says which
+way the error runs: a σ that has grown means the published band is that much too narrow, which is the
+direction that matters. Neither is a failure and neither exits non-zero, because a beta genuinely
+drifts and a recorded one stays usable long after it stops being exact. What must not happen is
+nobody knowing by how much.
+
+There is also a completeness check, because the failure mode here is silent: an admitted asset with
+no entry in `MEASURED` falls back to a live regression, which is the dependency this was meant to
+remove, back again and invisible. All three checks were verified by breaking them deliberately —
+β forced to 0.4 reports `+0.3445`, σ forced to 0.5% reports `+85% — the band is that much too
+narrow`, and a removed entry reports `Admitted but not in MEASURED: wTSMx`.
+
+What remains for the migration proper: point the reference leg at the issuer's quote, add the
+issuer's per-session spread as a **floor** on the band, and delete `src/marketdata.ts`.
+
+### Correction: the issuer's spread is not the band
+
+The plan for this migration said the overnight direction guess would be replaced by the issuer's
+published per-session spread. That was wrong, and it is worth recording because it is the kind of
+wrong that looks like a simplification.
+
+They are different quantities. The issuer's spread is a **transaction cost** — the gap between the
+price they will buy at and the price they will sell at. The band is a **forecast uncertainty** — how
+far the price may jump before the market reopens. Side by side:
+
+```
+              our band     issuer overnight spread
+wAAPLx          1.68%              0.15%
+wINTCx          5.71%              0.25%
+wQQQx           0.28%              0.15%
+```
+
+Substituting one for the other would narrow wAAPLx's uncertainty roughly sevenfold, and narrow it
+**precisely while the market is shut** — making the guard most permissive at the hour it should be
+least. That is the opposite of what the change was supposed to buy.
+
+The correct shape is a floor, not a substitution: uncertainty is never narrower than the spread the
+issuer is itself quoting. The band stays what it is — the empirical distribution of the jump being
+predicted.
+
+"The oracle is a guard, not a forecaster" still holds. It guards by stating how far the price could
+jump, which is a measurement, not by copying somebody else's dealing spread.
+
+### Applied: the reference leg is the issuer, and the prediction is gone
+
+```
+FV = issuer mid × shares/token
+```
+
+Two measurements settled the shape before any of it was written.
+
+**Does the issuer's quote already contain the multiplier?** If it did, applying ours would double
+count. Regressing (chain vs issuer mid) on (multiplier − 1) across all thirty assets:
+**slope 1.090, R² 0.816, intercept −4.1bp.** The issuer quotes *one share*; the chain prices *one
+token*; the multiplier is exactly the difference. wIBMx is the anchor of the fit — multiplier
+204bp, chain 230bp above the issuer's mid — and the fourteen assets at 1.0 cluster at zero.
+
+**Is the issuer's overnight mark live, or an echo of the close?** Sampled 91 seconds apart at 04:20
+New York time, four of eight names moved more than a basis point (MSFTx −5.3, IBMx +4.0, AAPLx +2.3,
+GLDx +2.3). Over twenty minutes AAPLx moved 24bp. It is a live two-sided market, not a stored close.
+
+That second answer **retires the carry-forward**, and this is a correction to what was promised.
+The plan said the overnight direction guess would be lost. It is not lost — it is replaced by
+someone doing the same job better, with money behind it. Regressing index futures onto an eleven-
+hour-old close was re-deriving, badly and from an unlicensed source, a number a dealer publishes
+continuously at a 25bp spread and will transact in from $1,000 to $20M.
+
+So the signal machinery is deleted rather than left dormant: `classifySession`, `loadSignal`, the
+signal cache and the whole `alignedReturns → regress → moveLog` path. D59's lesson is that an
+unexercised path gets chosen automatically; a dormant Yahoo fallback would have been exactly that.
+`MEASURED.fits` stays recorded — evidence, drift-checked, and ready if a licensed futures feed ever
+justifies putting the prediction back on top — but nothing prices from it.
+
+**The band and gap risk stopped being the same measurement.** This is the part worth understanding:
+
+- The **band** is uncertainty about the value *now*. While the issuer quotes, it is that market's
+  own spread: 10bp open, 15bp extended, 25bp overnight, 50bp closed. Anything inside it is a price
+  the issuer itself treats as fair. When nobody quotes, there is no spread and the recorded jump
+  distribution becomes the band, unshrunk — there is no carry-forward left to explain any of it away.
+- **Gap risk** is what the *position* is exposed to, and it keeps the jump distribution in the score
+  even while the mark is live. Buying at 3am carries the open however good the price is.
+
+The old model conflated them and paid for it twice: it inflated the band with a jump the guard was
+comparing a live price against, and it scored 0.16 of staleness at 3am purely because New York had
+shut eleven hours earlier, while a dealer was quoting the token the entire time. `staleness` is now
+binary — is anyone making a market — and `displacement` carries the open-gap term.
+
+`WIDEST_RECORDED_BAND_BPS = 853` normalises that term, derived as the widest band across admitted
+assets (wSNDKx) rather than picked. At the 300bp the old displacement used, half the universe pinned
+at maximum and the score could not tell wQQQx from wSNDKx — 98bp against 853bp.
+
+Measured effect, same minute, before and after:
+
+```
+             basis before      basis after      band before   band after
+wAAPLx          -0.12%           +0.09%            1.68%        0.10%
+wSNDKx          +2.09%           -0.04%            6.90%        0.15%
+wMRVLx          +2.28%           -0.15%            5.12%        0.15%
+wEWYx           +1.51%           -0.09%            3.76%        0.15%
+```
+
+Every asset now sits inside ±0.40% of fair value, against up to 2.7% before. The guard got
+**tighter**, not looser: tolerance is `maxDeviationBps + band`, and the band collapsed because the
+fair value stopped being a forecast.
+
+**`MarketState` did not change**, deliberately. The contract's enum has six members and
+`src/guard.ts` mirrors it line for line; a seventh would move the whole stack, because `oracle` is
+`immutable` in both `PolicyGuard` and `Executor`. The issuer says `extended` without saying which
+side of the day, so the side comes from the clock in New York — an extended session never straddles
+noon, and what hour it is there is not licensed data.
+
+**Nothing newly publishes.** `admittedOn` still gates, and the admission test is still the
+exchange-referenced one, so wSKHYx and wSPCXx remain withheld. The interesting part: under the
+issuer, wSKHYx now sits **2bp** from the chain rather than −86%. Its withholding note said "the pool
+quotes ~86% below the share", which was true and has stopped being the reason — so the note now says
+the rejection is about the mapping and the test rather than about the token. A refusal that gives a
+stale reason is worse than one that gives none.
+
+Yahoo now has exactly one consumer: `src/reconcile.ts`, the offline admission test. Nothing that
+publishes touches it. Deleting it entirely means re-running admission against the issuer, which
+would newly admit two assets — a product change, not a cleanup, and it is not being smuggled in
+here.
+
+### Applied: admission moves to the issuer, and the universe becomes 30 of 30
+
+The last step. `pnpm reconcile` no longer asks "does this wrapper reconcile with a listing on an
+exchange?" — it asks **"does the chain agree with the mark the issuer is making for this token?"**
+
+Two gates disappear entirely, and neither is a relaxation:
+
+- **`FX_REQUIRED` is gone.** The issuer quotes every token in USD, including the Seoul listing that
+  needed a live KRW leg and the conversion logic behind D39. That whole class of error — a price
+  wrong by three orders of magnitude in one direction and plausible in the other — no longer has
+  anywhere to happen.
+- **`NO_HISTORY` is gone**, because there is no beta to fit. It was a gate on having enough data for
+  a model that no longer exists.
+
+What remains is sharper than what it replaced: is the token carried, is it quoted, is it halted, is
+there a pool, and does the chain agree. And the comparison is now like-for-like — issuer mid ×
+shares per token against the chain — where the old test compared a token against one share and
+called the dividend history basis.
+
+**30 of 30 admitted**, every basis inside ±0.4%. The two that were withheld:
+
+```
+wSKHYx   issuer × shares 146.28   chain 146.16   -0.1%     (was -86.3% against 000660.KS)
+wSPCXx   issuer × shares 134.69   chain 134.34   -0.3%     (was: no listing exists)
+```
+
+D39's rejection of `wSKHYx` was right about the mapping and wrong as a statement about the token.
+The wrapper is not a claim on one SK Hynix share at the KRW rate; it is a claim the issuer marks
+directly in USD, and the chain agrees to ten basis points. `wSPCXx` is the cleanest case for
+referencing the issuer at all: SpaceX is private, no exchange can price it, and the party that mints
+the token marks it anyway.
+
+That is the argument for this whole change in one line. The exchange-referenced oracle could defend
+28 of 30. The issuer-referenced one defends all 30, with tighter basis on every single asset.
+
+### The bug that admitting wSPCXx exposed
+
+It priced at **gap risk 2 out of 100** — the safest asset in the universe — because it has no
+recorded open-gap statistics, its underlying having never had a listing to measure, and a missing σ
+multiplied out to a zero open-gap term.
+
+Missing data is the least safe state, not the most. Unmeasured now scores as maximum on that term
+and says so in the notes, and where nothing is quoting *and* nothing is recorded, the band is null
+and the value is unpublishable rather than zero-width. A zero band is a lie the guard would act on.
+
+### Yahoo is quarantined rather than deleted
+
+`src/marketdata.ts` has exactly one importer: `src/measure.ts`, a bench tool run by hand as
+`pnpm measure`. Nothing on any path that publishes or admits touches it.
+
+Deleting it outright was the plan and is the wrong call, for a reason worth recording. The open-gap
+distribution behind every band has no free licensed replacement — the issuer publishes no history at
+all — so removing the code would leave the recorded σ values permanently unauditable: magic numbers
+nobody could re-derive, which is D5 in reverse. Quarantining keeps them checkable and keeps the
+unlicensed source strictly off production.
+
+The header on that file now says so in the first line, along with what to import instead. The real
+fix is to stop borrowing history and build it: sample the issuer's own marks into a store and derive
+σ from those. That is the indexer already named in `03-architecture.md`, and it does not exist yet.
+
+### What is left of the old model
+
+`AssetSpec.signals` is deleted — nothing carries anything forward. `MEASURED.fits` stays recorded,
+drift-checked by `pnpm measure`, and prices nothing; it is there for the day a licensed futures feed
+makes putting the prediction back on top worth doing. `classifySession`, `loadSignal`, the signal
+cache and the whole aligned-returns path are gone rather than dormant, because D59's lesson is that
+an unexercised path gets chosen automatically.
+
+### The new model published to mainnet, and the read-back lied about it
+
+First publication of the issuer-referenced oracle: **30 observations in one transaction**, block
+67756404, 968,736 gas, status success. On-chain bands came back at **10–25bp** against the 168bp the
+previous observation carried for the same asset.
+
+The script then reported three assets as `REJECT STALE`. They were not stale. Read directly a minute
+later, all four sampled assets showed `hasValue: true` with `updatedAt` under a minute old — the
+write had landed for all thirty.
+
+**D18 again, through a guard that was already there.** `publish.ts` waits for the write to become
+readable before reading it back, because the public X Layer RPC load-balances and a read issued
+straight after a confirmed write can hit an unsynced node. The wait's predicate was
+`updatedAt !== 0`, which is the wrong question: an asset that has ever been published has a non-zero
+`updatedAt` forever, so the wait passed instantly against a node still serving the *previous*
+observation. The first three assets were then read from that node — returning values 12.9 hours old,
+which the contract correctly called stale.
+
+The bound is now the timestamp of the block the write landed in, and every asset waits on its own
+read rather than only the first, because the RPC balances per request: asset 3 can hit a lagging
+node after asset 1 did not.
+
+Worth recording for the shape rather than the size. The check existed, ran, and passed — against a
+condition that could not fail. A guard whose predicate is always true is worse than no guard,
+because it is also reassuring, and this one produced a false `REJECT STALE` on the single condition
+the script exists to verify.
+
+### D39 was right to refuse and wrong about why — `wSKHYx` tracks a US depositary receipt
+
+The last thing the issuer's metadata settled, and the sharpest argument in D62's favour.
+
+D39 rejected `wSKHYx` at −86% against `000660.KS` and concluded: *"whatever that pool is pricing,
+the test cannot call it a claim on an SK Hynix share."* The refusal was correct — publishing that
+basis would have been indefensible. The reason was not.
+
+```
+SKHYx   underlyingSymbol SKHY   underlyingIsin US78392B2060
+```
+
+A **US** ISIN. The token references the US-listed depositary receipt, not the Seoul ordinary share,
+and a DR ratio is exactly what a ~7× price difference looks like — $146 against $1,061. There was
+never anything wrong with the pool.
+
+The field is called `underlyingIsin` and it was public, free and one request away for the entire
+day this asset was called unpriceable. Nothing about the exchange-referenced mapping could have
+found it, because the exchange-referenced mapping was the thing that was wrong: `wSKHYx → SKHY →
+000660.KS` came from stripping a ticker and then a human override that made the guess *more*
+confident. `REFERENCE_OVERRIDES` was invented precisely to handle this asset, and it encoded the
+error rather than the fix.
+
+That is the case for referencing the issuer, stated in one asset. The mapping between a wrapper and
+what it is a claim on was never inferable from a ticker. It is a fact the issuer knows and
+publishes, and every version of this system that tried to derive it instead was doing archaeology on
+a string.
+
+`ASSETS`, `README.md` and `03-architecture.md` are corrected. The old text is struck through rather
+than deleted, because a reader who saw "wSKHYx does not reconcile, −86%" needs to know it was
+superseded and why.
+
+**`wSPCXx` is not the same situation and should not be treated as one.** Every other asset has two
+independent opinions — the issuer's mark and the chain's price. SpaceX is private, so the issuer's
+mark is the only opinion in existence, and the pool almost certainly quotes *because of* it. Two
+numbers from one source are not two pieces of evidence. It also has no recorded open-gap statistics,
+because there has never been a listing to measure, so its risk score is a conservative guess rather
+than a measurement — which the notes now say out loud. If any asset warrants a tighter mandate —
+smaller size, lower `maxGapRisk` — it is that one.
+
+---
+
+## D63 — Closing the gaps D62 opened, and deleting the last unlicensed source
+
+D62 moved the oracle onto the issuer's mark and left five loose ends. Four are closed here. The
+fifth — the licence question with Backed — is not an engineering problem and is not pretended to be.
+
+### `PUBLISH_SYMBOLS`, and the number that turned out smaller than claimed
+
+The publisher wrote all thirty assets every cycle while the live mandate held four. That is the same
+trade the worker's own schedule was set to avoid — *"running it from now so that nothing observes it
+is the wrong trade"* — one level down.
+
+`PUBLISH_SYMBOLS` narrows the set, defaulting to all thirty because a demo with a blank asset is
+worse than a slightly expensive one. An unknown symbol is a **hard error**, not a silent skip: a typo
+that quietly publishes twenty-nine instead of thirty is exactly the drift nobody notices until a
+mandate cannot execute.
+
+Measured on chain rather than estimated:
+
+```
+30 assets   919,563 gas
+ 4 assets   142,872 gas      6.4x, not the 8x the first comment claimed
+```
+
+The saving is under-linear because the first write pays for the transaction. Three weeks of runway
+on $5 becomes about four and a half months. The runway printed each run now scales with the set
+being published — a runway computed for thirty while publishing four is wrong in the reassuring
+direction, which is the worst direction.
+
+### The gap σ now comes from our own history, and Yahoo is deleted
+
+`src/marketdata.ts` is **gone**, not quarantined. Quarantine was the previous answer and the owner's
+instruction was clearer: stop using it. What made that possible was building the thing it was being
+borrowed for.
+
+The band, when nobody is quoting, is the security's close-to-open jump distribution. The issuer
+publishes a live mark and no history, so that σ had no source but Yahoo. It has one now:
+`pnpm sample` writes the issuer's marks to `observations/issuer-marks.jsonl`, append-only, one line
+per asset per pass, and `pnpm measure` derives σ from that store. It runs beside the publish worker,
+costs no gas and needs no key.
+
+**It refuses to guess, and that is the design.** A close-to-open jump needs a session boundary, and a
+store six hours old has watched none. Below thirty jumps per asset `pnpm measure` reports how far
+along it is and leaves the recorded σ in force — dated, stale, and visible. A σ derived from a short
+series would look fresher than the number it replaced and be worse. Thirty is roughly six weeks of
+weeknights, the point at which one more observation stops moving the answer.
+
+The store is committed on purpose. A σ derived from a file nobody else holds is not reproducible, and
+this repo's argument is that its numbers can be checked.
+
+### `MEASURED.fits` deleted
+
+The recorded betas priced nothing once the carry-forward was retired. A recorded number that nothing
+reads is a number nobody checks, so they are gone — D59's lesson applied to data rather than code.
+`MEASURED` is now gaps only.
+
+### The browser can produce a Permit2 signature — the half that was actually missing
+
+`07-team.md` said the follow flow was gated on wallet connect. Wallet connect shipped on 2026-08-12
+and the flow did not move, which meant the stated blocker was not the real one. It was this: nothing
+in `app/` could produce a Permit2 signature, so the browser could create a mandate and never place a
+fill.
+
+`src/permit.ts` is that piece, and only that piece — deliberately not an execute helper, because
+quoting and `dryRun` already work and already have one implementation each. Browser-safe under the
+same rule as `abi.ts`, `deployments.ts` and `chain.ts`: no `node:`, no `process.env`, no client
+construction.
+
+Two objects come back rather than one, because the signed struct carries `spender` and the calldata
+struct does not — Permit2 fills that field from `msg.sender`. Handing callers one object and hoping
+they drop the right field is how a signature ends up authorising the wrong contract.
+
+**`src/execute.ts` was rewired through it**, which is the part that matters. The browser half is
+proven by the CLI: every mainnet fill now exercises the exact code the web app will run. Verified by
+placing one — receipt #14, 0.6 USDG into wTSLAx, `dryRun ALLOW`, nonce 14, 614,433 gas.
+
+`describePermit` lives there too, so the copy that tells a user what they are signing cannot drift
+from the struct it describes. A typed-data prompt is unreadable to almost everyone; the four facts
+that bound it — one token, one cap, one spender, twenty minutes — have to be said in words.
+
+### Still open
+
+**The FE wiring for a browser fill.** The signature is the hard half and it is done and exercised;
+what remains is a component that quotes, shows the guard's verdict, calls `signTypedData`, and sends.
+That is FE work on an FE file and it is not built. **The browser still has never placed a fill**, and
+nothing in the docs may say otherwise until it has.
+
+**`Mandate.tsx` against a real wallet extension.** Cannot be done from here — it needs a browser with
+a funded extension. It is a person-with-a-laptop task, not an engineering one.
+
+**The licence.** Unchanged and unchangeable by code.

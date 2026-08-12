@@ -5,7 +5,15 @@ Two people, ten days, one submission (deadline **2026-08-21 23:59 UTC**).
 | | Person | Owns |
 |---|---|---|
 | **BE** | Wangsit | `src/`, `contracts/`, `script/`, `test/`, `app/api/`, deployment, docs |
-| **FE** | teammate | `app/` except `app/api/`, `app/components/`, styling, wallet UI, hosting of the page |
+| **FE** | teammate | `app/` except `app/api/`, `app/components/`, styling, hosting of the page |
+
+> **Reassigned 2026-08-12 — wallet UI moved to BE.** Wallet connect had been FE ticket 3 and was
+> still unstarted with nine days left, while Simple mode's follow-once could not be built without
+> it. Wangsit took it over with the owner's agreement rather than leaving it unclaimed. So
+> `app/components/useWallet.ts` and `app/components/Wallet.tsx` — and the header line in
+> `app/page.tsx` that mounts them — are **BE-owned**, and are the one exception to the table
+> above. Everything else under `app/` is unchanged and still FE's. Nabil: pull before touching
+> `app/page.tsx`.
 
 The split is drawn along a seam that already exists in the code: **the web app computes
 nothing.** It renders `src/pipeline.ts` (D28). So BE owns everything that produces a number, FE
@@ -69,17 +77,17 @@ jump ahead of it.
 ```
 FairValueOracle  0xDB7949c99e6d234C0eD374a71966d9e6CbfcfD09  (replaced 2026-08-11, D42)
 ReceiptRegistry  0x9D04575894F570C3638Bc1f6ECaD6EF36D479Fa6
-PolicyGuard      0x3F58df45FcB5D1074bA5D046D4928CF5efde5f4d  (replaced)
-Executor         0xf3a06c9f0F1AABf01080475E420DD7A1092E1e1B  (replaced)
+PolicyGuard      0x9C8F1af1cF0FaD14C46617c573bFed8C90a783be  (replaced again 2026-08-12, D56)
+Executor         0xD3d4aeD69f045dAb75390b2a1431A2161C02fBE2  (replaced again 2026-08-12, D56)
 FeeCollector     0x3A1D6b9129E69fEF189E538996B18cebd56C3Dd0
 PoolSwapper      0x1f3b67d8209060eC68d0eDCD6E60Ba53A8e9ac28
 cash             0x4ae46a509F6b1D9056937BA4500cb143933D2dc8  (real USDG)
 ```
 
-**Four fills, receipts `#0`–`#3`** — `receipts.count()` reads 4 on chain. `#0`–`#2` went through
-the previous guard and executor; `#3` (`0xc9eba0cb…`, 0.5 USDG into wTSLAx) is the first through
-the replacements, so the D42 stack is proven and not merely deployed. All four sit in one
-append-only history because `ReceiptRegistry` was kept across both migrations. Everything deployed
+**Nine fills, receipts `#0`–`#8`** — `receipts.count()` reads 9 on chain. `#4` is the first
+**exit** (D51), and `#5`–`#8` are the seeded baskets for theses #1 and #2, each carrying an
+`evidenceHash` that verifies against a bundle on disk (D57, D58). They sit in one append-only
+history because `ReceiptRegistry` was kept across every migration — three of them now. Everything deployed
 and listed in `src/deployments.ts` is verified on Sourcify. `MAINNET` is populated, so the FE header chip lights up on its own.
 **Read addresses with the chain id**: the new mainnet guard and executor reuse addresses the old
 *testnet* TestUSDG and PolicyGuard had — same deployer, same nonce sequence, two chains.
@@ -113,8 +121,11 @@ server that can sign is a server that has custody, and D6 forbids it.
 ### 3. Deploy the API runtime ✅ done
 
 **https://reckonz.vercel.app** — Root Directory is the repo root, not `app/`. The only environment
-variable is `GEMINI_API_KEY`; the web path reads no key that can move funds, and it must stay that
-way. `pnpm build` is `next build` (Foundry moved to `build:contracts`) so Vercel's default works.
+variable that belongs there is `GEMINI_API_KEY`; the web path reads no key that can move funds, and
+it must stay that way. Checked 2026-08-12 by tracing every deployed route: `/api/theses` and
+`/api/universe` read nothing from the environment at all. **Contract addresses are compiled into
+the bundle, not read from env** — so a guard or executor redeploy needs a Vercel redeploy, or the
+page builds mandates pointing at a dead contract. `pnpm build` is `next build` (Foundry moved to `build:contracts`) so Vercel's default works.
 
 Verified in production end to end, not just a 200: six stages, live Gemini, 30 assets from the
 chain, capacity-limited plan, one of two assets refused at the guard.
@@ -149,18 +160,32 @@ it is not built.
 
 ### 7. Next up
 
-Simple mode — browse published theses with their real on-chain track records. Mostly an FE
-question now that the data exists.
+Simple mode. The read half is done and on `main`: `src/track-record.ts` + `GET /api/theses`
+(`pnpm track-record` shows the same data in the terminal). Each thesis arrives with its basket
+already derived from settled fills, its weighted slippage, and whether it was published before it
+was executed.
+
+What is not done is the follow itself. **The stated blocker was wrong**: this was "gated on wallet
+connect", wallet connect shipped 2026-08-12, and the flow did not move — because the real gap was
+that nothing in `app/` could produce a Permit2 signature. `src/permit.ts` closes that half (D63) and
+is exercised by every CLI fill, so it is proven rather than merely written. What remains is a
+component that quotes, shows the guard's verdict, calls `signTypedData` and sends. **The browser has
+still never placed a fill.** Auto-DCA was
+dropped for this submission; the reasoning is D50.
+
+Be warned what the data looks like: **one** thesis, and only **one** receipt bound to it — a
+single wSPYx entry of $0.50. Three further receipts carry no thesis hash and are returned
+separately as `unattributed`. Render them; dropping them would overstate the discipline.
 
 ### Known gaps BE owns
 
 Updated 2026-08-11 after D38–D42.
 
-- **Claude provider is typechecked and has never executed.** Gemini Flash 3.6 is the default and
-  works. Bring-your-own-key was considered as a way to have someone else's key run it and
-  **deferred** — see D43. It would not have closed this gap anyway: the path is unproven until it
-  runs once, whoever pays.
-- **Yahoo Finance is not a production data source.** The blocker is licensing, not engineering.
+- ~~**Claude provider is typechecked and has never executed**~~ — **removed 2026-08-12 (D59)**.
+  Gemini Flash 3.6 is the only live provider and the fixture is the floor. Bring-your-own-key
+  (D43) was aimed at this gap and would not have closed it: a path is unproven until it runs once,
+  whoever pays. Deleting it was the closure.
+- ~~**Yahoo Finance is not a production data source.** The blocker is licensing, not engineering.~~ — **done 2026-08-12 (D62).** The oracle now prices from the issuer's own mark. Yahoo is **deleted** (D63); the gap σ now comes from `observations/`, sampled from the issuer by the publish worker.
 - ~~The oracle prices 8 of the 30 xStocks~~ — **28 of 30** now, admitted by a measured test
   (D38). The two refusals are measured, not pending.
 - ~~One admin key that can publish any fair value~~ — admin is a **2-of-3 Safe**, publishing is a
@@ -198,17 +223,37 @@ The page works end to end today; it is not yet something to record a video of. P
   unpublishable, render the withholding — not `0`, not `—` alone.
 - Mobile is not required. Judges will use a laptop.
 
-### 3. Wallet connect + mandate creation — unblocked
+### 3. Wallet connect — ~~FE~~ **done, and taken over by BE 2026-08-12**
 
-Today the page reads and decides; it cannot sign. Everything on-chain still happens through
-`pnpm mandate` / `pnpm oracle:publish`. Target: connect, pick a chain, create a mandate, see the
-receipt.
+Connect, chain switch and account state ship in `app/components/useWallet.ts` +
+`app/components/Wallet.tsx`, mounted in the page header. Signing happens in the browser; no key
+or signature reaches the server.
 
-- Sign **in the browser only**. No key ever reaches the server.
-- Chain switch between 1952 and 196 driven by `src/deployments.ts` — if `MAINNET` is `null`,
-  offer testnet only.
-- Add the wallet library to `package.json` yourself; see `08-parallel.md` for how to touch a
-  shared file without a conflict.
+**No wallet library was added.** Discovery is EIP-6963 and the transport is viem's `custom()`,
+and viem was already a dependency — so `package.json` and the lockfile were never touched, which
+also removes the shared-file conflict this ticket used to warn about.
+
+The cost of that choice, stated rather than discovered later: **there is no WalletConnect**, so
+no phone-scans-a-QR path. Only browser extensions announce themselves. That is the demo we are
+building for, and it is a real limitation if that ever stops being true.
+
+`useWallet()` returns `walletClient`, a viem `WalletClient` — and it is deliberately `null` when
+the wallet is on a chain with no deployment in `src/deployments.ts`. A `writeContract` against one
+of our addresses while the wallet sits on another network sends a transaction to whatever happens
+to live there.
+
+**Mandate creation ships with it**, in `app/components/Mandate.tsx`. Blast radius and asset
+allowlist in the panel, `createMandate` from the user's own wallet, then a poll until the mandate
+is readable — a confirmed write is not immediately readable on this chain (D18), and the panel
+says so on screen rather than showing a zero. Assets come from `GET /api/universe`, which is
+`universe()` out of `src/pipeline.ts`, so the picker computes nothing (D28).
+
+`agent` is set to the user's own address: they propose their own trades, and no key of ours can
+act on their mandate. `executor` is the deployed `Executor` — not the user — because
+`Executor.execute` checks `m.executor == address(this)` before it will pull a single USDG.
+
+**Untested against a real wallet.** Written where no extension exists. First run belongs on
+testnet.
 
 The call to build against first:
 
@@ -236,6 +281,44 @@ mirrors the Solidity enum and cannot be reordered.
 
 `dryRun(mandateId, fills)` is a read that returns the guard's verdict without spending gas.
 Call it before every write and show the answer — refusing early *is* the feature.
+
+### 3b. ~~Two labels in `panels.tsx` now say the wrong thing~~ — **done by BE 2026-08-12, on request**
+
+Raised by BE on 2026-08-12 as a ticket rather than an edit, because `app/components/**` is yours.
+Nothing is broken and nothing crashes; two strings are now inaccurate.
+
+D62 rewrote the fair-value engine. The `FairValueReport` shape is unchanged — same fields, same
+types, so nothing needs rewiring — but **two of the four gap-risk components mean something
+different now**:
+
+```
+was:  gap risk = staleness / displacement / uncertainty / basis
+now:  gap risk = not quoting / open gap    / band        / basis
+```
+
+- `parts.staleness` was "hours since the last exchange print, normalised". It is now binary: **is
+  anyone making a market in this token at all**. It reads 0 almost always, and 1 when the issuer is
+  halted or shut, which is the state worth showing loudly.
+- `parts.displacement` was "how far we carried the price forward with betas". Nothing is carried
+  forward any more. It is now **the open gap** — how far this security has historically jumped
+  between one session's close and the next open, which is what the *position* is exposed to even
+  when the price is perfect.
+
+Suggested labels: `not quoting / open gap / band / basis`.
+
+Two smaller ones in the same block:
+
+- `r.signals` is now **always empty** — the signal machinery is deleted, so the block at line ~309
+  never renders. Safe to remove, and worth removing so nobody wonders why it never appears.
+- `r.stalenessHours` now reads ~0.0h always, because the mark is live rather than an eleven-hour-old
+  close. It is no longer an interesting number to show; the session (`r.state`) and the band are.
+
+**BE edited `panels.tsx` directly, crossing the seam, because Wangsit asked for it explicitly.**
+Recorded here rather than done quietly, since the rule exists so nobody's branch silently loses:
+the change is confined to one paragraph in the gap-risk line and the removal of the dead
+`r.signals` block. Nothing else in the file was touched. If you have that file open on a branch,
+this is the conflict to expect. Reword freely — the labels are the part that had to be true, not
+the phrasing.
 
 ### 4. The logo — asset ready, drop-in is yours
 

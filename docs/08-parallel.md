@@ -58,6 +58,34 @@ Rules:
 - **`import type` only, from FE into `src/`.** A value import drags the RPC client and the LLM SDK
   into the browser bundle.
 
+### Announced breaking changes
+
+**2026-08-12 — `FairValueReport.signals` removed, and two `gapRiskParts` fields changed meaning.**
+
+Announced here after the fact rather than before, because BE also landed the matching FE change on
+request — `app/components/panels.tsx`, see `07-team.md §3b`. If you have that file open on a branch,
+this is the conflict to expect.
+
+D62 rewrote the fair-value engine to read the issuer's mark instead of forecasting from index
+futures. Consequences on the frozen shape:
+
+- `signals: SignalContribution[]` is **gone**. Nothing is carried forward any more, so it was
+  always `[]`; a field that can only ever be empty is a field nobody checks. Removed rather than
+  left, per D59.
+- `gapRiskParts.staleness` and `.displacement` kept their names — renaming them would have broken
+  the seam for nothing — but they measure different quantities now:
+
+  ```
+  staleness     → is anyone quoting this token at all (0 or 1)
+  displacement  → the open gap the position is exposed to
+  ```
+
+  Labels in the UI now read `not quoting / open gap / band / basis`.
+
+Everything else on `FairValueReport` is unchanged in name and type. `stalenessHours` still exists
+and now reads ~0 always, because the mark is live rather than an eleven-hour-old close; it is no
+longer an interesting number to render.
+
 ### Working before the seam exists
 
 FE should not sit idle waiting for BE. Two unblocks:
@@ -83,7 +111,7 @@ Before you open a PR:
 
 ```bash
 pnpm typecheck        # covers src/ and app/ together — both of you run this
-forge test            # BE only; expect 89 passed
+forge test            # BE only; expect 105 passed
 git switch main && git pull --ff-only
 git switch -          # then rebase or merge main into your branch
 ```
