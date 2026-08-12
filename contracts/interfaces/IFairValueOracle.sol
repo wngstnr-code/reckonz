@@ -18,6 +18,18 @@ interface IFairValueOracle {
     ///         gap risk and capacity stay meaningful when the value is withheld.
     function observation(address asset) external view returns (Observation memory);
 
+    /// @notice The raw observation, however old, without reverting.
+    /// @dev Added to this interface for exits (D56). Every other read here
+    ///      reverts on stale, which is right when the question is "may I buy"
+    ///      and catastrophic when it is "may I sell" — a consumer that cannot
+    ///      read a stale value cannot let anyone out. `FairValueOracle` has
+    ///      always implemented this; only the interface omitted it, so nothing
+    ///      needs redeploying on the oracle's side.
+    ///
+    ///      A caller of `peek` is taking responsibility for judging the value's
+    ///      age itself. Never use it where `checkExecution` belongs.
+    function peek(address asset) external view returns (Observation memory);
+
     /// @return valueE8       fair value, 8 decimals
     /// @return confidenceBps half-width of the 95% band, basis points
     /// @return gapRisk       0-100

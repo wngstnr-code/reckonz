@@ -286,14 +286,52 @@ contract PolicyGuard {
                 revert SlippageTooHigh(f.asset, f.slippageBps, p.maxSlippageBps);
             }
 
-            (bool ok, bytes32 reason) = oracle.checkExecution(
-                f.asset, f.executionPriceE8, p.maxGapRisk, p.maxDeviationBps
-            );
-            if (!ok) revert OracleRejected(f.asset, reason);
+            uint128 fv;
+            uint8 gapRisk;
 
-            // Stamp the oracle's own view into the receipt so the record shows
-            // what the guard was looking at, not just what the agent claimed.
-            (uint128 fv,, uint8 gapRisk) = oracle.fairValue(f.asset);
+            if (f.isExit) {
+                // **The oracle is advisory on the way out.** It was not, and that
+                // was the defect: `checkExecution` rejects on STALE, NO_DATA,
+                // NO_REFERENCE and GAP_RISK, so a mandate whose gap-risk trigger
+                // had just fired was refused the exit it was being told to make,
+                // and an unpublished oracle trapped every open position rather
+                // than merely pausing new ones (D51, D56).
+                //
+                // What still bounds an exit: the mandate's `maxSlippageBps`
+                // against the shortfall the executor measured, `maxNotionalPerTrade`
+                // against the proceeds, the allowlist, the circuit breaker, and —
+                // the one that does not depend on the oracle at all — the
+                // `minAmountOutUsdg` floor the owner signed into the leg. When
+                // there is no defensible fair value that floor is the whole of
+                // the price protection, which is a weaker guarantee than an entry
+                // gets and a far better outcome than being unable to sell.
+                //
+                // `peek` rather than `observation` because the latter reverts on
+                // exactly the staleness this branch exists to tolerate.
+                // `gapRisk` from `peek`, because the last known risk score is
+                // still the most informative thing available and a stale one is
+                // itself a signal. `fairValueE8` only from `fairValue`, which
+                // reverts unless the oracle will stand behind the number — so a
+                // receipt records **0** rather than a price nobody vouches for.
+                // Writing a stale value into an append-only record would be the
+                // one thing this oracle exists to refuse.
+                gapRisk = oracle.peek(f.asset).gapRisk;
+                try oracle.fairValue(f.asset) returns (uint128 v, uint32, uint8 g) {
+                    fv = v;
+                    gapRisk = g;
+                } catch {
+                    fv = 0;
+                }
+            } else {
+                (bool ok, bytes32 reason) = oracle.checkExecution(
+                    f.asset, f.executionPriceE8, p.maxGapRisk, p.maxDeviationBps
+                );
+                if (!ok) revert OracleRejected(f.asset, reason);
+
+                // Stamp the oracle's own view into the receipt so the record shows
+                // what the guard was looking at, not just what the agent claimed.
+                (fv,, gapRisk) = oracle.fairValue(f.asset);
+            }
             recorded[i] = ReceiptRegistry.Fill({
                 asset: f.asset,
                 isExit: f.isExit,
@@ -330,7 +368,24 @@ contract PolicyGuard {
         }
 
         // --- portfolio-level checks --------------------------------------
-        if (p.enforceWeights) {
+        //
+        // Skipped when every fill is an exit, for two reasons. The weaker one is
+        // that it cannot fail: selling reduces an asset's weight and raises the
+        // cash balance, so neither `maxWeightBps` nor `minCashBufferBps` can be
+        // breached by leaving. The stronger one is that `_checkWeights` prices
+        // the portfolio through `oracle.fairValue`, which reverts on stale — so
+        // leaving it running here would put the trap this change removes straight
+        // back, for any mandate with `enforceWeights` on (D56).
+        //
+        // A mixed batch still runs it: the entry legs in it can breach.
+        bool allExits = true;
+        for (uint256 i; i < fills.length; ++i) {
+            if (!fills[i].isExit) {
+                allExits = false;
+                break;
+            }
+        }
+        if (p.enforceWeights && !allExits) {
             _checkWeights(mandateId, m.owner, p);
         }
 
@@ -369,9 +424,15 @@ contract PolicyGuard {
             if (f.amountInUsdg > p.maxNotionalPerTrade) return (false, "NOTIONAL", f.asset);
             if (f.slippageBps > p.maxSlippageBps) return (false, "SLIPPAGE", f.asset);
 
-            (bool o, bytes32 r) =
-                oracle.checkExecution(f.asset, f.executionPriceE8, p.maxGapRisk, p.maxDeviationBps);
-            if (!o) return (false, r, f.asset);
+            // Mirrors `validateAndRecord` exactly, exits included. A dryRun that
+            // refused something the real call would allow is worse than no
+            // dryRun: the planner reads this to decide whether to spend gas, so
+            // a false rejection here is a position nobody tries to leave.
+            if (!f.isExit) {
+                (bool o, bytes32 r) =
+                    oracle.checkExecution(f.asset, f.executionPriceE8, p.maxGapRisk, p.maxDeviationBps);
+                if (!o) return (false, r, f.asset);
+            }
         }
         return (true, bytes32(0), address(0));
     }
