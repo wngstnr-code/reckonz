@@ -38,7 +38,8 @@
     "safe:admin": "tsx src/safe-admin.ts",
     "handover": "tsx src/handover.ts",
     "publish:loop": "tsx src/publish-loop.ts",
-    "track-record": "tsx src/track-record-demo.ts"
+    "track-record": "tsx src/track-record-demo.ts",
+    "index": "tsx src/index-demo.ts"
   },
   "keywords": [],
   "author": "",

@@ -26,6 +26,7 @@ import { formatUnits, type Address, type Hex } from 'viem';
 import { RECEIPT_REGISTRY_ABI, THESIS_REGISTRY_ABI } from './abi';
 import { client, serial, USDG } from './chain';
 import { MAINNET } from './deployments';
+import { readIndex } from './indexer';
 import { loadToken } from './pool';
 
 const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000';
@@ -157,12 +158,15 @@ async function symbolsFor(assets: Address[]): Promise<Map<Address, string>> {
 }
 
 /**
- * Every receipt, oldest first.
+ * Every receipt, oldest first — from the index where it has one, the chain for
+ * the rest.
  *
- * Enumerated by index rather than by log scan: `count()` is authoritative, the
- * volume is small, and an event query against this RPC is the less reliable of
- * the two. Revisit if receipts ever reach the thousands — at which point the
- * indexer in `05-status.md` stops being a roadmap item.
+ * Enumerated by id rather than by log scan: `count()` is authoritative, and an
+ * event query against this RPC is the less reliable of the two. **The chain is
+ * still what decides how many exist**; `observations/registry.jsonl` only
+ * answers for ids below that count, so a missing, stale or truncated store
+ * makes this slower and never wrong. See `src/indexer.ts` for why a copy is
+ * allowed here at all.
  */
 async function loadReceipts(registry: Address): Promise<ReceiptRecord[]> {
   const count = await client.readContract({
@@ -171,8 +175,12 @@ async function loadReceipts(registry: Address): Promise<ReceiptRecord[]> {
     functionName: 'count',
   });
 
+  const indexed = new Map((await readIndex()).receipts.map((r) => [r.id, r]));
+
   const ids = Array.from({ length: Number(count) }, (_, i) => i);
-  const raw = await serial(ids, async (id) => {
+  const missing = ids.filter((id) => !indexed.has(id));
+
+  const fetched = await serial(missing, async (id) => {
     const [receipt, fills] = await client.readContract({
       address: registry,
       abi: RECEIPT_REGISTRY_ABI,
@@ -182,29 +190,39 @@ async function loadReceipts(registry: Address): Promise<ReceiptRecord[]> {
     return { id, receipt, fills };
   });
 
-  const symbols = await symbolsFor(raw.flatMap((r) => r.fills.map((f) => f.asset)));
+  // Only for what was not indexed: an indexed fill already carries its symbol,
+  // resolved once at index time rather than on every read.
+  const symbols = await symbolsFor(fetched.flatMap((r) => r.fills.map((f) => f.asset)));
 
-  return raw.map(({ id, receipt, fills }) => ({
-    id,
-    mandateId: receipt.mandateId,
-    policyVersion: Number(receipt.policyVersion),
-    agent: receipt.agent,
-    thesisHash: receipt.thesisHash,
-    evidenceHash: receipt.evidenceHash,
-    timestamp: Number(receipt.timestamp),
-    blockNumber: receipt.blockNumber,
-    fills: fills.map((f) => ({
-      asset: f.asset,
-      symbol: symbols.get(f.asset.toLowerCase() as Address) ?? f.asset,
-      isExit: f.isExit,
-      amountInUsdg: f.amountInUsdg,
-      amountOut: f.amountOut,
-      executionPriceE8: f.executionPriceE8,
-      slippageBps: Number(f.slippageBps),
-      fairValueE8: f.fairValueE8,
-      gapRisk: Number(f.gapRisk),
-    })),
-  }));
+  for (const { id, receipt, fills } of fetched) {
+    indexed.set(id, {
+      kind: 'receipt',
+      id,
+      mandateId: receipt.mandateId,
+      policyVersion: Number(receipt.policyVersion),
+      agent: receipt.agent,
+      thesisHash: receipt.thesisHash,
+      evidenceHash: receipt.evidenceHash,
+      timestamp: Number(receipt.timestamp),
+      blockNumber: receipt.blockNumber,
+      fills: fills.map((f) => ({
+        asset: f.asset,
+        symbol: symbols.get(f.asset.toLowerCase() as Address) ?? f.asset,
+        isExit: f.isExit,
+        amountInUsdg: f.amountInUsdg,
+        amountOut: f.amountOut,
+        executionPriceE8: f.executionPriceE8,
+        slippageBps: Number(f.slippageBps),
+        fairValueE8: f.fairValueE8,
+        gapRisk: Number(f.gapRisk),
+      })),
+    });
+  }
+
+  return ids.map((id) => {
+    const { kind: _kind, ...record } = indexed.get(id)!;
+    return record;
+  });
 }
 
 /** Weight a thesis's entry fills by the USDG that actually went in. */
@@ -286,8 +304,15 @@ export async function loadRegistry(): Promise<RegistrySnapshot> {
   });
 
   const thesisIds = Array.from({ length: Number(count) }, (_, i) => i);
+  const storedTheses = new Map((await readIndex()).theses.map((t) => [t.id, t]));
+
   const [published, allReceipts] = await Promise.all([
+    // Same rule as the receipts below: the chain's `count()` says how many, the
+    // index answers for the ones it holds, and anything it does not hold is
+    // read from the chain.
     serial(thesisIds, async (id) => {
+      const held = storedTheses.get(id);
+      if (held) return { id, thesis: held };
       const t = await client.readContract({
         address: thesisRegistry,
         abi: THESIS_REGISTRY_ABI,
