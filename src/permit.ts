@@ -152,12 +152,18 @@ export async function buildPermit(
  */
 export function describePermit(
   req: PermitRequest,
-  payload: PermitPayload,
+  /**
+   * Unix seconds the authorisation dies at. Taken as a value rather than as a
+   * `PermitPayload` because the UI has to show this *before* the permit exists:
+   * the nonce read and the typed data are built when the user commits, and
+   * telling them what they are about to sign afterwards is telling them late.
+   */
+  deadline: bigint,
   symbol: string,
   decimals: number,
 ): string[] {
   const amount = Number(req.amount) / 10 ** decimals;
-  const minutes = Math.round((Number(payload.deadline) - Math.floor(Date.now() / 1000)) / 60);
+  const minutes = Math.round((Number(deadline) - Math.floor(Date.now() / 1000)) / 60);
   return [
     `at most ${amount} ${symbol}, and not a unit more`,
     `only ${req.spender} can use it — no other contract, ever`,

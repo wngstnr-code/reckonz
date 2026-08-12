@@ -1,6 +1,8 @@
 import { Console } from './components/Console';
+import { Fill } from './components/Fill';
 import { Mandate } from './components/Mandate';
 import { MandateManage } from './components/MandateManage';
+import { Theses } from './components/Theses';
 import { Wallet } from './components/Wallet';
 import { MAINNET, TESTNET } from '@/src/deployments';
 import { DEFAULT_MANDATE } from '@/src/guard';
@@ -68,6 +70,10 @@ export default function Page() {
         <Mandate />
 
         <MandateManage />
+
+        <Theses />
+
+        <Fill />
 
         <section className="mb-4 rounded-xl border border-line bg-panel px-6 py-5">
           <h2 className="mb-3 text-[15px] font-semibold tracking-tight">

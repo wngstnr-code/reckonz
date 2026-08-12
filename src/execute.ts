@@ -30,6 +30,7 @@ import {
   RECEIPT_REGISTRY_ABI,
   THESIS_REGISTRY_ABI,
 } from './abi';
+import { executionPriceE8, shortfallBps } from './fill';
 import { buildPermit } from './permit';
 import { ADDR, USDG } from './chain';
 import { writeEvidence, type EvidenceBundle } from './evidence';
@@ -291,18 +292,17 @@ const observation = await ownerWallet.readContract({
   args: [asset],
 });
 
-// Mirrors Executor._priceE8 exactly: settlement paid per whole asset unit, 8dp.
-const executionPriceE8 =
-  (amountIn * 10n ** BigInt(token.decimals) * 100_000_000n) /
-  (quoted.result.amountOut * 10n ** BigInt(cashDecimals));
-
-// Mirrors Executor._shortfallBps: measured against the oracle, not the quote.
-const slippageBps =
-  observation.hasValue && observation.fairValueE8 > 0n && executionPriceE8 > observation.fairValueE8
-    ? Number(
-        ((executionPriceE8 - observation.fairValueE8) * 10_000n) / observation.fairValueE8,
-      )
-    : 0;
+// Both mirror `Executor` — `_priceE8` and `_shortfallBps`. They live in
+// `src/fill.ts` because the browser needs the same two numbers to predict the
+// same fill, and arithmetic that decides whether the guard rejects must not
+// exist in two places.
+const priceE8 = executionPriceE8(
+  amountIn,
+  quoted.result.amountOut,
+  token.decimals,
+  cashDecimals,
+);
+const slippageBps = shortfallBps(priceE8, observation.fairValueE8, observation.hasValue);
 
 console.log(
   `  oracle    fv ${(Number(observation.fairValueE8) / 1e8).toFixed(4)}` +
@@ -310,7 +310,7 @@ console.log(
     `  age ${Math.max(0, Math.floor(Date.now() / 1000) - Number(observation.updatedAt))}s`,
 );
 console.log(
-  `  predicted price ${(Number(executionPriceE8) / 1e8).toFixed(4)}, shortfall ${slippageBps}bp`,
+  `  predicted price ${(Number(priceE8) / 1e8).toFixed(4)}, shortfall ${slippageBps}bp`,
 );
 
 const predictedFill = {
@@ -318,7 +318,7 @@ const predictedFill = {
   isExit: false,
   amountInUsdg: amountIn,
   amountOut: quoted.result.amountOut,
-  executionPriceE8,
+  executionPriceE8: priceE8,
   slippageBps,
   fairValueE8: 0n,
   gapRisk: 0,

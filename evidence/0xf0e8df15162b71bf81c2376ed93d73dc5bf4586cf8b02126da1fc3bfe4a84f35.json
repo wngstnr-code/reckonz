@@ -1,0 +1,37 @@
+{
+  "kind": "entry",
+  "chainId": 196,
+  "decidedAt": 1786536954,
+  "mandateId": "1",
+  "executor": "0xD3d4aeD69f045dAb75390b2a1431A2161C02fBE2",
+  "guard": "0x9C8F1af1cF0FaD14C46617c573bFed8C90a783be",
+  "thesisHash": "0xc3cd487e6946be180e01073e43c6377d7acbc90119648bb7597fbc6d7a027ee0",
+  "legs": [
+    {
+      "asset": "0xE7E553Cd128F0011777323A0b44a7b96EA1CB540",
+      "symbol": "wSPYx",
+      "amountIn": "500000",
+      "minAmountOut": "637158241607252",
+      "feeTier": 500,
+      "simulatedOut": "0.000643594183441669",
+      "impactBps": 5
+    }
+  ],
+  "observations": [
+    {
+      "asset": "0xE7E553Cd128F0011777323A0b44a7b96EA1CB540",
+      "fairValueE8": "77694502906",
+      "confidenceBps": 10,
+      "gapRisk": 4,
+      "capacityUsdg": "3869655713",
+      "updatedAt": 1786536944,
+      "ageSeconds": 10,
+      "hasValue": true
+    }
+  ],
+  "dryRun": {
+    "ok": true,
+    "reason": "ALLOW",
+    "offendingAsset": null
+  }
+}
