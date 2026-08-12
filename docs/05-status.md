@@ -59,7 +59,7 @@ history. `receipts.count()` was 3 before and 3 after.
 FairValueOracle  0xDB7949c99e6d234C0eD374a71966d9e6CbfcfD09   new — publish-time jump bound
 PolicyGuard      0x9C8F1af1cF0FaD14C46617c573bFed8C90a783be   redeployed 2026-08-12 — D56 exit fix
 Executor         0xD3d4aeD69f045dAb75390b2a1431A2161C02fBE2   redeployed 2026-08-12 with the guard
-ReceiptRegistry  0x9D04575894F570C3638Bc1f6ECaD6EF36D479Fa6   kept — 15 fills, #9-#13 exits and #14 an entry, all under D62/D63
+ReceiptRegistry  0x9D04575894F570C3638Bc1f6ECaD6EF36D479Fa6   kept — 16 fills; #9-#13 exits, #14 an entry, #15 the first from a browser (D65)
 ThesisRegistry   0xD4b503d002Fb77019d7BB1a26DCe1d60F32dfa1E   kept
 FeeCollector     0x3A1D6b9129E69fEF189E538996B18cebd56C3Dd0   kept — 15 bps, ceiling 50
 PoolSwapper      0x1f3b67d8209060eC68d0eDCD6E60Ba53A8e9ac28
@@ -312,6 +312,9 @@ That single run exercises every claim the product makes. It is the demo.
 | ~~**Wallet connect**~~ — **built 2026-08-12** | The header connects, switches between 1952 and 196, and hands out a viem `WalletClient`. EIP-6963 + viem's `custom()` transport, so no wallet library and no change to `package.json`. No WalletConnect, therefore no mobile QR path. Taken over from FE, see `07-team.md`. |
 | ~~**Mandate creation in the UI**~~ — **built 2026-08-12** | `app/components/Mandate.tsx`: set the blast radius, pick assets from `GET /api/universe`, `createMandate` from the user's own wallet, then poll until the mandate is readable (D18) and show its id with an explorer link. The user is `owner` *and* `agent`; `executor` is the deployed `Executor`, which is what `Executor.execute` checks before it will pull funds. **Not yet exercised against a real wallet extension** — see below. |
 
+| ~~**Simple mode in the UI**~~ — **built 2026-08-12** | `app/components/Theses.tsx`: every published thesis with its basket derived from settled fills, its notional-weighted slippage, whether it was published before every fill, and the receipts underneath — plus the unattributed receipts and any orphaned hashes, rendered rather than dropped. It reads `GET /api/theses`, so the page and `pnpm track-record` cannot disagree (D28). **Follow** hands the executed basket to the mandate form (`app/components/follow.ts`, a one-way DOM event) which preselects those assets and nothing else — the caps, the size and the signature stay with the follower. A followed thesis's hash is carried into the fill below, so a follower's execution lands back in that thesis's track record. |
+| ~~**Fill from the browser**~~ — **done 2026-08-12, receipt #15 on mainnet** | `app/components/Fill.tsx` + `POST /api/fill` + `src/fill.ts` (D64). The server quotes, checks the pool the executor derives, reads the oracle, runs `dryRun` and hashes the evidence; the browser approves Permit2, signs an authorisation scoped to one token/amount/spender/20 minutes, and sends `execute`. **No key on the server.** **Exercised end to end against the OKX extension** (D65): receipt **#15**, 0.49925 USDG into wSPYx at 776.8877 against fair value 776.9450 — 0 bps slippage, gap 4 — carrying thesis #0's hash and evidence `0xf0e8df15…`, which `pnpm evidence` re-derives. It appears in thesis #0's track record on the same page. Two bugs were in the way and are fixed: `useWallet` gave every component its own connection, and `waitForTransactionReceipt` never returned through the injected provider — the replacement is `app/components/awaitReceipt.ts`, proven by tripping and releasing the breaker from the browser (two writes, no funds moved). The connection now survives a reload, and Follow re-points the asset at the thesis's basket. |
+
 ### Known gaps in the work itself
 
 - ~~**Claude provider never executed**~~ — **deleted 2026-08-12 (D59)**. Gemini is the only live
@@ -422,8 +425,8 @@ a million that silently never fires.
 
 | Component | Blocked on | Verdict for this submission |
 |---|---|---|
-| Consumer / simple mode — follow-once | wallet connect in the UI | The **read half is built**: `src/track-record.ts` joins both registries and derives each thesis's basket from its settled fills; `GET /api/theses` serves it; `pnpm track-record` is the terminal view. What is left is the follow itself — a follower's `createMandate` + Permit2 signature, both of which are browser-side and land with wallet connect. Auto-DCA was dropped, see D50. |
-| Indexer | volume | No longer blocked on receipts — there are **five** — but five receipts do not need an index. Real work that only pays off with volume. Roadmap item. |
+| ~~Consumer / simple mode — follow-once~~ | ~~the Permit2 fill component~~ | **Built end to end 2026-08-12** (D64): `src/track-record.ts` + `GET /api/theses` + `app/components/Theses.tsx` for the browse, Follow for the mandate, and `app/components/Fill.tsx` + `POST /api/fill` for the fill, carrying the thesis hash so a follower's execution rejoins the track record. What is left is not code: a fresh oracle publish (the guard refuses on `STALE` until the worker runs) and one run against a real wallet extension. Auto-DCA stays dropped, see D50. |
+| ~~Indexer~~ | ~~volume~~ | **Built 2026-08-12** (D66). The block was never volume: the cost is per *read*, not per record, and `loadRegistry()` re-enumerated both registries on every page load. `src/indexer.ts` + `pnpm index` keep an append-only store at `observations/registry.jsonl`; `pnpm track-record` went 4.97s → 1.05s on the same 16 receipts. The chain still decides how many exist, so deleting the store costs latency and never correctness, and `pnpm index --verify` re-derives every stored record from the chain. |
 | ASP / x402 registration | a stable hosted endpoint | The endpoint exists now (reckonz.vercel.app), so this is unblocked and simply not started. Worth naming on the form as planned ecosystem contribution. |
 
 The honest summary: depth was chosen over breadth throughout, and that was the right call for
@@ -607,7 +610,15 @@ outright was the plan and was the wrong call — the open-gap distribution has n
 replacement and the issuer publishes no history, so removing the code would leave the recorded σ
 values permanently unauditable, which is D5 in reverse. The real fix is to build the history rather
 than borrow it: sample the issuer's own marks into a store. That is the indexer in
-`03-architecture.md`, and it does not exist yet.
+`03-architecture.md`; the store exists (`observations/issuer-marks.jsonl`) and the registry half was
+built 2026-08-12 (D66).
+
+**What the store can and cannot do yet, plainly.** `pnpm measure` counts *session boundaries
+crossed*, not samples — one boundary is one close-to-open jump — so a store that has watched three
+boundaries cannot replace a σ measured over years, and says so rather than deriving one. Until the
+publish worker has run for weeks, this is a mechanism being proven, not a statistic being used. And
+it only accumulates where it is written: the worker needs a volume and `OBSERVATIONS_PATH`, or it
+collects onto a disk that is wiped on redeploy (D67).
 
 **Exercised end to end, same day.** Five exits and one entry under the new model — receipts #9–#13, all
 `dryRun ALLOW`, clearing wQQQx/wNVDAx/wTSLAx/wSPYx back to USDG at 0.25/0.40/0.80/0.95/0.44 USDG.

@@ -56,8 +56,10 @@ pnpm capacity                # absorbable size per xStock, by impact limit
 pnpm oracle [usdg]           # fair value, gap risk, PolicyGuard allow/reject
 pnpm reconcile               # admission test vs the issuer's mark — run before trusting ASSETS
 pnpm sample [--loop]         # write the issuer's marks to observations/ — our own price history
+pnpm sample --merge <path>   # fold a store collected on the worker's volume back in (D67)
 pnpm measure [--multipliers]  # re-derive the recorded multipliers and gap σ from that store
 pnpm evidence [hash]         # verify receipts against the bundles they claim (D57)
+pnpm index [--verify|--rebuild]  # keep observations/registry.jsonl current (D66)
 pnpm dev                     # the web app — thesis in, guard verdict out
 pnpm build                   # next build (what Vercel runs); contracts are build:contracts
 pnpm typecheck               # covers src/ and app/
@@ -119,6 +121,10 @@ TARGET=mainnet pnpm fees [withdraw]    # what the fee earned, and sweep it to th
   has already gone $17.5M → $22.9M. Re-run `pnpm capacity` before quoting it. See D49.
 - **Never trust a prose summary of a large JSON API** for X Layer facts — parse the JSON
   or hit the RPC. That is how D2 happened.
+- **On `FairValueOracle`, `peek` is the safe read and `observation` reverts.** Not the other way
+  round, whatever the names suggest — `observation` throws `NoData` / `Stale`. `src/abi.ts` said
+  the opposite for weeks and the browser fill path believed it (D64). Render with `peek`; decide
+  with `checkExecution`, which returns its reasons and never reverts.
 - **There are no Chainlink equity feeds on X Layer.** The fair-value layer must be built.
 - **DexScreener does not index X Layer.** GeckoTerminal does, as network `x-layer`.
 - The public RPC throttles hard: serialise reads, batch ~12, retry with backoff. Use
@@ -159,6 +165,11 @@ TARGET=mainnet pnpm fees [withdraw]    # what the fee earned, and sweep it to th
   what makes a fair value publishable.
   Adding a line because the ticker is obvious is the exact assertion this oracle refuses to make.
   See D38.
+- **After a fill or a thesis publish, run `pnpm index` and commit the store.** It is what makes
+  `/api/theses` cheap in production, and the file tracer cannot follow the runtime path — see
+  `outputFileTracingIncludes` in `next.config.ts`. Forgetting costs latency, never correctness:
+  the chain still decides how many receipts exist, so a stale store just makes the read enumerate
+  what it is missing.
 - Log real direction changes and corrections in `docs/04-decisions.md`; update
   `docs/05-status.md` when something starts or finishes working. Both are read by the other
   person, so they are part of the change, not paperwork after it.

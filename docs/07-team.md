@@ -153,12 +153,39 @@ deliberately idle until then; the reasoning, the funding and the runway are in
 of OKB** (a plain transfer, no Safe signatures), then bring the worker up with `TARGET=mainnet`,
 `PUBLISHER_KEY`, `PUBLISH_INTERVAL_SEC=600`.
 
+**Before starting it, attach a Railway volume at `/data` and set
+`OBSERVATIONS_PATH=/data/issuer-marks.jsonl`** (D67). Without it the sampler writes to a container
+filesystem that is wiped on redeploy, and the price history the worker exists to accumulate is lost
+every time it restarts. Do **not** mount the volume over `observations/` — an empty volume there
+shadows the marks that ship in the image.
+
+Then, once before submission: pull `/data/issuer-marks.jsonl` down and run
+
+```bash
+pnpm sample --merge ./issuer-marks-from-worker.jsonl   # idempotent; dedupes on symbol+observedAt
+git add observations/issuer-marks.jsonl                 # a σ from a file nobody has is a magic number
+```
+
 That $5 lasts ~21 days at 30 assets, so it runs dry around **9 Sep** — a reminder sits at 5 Sep in
-the status doc. If it ever needs to run longer, the fix is a `PUBLISH_SYMBOLS` filter in
-`publish.ts` so it publishes the mandate's allowlist instead of all 30; that is an 8x saving and
-it is not built.
+the status doc. ~~If it ever needs to run longer, the fix is a `PUBLISH_SYMBOLS` filter…~~
+**`PUBLISH_SYMBOLS` is built (D63), and it changes this arithmetic entirely**: publishing one
+symbol costs 53,739 gas, and the publisher's existing 0.00276 OKB is **1,532 runs** at 0.02 gwei.
+The $5 was sized for thirty assets and is not the constraint it was written as.
 
 ### 7. Next up
+
+**Update 2026-08-12: both halves are built.** `app/components/Theses.tsx` renders the registry
+join; `follow` preselects a thesis's executed basket in the mandate form via
+`app/components/follow.ts` and carries its hash into the fill. The fill itself is
+`app/components/Fill.tsx` + `POST /api/fill` + `src/fill.ts` (D64) — the server quotes and asks the
+guard, the wallet approves, signs and sends.
+
+Both halves have now been run against the OKX extension end to end — receipt #15, thesis #0's hash
+on it (D65). Two bugs stood in the way and are fixed: `useWallet` gave every component its own
+connection, so every wallet-dependent panel was unreachable, and `waitForTransactionReceipt` never
+returned through the injected provider. The guard still answers `STALE` whenever the publisher has
+not run inside `maxAge`; one `PUBLISH_SYMBOLS=<sym> pnpm oracle:publish` clears it. The rest of
+this section is the brief it was built from.
 
 Simple mode. The read half is done and on `main`: `src/track-record.ts` + `GET /api/theses`
 (`pnpm track-record` shows the same data in the terminal). Each thesis arrives with its basket
@@ -319,6 +346,30 @@ the change is confined to one paragraph in the gap-risk line and the removal of 
 `r.signals` block. Nothing else in the file was touched. If you have that file open on a branch,
 this is the conflict to expect. Reword freely — the labels are the part that had to be true, not
 the phrasing.
+
+**BE also crossed the seam for the Simple mode surface, 2026-08-12, again on request.** New
+files, so nothing of yours is overwritten: `app/components/Theses.tsx` and
+`app/components/follow.ts`. Three existing files were touched, and only these lines:
+
+- `app/page.tsx` — one import, one `<Theses />` between `<MandateManage />` and the deployments
+  card.
+- `app/components/ui.tsx` — `Card` now takes an optional `ref`, forwarded to its `<section>`.
+  React 19 needs no `forwardRef`; nothing else about `Card` changed.
+- `app/components/Mandate.tsx` — a listener for the `reckonz:follow` event that preselects the
+  assets and scrolls the card into view, plus the banner that says which thesis is being followed.
+  The create path, the policy defaults and the picker are untouched.
+
+Reword the copy freely. What has to stay true is the honesty of it: the basket comes from settled
+fills, weights are not copied into the policy, and the follower sizes and signs it themselves.
+
+**And once more for the fill, same day, same reason.** New file `app/components/Fill.tsx` (panel
+10), plus one import and one `<Fill />` in `app/page.tsx`.
+
+`app/components/follow.ts` now holds three one-way events rather than one, and two existing files
+gained a listener each: `Mandate.tsx` fires `reckonz:mandates-changed` after it creates one, and
+`MandateManage.tsx` re-reads on that and on `reckonz:filled`. Both are additive — a `useEffect`
+and an import, nothing existing rewritten. Without them, creating a mandate left the fill panel
+saying none existed, and a fill left positions and the track record showing pre-trade state.
 
 ### 4. The logo — asset ready, drop-in is yours
 

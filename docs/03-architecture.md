@@ -177,21 +177,23 @@ a grant. Unlike Yahoo, it is answerable: their data, their product, one email.
 ## L4 — Product surface
 
 - **Pro** — write a thesis → see the mapping → *see the depth reality before confirming* →
-  execute → receipt. Everything up to the guard's verdict runs in the browser today; **the execute
-  step does not** — it is `pnpm execute` / `pnpm exit` from a terminal. The browser can create and
-  govern a mandate (D52, D54) but has never placed a fill.
+  execute → receipt. All of it runs from the browser as of 2026-08-12 (D64): the quote, the pool
+  check, the oracle read and `dryRun` come from `POST /api/fill`, and the wallet approves Permit2,
+  signs and sends. `pnpm execute` / `pnpm exit` remain the terminal path, and `exit` is still
+  terminal-only. **The browser has now placed a fill**: receipt #15 on mainnet, from the OKX
+  extension, carrying thesis #0's hash (D65).
 - **Simple** — browse published theses with real on-chain track records, then follow one once
   at your own size in USDG. The basket is derived from the settled fills, not from the thesis
   text, so it needs no pinning. **Auto-DCA is not in scope** — Permit2 SignatureTransfer is
   single-use, and the alternatives cost either a standing allowance or a database and a
   scheduler we do not have. See D50.
 
-  **Not built as a surface.** The data behind it is: `src/track-record.ts` joins both registries
-  and derives each thesis's basket from its settled fills, `GET /api/theses` serves it, and
-  `pnpm track-record` renders it in a terminal. **Nothing in `app/` fetches that route** — there is
-  no page, no component, and no follow action. Marked rather than left, because "the read half is
-  done" is true of the API and false of anything a user can see, and an unmarked line in a surface
-  list reads as shipped. Same defect class as the basket page below (D60).
+  **Built 2026-08-12.** `src/track-record.ts` joins both registries and derives each thesis's
+  basket from its settled fills, `GET /api/theses` serves it, `pnpm track-record` renders it in a
+  terminal, and `app/components/Theses.tsx` renders it on the page — with the unattributed
+  receipts and orphaned hashes shown rather than dropped. Follow preselects the basket in the
+  mandate form and carries the thesis hash into the fill, so a follower's execution rejoins the
+  same track record.
 - **Public basket page** — live weights, receipt timeline, gap-risk banner when closed.
   **Not built.** `GET /api/theses` already returns everything it needs, so this is a page and not a
   system; it is simply not written.
@@ -205,7 +207,10 @@ snapshot, fair value / gap risk, thesis→basket compilation.
 
 - Chain reads: **viem + Multicall3**, serialised, batched at ~12.
 - **Build your own indexer** — DexScreener does not index X Layer; GeckoTerminal is
-  limited. Moat and ecosystem contribution.
+  limited. Moat and ecosystem contribution. **Two stores exist now**, both append-only NDJSON
+  under `observations/`: `issuer-marks.jsonl`, the price history sampled from the issuer (D62),
+  and `registry.jsonl`, the receipts and theses read once and kept (D66). Neither is a database
+  and neither is authoritative — the chain and the issuer are.
 - Evidence: IPFS, hash on-chain. **Not built.** `evidenceHash` is written as zero and
   `evidenceCID` as `''` by every path that produces a receipt, exactly as `ThesisRegistry.cid` is.
   Publishing a CID that resolves to nothing is worse than publishing none, so the field stays empty
@@ -226,8 +231,9 @@ snapshot, fair value / gap risk, thesis→basket compilation.
 6. Mainnet with small caps ✅ — four real fills, 25→1 USDG blast radius, receipts #0–#3
 7. `FeeCollector` ✅ — 15 bps, taking a real fee ← **done ahead of order**
 8. `ThesisRegistry` ✅ — deployed, loop closed on mainnet (receipt #2 → thesis #0)
-9. Simple mode — read layer ✅ (`src/track-record.ts`, `GET /api/theses`); follow-once needs
-   wallet connect in the UI ← **next**
+9. Simple mode — read layer ✅ (`src/track-record.ts`, `GET /api/theses`) and browse surface ✅
+   (`app/components/Theses.tsx`, Follow preselects the basket); the fill itself needs the Permit2
+   component ← **next**
 10. ASP / x402
 
 `Executor` swaps by calling the pool directly (`V3Swapper`). The Universal Router was in

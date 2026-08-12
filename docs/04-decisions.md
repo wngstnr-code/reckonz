@@ -2897,3 +2897,266 @@ by `pnpm verify`, `pnpm reconcile` and `pnpm check:tests`, which are regression 
 state rather than unit tests. That has been enough to catch real defects — including both above —
 but it means a pure-function bug in `src/issuer.ts` or `src/permit.ts` has nothing standing in front
 of it except the next live run.
+
+---
+
+## D64 — The browser can fill; the quote stays on the server, and one ABI comment was backwards
+
+Simple mode's browse surface (`app/components/Theses.tsx`) and the fill path
+(`app/components/Fill.tsx` + `POST /api/fill`) close the last two items that were "built but
+unreachable". `src/permit.ts` could produce the authorisation and `Executor.execute` could spend
+it; nothing joined them outside a Node script holding a key. That is now joined.
+
+### Where the work is split, and why that is the security claim
+
+The obvious shape — quote in the browser — does not survive contact with this chain. A quote is
+thousands of pool reads over an RPC that throttles, and the evidence bundle needs a filesystem.
+So `POST /api/fill` quotes, checks the pool the executor will actually derive, reads the oracle,
+asks `PolicyGuard.dryRun` and hashes the evidence, and the browser does the three things that must
+happen in the user's own wallet: approve Permit2 once, sign an authorisation scoped to one token,
+one amount, one spender and twenty minutes, and send the transaction.
+
+**The server holds no key and what it returns cannot move anything.** That is not a convenient
+division of labour, it is the non-custodial claim expressed as an architecture: the only artefact
+that can move funds is produced by the owner's wallet and by nothing else.
+
+`src/fill.ts` is the shared implementation. `executionPriceE8` and `shortfallBps` were written out
+inline in `execute.ts`; they mirror `Executor._priceE8` and `_shortfallBps`, they decide whether
+the guard rejects, and a second copy in an API route would have been a third place for them to
+drift from the Solidity. `execute.ts` now imports them.
+
+### The evidence bundle is written only when the guard allows
+
+A rejected plan is never signed. Writing its bundle would fill `evidence/` with reasoning for
+trades nobody made, which makes the directory worth less rather than more. The hash is returned
+either way, and on a serverless runtime with no writable filesystem the write fails and is
+reported — the hash still binds, which is the half that mattered (D57).
+
+### `peek` and `observation` are the opposite of what the ABI said
+
+`src/abi.ts` carried a comment saying `peek` reverts on stale or withheld values and `observation`
+returns the raw record. **It is the other way round.** `FairValueOracle.peek` is a plain getter;
+`observation` reverts with `NoData` and `Stale`. The browser fill path followed the comment and
+got a revert where it expected a record — on a *correct* refusal, which is exactly the failure
+mode `09-design.md` warns about: the oracle doing its job, rendered as a bug.
+
+Corrected in place, with the line numbers, because the name that sounds safer is the one that
+throws. `checkExecution` returns its reasons and never reverts, which is why `dryRun` answers
+`STALE` instead of failing.
+
+### What the chain says right now, 2026-08-12
+
+A quote for 0.5 USDG into wSPYx returns `REJECT · STALE`: the last published observation is
+~1.9 hours old against a 900-second `maxAge`, because the publish worker is deliberately not
+running until 18–19 Aug. This is the guard working, and the surface renders it as a verdict with
+its reason rather than as an error. **A browser fill will not go through until a fresh value is
+published** — one `TARGET=mainnet PUBLISH_SYMBOLS=… pnpm oracle:publish` is enough for a demo.
+
+**The browser has still never placed a fill.** The server half is exercised against mainnet; the
+wallet half — approve, sign, send — is typechecked and built and has not been run against a real
+extension. That is the one claim not to make until someone presses the button.
+
+### Swept afterwards, same day — seven gaps the first pass left
+
+Written down because five of the seven would only have surfaced with a wallet holding real funds,
+which is the most expensive place to find them.
+
+1. **The permit has to be signed by the mandate's `owner`, and `prepareFill` only checked `agent`.**
+   `Executor.execute` calls `_pull(permit, signature, m.owner, legs)` and sends the bought asset to
+   `m.owner` too. A caller who was the agent but not the owner would have approved Permit2, signed,
+   sent — and reverted on an invalid signer, having paid gas to find out. The CLI splits the two
+   roles across two keys and never hit this; the browser has one wallet, so it must hold both, and
+   the server now says so before anything is signed.
+2. **The approval was not polled before the transaction that depends on it.** `execute.ts` waits
+   for the Permit2 allowance to become *readable* (D18) and the browser did not — it awaited the
+   receipt and went straight on. On this RPC that is a gas estimate against a node that has not
+   seen the approval: a revert with no useful message, on a first-time user's very first fill.
+3. **A stale plan could be signed.** Changing the asset, size or mandate after quoting left the
+   previous plan on screen with a live "sign & fill" button, which would have executed something
+   other than what the form said. The plan is now cleared whenever any of its three inputs change.
+4. **Following a thesis and filling a different asset would have stamped its hash on the trade.**
+   A receipt pointing at reasoning that says nothing about the asset is worse than an untethered
+   fill, because it looks like evidence. The hash now rides along only when the asset is in that
+   thesis's basket, and the panel says which case it is in.
+5. **A failed read left the panel reading forever.** `load()` had no `catch`, so a throttled RPC
+   produced an unhandled rejection and a permanent "Reading your mandates…". A throttled RPC is
+   not an empty list of mandates — the same distinction `/api/theses` already makes.
+6. **Nothing re-read the chain after anything changed.** Creating a mandate left the fill panel
+   saying no mandate existed; a fill left the positions and the track record showing pre-trade
+   state. Three one-way events (`reckonz:follow`, `:mandates-changed`, `:filled`) now join the
+   panels, so a fill that carries a thesis hash appears in that thesis's record without a reload.
+7. **A fill whose balance had not become readable reported "received 0".** Exactly the D18 defect
+   that once made a working fill print zero. It now says the balance is not visible yet and points
+   at the transaction.
+
+Also: the user's USDG balance is read up front and a size larger than it is refused with the reason
+— Permit2 authorises a pull, it does not create the balance — and `describePermit` takes a deadline
+rather than a built payload, because the UI has to say what is about to be signed *before* the
+permit exists rather than after.
+
+---
+
+## D65 — The browser placed a fill, and two bugs stood between it and ever doing so
+
+2026-08-12. **Receipt #15 on X Layer mainnet**: 0.49925 USDG into wSPYx at 776.8877 against a fair
+value of 776.9450 — **0 bps slippage**, gap risk 4 — carrying `thesisHash`
+`0xc3cd487e…` (thesis #0, published 2026-08-11) and `evidenceHash` `0xf0e8df15…`, which `pnpm
+evidence` re-derives from the stored bundle. Quote, oracle read and `dryRun` from `POST /api/fill`;
+approval, Permit2 signature and transaction from the OKX extension. **No key on the server, and
+the browser had never done this before.**
+
+The loop is now visible in one screen: the fill appears under thesis #0's track record, which went
+from one settled entry to two, 0.49925 → 0.9985 USDG deployed, 45 bps worst slippage against 22 bps
+weighted.
+
+Getting there took a publish — the guard answered `STALE` until `PUBLISH_SYMBOLS=wSPYx pnpm
+oracle:publish` (tx `0x099d6e19…`, 53,739 gas). Worth recording: the publisher's runway is **1,532
+runs** at 0.02 gwei on its current 0.00276 OKB, not the ~21 days at $5 that `07-team.md` assumed.
+The funding note there was written before `PUBLISH_SYMBOLS` existed and is now wrong in the
+expensive direction.
+
+### `useWallet` gave every component its own connection
+
+The hook kept its state in `useState`. Four components call it — `Wallet`, `Mandate`,
+`MandateManage`, `Fill` — so each had its **own** connection, and only the header ever called
+`connect()`. The address rendered in the header while all three panels below sat on
+`address === null` and asked the user to connect a wallet that was already connected.
+
+**Every wallet-dependent surface on the page was unreachable, from the day wallet connect shipped
+until the first time a real extension was pointed at it.** Not a regression from this week's work
+— D54 shipped it that way, and `05-status.md` recorded "not yet exercised against a real wallet
+extension" without anyone drawing the conclusion. A hook that owns connection state is a hook that
+cannot be called twice, and nothing said so.
+
+The state now lives in a module-level store that `useWallet` subscribes to via
+`useSyncExternalStore`: one connection, one set of provider listeners, every panel reading the same
+snapshot. A context provider would also have worked and would have put a client boundary around a
+server-rendered page; this changes nothing at any call site.
+
+### `waitForTransactionReceipt` never returned through the injected provider
+
+The fill was mined in block 67767995 and confirmed on chain while the page still said `mining…`.
+Whatever the OKX provider does or does not support behind viem's `custom()` transport, the page
+cannot depend on being told — a successful trade that never finishes rendering reads as a failed
+one, and the expensive version of that mistake is a user who retries a fill they already made.
+
+`app/components/awaitReceipt.ts` polls `eth_getTransactionReceipt` on a bounded loop instead. A
+miss is not a failure: viem throws while the transaction is pending, and on this chain a read can
+also land on a node that has not seen the block (D18). Both mean *ask again*. It gives up loudly
+after 90 seconds with the hash, because "we stopped looking" and "it failed" are different
+sentences. Applied to all three write paths, since `Mandate` and `MandateManage` had the same call.
+
+Exercised rather than assumed, and deliberately without spending anything: the mandate's circuit
+breaker was tripped and released from the browser — two writes, no funds moved, `getMandate` back
+to `active: true, circuitBreaker: false` — and both completed, re-reading the chain each time.
+That is the same write path the fill takes.
+
+### Two smaller things, closed the same day
+
+- **The connection now survives a reload.** `eth_accounts` returns what has already been authorised
+  and shows no dialog — unlike `eth_requestAccounts`, which asks — so a refresh picks the session
+  back up silently. Only the wallet's `rdns` is remembered, never an address: the wallet is the
+  authority on which account is selected, and a stored address goes stale the first time the user
+  switches account. `disconnect` clears it, because a disconnect that undoes itself on refresh is
+  not a disconnect.
+- **Following a thesis now re-points the asset** at that thesis's basket even when one is already
+  selected. Following wSPYx and leaving wTSLAx in the box is a fill that cannot carry the hash, and
+  the user had to notice and fix it. Applied once per follow, tracked by object identity, so the
+  next chain read does not overrule a choice made afterwards.
+
+---
+
+## D66 — The indexer, and what it costs to keep a second copy of a fact
+
+`05-status.md` has carried "indexer — blocked on volume" since before there were any receipts.
+The block was real and it has now cleared, but not because volume arrived: **the cost is per
+read, not per record.** `loadRegistry()` enumerated both registries on every call — `count()`,
+one `get()` per thesis and per receipt, then a token read per distinct asset to resolve symbols —
+and every page load of the Simple mode surface paid it, over an RPC that throttles.
+
+Measured before building anything, on the same 16 receipts: **4.97s** for `pnpm track-record`.
+With the index, **1.05s**. The ratio is not the point — the shape is. The old path is O(receipts)
+RPC round trips on every read; the new one is two `count()` calls plus whatever is new. The number
+it scales with is the one number in this system designed only ever to go up.
+
+### An index breaks the repo's own rule, so it pays for it
+
+CLAUDE.md: one source per kind of fact, because the copy is what drifts. An index *is* a second
+copy. Three things make that affordable rather than reckless:
+
+- **The chain still decides how much exists.** `count()` is read every time, and the store is only
+  consulted for ids below it. A store that is missing, stale, truncated or deleted makes reads
+  slower and never wrong, and can never invent a receipt the chain does not have. Deleting
+  `observations/registry.jsonl` is a supported operation.
+- **Only settled history is indexed.** A record is written once it is 12 blocks deep. Ids in both
+  registries are assigned by append-only contracts so an indexed record cannot change — but a
+  reorg at the tip could drop the transaction that created it and renumber everything after, so
+  the tip is not indexed. Held-back records are reported, not silently skipped.
+- **`pnpm index --verify` re-reads every stored record from the chain**, field by field, and exits
+  non-zero on disagreement. A full re-read rather than a spot check, because the failure worth
+  catching — a store written against a different deployment or chain — is invisible in a sample.
+  Run against the first store: 3 theses, 16 receipts, every field matched.
+
+### A file, next to the issuer marks
+
+Same answer as `observations/issuer-marks.jsonl`, which it sits beside: append-only NDJSON,
+readable with `tail`, diffable, no infrastructure this project does not have. Duplicate ids are
+tolerated on read (last wins) so a re-index or an overlapping run cannot corrupt it, and a
+truncated final line — what a killed writer leaves — costs one record rather than the store.
+
+**The writer is the CLI, and deliberately not the publish worker.** The worker's filesystem on
+Railway is ephemeral, so an index built there would die with the container and never reach Vercel.
+The store is committed instead, which means a deploy ships the history. The cost of that choice is
+a manual step someone will forget — and the reason it is acceptable is the first bullet above:
+forgetting costs latency, never correctness.
+
+`outputFileTracingIncludes` in `next.config.ts` is what actually gets the file into the
+deployment. Without it the store is committed, works locally, and is simply absent in production —
+degrading correctly and silently costing every request the enumeration it exists to avoid. The
+worst kind of regression is one that only shows up as latency.
+
+---
+
+## D67 — The worker samples onto a volume, and nothing pushes to the repo
+
+Found while answering a plain question — *are `observations/` and `evidence/` committed, and why?*
+
+Both are, deliberately. `evidence/` **is** the pinning: `evidenceHash` goes on chain in the same
+transaction as the fill and `evidenceCID` stays empty because nothing pins it (D57), so a bundle
+that is not in the repo is a hash pointing at something nobody can produce. `observations/` is what
+makes σ re-derivable now that Yahoo is gone (D63) — a number derived from a file nobody else has is
+a magic number, which is D5 in reverse.
+
+The gap is what happens to `observations/` **once the publish worker runs**. `publish-loop.ts`
+samples every cycle, `railway.json` mounts no volume, and a container filesystem is wiped on
+redeploy. So from 18 Aug the one scheduled process that exists to accumulate history would collect
+~4,000 marks a day onto a disk that evaporates, and nothing would carry them back. D62's whole
+argument — build the history rather than borrow it — executed by a process that throws the result
+away.
+
+**Decided: a Railway volume at `/data`, pointed at by `OBSERVATIONS_PATH`, merged back by hand.**
+
+- **Not a repo token on the worker.** The obvious fix is to have the worker commit what it collects.
+  That gives repo-write to a process already holding the publisher's hot key, which raises the blast
+  radius of that key for data nothing consumes yet. D41 and D42 both chose the other direction.
+- **Not mounted over `observations/`.** An empty volume there shadows the copy that ships in the
+  image, so the worker appends to an empty file and the 30 committed marks look lost. The volume
+  goes somewhere else and `OBSERVATIONS_PATH` points at it.
+- **`pnpm sample --merge <path>` folds it back**, deduplicating on `symbol` + `observedAt` — the
+  same asset cannot be received twice at the same instant, so two overlapping runs collide exactly
+  there. It is idempotent by construction, which matters because it is a manual step and the hand
+  that runs it is the one most likely to run it twice. Verified: 30 marks + 12 incoming of which 4
+  were new → 34, and a second run → +0.
+
+### The part worth saying out loud
+
+**This store cannot replace σ before judging, and that is not a failure.** What `pnpm measure`
+counts is not samples but *session boundaries crossed* — each one is one close-to-open jump. Three
+days of sampling gives at most three. So what is being preserved in this window is evidence that
+the mechanism works and accumulates, not a statistic anyone should use yet. Sampling at 600s is
+over-sampled for the statistic and correctly sampled for bracketing a boundary tightly, and it
+costs one HTTP call and no gas, so it stays.
+
+The growth is worth knowing before it is a surprise: ~113 bytes per mark × 28 assets × 144 cycles a
+day ≈ **455 KB/day, ~14 MB/month**. With the volume, none of that reaches git until someone merges
+on purpose.
