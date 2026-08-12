@@ -14,7 +14,45 @@
  * reproducible, and this repo's whole argument is that its numbers can be
  * checked. See `src/observations.ts` for why the file rather than a database.
  */
-import { append, coverage, readAll, sampleOnce, STORE } from './observations';
+import { writeFileSync } from 'node:fs';
+import { append, coverage, merge, readAll, sampleOnce, STORE } from './observations';
+
+/**
+ * `--merge <path>` folds a store collected elsewhere into the committed one.
+ *
+ * The case it exists for: the publish worker samples into a Railway volume,
+ * because a container's own filesystem is wiped on redeploy. Nothing pushes
+ * that back — deliberately, since a worker that can write to the repo is a
+ * worker holding a token, and it already holds the publisher's hot key. So the
+ * file is pulled down by hand and folded in with this, which is idempotent and
+ * says exactly what it changed.
+ */
+const MERGE_FROM = process.argv.includes('--merge') ? process.argv[process.argv.indexOf('--merge') + 1] : null;
+
+if (MERGE_FROM) {
+  const before = readAll();
+  const incoming = readAll(MERGE_FROM);
+  if (incoming.length === 0) {
+    console.error(`\n  ${MERGE_FROM} holds no marks — nothing to merge.\n`);
+    process.exit(1);
+  }
+
+  const merged = merge(before, incoming);
+  writeFileSync(STORE, merged.map((s) => JSON.stringify(s)).join('\n') + '\n');
+
+  const cov = coverage(merged);
+  console.log(
+    `\n  merged ${MERGE_FROM} into ${STORE}\n` +
+      `    had      ${before.length} marks\n` +
+      `    incoming ${incoming.length}\n` +
+      `    now      ${merged.length}  (+${merged.length - before.length} new, ` +
+      `${before.length + incoming.length - merged.length} were duplicates)\n` +
+      `    coverage ${cov.length} assets, ` +
+      `${cov.length ? Math.min(...cov.map((c) => c.boundaries)) : 0} boundary(s) on the least-covered\n\n` +
+      `  Run it twice and the second run changes nothing. Commit the store.\n`,
+  );
+  process.exit(0);
+}
 
 const LOOP = process.argv.includes('--loop');
 const INTERVAL_SEC = Number(process.env.SAMPLE_INTERVAL_SEC ?? 300);

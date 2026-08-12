@@ -43,7 +43,20 @@ import { dirname } from 'node:path';
 import { ASSETS, issuerSymbolFor } from './fairvalue';
 import { issuerBook } from './issuer';
 
-export const STORE = 'observations/issuer-marks.jsonl';
+/**
+ * Where the marks are written.
+ *
+ * `OBSERVATIONS_PATH` exists for one case: the publish worker samples every
+ * cycle, and a Railway container's filesystem is wiped on redeploy, so the
+ * history D62 exists to accumulate would evaporate. A mounted volume fixes
+ * that — but mounting it **over** `observations/` would shadow the copy that
+ * ships in the image and make the 30 committed marks look lost. So the volume
+ * goes somewhere else (`/data`) and this points at it.
+ *
+ * Node-only, like the rest of this module. Merging what the volume collected
+ * back into the repo is a deliberate act: `pnpm sample --merge <path>`.
+ */
+export const STORE = process.env.OBSERVATIONS_PATH ?? 'observations/issuer-marks.jsonl';
 
 export interface Sample {
   /** on-chain symbol, so the store joins to `ASSETS` without a lookup */
@@ -87,6 +100,27 @@ export function append(samples: readonly Sample[], path = STORE): void {
   if (!samples.length) return;
   mkdirSync(dirname(path), { recursive: true });
   appendFileSync(path, samples.map((s) => JSON.stringify(s)).join('\n') + '\n');
+}
+
+/**
+ * Fold a second store into this one, keeping every distinct mark.
+ *
+ * The identity of a mark is `symbol` + `observedAt`: the same asset cannot be
+ * received twice at the same instant, and two runs that overlap produce exactly
+ * that collision. Deduplicating on it means a merge can be run twice with no
+ * effect the second time — which matters, because this is a manual step and the
+ * hand that runs it is the one most likely to run it again.
+ *
+ * The result is sorted by time and **rewritten**, not appended: a merge is the
+ * one operation on this store that cannot be expressed as an append, and
+ * pretending otherwise would leave the file out of order and the duplicates in.
+ */
+export function merge(into: readonly Sample[], from: readonly Sample[]): Sample[] {
+  const seen = new Map<string, Sample>();
+  for (const s of [...into, ...from]) seen.set(`${s.symbol}@${s.observedAt}`, s);
+  return [...seen.values()].sort(
+    (a, b) => a.observedAt - b.observedAt || a.symbol.localeCompare(b.symbol),
+  );
 }
 
 export function readAll(path = STORE): Sample[] {
