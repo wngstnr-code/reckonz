@@ -4,6 +4,16 @@
  *
  * Mirrors FairValueOracle.checkExecution — deliberately, line for line. If the
  * two ever disagree the off-chain planner is wrong, not the contract.
+ *
+ * **This models entries only.** `PolicyGuard` stopped applying `checkExecution`
+ * to exits in D56: an oracle that cannot vouch for a price must not be able to
+ * trap a position, so on the way out the check is advisory and the leg's
+ * `minAmountOutUsdg` floor carries the price protection instead. Nothing here
+ * needs a direction flag today because the only caller is the entry planner —
+ * but a consumer that asked this module "may I sell" would get an answer
+ * stricter than the chain's, which is the one direction of disagreement this
+ * file is otherwise built to prevent. `PolicyGuard.dryRun` is the honest
+ * pre-flight for an exit, and `src/exit.ts` calls it.
  */
 import type { FairValueReport } from './fairvalue';
 

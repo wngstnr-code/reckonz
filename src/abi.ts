@@ -234,10 +234,15 @@ export const FAIR_VALUE_ORACLE_ABI = parseAbi([
  */
 export const EXECUTOR_ABI = parseAbi([
   'struct Leg { address asset; uint128 amountInUsdg; uint256 minAmountOut; uint24 fee; }',
+  // The reverse direction. `amountIn` is denominated in the **asset**, and the
+  // permit that accompanies it must name the asset rather than the settlement
+  // currency — see `Executor.exit`.
+  'struct ExitLeg { address asset; uint128 amountIn; uint256 minAmountOutUsdg; uint24 fee; }',
   'struct TokenPermissions { address token; uint256 amount; }',
   'struct PermitBatchTransferFrom { TokenPermissions[] permitted; uint256 nonce; uint256 deadline; }',
 
   'function execute(uint256 mandateId, Leg[] legs, PermitBatchTransferFrom permit, bytes signature, bytes32 thesisHash, bytes32 evidenceHash, string evidenceCID) returns (uint256 receiptId)',
+  'function exit(uint256 mandateId, ExitLeg[] legs, PermitBatchTransferFrom permit, bytes signature, bytes32 thesisHash, bytes32 evidenceHash, string evidenceCID) returns (uint256 receiptId)',
 
   'function guard() view returns (address)',
   'function oracle() view returns (address)',
