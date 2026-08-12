@@ -1,0 +1,37 @@
+{
+  "kind": "exit",
+  "chainId": 196,
+  "decidedAt": 1786527538,
+  "mandateId": "1",
+  "executor": "0xD3d4aeD69f045dAb75390b2a1431A2161C02fBE2",
+  "guard": "0x9C8F1af1cF0FaD14C46617c573bFed8C90a783be",
+  "thesisHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "legs": [
+    {
+      "asset": "0x4C1AE29c159838fC1b224636E28E086EB69101f7",
+      "symbol": "wQQQx",
+      "amountIn": "344682048148572",
+      "minAmountOut": "247179",
+      "feeTier": 500,
+      "simulatedOut": "249676",
+      "impactBps": null
+    }
+  ],
+  "observations": [
+    {
+      "asset": "0x4C1AE29c159838fC1b224636E28E086EB69101f7",
+      "fairValueE8": "72530612297",
+      "confidenceBps": 10,
+      "gapRisk": 6,
+      "capacityUsdg": "3887901439",
+      "updatedAt": 1786527505,
+      "ageSeconds": 33,
+      "hasValue": true
+    }
+  ],
+  "dryRun": {
+    "ok": true,
+    "reason": "ALLOW",
+    "offendingAsset": null
+  }
+}
