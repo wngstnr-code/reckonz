@@ -18,9 +18,18 @@
  * loop. Spawning keeps one source of truth for what publishing *is*, and makes a
  * cycle that dies unable to take the supervisor with it.
  *
+*
+ * It also **samples** each cycle, into `observations/`. That store is what the
+ * band's gap σ is derived from now that Yahoo is gone (D63), and it only fills
+ * up while something is running. Doing it here rather than as a second process
+ * is deliberate: `&` in a start command means a sampler that dies unnoticed and
+ * is orphaned when the publisher exits. One process, one lifecycle, one restart
+ * policy. Sampling is one HTTP call and costs no gas, so it is free to carry.
+ *
  *   TARGET=mainnet PUBLISH_INTERVAL_SEC=600 pnpm publish:loop
  */
 import { spawn } from 'node:child_process';
+import { append, sampleOnce } from './observations';
 
 const INTERVAL_SEC = Number(process.env.PUBLISH_INTERVAL_SEC ?? 600);
 /** Consecutive failures before the process gives up and lets the host restart it. */
@@ -62,6 +71,18 @@ console.log(
 
 while (!stopping) {
   const started = Date.now();
+
+  // Sample before publishing, and never let it stop a publish. The store is
+  // valuable and the oracle is load-bearing; a bad HTTP response must cost a
+  // line in the history, not a stale oracle.
+  try {
+    const samples = await sampleOnce();
+    append(samples);
+    console.log(`${stamp()}  sampled ${samples.length} issuer marks`);
+  } catch (e) {
+    console.error(`${stamp()}  sample failed, publishing anyway: ${(e as Error).message}`);
+  }
+
   const code = await runOnce();
 
   if (code === 0) {

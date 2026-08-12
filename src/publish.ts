@@ -51,7 +51,11 @@ console.log(`  publisher       ${account.address}`);
 const REFUEL_AT_RUNS = 20;
 const balance = await client.getBalance({ address: account.address });
 const gasPrice = await client.getGasPrice();
-const perRun = 900_000n * gasPrice; // ~884k gas for 30 warm slots, rounded up
+// ~884k gas for 30 warm slots, rounded up, and scaled by how many are actually
+// being published — a runway printed for thirty while publishing four is a
+// number that is wrong in the reassuring direction.
+const slots = BigInt((process.env.PUBLISH_SYMBOLS ?? '').split(',').filter((s) => s.trim()).length || 30);
+const perRun = ((900_000n * slots) / 30n + 60_000n) * gasPrice;
 const runsLeft = perRun > 0n ? balance / perRun : 0n;
 console.log(
   `  gas balance     ${formatEther(balance)} OKB — about ${runsLeft} runs at ${formatGwei(gasPrice)} gwei\n`,
@@ -64,7 +68,7 @@ if (runsLeft < BigInt(REFUEL_AT_RUNS)) {
   process.exit(1);
 }
 
-// 1 — run the off-chain engine: fair value from marketdata, capacity and basis
+// 1 — run the off-chain engine: fair value from the issuer's mark, capacity and basis
 //     from live mainnet pool state via the planner.
 const now = Math.floor(Date.now() / 1000);
 type Item = {
@@ -78,9 +82,59 @@ type Item = {
   anchorAt: bigint;
   hasValue: boolean;
 };
+/**
+ * Which assets to publish this run.
+ *
+ * Publishing all thirty every ten minutes costs ~900k gas a cycle and about
+ * $5 of OKB every three weeks. A live mandate holds four assets. The other
+ * twenty-six are being published so that nothing reads them, which is the
+ * same trade the publish worker itself was scheduled to avoid — *"running it
+ * from now so that nothing observes it is the wrong trade"* — applied one
+ * level down.
+ *
+ * So the set is configurable, and the default stays all thirty because a demo
+ * that shows an empty asset is worse than a slightly expensive one. Narrow it
+ * on the worker, where the cost is recurring:
+ *
+ *   PUBLISH_SYMBOLS=wTSLAx,wNVDAx,wQQQx,wSPYx pnpm publish:loop
+ *
+ * Measured rather than estimated: **919,563 gas for thirty against 142,872 for
+ * four**, a 6.4x saving that turns three weeks of runway into roughly four and
+ * a half months on the same $5. The saving is under-linear because the first
+ * write in a transaction pays for the transaction, not because a slot is free.
+ *
+ * An unknown symbol is a hard error rather than a silent skip: a typo that
+ * quietly publishes twenty-nine assets instead of thirty is exactly the kind
+ * of drift nobody notices until a mandate cannot execute.
+ */
+const PUBLISH_SYMBOLS = (process.env.PUBLISH_SYMBOLS ?? '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+if (PUBLISH_SYMBOLS.length) {
+  const unknown = PUBLISH_SYMBOLS.filter((s) => !ASSETS.some((a) => a.symbol === s));
+  if (unknown.length) {
+    console.error(`\n  ✗ PUBLISH_SYMBOLS names assets that are not in ASSETS: ${unknown.join(', ')}\n`);
+    process.exit(1);
+  }
+}
+
+const selected = PUBLISH_SYMBOLS.length
+  ? ASSETS.filter((a) => PUBLISH_SYMBOLS.includes(a.symbol))
+  : ASSETS;
+
+if (PUBLISH_SYMBOLS.length) {
+  console.log(
+    `  publishing ${selected.length} of ${ASSETS.length} assets (PUBLISH_SYMBOLS)\n` +
+      `  the rest keep whatever they last had on chain, and go stale — which is correct\n` +
+      `  if nothing reads them, and wrong the moment a mandate allows one.\n`,
+  );
+}
+
 const items: Item[] = [];
 
-for (const spec of ASSETS) {
+for (const spec of selected) {
   const address = ADDRESS_BY_SYMBOL.get(spec.symbol);
   if (!address) continue;
 
@@ -131,30 +185,42 @@ console.log(`  block ${receipt.blockNumber}  gas ${receipt.gasUsed}  status ${re
 
 // The public X Layer RPC load-balances, so a read issued straight after a
 // confirmed write can land on a node that has not synced the block and return
-// zeroes — a stale read, not an error. See D18.
-await waitUntil(
-  () =>
-    client.readContract({
-      address: ORACLE,
-      abi: FAIR_VALUE_ORACLE_ABI,
-      functionName: 'peek',
-      args: [assets[0]!],
-    }),
-  (o) => o.updatedAt !== 0n,
-  { attempts: 20, delayMs: 500, what: 'the published observation' },
-);
+// the *previous* observation — a stale read, not an error. See D18.
+//
+// This used to wait for `updatedAt !== 0`, which is the wrong question: an
+// asset that has ever been published has a non-zero `updatedAt` forever, so the
+// wait passed instantly against a node still serving the old block. The run
+// that caught it reported three assets as `REJECT STALE` while the write had in
+// fact landed for all thirty — a false alarm about the one condition this whole
+// script exists to check.
+//
+// The right question is whether the node has caught up to *our* write, so the
+// bound is the timestamp of the block it landed in.
+const publishedAt = (await client.getBlock({ blockNumber: receipt.blockNumber })).timestamp;
+
+const peekFresh = (asset: Address) =>
+  waitUntil(
+    () =>
+      client.readContract({
+        address: ORACLE,
+        abi: FAIR_VALUE_ORACLE_ABI,
+        functionName: 'peek',
+        args: [asset],
+      }),
+    (o) => o.updatedAt >= publishedAt,
+    { attempts: 20, delayMs: 500, what: 'the published observation' },
+  );
+
+await peekFresh(assets[0]!);
 console.log();
 
 // 3 — read it back and let the contract decide
 console.log('  contract read-back + checkExecution (maxGapRisk 60, ≤100bp deviation)\n');
 for (let i = 0; i < assets.length; i++) {
   const symbol = ASSETS.find((a) => ADDRESS_BY_SYMBOL.get(a.symbol) === assets[i])!.symbol;
-  const obs = await client.readContract({
-    address: ORACLE,
-    abi: FAIR_VALUE_ORACLE_ABI,
-    functionName: 'peek',
-    args: [assets[i]!],
-  });
+  // Every asset waits on its own read, not just the first: the RPC balances
+  // per request, so asset 3 can land on a lagging node after asset 1 did not.
+  const obs = await peekFresh(assets[i]!);
 
   // Execute exactly at fair value — the deviation term is then zero, so any
   // rejection here is the oracle's own state talking, not the price.

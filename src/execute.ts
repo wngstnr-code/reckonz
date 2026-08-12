@@ -30,7 +30,9 @@ import {
   RECEIPT_REGISTRY_ABI,
   THESIS_REGISTRY_ABI,
 } from './abi';
+import { buildPermit } from './permit';
 import { ADDR, USDG } from './chain';
+import { writeEvidence, type EvidenceBundle } from './evidence';
 import { bestQuote, loadVenues } from './planner';
 import { addressBySymbol, loadToken } from './pool';
 import {
@@ -219,6 +221,19 @@ if (THESIS_HASH !== ZERO_HASH) {
 
 // ------------------------------------------------------ 2. the mandate
 
+/**
+ * The newest *usable* mandate, not simply the newest.
+ *
+ * This used to return `nextMandateId - 1` and nothing else, which was right
+ * only for as long as the highest id happened to be live. It stopped being
+ * true the moment a mandate was closed and an executor was redeployed: the
+ * script picked a closed mandate pointing at the previous executor and failed
+ * with an error about the executor, which is the second-most-confusing way to
+ * report "that mandate is dead".
+ *
+ * Owned by the signing key, active, and pointing at the executor this build
+ * targets — all three, or it is not a mandate this script can use.
+ */
 const mandateId =
   MANDATE_ID ??
   (await (async () => {
@@ -228,7 +243,25 @@ const mandateId =
       functionName: 'nextMandateId',
     });
     if (next <= 1n) throw new Error('no mandate exists — run pnpm mandate first');
-    return next - 1n;
+    for (let id = next - 1n; id > 0n; id--) {
+      const m = await ownerWallet.readContract({
+        address: GUARD,
+        abi: POLICY_GUARD_ABI,
+        functionName: 'getMandate',
+        args: [id],
+      });
+      if (
+        m.active &&
+        m.owner.toLowerCase() === owner.address.toLowerCase() &&
+        m.executor.toLowerCase() === EXECUTOR.toLowerCase()
+      ) {
+        return id;
+      }
+    }
+    throw new Error(
+      `no active mandate owned by ${owner.address} points at executor ${EXECUTOR}. ` +
+        `Run pnpm mandate:show to see what exists, or set MANDATE_ID explicitly.`,
+    );
   })());
 
 const mandate = await ownerWallet.readContract({
@@ -306,6 +339,52 @@ if (!ok) {
 }
 console.log(`  dryRun    ALLOW`);
 
+// ------------------------------- 3b. the evidence this decision rests on
+
+// Assembled *before* signing, from the numbers the decision actually used —
+// the quote, the oracle's published view and its age, and the guard's verdict.
+// Recording it afterwards from the receipt would prove nothing: the interesting
+// claim is what was known beforehand, and only a hash fixed in the same
+// transaction as the fill can carry that (D57).
+const bundle: EvidenceBundle = {
+  kind: 'entry',
+  chainId: chain.id,
+  decidedAt: Math.floor(Date.now() / 1000),
+  mandateId: mandateId.toString(),
+  executor: EXECUTOR,
+  guard: GUARD,
+  thesisHash: THESIS_HASH,
+  legs: [
+    {
+      asset,
+      symbol: token.symbol,
+      amountIn: amountIn.toString(),
+      minAmountOut: minAmountOut.toString(),
+      feeTier,
+      simulatedOut: quoted.out.toString(),
+      impactBps: quoted.impactBps,
+    },
+  ],
+  observations: [
+    {
+      asset,
+      fairValueE8: observation.fairValueE8.toString(),
+      confidenceBps: Number(observation.confidenceBps),
+      gapRisk: Number(observation.gapRisk),
+      capacityUsdg: observation.capacityUsdg.toString(),
+      updatedAt: Number(observation.updatedAt),
+      ageSeconds: Math.max(0, Math.floor(Date.now() / 1000) - Number(observation.updatedAt)),
+      hasValue: observation.hasValue,
+    },
+  ],
+  dryRun: { ok, reason: 'ALLOW', offendingAsset: null },
+};
+
+const EVIDENCE_HASH = await writeEvidence(bundle);
+console.log(`  evidence  ${EVIDENCE_HASH}`);
+console.log(`            written to evidence/${EVIDENCE_HASH}.json — the hash binds, the file is`);
+console.log(`            how anyone checks it. No CID: nothing pins it yet (D57).`);
+
 // --------------------------------------------- 4. Permit2, scoped to this fill
 
 // Permit2 pulls through the ERC20 allowance the owner grants it once. Without
@@ -344,49 +423,25 @@ if (allowance < amountIn) {
  * owner's bitmap will do. Scanning for one is what makes a re-run safe — a
  * reused nonce reverts, and reusing one accidentally is the easy mistake.
  */
-async function unusedNonce(): Promise<bigint> {
-  for (let word = 0n; word < 16n; word++) {
-    const bitmap = await ownerWallet.readContract({
-      address: ADDR.permit2,
-      abi: PERMIT2_ABI,
-      functionName: 'nonceBitmap',
-      args: [owner.address, word],
-    });
-    for (let bit = 0n; bit < 256n; bit++) {
-      if ((bitmap >> bit) % 2n === 0n) return word * 256n + bit;
-    }
-  }
-  throw new Error('no unused Permit2 nonce found in the first 16 words');
-}
-
-const nonce = await unusedNonce();
-const deadline = BigInt(Math.floor(Date.now() / 1000) + 20 * 60);
+// The nonce and the typed data come from `src/permit.ts`, which is browser-safe
+// and exists so the web app can produce this same signature. Using it here is
+// the point: every mainnet fill exercises the exact code path the browser will
+// run, so the browser half is proven by the CLI rather than by hope. D59.
+const permitPayload = await buildPermit(ownerWallet as never, {
+  token: cash,
+  amount: amountIn,
+  spender: EXECUTOR,
+  owner: owner.address,
+  chainId: chain.id,
+});
+const { nonce, deadline } = permitPayload;
 
 // The signed struct carries `spender`; the struct passed as calldata does not.
 // Permit2 reconstructs it from msg.sender, which is why only the executor named
 // here can ever use this signature.
 const signature = await ownerWallet.signTypedData({
   account: owner,
-  domain: { name: 'Permit2', chainId: chain.id, verifyingContract: ADDR.permit2 },
-  types: {
-    TokenPermissions: [
-      { name: 'token', type: 'address' },
-      { name: 'amount', type: 'uint256' },
-    ],
-    PermitBatchTransferFrom: [
-      { name: 'permitted', type: 'TokenPermissions[]' },
-      { name: 'spender', type: 'address' },
-      { name: 'nonce', type: 'uint256' },
-      { name: 'deadline', type: 'uint256' },
-    ],
-  },
-  primaryType: 'PermitBatchTransferFrom',
-  message: {
-    permitted: [{ token: cash, amount: amountIn }],
-    spender: EXECUTOR,
-    nonce,
-    deadline,
-  },
+  ...permitPayload.typedData,
 });
 
 console.log(
@@ -411,11 +466,11 @@ const hash = await agentWallet.writeContract({
   args: [
     mandateId,
     [{ asset, amountInUsdg: amountIn, minAmountOut, fee: feeTier }],
-    { permitted: [{ token: cash, amount: amountIn }], nonce, deadline },
+    permitPayload.permit,
     signature,
     THESIS_HASH,
-    ZERO_HASH, // evidenceHash — the bundle is not pinned yet
-    '',
+    EVIDENCE_HASH,
+    '', // evidenceCID — the bundle is not pinned anywhere, so this stays empty
   ],
 });
 const receipt = await waitForReceipt(agentWallet, hash);
