@@ -62,8 +62,8 @@ written with that in mind, and the phrase appears in the first sentence on purpo
 > registry, each carrying a hash of the exact quote, oracle reading and guard verdict the decision
 > was made on. That hash is published *before* signing, the bundle is archived publicly, and anyone
 > can re-derive it with `pnpm evidence`. A fee collector has taken real revenue into a 2-of-3 Safe.
-> 14 contracts are verified on Sourcify. 106 Solidity and 216 TypeScript tests run in CI on every
-> push.
+> Every contract in this system is verified on Sourcify, seven on mainnet and seven on testnet.
+> 106 Solidity and 216 TypeScript tests run in CI on every push.
 >
 > **It serves agents as well as people.** `POST /api/fill` and `POST /api/exit` take a request,
 > quote it against live pool state, ask the on-chain guard, hash the evidence, and return a plan
@@ -140,9 +140,18 @@ converts it into the growth argument: the layer is deployed *before* the liquidi
 chain whose parent company has just tied itself to tokenised equities with ICE alongside.
 
 **Numbers to re-check before pasting.** Every one of these is read from the chain and drifts:
-receipts (18), theses (3), contracts (14 verified across both chains, 8 on mainnet), tests
-(106 + 216), capacity (~$48k), and the $250,000 to $1,618 run. `pnpm capacity`, `pnpm check:tests`
-and a `count()` read settle all of them.
+receipts (18), theses (3), tests (106 + 216), capacity (~$48k), and the $250,000 to $1,618 run.
+`pnpm capacity`, `pnpm check:tests` and a `count()` read settle all of them.
+
+**On the contract count, which is easy to state wrongly.** Fourteen are ours and verified, but
+that is **seven on mainnet plus seven on testnet**, not fourteen on mainnet. The eighth address in
+the mainnet deployment is USDG, the issuer's stablecoin: not ours, and Sourcify holds nothing for
+it. An earlier draft put "14 contracts are verified" inside the paragraph that opens *"It runs on X
+Layer mainnet"*, which reads as fourteen on mainnet and is an overclaim by placement rather than by
+arithmetic. The sentence now claims completeness instead of a count, which is both accurate and the
+stronger thing to say. Re-checked 2026-08-14 against the Sourcify **v2** API, contract by contract:
+all seven mainnet are `exact_match`, and on testnet six are `exact_match` with TestUSDG at `match`,
+which is a mock nobody trades.
 
 ---
 
