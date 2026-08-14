@@ -9,10 +9,19 @@
  * have silently routed the thesis compiler through a path nobody had ever run.
  * Deleting it closes that permanently instead of documenting it forever (D59).
  *
- * The fixture is the floor, so the pipeline is always runnable with no
- * credential at all. The interface is the point — the schema enforces the
- * observable-metric contract regardless of which model is behind it, and a
- * second provider can be added when there is a reason to run one.
+ * The interface is the point — the schema enforces the observable-metric
+ * contract regardless of which model is behind it, and a second provider can be
+ * added when there is a reason to run one.
+ *
+ * **The fixture has to be asked for.** It used to be the floor: with no
+ * credential set, `compile` returned a recorded thesis for *any* input text. The
+ * label said so and the UI printed the label, which is not the same as the run
+ * being honest — a judge, or either of us, could paste a thesis, watch six
+ * stages complete, and read an answer that was written before the question. A
+ * recorded output is a legitimate thing to run against; silently substituting it
+ * for a compilation nobody could perform is not. So it is now reachable only
+ * through `LLM_PROVIDER=fixture`, and a missing key is an error with a sentence
+ * rather than a plausible-looking result.
  */
 import type { ThesisProvider } from './thesis';
 import { fixtureProvider } from './thesis-fixture';
@@ -31,7 +40,7 @@ export function pickProvider(): SelectedProvider {
 
   if (forced && forced !== 'gemini' && forced !== 'fixture') {
     throw new Error(
-      `LLM_PROVIDER=${forced} is not a provider this build has. Use gemini, or unset it.`,
+      `LLM_PROVIDER=${forced} is not a provider this build has. Use gemini, or fixture.`,
     );
   }
 
@@ -40,9 +49,20 @@ export function pickProvider(): SelectedProvider {
     return { provider: geminiProvider(), label: `${geminiModel} (live)`, live: true };
   }
 
-  return {
-    provider: fixtureProvider(),
-    label: 'fixture — no LLM credential set; recorded output, input text ignored',
-    live: false,
-  };
+  if (forced === 'fixture') {
+    return {
+      provider: fixtureProvider(),
+      label: 'fixture (recorded) — LLM_PROVIDER=fixture; the input text is ignored',
+      live: false,
+    };
+  }
+
+  // No credential and nothing asked for. Falling back to the fixture here would
+  // answer every thesis with the same recorded one, which reads as a working
+  // system rather than as a missing key.
+  throw new Error(
+    'no LLM credential: set GEMINI_API_KEY to compile a thesis, or LLM_PROVIDER=fixture to run ' +
+      'the recorded one deliberately (it ignores the input text and returns the same thesis ' +
+      'every time).',
+  );
 }
