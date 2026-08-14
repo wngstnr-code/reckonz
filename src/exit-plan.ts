@@ -67,6 +67,46 @@ export function exitShortfallBps(
   return bps > 65_535n ? 65_535 : Number(bps);
 }
 
+/**
+ * Whether that zero is a measurement or the absence of one.
+ *
+ * The function above must keep returning `0` — it mirrors the Solidity, and a
+ * mirror that disagrees with the contract is worse than no mirror (CLAUDE.md).
+ * But **zero has two meanings there**, and only one of them is a fact:
+ *
+ *   - the sale landed at or above fair value — measured, and good news
+ *   - nothing measured it — the oracle is stale or silent, so `maxSlippageBps`
+ *     has nothing to compare against and cannot block anything
+ *
+ * Receipt #16 is the second kind: `slippageBps: 0`, `fairValueE8: 0`, an oracle
+ * 158,738 seconds old. Rendered as a number it reads as a **flawless exit**,
+ * which is the most flattering possible description of the one case where no
+ * protection was applied at all. That is the same defect class as D71's wrong
+ * comparator: not a wrong number, a true number carrying a false meaning.
+ *
+ * So callers get the status alongside the number, and everything that displays
+ * a shortfall must render `null` rather than `0` when it is `unmeasured`.
+ */
+export type ShortfallStatus = 'measured' | 'unmeasured-stale' | 'unmeasured-no-value';
+
+export function shortfallStatus(hasValue: boolean, stale: boolean): ShortfallStatus {
+  if (!hasValue) return 'unmeasured-no-value';
+  if (stale) return 'unmeasured-stale';
+  return 'measured';
+}
+
+/** One sentence, for a terminal or a panel. */
+export function describeShortfallStatus(status: ShortfallStatus): string {
+  switch (status) {
+    case 'measured':
+      return 'measured against a fair value the oracle is standing behind';
+    case 'unmeasured-stale':
+      return 'not measured — the oracle is past its freshness limit, so the mandate’s slippage cap has nothing to compare against and will not block this sale';
+    case 'unmeasured-no-value':
+      return 'not measured — the oracle is publishing no value for this asset, so the mandate’s slippage cap cannot apply';
+  }
+}
+
 export interface ExitRequest {
   asset: Address;
   /** Human decimal string, in the **asset's** own units — not a dollar target. */
@@ -88,6 +128,18 @@ export interface ExitRequest {
   /** Zero when the exit claims no published reasoning. */
   thesisHash?: Hex;
   slippageToleranceBps?: number;
+  /**
+   * Consent to sell with no slippage protection.
+   *
+   * Required only when the shortfall cannot be measured. Without it the plan
+   * still comes back — the user is entitled to see the quote, the pool and the
+   * oracle's age before deciding — but it is marked unsignable, no evidence file
+   * is written for it, and the callers refuse to hand it to a wallet.
+   *
+   * Deliberately not a default: an exit the guard cannot bound is a normal thing
+   * to want when the oracle has lapsed, and an abnormal thing to do by accident.
+   */
+  acknowledgeUnmeasured?: boolean;
 }
 
 export interface ExitPlan {
@@ -129,8 +181,29 @@ export interface ExitPlan {
      */
     stale: boolean;
   };
-  predicted: { executionPriceE8: bigint; shortfallBps: number };
+  predicted: {
+    executionPriceE8: bigint;
+    /**
+     * How far below fair value the sale lands — **`null` when nothing measured
+     * it**. Never render a zero here; see `shortfallStatus`.
+     */
+    shortfallBps: number | null;
+    status: ShortfallStatus;
+    /**
+     * What `Executor._exitShortfallBps` will compute and `PolicyGuard` will
+     * check. Always a number, and zero in exactly the cases the contract's is.
+     * Kept separate from the field above because one is what the chain does and
+     * the other is what is true, and conflating them is the whole defect.
+     */
+    guardSlippageBps: number;
+  };
   verdict: { allow: boolean; reason: string; offendingAsset: Address | null };
+  /**
+   * Whether this plan may be handed to a wallet. False only when the shortfall
+   * is unmeasured and the caller did not acknowledge it — a refusal by us, not
+   * by the guard, which is why it is separate from `verdict`.
+   */
+  signable: { ok: boolean; reason: string | null };
   thesis: { hash: Hex; id: number; publishedAt: number } | null;
   evidence: { hash: Hex; stored: boolean; bundle: EvidenceBundle };
   mandate: { id: bigint; owner: Address; agent: Address; executor: Address; active: boolean };
@@ -332,12 +405,19 @@ export async function prepareExit(req: ExitRequest): Promise<ExitPlan> {
   // sides. Gross of the execution fee, matching `_exitSwap`: the fee never
   // reaches a pool, so folding it in would describe a price no pool quoted.
   const priceE8 = executionPriceE8(best.out, units, token.decimals, Number(cashDecimals));
-  const shortfallBps = exitShortfallBps(
+  const guardSlippageBps = exitShortfallBps(
     priceE8,
     observation.fairValueE8,
     observation.hasValue,
     stale,
   );
+  const status = shortfallStatus(observation.hasValue, stale);
+  const measured = status === 'measured';
+  // The number that goes to the chain is the mirror's, always. The number shown
+  // is null when nothing measured it, so no caller can print a zero that means
+  // "unprotected" in a column headed "slippage".
+  const shortfallBps = measured ? guardSlippageBps : null;
+  const signable = measured || req.acknowledgeUnmeasured === true;
 
   const [allow, rawReason, offending] = await client.readContract({
     address: guard,
@@ -356,7 +436,7 @@ export async function prepareExit(req: ExitRequest): Promise<ExitPlan> {
           amountInUsdg: best.out,
           amountOut: units,
           executionPriceE8: priceE8,
-          slippageBps: shortfallBps,
+          slippageBps: guardSlippageBps,
           // Stamped by the guard from the oracle. Passing our own read would be
           // asking it to check our arithmetic rather than its own.
           fairValueE8: 0n,
@@ -408,15 +488,25 @@ export async function prepareExit(req: ExitRequest): Promise<ExitPlan> {
       },
     ],
     dryRun: { ok: allow, reason, offendingAsset: allow ? null : offending },
+    // Present only on an exit nothing could measure, and only once the seller
+    // said so. It records the decision rather than the condition: `ageSeconds`
+    // above already proves the oracle had lapsed, and what this adds is that the
+    // sale went ahead knowing the slippage cap could not apply. Absent fields
+    // are dropped by `canonicalise`, so a measured exit hashes exactly as before.
+    shortfall: measured ? undefined : { status, acknowledged: signable },
   };
 
   // The hash is what binds; the file is only how someone checks it. Written
   // only when the guard allows, for the same reason the entry path does it:
   // `evidence/` is the record of trades that happened, and filling it with
   // bundles for sales nobody made would make the directory worth less.
+  // …and only when we would actually hand it to a wallet. An unacknowledged
+  // unmeasured exit is a plan the caller is being shown, not one that can
+  // happen, and writing its bundle would put a file in `evidence/` for a sale
+  // that was refused on our side.
   let stored = false;
   const hash = evidenceHash(bundle);
-  if (allow) {
+  if (allow && signable) {
     try {
       await writeEvidence(bundle);
       stored = true;
@@ -454,8 +544,14 @@ export async function prepareExit(req: ExitRequest): Promise<ExitPlan> {
       maxAgeSeconds: Number(maxAge),
       stale,
     },
-    predicted: { executionPriceE8: priceE8, shortfallBps },
+    predicted: { executionPriceE8: priceE8, shortfallBps, status, guardSlippageBps },
     verdict: { allow, reason, offendingAsset: allow ? null : offending },
+    signable: {
+      ok: signable,
+      reason: signable
+        ? null
+        : `the shortfall is ${describeShortfallStatus(status)}. Acknowledge that to sell anyway.`,
+    },
     thesis,
     evidence: { hash, stored, bundle },
     mandate: {

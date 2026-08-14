@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { formatUnits } from 'viem';
+import { shortfallMeasured } from '@/src/abi';
 import { MAINNET } from '@/src/deployments';
 import { Bar, Card, Legend, Note, Num, Pill } from './ui';
 import { FILLED_EVENT, FOLLOW_EVENT, type FollowRequest } from './follow';
@@ -327,10 +328,20 @@ function Thesis({ thesis: t, explorer }: { thesis: WireThesis; explorer?: string
                         <Num>{usdg(f.amountInUsdg)}</Num> <span className="text-faint">USDG</span>
                       </span>
                       <span className="text-faint">
-                        at {e8(f.executionPriceE8)} · fair {e8(f.fairValueE8)}
+                        at {e8(f.executionPriceE8)} ·{' '}
+                        {shortfallMeasured(f)
+                          ? `fair ${e8(f.fairValueE8)}`
+                          : 'fair withheld'}
                       </span>
+                      {/* A zero slippage on an exit the oracle could not price is
+                          not a clean sale, it is an unmeasured one — and reading
+                          as the best possible number is the worst possible way to
+                          show it (D77). */}
                       <span className="text-faint">
-                        {f.slippageBps} bps slip · gap {f.gapRisk}
+                        {shortfallMeasured(f)
+                          ? `${f.slippageBps} bps slip`
+                          : 'slip unmeasured'}{' '}
+                        · gap {f.gapRisk}
                       </span>
                     </li>
                   ))}

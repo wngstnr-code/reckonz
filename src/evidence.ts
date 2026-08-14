@@ -69,6 +69,19 @@ export interface EvidenceBundle {
   observations: EvidenceObservation[];
   /** The guard's own verdict, asked before spending gas. */
   dryRun: { ok: boolean; reason: string; offendingAsset: Address | null };
+  /**
+   * Exits only, and only when the shortfall could not be measured (D77).
+   *
+   * `Executor._exitShortfallBps` returns zero when the oracle is stale or
+   * silent, so `maxSlippageBps` has nothing to compare against and the sale goes
+   * out unbounded. The observation above already proves the oracle had lapsed;
+   * this records that the seller was told and went ahead anyway.
+   *
+   * Optional, and absent on every measured fill — `canonicalise` drops
+   * `undefined`, so bundles that do not set it hash exactly as they did before
+   * this field existed, and every evidence hash already on chain still verifies.
+   */
+  shortfall?: { status: string; acknowledged: boolean };
 }
 
 /**

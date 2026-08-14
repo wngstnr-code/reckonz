@@ -394,6 +394,29 @@ export const MARKET_STATES = [
 
 export type MarketState = (typeof MARKET_STATES)[number];
 
+/**
+ * Whether this fill's `slippageBps` is a measurement or the absence of one (D77).
+ *
+ * On an **entry** the guard only records after `checkExecution` passed, so it
+ * always stamps a fair value it will stand behind and the slippage means what it
+ * says. On an **exit** it stamps `fairValueE8` from `oracle.fairValue`, which
+ * reverts unless the value is defensible — so a zero there is the guard saying
+ * *nobody vouched for a price*, and `Executor._exitShortfallBps` returned zero
+ * for the same reason rather than because the sale was clean.
+ *
+ * Receipt #16 is that case, and rendered as a number it reads as a flawless
+ * exit. It is derived here rather than stored so `observations/registry.jsonl`
+ * keeps the shape `pnpm index --verify` compares against the chain, and so both
+ * renderers get the same answer from one place.
+ */
+export function shortfallMeasured(fill: {
+  isExit: boolean;
+  /** Accepts the wire form too: `GET /api/theses` serialises BigInt as a string. */
+  fairValueE8: bigint | string;
+}): boolean {
+  return !fill.isExit || BigInt(fill.fairValueE8) !== 0n;
+}
+
 /** Encode a metric name to the `uint8` the contract expects. */
 export function metricIndex(metric: TriggerMetric): number {
   return TRIGGER_METRICS.indexOf(metric);

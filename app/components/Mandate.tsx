@@ -1,12 +1,19 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { parseUnits, type Address } from 'viem';
 import { POLICY_GUARD_ABI } from '@/src/abi';
 import { USDG } from '@/src/chain';
 import type { UniverseEntry } from '@/src/pipeline';
+import { encodeTriggers, describeOnchainTrigger } from '@/src/triggers';
 import { awaitReceipt } from './awaitReceipt';
-import { FOLLOW_EVENT, MANDATES_CHANGED_EVENT, type FollowRequest } from './follow';
+import {
+  FOLLOW_EVENT,
+  INSTALL_TRIGGERS_EVENT,
+  MANDATES_CHANGED_EVENT,
+  type FollowRequest,
+  type TriggerInstallRequest,
+} from './follow';
 import { Card, Legend, Note, Num } from './ui';
 import { useWallet } from './useWallet';
 
@@ -49,12 +56,33 @@ const draftFor = (chainId: number): Draft => ({
   maxGapRisk: '60',
 });
 
+/**
+ * How the exit rules ended up, reported separately from the mandate itself.
+ *
+ * They are a **second transaction** — `createMandate` takes a policy and an
+ * allowlist, not triggers — so the two can succeed independently, and a mandate
+ * that exists with no rules installed is the outcome a user must never mistake
+ * for a mandate that has them. `'failed'` is therefore rendered as loudly as a
+ * revert, even though the mandate above it worked.
+ */
+type Rules =
+  | { kind: 'none' }
+  | { kind: 'installing' }
+  | { kind: 'installed'; hash: `0x${string}`; count: number }
+  | { kind: 'failed'; message: string };
+
 type Phase =
   | { kind: 'idle' }
   | { kind: 'signing' }
   | { kind: 'mining'; hash: `0x${string}` }
   | { kind: 'confirming'; hash: `0x${string}` }
-  | { kind: 'done'; hash: `0x${string}`; mandateId: bigint; allowed: readonly Address[] }
+  | {
+      kind: 'done';
+      hash: `0x${string}`;
+      mandateId: bigint;
+      allowed: readonly Address[];
+      rules: Rules;
+    }
   | { kind: 'failed'; message: string };
 
 export function Mandate() {
@@ -65,7 +93,29 @@ export function Mandate() {
   const [draft, setDraft] = useState<Draft>(() => draftFor(196));
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
   const [follow, setFollow] = useState<FollowRequest | null>(null);
+  const [compiled, setCompiled] = useState<TriggerInstallRequest | null>(null);
+  const [installRules, setInstallRules] = useState(true);
   const panel = useRef<HTMLElement>(null);
+
+  /**
+   * The compiled exit rules, arriving from the triggers panel above (D76).
+   *
+   * Encoded here rather than there because the mandate's allowlist is not known
+   * until the assets are picked, and `encodeTriggers` drops a rule whose assets
+   * fall outside it rather than widening it to the whole basket. So this
+   * recomputes as the picker changes, and what the list shows is what the
+   * transaction will carry.
+   */
+  const encoded = useMemo(() => {
+    if (!compiled || !universe) return null;
+    const addressOf = new Map(universe.map((u) => [u.symbol, u.address]));
+    return encodeTriggers(compiled.exitTriggers, addressOf, picked);
+  }, [compiled, universe, picked]);
+
+  const symbolOf = useMemo(
+    () => new Map((universe ?? []).map((u) => [u.address.toLowerCase(), u.symbol])),
+    [universe],
+  );
 
   useEffect(() => {
     if (option) setDraft(draftFor(option.chain.id));
@@ -83,6 +133,16 @@ export function Mandate() {
     };
     window.addEventListener(FOLLOW_EVENT, onFollow);
     return () => window.removeEventListener(FOLLOW_EVENT, onFollow);
+  }, []);
+
+  useEffect(() => {
+    const onTriggers = (e: Event) => {
+      setCompiled((e as CustomEvent<TriggerInstallRequest>).detail);
+      setInstallRules(true);
+      panel.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+    window.addEventListener(INSTALL_TRIGGERS_EVENT, onTriggers);
+    return () => window.removeEventListener(INSTALL_TRIGGERS_EVENT, onTriggers);
   }, []);
 
   // Matched against the universe rather than trusted: the picker renders from
@@ -166,10 +226,57 @@ export function Mandate() {
         args: [mandateId],
       });
 
-      setPhase({ kind: 'done', hash, mandateId, allowed });
+      const wanted = installRules ? (encoded?.triggers ?? []) : [];
+      setPhase({
+        kind: 'done',
+        hash,
+        mandateId,
+        allowed,
+        rules: wanted.length ? { kind: 'installing' } : { kind: 'none' },
+      });
       // The fill panel enumerates what this wallet can execute against, and it
       // read the chain before this mandate existed. Tell it to look again.
       window.dispatchEvent(new Event(MANDATES_CHANGED_EVENT));
+
+      // The second transaction. Deliberately after the mandate is *readable*
+      // rather than after it is mined: `setTriggers` is a dependent write, and
+      // on this RPC a dependent transaction's gas estimation reverts against an
+      // unsynced node exactly as a read returns zeroes (D18).
+      if (wanted.length) {
+        try {
+          const rulesHash = await walletClient.writeContract({
+            address: guard,
+            abi: POLICY_GUARD_ABI,
+            functionName: 'setTriggers',
+            args: [mandateId, wanted],
+            chain: option.chain,
+            account: address,
+          });
+          await awaitReceipt(publicClient, rulesHash);
+          const installed = await confirmTriggers(guard, mandateId, wanted.length);
+          setPhase((p) =>
+            p.kind === 'done'
+              ? { ...p, rules: { kind: 'installed', hash: rulesHash, count: installed } }
+              : p,
+          );
+        } catch (e) {
+          const code = (e as { code?: number })?.code;
+          setPhase((p) =>
+            p.kind === 'done'
+              ? {
+                  ...p,
+                  rules: {
+                    kind: 'failed',
+                    message:
+                      code === 4001
+                        ? 'you declined the second transaction — the mandate exists with no exit rules'
+                        : ((e as { shortMessage?: string }).shortMessage ?? (e as Error).message),
+                  },
+                }
+              : p,
+          );
+        }
+      }
     } catch (e) {
       const code = (e as { code?: number })?.code;
       if (code === 4001) {
@@ -219,6 +326,37 @@ export function Mandate() {
       }
       throw new Error('the mandate was mined but never became readable — check the explorer');
     }
+
+    /**
+     * Read the rules back before claiming they are installed.
+     *
+     * Same reason as `confirmMandate`: a confirmed write is not immediately
+     * readable here. "Probably installed" is not an answer for a risk control —
+     * the CLI's `breaker` and `mandate:edit` both poll for the same reason.
+     */
+    async function confirmTriggers(
+      guardAddress: Address,
+      mandateId: bigint,
+      expected: number,
+    ): Promise<number> {
+      for (let attempt = 0; attempt < 40; attempt++) {
+        try {
+          const onChain = await publicClient!.readContract({
+            address: guardAddress,
+            abi: POLICY_GUARD_ABI,
+            functionName: 'getTriggers',
+            args: [mandateId],
+          });
+          if (onChain.length === expected) return onChain.length;
+        } catch {
+          /* an unsynced node; try again */
+        }
+        await new Promise((r) => setTimeout(r, 700));
+      }
+      throw new Error(
+        'the rules were sent but never read back — check the explorer before trusting them',
+      );
+    }
   }
 
   const busy = phase.kind === 'signing' || phase.kind === 'mining' || phase.kind === 'confirming';
@@ -249,6 +387,78 @@ export function Mandate() {
               can read, and were not selected.
             </p>
           )}
+        </div>
+      )}
+
+      {compiled && (
+        <div className="mb-4 rounded-lg border border-line bg-raised px-4 py-3">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+            <h3 className="text-[10.5px] font-semibold tracking-[0.09em] text-faint uppercase">
+              Exit rules from your thesis
+            </h3>
+            <label className="flex items-center gap-2 text-[12px] text-dim">
+              <input
+                type="checkbox"
+                checked={installRules}
+                onChange={(e) => setInstallRules(e.target.checked)}
+                className="accent-signal"
+              />
+              install them
+            </label>
+          </div>
+
+          {/* What the second transaction will carry, recomputed against the
+              picker above. A rule scoped to an asset this mandate will not hold
+              is dropped rather than quietly widened — `encodeTriggers` refuses
+              to turn "exit wMUx" into "exit everything". */}
+          {encoded && encoded.triggers.length > 0 ? (
+            <ul className="grid gap-1.5">
+              {encoded.triggers.map((t, i) => (
+                <li key={i} className="font-mono text-[12px] text-ink">
+                  {describeOnchainTrigger(t, symbolOf)}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-[12.5px] text-caution">
+              None of the compiled rules survive against the assets picked above — pick the assets
+              the thesis named, or create the mandate without rules and add them later.
+            </p>
+          )}
+
+          {encoded && encoded.dropped.length > 0 && (
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-[12px] text-caution">
+              {encoded.dropped.map((d, i) => (
+                <li key={i}>
+                  <span className="font-mono text-ink">{d.description}</span> — {d.reason}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {encoded && encoded.flagged.length > 0 && (
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-[12px] text-refuse">
+              {encoded.flagged.map((f, i) => (
+                <li key={i}>
+                  <span className="font-mono">{f.description}</span> — {f.reason}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {compiled.manualWatch.length > 0 && (
+            <p className="mt-2 text-[12px] text-dim">
+              {compiled.manualWatch.length} condition
+              {compiled.manualWatch.length === 1 ? '' : 's'} no metric captures stay yours to watch
+              — they are not installed, and nothing pretends otherwise.
+            </p>
+          )}
+
+          <p className="mt-2 text-[12px] text-faint">
+            This is a <strong className="text-dim">second transaction</strong> after the mandate is
+            created: <code className="font-mono">createMandate</code> takes a policy and an
+            allowlist, not rules. You will be asked to sign twice.
+          </p>
         </div>
       )}
 
@@ -371,6 +581,39 @@ export function Mandate() {
                 >
                   {phase.hash}
                 </a>
+              )}
+
+              {phase.rules.kind === 'installing' && (
+                <p className="mt-2 text-[12.5px] text-dim">
+                  Installing the exit rules — confirm the second transaction in your wallet.
+                </p>
+              )}
+              {phase.rules.kind === 'installed' && (
+                <p className="mt-2 text-[12.5px] text-ink">
+                  <Num>{phase.rules.count}</Num> exit rule
+                  {phase.rules.count === 1 ? '' : 's'} installed and read back from the chain.
+                  PolicyGuard now refuses a fill on this mandate while any of them is firing.
+                  {explorer && (
+                    <a
+                      href={`${explorer}/tx/${phase.rules.hash}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1 block font-mono text-[11px] break-all text-faint hover:text-signal"
+                    >
+                      {phase.rules.hash}
+                    </a>
+                  )}
+                </p>
+              )}
+              {/* As loud as a revert on purpose: the mandate above succeeded, and
+                  a user who reads that line and stops has a live mandate with no
+                  exit rules on it. */}
+              {phase.rules.kind === 'failed' && (
+                <p className="mt-2 rounded-md border border-refuse/40 bg-refuse/6 px-3 py-2 text-[12.5px] text-refuse">
+                  The mandate exists, but its exit rules were <strong>not</strong> installed:{' '}
+                  {phase.rules.message}. Add them from the mandate panel below, or with{' '}
+                  <code className="font-mono">pnpm mandate:edit {phase.mandateId.toString()} trigger</code>.
+                </p>
               )}
             </div>
           )}

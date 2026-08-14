@@ -139,6 +139,61 @@ export const AllocationSchema = z.object({
 
 export type Allocation = z.infer<typeof AllocationSchema>;
 
+/** A leg naming an asset that does not exist in the universe it was given. */
+export interface InventedLeg {
+  symbol: string;
+  weightBps: number;
+}
+
+export interface ValidatedAllocation {
+  /** Legs whose symbol is in the universe. The only ones anything downstream may use. */
+  allocation: Allocation;
+  /** Legs naming an asset that is not in the universe — reported, never dropped quietly. */
+  invented: InventedLeg[];
+  /** Sum of the surviving legs' weights. 10000 when nothing was lost. */
+  weightBpsTotal: number;
+}
+
+/**
+ * The allocation, checked against the universe it was supposed to be drawn from.
+ *
+ * The schema cannot do this: `symbol` is a `z.string()`, because the set of
+ * tradable assets is discovered from the factory at runtime and is not knowable
+ * when the schema is written. So the model can name an asset that does not
+ * exist, and until 2026-08-14 the pipeline handled that with
+ * `allocation.legs.filter((l) => bySymbol.has(l.symbol))` — the leg vanished.
+ *
+ * Vanishing was the bug. A leg's weight is a share of the notional, so dropping
+ * `wAAPLx` at 30% did not reallocate anything: 30% of the basket simply never
+ * got planned, and `planBasket` reported it in `unallocated` — the same field
+ * that carries capital the market genuinely could not absorb. A hallucination
+ * was therefore rendered to the user as *the chain refused this size*, which is
+ * the one sentence this product must never say when it is not true.
+ *
+ * The fix is not to repair the allocation. It is to say what happened: the legs
+ * that survive are executable, the invented ones are named, and the weight that
+ * left with them is visible rather than folded into a capacity number.
+ */
+export function validateAllocation(
+  allocation: Allocation,
+  universeSymbols: Iterable<string>,
+): ValidatedAllocation {
+  const known = new Set(universeSymbols);
+  const legs: Allocation['legs'] = [];
+  const invented: InventedLeg[] = [];
+
+  for (const leg of allocation.legs) {
+    if (known.has(leg.symbol)) legs.push(leg);
+    else invented.push({ symbol: leg.symbol, weightBps: leg.weightBps });
+  }
+
+  return {
+    allocation: { legs, unmapped: allocation.unmapped },
+    invented,
+    weightBpsTotal: legs.reduce((sum, l) => sum + l.weightBps, 0),
+  };
+}
+
 // ----------------------------------------------------------------- prompts
 
 const COMPILER_SYSTEM = `You compile investment theses into structured, falsifiable form for an execution system.

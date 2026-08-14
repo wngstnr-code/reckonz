@@ -62,10 +62,17 @@ mistake `09-design.md` names outright.
 so they are announced here rather than discovered:
 
 ```
-reckonz:follow             CustomEvent<FollowRequest>  a thesis hands its basket + hash onward
-reckonz:mandates-changed   Event                       a mandate was created; re-read the chain
-reckonz:filled             Event                       a fill settled; re-read the registries
+reckonz:follow             CustomEvent<FollowRequest>          a thesis hands its basket + hash onward
+reckonz:install-triggers   CustomEvent<TriggerInstallRequest>  a run hands its compiled exit rules onward
+reckonz:mandates-changed   Event                               a mandate was created; re-read the chain
+reckonz:filled             Event                               a fill settled; re-read the registries
 ```
+
+`reckonz:install-triggers` was added 2026-08-14 by BE, also inside FE territory (D76). It carries
+the **compiled** rules rather than encoded ones on purpose: the mandate's allowlist does not exist
+until the picker has been used, and `encodeTriggers` has to run against it — in the form, on every
+change — or a rule scoped to an asset the mandate will not hold would be installed as if it were
+basket-wide.
 
 One way, no payload on the last two — the reader already knows how to enumerate, and a payload
 would be a second description of a mandate that could disagree with the first. Rename or repurpose
@@ -83,6 +90,41 @@ Rules:
   A local cast in a component is a lie that survives to the demo.
 - **`import type` only, from FE into `src/`.** A value import drags the RPC client and the LLM SDK
   into the browser bundle.
+
+### Every endpoint can now answer 429
+
+**2026-08-14 (D78).** `/api/run`, `/api/fill`, `/api/exit` and `/api/theses` are rate-limited and
+concurrency-capped. FE has to handle it, and handle it as its own case:
+
+```json
+{ "error": "…", "reason": "rate" | "busy" }     // status 429, header: retry-after: <seconds>
+```
+
+`rate` means this caller asked too often; `busy` means the instance is saturated and the caller did
+nothing wrong. Neither is a failure of the pipeline, so neither should render as one — `retry-after`
+is a number of seconds the UI can honour rather than a message to bury. Note the difference from a
+guard refusal: **that** is a `200` with `verdict.allow === false` and is the product working. This
+is us being unable to serve, which is not.
+
+`/api/run` also validates now, and returns `400` for a notional or impact limit outside its range
+and `413` for a thesis over 2,000 characters.
+
+### Additive, but worth rendering
+
+**2026-08-14 — the `allocate` event carries `invented` and `weightBpsTotal`** (D75). Free by the
+rule above, listed because it is a field FE should show rather than one it may ignore:
+
+```
+data: Allocation & { invented: { symbol: string; weightBps: number }[]; weightBpsTotal: number }
+```
+
+`invented` is the legs whose symbol does not exist in the universe the model was given. It is
+**not** the same as `unmapped`, which is already on `Allocation`: unmapped is an entity with no
+tradable asset and is the model being honest, invented is an asset that does not exist and is the
+model hallucinating. They must not be rendered as one list. Until this change an invented leg was
+filtered out silently and its share of the notional came back as `BasketPlan.unallocated`, which
+the page labels as capacity the market refused — so the one thing not to do with this field is drop
+it.
 
 ### Announced breaking changes
 

@@ -13,7 +13,8 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { exitShortfallBps } from './exit-plan';
+import { shortfallMeasured } from './abi';
+import { describeShortfallStatus, exitShortfallBps, shortfallStatus } from './exit-plan';
 import { shortfallBps } from './fill';
 
 const FAIR = 100_00_000_000n; // 100.00000000
@@ -87,4 +88,60 @@ test('the measurement cannot exceed 10,000 bps, which is what the uint16 relies 
 test('truncation matches integer division, not rounding', () => {
   // fair 3, price 2 -> (1 * 10_000) / 3 = 3333.33…, and the contract keeps 3333.
   assert.equal(exitShortfallBps(2n, 3n, true, false), 3_333);
+});
+
+// ------------------------------ zero that is a measurement, zero that is not
+
+test('the mirror still returns zero when nothing measured it — and now says which', () => {
+  // The mirror must not change: it is what `dryRun` is asked with, and a mirror
+  // that disagrees with the contract is worse than no mirror. What is new is
+  // that the *meaning* of the zero is available beside it (D77).
+  assert.equal(exitShortfallBps(50_00_000_000n, FAIR, true, true), 0);
+  assert.equal(shortfallStatus(true, true), 'unmeasured-stale');
+
+  assert.equal(exitShortfallBps(50_00_000_000n, 0n, false, false), 0);
+  assert.equal(shortfallStatus(false, false), 'unmeasured-no-value');
+
+  // And a genuine zero: sold above fair value, oracle fresh and standing behind
+  // it. Same number, opposite fact.
+  assert.equal(exitShortfallBps(101_00_000_000n, FAIR, true, false), 0);
+  assert.equal(shortfallStatus(true, false), 'measured');
+});
+
+test('no-value outranks stale, because it is the more specific sentence', () => {
+  // Both are true when the oracle has never published: `hasValue` false and the
+  // age is unbounded. "It is publishing no value for this asset" tells the user
+  // publishing again will not help; "it is past its freshness limit" implies it
+  // would.
+  assert.equal(shortfallStatus(false, true), 'unmeasured-no-value');
+  assert.match(describeShortfallStatus('unmeasured-no-value'), /no value/);
+  assert.match(describeShortfallStatus('unmeasured-stale'), /freshness limit/);
+});
+
+// -------------------------------------------- reading it back off the chain
+
+test('an exit with no fair value in its receipt is unmeasured, not clean', () => {
+  // Receipt #16 on mainnet: `slippageBps: 0`, `fairValueE8: 0`, oracle 158,738s
+  // old. `PolicyGuard` stamps `fairValueE8` from `oracle.fairValue`, which
+  // reverts unless the value is defensible — so a zero there is the guard
+  // declining to record a price, and the zero slippage beside it was never a
+  // measurement. Rendered as "0 bps" it reads as the best exit ever executed.
+  assert.equal(shortfallMeasured({ isExit: true, fairValueE8: 0n }), false);
+  assert.equal(shortfallMeasured({ isExit: true, fairValueE8: 776_94_500_000n }), true);
+});
+
+test('an entry is always measured, because the guard refuses to record one that is not', () => {
+  // `checkExecution` must pass before the fill is recorded, and it rejects
+  // NO_REFERENCE, so an entry cannot reach the registry without a fair value the
+  // oracle stood behind. The asymmetry with exits is the whole point of D56.
+  assert.equal(shortfallMeasured({ isExit: false, fairValueE8: 0n }), true);
+});
+
+test('the wire form is accepted, so the page and the terminal cannot disagree', () => {
+  // `GET /api/theses` serialises BigInt as a decimal string, and the browser
+  // renders from that. One function, both shapes — the alternative is a second
+  // copy in a component, which is how the two halves start telling different
+  // stories about the same receipt.
+  assert.equal(shortfallMeasured({ isExit: true, fairValueE8: '0' }), false);
+  assert.equal(shortfallMeasured({ isExit: true, fairValueE8: '77694500000' }), true);
 });

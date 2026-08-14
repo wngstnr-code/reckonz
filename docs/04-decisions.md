@@ -3537,3 +3537,315 @@ paragraph that nobody re-read. `check:tests` exists because a number repeated ac
 unverified claim in several copies (D60). The same is true of a *state* repeated in several
 paragraphs, and there is no script for that one — only someone reading it against the chain, which
 is what this entry is.
+
+---
+
+## D75 — The compiler's output is untrusted input, and two things were taking it at its word
+
+Every suite in this repo asked whether *our* arithmetic is right. None asked what reaches the
+chain when the **model** is wrong. That gap matters more than the others here, because the model is
+the one component that changes without anybody editing this repo, and because "the same LLM output
+that produced the entry also produces the risk rules" is the sentence the product is sold on.
+
+`src/thesis-redteam.test.ts` — 24 tests, no network, no key. The fixtures are hand-written model
+responses of the kind a bad, confused or prompt-injected model produces, and they run the whole
+distance a response travels: `ThesisSchema` → `validateAllocation` → `compileMandate` →
+`encodeTriggers`. Most of it passed on the first run, which is the useful outcome: the schema
+already refuses an invented metric, an injected instruction in the prose changes no rule because
+nothing downstream reads prose, and a trigger whose entities resolve to nothing is dropped rather
+than widened to basket-wide.
+
+Two things did not pass, and both were live.
+
+### 1 — An invented asset was rendered to the user as capacity the market refused
+
+`pipeline.ts` filtered the allocation with `legs.filter((l) => bySymbol.has(l.symbol))`. A leg the
+model invented — `wAAPLx`, which is not on X Layer — simply vanished. But a leg's `weightBps` is a
+share of the notional, so dropping a 30% leg did not reallocate anything: 30% of the basket was
+never planned, and `planBasket` reported it in **`unallocated`** — the same field that carries
+capital the chain genuinely could not absorb.
+
+So a hallucination came out of the pipeline as *the market could not take this size*. For a product
+whose whole claim is that it reports honestly what the chain cannot absorb, that is the worst
+available failure: not a wrong number, a **true-sounding number attributed to the wrong cause**.
+
+`validateAllocation` now names them. Legs that exist are executable, invented ones are listed with
+the weight that left with them, and `weightBpsTotal` says how much of the basket survived.
+`invented` is kept distinct from the model's own `unmapped` — one is an entity with no asset, the
+other is an asset that does not exist, and collapsing them loses which side made the mistake. The
+`allocate` event carries both, additive to the frozen `Allocation` shape rather than inside it.
+
+### 2 — `gapRisk > 5000` installed cleanly and could never fire
+
+The schema stops the model naming a metric the chain cannot evaluate (D15). Nothing stopped it
+choosing a **number the metric can never reach**. `gapRisk` is a 0-100 score; a trigger at 5000
+costs gas, reads like a risk control in `mandate:show` and the browser panel, and does not fire
+once. A neutered rule is worse than a missing one for the same reason a wrong label is (D71).
+
+`METRIC_DOMAIN` and `reachability()` in `src/triggers.ts` classify a trigger against its metric's
+domain, judged on the **scaled** threshold — `gapRisk > 100.5` truncates to `> 100`, and it is the
+truncated rule that never fires. Unreachable rules are dropped and reported. Rules that fire on
+every observation are **installed and flagged**, and that asymmetry is the judgement call:
+unreachable rules protect nothing, while an always-firing rule makes the mandate refuse every trade
+— visible on the first attempt, and erring toward not trading. When this repo has to choose, it
+chooses refusing to trade.
+
+The domain table is deliberately **not** a plausibility filter. `basisBps` and
+`priceVsThesisEntryBps` are unbounded because a price can double, and cash has no ceiling either.
+One test was written expecting `capacityUsdg < 1e12` to be classified `always` and the code was
+right to say `ok`: that rule fires on every observation *this* market can produce, which is a fact
+about today's liquidity and not about the metric. Guessing a ceiling for cash would put an
+undefendable number inside the component whose job is refusing undefendable numbers — and would
+drop `capacityUsdg < 1000`, the live mandate's own rule, on the day the pools get deep.
+
+### What the sweep found and did not fix
+
+**`encodeTriggers` has no production caller.** It is the join between a compiled thesis and
+`PolicyGuard.setTriggers`, it is tested twice over, and every path that actually calls `setTriggers`
+— `mandate-edit.ts`, `mandate-demo.ts`, `app/components/MandateManage.tsx` — hand-builds its
+triggers from what the user typed. So the exit rules the compiler derives are **displayed and never
+installed**; a user who wants them retypes them.
+
+This is D52's shape one layer up: not unreachable contract functions this time, but an unreachable
+*step of the pitch*. "The same LLM output that produced the entry also produces the risk rules" is
+true of `pipeline.ts` and false of anything that writes to the chain. Recorded here rather than
+fixed in the same change, because wiring it touches the mandate creation path and that deserves its
+own decision — but it is now the sharpest gap between what this system claims and what it does.
+
+---
+
+## D76 — The rules the compiler derives are now the rules the chain holds
+
+D75's sweep ended on a sentence that had to be its own entry: **`encodeTriggers` had no caller.**
+The join between a compiled thesis and `PolicyGuard.setTriggers` existed, was documented, was
+tested twice over — and every path that actually wrote triggers (`mandate-edit.ts`,
+`mandate-demo.ts`, `MandateManage.tsx`) hand-built them from what the user typed into a form.
+
+So the product's central sentence was half true. *"The same compilation that produced the entry
+also produced the risk rules"* described `pipeline.ts`, which computes them and renders them. What
+reached the chain was whatever the user retyped, if they retyped it. The gap was invisible because
+both halves worked: the panel showed real compiled rules, the mandate had real triggers, and
+nobody had asked whether they were the same rules.
+
+**The hand-off is a DOM event, like Follow (D50).** `reckonz:install-triggers` carries
+`ResolvedTrigger[]` from the triggers panel to the mandate form — the *compiled* rules, not encoded
+ones, because the mandate's allowlist does not exist until the user picks the assets.
+`encodeTriggers` then runs **in the form**, against the current selection, and re-runs as it
+changes: what the list shows is what the transaction will carry, including what was dropped and
+why. A rule scoped to an asset the mandate will not hold is dropped rather than widened to
+basket-wide, which is the invariant `thesis-redteam.test.ts` pins from the other side.
+
+**It is a second transaction, and that is said out loud.** `createMandate` takes a policy and an
+allowlist; triggers are `setTriggers`. Three consequences, all of them in the UI rather than in a
+comment:
+
+- The user signs twice, and the form says so before the first signature.
+- The second write waits until the mandate is **readable**, not merely mined. A dependent
+  transaction's gas estimation reverts against an unsynced node for the same reason a read returns
+  zeroes (D18), so the existing `confirmMandate` poll now gates the write that follows it.
+- The rules are **read back** with `getTriggers` before the UI claims they are installed. "Probably
+  installed" is not an answer for a risk control — the same standard `pnpm breaker` holds itself to.
+
+**The failure that matters is the partial one.** If the mandate succeeds and `setTriggers` is
+declined or reverts, the user has a live mandate with no exit rules. That is rendered as loudly as
+a revert, on top of a success message, because a user who reads "mandate created" and stops has
+exactly the wrong belief about what is protecting them. Declining the second signature says so in
+those words rather than as a wallet error code.
+
+**Not done: the CLI has no equivalent**, because the CLI never runs a compiler — `mandate:create`
+takes symbols and `mandate:edit … trigger add` takes a hand-written rule. Both still go through
+`src/triggers.ts`, so they cannot disagree about scaling, but the thesis → rules path exists only
+in the browser. Worth knowing before anyone claims parity.
+
+**And it has never been run against a wallet.** It type-checks and it builds; so did the fill path
+before D65, and two real bugs were waiting in it. D35 is the rule: an external dependency is
+unverified until a call that does the actual work succeeds against it. Until that run happens this
+is written, not proven.
+
+---
+
+## D77 — A shortfall of zero and no shortfall at all were printing the same way
+
+The competitive read on 2026-08-14 asked what a technical judge would find if they read the exit
+path, and the answer was this: **the product's headline claim is that it refuses to trade against a
+price it cannot defend, and on the way out it does the opposite — silently.**
+
+The mechanism was already correct and is unchanged. `Executor._exitShortfallBps` reads through
+`observation`, which reverts on `Stale` and `NoData`, catches it, and returns zero. That is right:
+measuring against a value the oracle has stopped defending computes an enormous false shortfall,
+`maxSlippageBps` then blocks the exit, and an unpublished oracle trapping every open position is
+worse than one that merely pauses new ones (D51, D56). Nothing here changes that behaviour, and
+`exitShortfallBps` in `src/exit-plan.ts` still mirrors it exactly — it is what `dryRun` is asked
+with, and a mirror that disagrees with the contract is worse than no mirror.
+
+**What was wrong is that the zero carried two different facts and every renderer showed one of
+them.** Either the sale landed at or above fair value — measured, and good news — or nothing
+measured it, `maxSlippageBps` had nothing to compare against, and the sale went out with no price
+protection except the `minAmountOutUsdg` floor the owner signed. Receipt #16 is the second kind:
+`slippageBps: 0`, `fairValueE8: 0`, an oracle 158,738 seconds old. In the track record it renders
+as **0 bps** — the most flattering number available, describing the one case where the guard
+applied nothing. Same defect class as D71's comparator: not a wrong number, a true number carrying
+a false meaning, on a risk control.
+
+Three changes, none of them on chain.
+
+**1. The planner distinguishes them.** `shortfallStatus()` returns `measured`,
+`unmeasured-stale` or `unmeasured-no-value`, and `ExitPlan.predicted.shortfallBps` is **`null`**
+rather than `0` for the last two. What the chain will compute stays beside it as
+`guardSlippageBps`, because one is what the contract does and the other is what is true, and
+conflating them is the whole defect.
+
+**2. Selling unmeasured takes an explicit acknowledgement.** `prepareExit` still returns the full
+plan — the quote, the pool, the floor, the oracle's age are exactly what a seller needs in order to
+decide — but marks it `signable: { ok: false }`, writes no evidence bundle, and every caller
+refuses to hand it to a wallet: `pnpm exit` exits with the reason unless `--unmeasured` is passed,
+`POST /api/exit` requires a literal `acknowledgeUnmeasured: true` boolean, and the browser puts a
+red checkbox in front of the sign button. When it is acknowledged, the evidence bundle records
+`shortfall: { status, acknowledged }` — the observation already proved the oracle had lapsed; this
+records that the seller was told and went ahead. The field is optional and `canonicalise` drops
+`undefined`, so every evidence hash already on chain still verifies.
+
+This is a refusal by **us**, not by the guard, which is why it is a separate field from `verdict`.
+The guard is right to allow these exits and must keep allowing them.
+
+**3. The record stops flattering itself.** `shortfallMeasured()` lives in `src/abi.ts` — a fact
+about how `PolicyGuard` fills the struct, and the browser reads it too, so it had to be in a
+browser-safe module. On an entry the guard only records after `checkExecution` passes, so a fair
+value is always stamped and the slippage means what it says. On an exit it stamps `fairValueE8`
+from `oracle.fairValue`, which reverts unless the value is defensible — so a zero there is the
+guard declining to record a price nobody vouched for. The thesis page and the terminal now print
+`slip unmeasured` instead of `0 bps slip`, from that one derivation rather than two copies.
+
+Derived rather than stored, deliberately: `observations/registry.jsonl` keeps the shape
+`pnpm index --verify` compares field by field against the chain, and a computed column in a
+verified store is a column that can be wrong in the store and right on the chain.
+
+### What this does not fix
+
+**The chain still cannot enforce it.** A stale oracle means an unbounded exit, and the only
+protection is the floor in the signed leg. Making the contract refuse instead would trap positions;
+making it demand a flag would need a new `Executor` and a migration of every mandate's executor
+pointer, eight days out. The honest position is that this is a **disclosed** limitation with
+consent attached, not a closed one — and the receipt now says which exits ran under it, which is
+the part that was missing.
+
+**And it has not been run against a wallet.** Same status as D76: type-checked, built, unit-tested,
+unexercised. D35.
+
+---
+
+## D78 — The public routes had no ceiling of any kind
+
+Found in the same 2026-08-14 competitive read as D75 and D77, and it is the one that is not about
+correctness. `GET /api/run` calls Gemini and then walks the throttled public RPC for tens of
+seconds, with `maxDuration = 300`. `POST /api/fill` and `POST /api/exit` enumerate every fee tier
+and write a file. `GET /api/theses` re-reads both registries. **None of them had a rate limit, a
+concurrency cap, or a bound on their inputs**, and the URL is about to be handed to judges.
+
+Nothing had gone wrong yet, which is exactly the state a rate limit is for.
+
+**`src/ratelimit.ts` — a token bucket and an in-flight cap, per process, no dependency.**
+`package.json` is shared and the rule is one dependency per commit (08-parallel.md); a bucket is
+twenty lines and the imported version would not have been better.
+
+| Route | burst | per minute | in flight | why |
+|---|---|---|---|---|
+| `GET /api/run` | 3 | 6 | 2 | the only route that spends an LLM quota, and it holds an RPC walker while it does |
+| `POST /api/fill`, `POST /api/exit` | 6 | 20 | 3 | no LLM, but pool enumeration and a file write |
+| `GET /api/theses` | 10 | 30 | 4 | a page load, warm through the index (D66), cold it re-enumerates |
+| `GET /api/universe` | — | — | — | `revalidate = 3600`, so it is served from the cache and mostly never reaches a function |
+
+**What it is honestly worth.** Fluid Compute reuses instances, so a bucket survives across requests
+and this genuinely bounds one caller against one instance. It does not coordinate across instances,
+so the global ceiling is the limit times however many are warm. The key is `x-forwarded-for`'s
+first entry, which anyone talking to the origin directly can set to whatever they like. So: **a
+cost ceiling per instance, not a guarantee per caller** — the whole of the accidental case (a page
+in a reload loop, a crawler, a demo tab left open) and much of the casual one. A real global limit
+needs shared state, and the right shape for that is Vercel's firewall rather than a store we run.
+Written down here rather than implied, because a limit that is described as stronger than it is
+becomes an excuse not to add the real one.
+
+Two branches were the kind that look right and are not, and both are pinned in
+`src/ratelimit.test.ts`:
+
+- **A refused caller must still accumulate their refill.** Leave `updatedAt` alone on a refusal and
+  a client in a retry loop refills from the original timestamp and gets a token early; stamp
+  `updatedAt` without storing the refill and the same client never accumulates one at all and is
+  locked out for as long as it keeps trying. The test hammers once a second for nine seconds and
+  asserts the tenth is served.
+- **A caller turned away for concurrency is not charged a token.** Being refused because someone
+  else is mid-run is not their doing.
+
+And `release()` is idempotent: a stream that both errors and closes calls it twice, and without the
+guard the counter drifts negative until the cap silently stops existing.
+
+**Inputs are bounded too**, which is half the value and none of the machinery. `/api/run` took a
+thesis of any length straight to the model, and `Number('abc')` for `notional` — NaN propagated
+through the sizing arithmetic and came out as a plan full of nulls rather than as an error anyone
+could act on. Now 2,000 characters, a notional in (0, 100M], an impact limit in (0, 10000].
+
+**Exercised, not just written** — unusually for this week, because it needs no wallet: against the
+dev server, 8 concurrent registry reads from one address returned `200 200 200 200` and four
+`429`s with `retry-after: 15` and `"reason":"busy"`; five concurrent pipeline runs returned two
+`200`s and three `429`s; the same caller was served again once the in-flight requests finished,
+which is the release path; and the three input bounds answered `400`, `400` and `413`.
+
+---
+
+## D79 — The oracle had one source and no second opinion
+
+Third of the three findings from the 2026-08-14 read, and the one about the number rather than the
+plumbing. Since D62 every fair value comes from exactly one place: the issuer's two-sided quote,
+times the shares-per-token multiplier. That is the right source — a dealer with money behind it,
+and it prices better than the regression it replaced. But it is **one**, and nothing between it and
+`publishMany` ever asked whether the number was sane. A shape change, a mis-scaled quote, another
+asset's price: the oracle publishes it.
+
+**The on-chain bound (D41) is not that check.** It caps the rate of change, not the correctness of
+a value — twelve confirmed steps are an 8x, which is in the suite as
+`test_APatientAttackerStillGetsThere` — and it **re-anchors freely once publishing has lapsed a
+day**, which is the state a manually-run publisher spends most of its life in. That hole was
+already written down in `06-assessment.md § 5`. This closes it off-chain, where it can be closed
+today.
+
+`src/crosscheck.ts` runs four checks between the engine and the chain, each against something the
+issuer does not control:
+
+| Check | Against | Refuses when |
+|---|---|---|
+| `quote-coherence` | the quote itself | bid ≤ 0, ask < bid, or the mid outside its own sides |
+| `spread-plausibility` | plausibility | spread > 2,000bp |
+| `step-vs-history` | **our own `observations/` store** | the mid moved past `max(8σ, 20%)` from our last recorded mark |
+| `pool-divergence` | **X Layer** | the pool is more than 50% from the value |
+
+**Every threshold is derived from a number this repo has already measured**, and the derivation is
+in the code beside it, per D5. Spreads in `observations/` run 10–30bp and the widest open-gap band
+ever recorded here is 853bp (wSNDKx), so 2,000bp is 66× the widest spread and 2.3× the widest band —
+it catches a broken feed and can never second-guess a genuinely wide market. The pool bound is
+bracketed by the admission test (D38): widest *admitted* basis 2.0% (wIBMx), narrowest *rejected*
+one 86.4% (wSKHYx, a currency error), so 50% sits between them with an order of magnitude of room
+on the side that matters. The 8σ is the asset's own `MEASURED[…].gaps.overnightSd`, with a 20%
+floor because the quietest asset here has σ ≈ 0.925% and 8σ of that is 7.4% — a number a real
+Monday produces.
+
+**It withholds; it never corrects.** A failed check publishes the asset in exactly the shape an
+unpriceable one already takes — `hasValue: false`, `fairValueE8: 0` — so consumers need no new
+case and `checkExecution` refuses on `NO_REFERENCE` as it always has. Adjusting, clamping or
+substituting a suspicious number would be inventing one with extra steps, which is the thing this
+oracle exists not to do.
+
+**A check that cannot run reports `skipped`, not `ok`.** The store held 60 samples on the day this
+was written — two per asset, one session, before the publish worker has ever run — so most assets
+have nothing to compare against, and the pool check needs a venue read the caller may not have
+made. Reporting either as `ok` would claim a verification that did not happen. Same rule as
+`pnpm measure` refusing to derive a σ from fewer than 30 jumps (D63), and it has its own test.
+
+**Run against live data before being believed**: all 30 assets, real quotes, real store —
+**30 publishable, 0 withheld**, with 29 of 30 finding a comparable mark and one skipping for want
+of a σ. A cross-check that fired on a normal afternoon would be worse than none, because the value
+it withholds is the one a user needs on the day the market moves.
+
+Two things to know about it operationally. The history window is 48 hours, so with the worker down
+these comparisons lapse into `skipped` within two days of the last sample — the check gets stronger
+exactly when the worker runs, which is the same 18–19 Aug item everything else depends on. And the
+pool check only runs where `publish.ts` read a venue, which it does for every asset it publishes.

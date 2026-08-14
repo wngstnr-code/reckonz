@@ -1,5 +1,6 @@
 import { isAddress, type Address, type Hex } from 'viem';
 import { prepareExit } from '@/src/exit-plan';
+import { clientKey, createGate, tooMany } from '@/src/ratelimit';
 
 // Every fee tier simulated over a throttled RPC, plus a filesystem write for the
 // evidence bundle. Neither belongs in a browser, and neither can be cached: a
@@ -10,6 +11,12 @@ export const dynamic = 'force-dynamic';
 // RPC, and a timeout here reads as a broken app rather than as the slow read it
 // is.
 export const maxDuration = 300;
+
+/**
+ * Cheaper than a pipeline run — no LLM — but it enumerates pools over the
+ * throttled RPC and writes an evidence bundle, and it is reachable by anyone.
+ */
+const gate = createGate('exit quote', { burst: 6, perMinute: 20, maxInFlight: 3 });
 
 /** BigInt reaches the wire as a decimal string rather than throwing. */
 const replacer = (_k: string, v: unknown) => (typeof v === 'bigint' ? v.toString() : v);
@@ -29,6 +36,13 @@ const HEX32 = /^0x[0-9a-fA-F]{64}$/;
  *
  * A guard rejection comes back `200` with `verdict.allow === false` and the
  * reason. It is not an error: refusing is the product working.
+ *
+ * So does **our own** refusal: when the oracle has lapsed, nothing can measure
+ * the shortfall, `maxSlippageBps` cannot bound the sale, and the plan comes back
+ * `signable.ok === false` with `predicted.shortfallBps === null`. The caller
+ * sees the whole quote and may repeat the request with
+ * `acknowledgeUnmeasured: true`; until then no evidence bundle is written and
+ * the plan is not meant to reach a wallet. See D77.
  */
 export async function POST(request: Request) {
   let body: Record<string, unknown>;
@@ -43,6 +57,7 @@ export async function POST(request: Request) {
   const mandateId = body.mandateId;
   const sender = body.sender;
   const thesisHash = body.thesisHash;
+  const acknowledgeUnmeasured = body.acknowledgeUnmeasured;
 
   if (typeof asset !== 'string' || !isAddress(asset)) {
     return Response.json({ error: 'asset must be an address' }, { status: 400 });
@@ -60,6 +75,15 @@ export async function POST(request: Request) {
   if (thesisHash !== undefined && (typeof thesisHash !== 'string' || !HEX32.test(thesisHash))) {
     return Response.json({ error: 'thesisHash must be 32 bytes of hex' }, { status: 400 });
   }
+  // Must be a real boolean rather than anything truthy: this is the field that
+  // decides whether a sale with no slippage protection may be signed, and
+  // accepting `"false"` or `1` for it would be a consent nobody gave (D77).
+  if (acknowledgeUnmeasured !== undefined && typeof acknowledgeUnmeasured !== 'boolean') {
+    return Response.json({ error: 'acknowledgeUnmeasured must be a boolean' }, { status: 400 });
+  }
+
+  const pass = gate.enter(clientKey(request));
+  if (!pass.ok) return tooMany(pass);
 
   try {
     const plan = await prepareExit({
@@ -68,6 +92,7 @@ export async function POST(request: Request) {
       mandateId: BigInt(mandateId),
       sender: sender as Address,
       thesisHash: thesisHash as Hex | undefined,
+      acknowledgeUnmeasured: acknowledgeUnmeasured as boolean | undefined,
     });
 
     return new Response(JSON.stringify(plan, replacer), {
@@ -79,5 +104,7 @@ export async function POST(request: Request) {
     // a mandate this wallet cannot act on. Pass it through verbatim; a generic
     // message would throw away the only useful part.
     return Response.json({ error: e instanceof Error ? e.message : String(e) }, { status: 502 });
+  } finally {
+    pass.release();
   }
 }

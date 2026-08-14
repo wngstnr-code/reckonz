@@ -1,5 +1,6 @@
 import { isAddress, type Address, type Hex } from 'viem';
 import { prepareFill } from '@/src/fill';
+import { clientKey, createGate, tooMany } from '@/src/ratelimit';
 
 // Thousands of pool reads over a throttled RPC, plus a filesystem write for the
 // evidence bundle. Neither belongs in a browser, and neither can be cached: a
@@ -10,6 +11,12 @@ export const dynamic = 'force-dynamic';
 // does, over the same throttled RPC, and a timeout here reads as a broken app
 // rather than as the slow read it is.
 export const maxDuration = 300;
+
+/**
+ * Cheaper than a pipeline run — no LLM — but it enumerates pools over the
+ * throttled RPC and writes an evidence bundle, and it is reachable by anyone.
+ */
+const gate = createGate('fill quote', { burst: 6, perMinute: 20, maxInFlight: 3 });
 
 /** BigInt reaches the wire as a decimal string rather than throwing. */
 const replacer = (_k: string, v: unknown) => (typeof v === 'bigint' ? v.toString() : v);
@@ -61,6 +68,9 @@ export async function POST(request: Request) {
     return Response.json({ error: 'thesisHash must be 32 bytes of hex' }, { status: 400 });
   }
 
+  const pass = gate.enter(clientKey(request));
+  if (!pass.ok) return tooMany(pass);
+
   try {
     const plan = await prepareFill({
       asset: asset as Address,
@@ -79,5 +89,7 @@ export async function POST(request: Request) {
     // this wallet cannot execute against. Pass it through verbatim; a generic
     // message here would throw away the only useful part.
     return Response.json({ error: e instanceof Error ? e.message : String(e) }, { status: 502 });
+  } finally {
+    pass.release();
   }
 }

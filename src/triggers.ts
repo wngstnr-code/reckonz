@@ -79,10 +79,73 @@ export function describeOnchainTrigger(t: OnchainTrigger, symbolOf?: Map<string,
   return `${scope}: exit when ${metric} ${operator} ${value}${unit}`;
 }
 
+/**
+ * The range each metric can actually take, in the units the chain compares in.
+ *
+ * `null` means unbounded on that side and is not a gap: a price can double, so
+ * `basisBps` and `priceVsThesisEntryBps` have no defensible ceiling, and cash
+ * has no defensible ceiling either. The bounded ones are bounded by
+ * construction — `gapRisk` is a 0-100 score, a confidence half-width at or above
+ * 100% describes a band with a negative floor, a long spot position cannot draw
+ * down more than 100%, and a staleness rule measured in years is not a rule
+ * anyone writes.
+ *
+ * This table exists because the model picks the thresholds. The schema already
+ * stops it naming a metric the chain cannot evaluate (D15); nothing stopped it
+ * choosing a number the metric can never reach, and `gapRisk > 5000` installs
+ * cleanly, costs gas, reads convincingly in the UI and never fires once.
+ */
+export const METRIC_DOMAIN: Record<TriggerMetric, { min: number | null; max: number | null }> = {
+  gapRisk: { min: 0, max: 100 },
+  basisBps: { min: null, max: null },
+  confidenceBps: { min: 0, max: 10_000 },
+  stalenessHours: { min: 0, max: 8_760 },
+  drawdownBpsFromEntry: { min: 0, max: 10_000 },
+  capacityUsdg: { min: 0, max: null },
+  priceVsThesisEntryBps: { min: null, max: null },
+};
+
+/**
+ * Whether a trigger can ever change state, given its metric's domain.
+ *
+ *   'never'  — the condition is outside the domain, so no observation satisfies it
+ *   'always' — every observation satisfies it, so the mandate refuses everything
+ *   'ok'     — neither
+ *
+ * Judged on the **scaled** threshold, because that is the number the chain will
+ * hold: `gapRisk > 100.5` truncates to `> 100`, and it is the truncated rule
+ * that never fires.
+ */
+export function reachability(
+  metric: TriggerMetric,
+  comparator: TriggerComparator,
+  scaled: bigint,
+): 'ok' | 'never' | 'always' {
+  const domain = METRIC_DOMAIN[metric];
+  if (!domain) return 'ok';
+  const min = domain.min === null ? null : scaleThreshold(metric, domain.min);
+  const max = domain.max === null ? null : scaleThreshold(metric, domain.max);
+
+  if (comparator === 'gt') {
+    if (max !== null && scaled >= max) return 'never';
+    if (min !== null && scaled < min) return 'always';
+    return 'ok';
+  }
+  if (min !== null && scaled <= min) return 'never';
+  if (max !== null && scaled > max) return 'always';
+  return 'ok';
+}
+
 export interface EncodeResult {
   triggers: OnchainTrigger[];
   /** Compiled triggers dropped because no allowed asset matched their scope. */
   dropped: { description: string; reason: string }[];
+  /**
+   * Triggers that were installed but are worth saying out loud — currently the
+   * ones that fire on every observation. Kept rather than dropped: see the
+   * comment at the `always` branch in `encodeTriggers`.
+   */
+  flagged: { description: string; reason: string }[];
 }
 
 /**
@@ -106,6 +169,7 @@ export function encodeTriggers(
   const allowSet = new Set(allowed.map((a) => a.toLowerCase()));
   const triggers: OnchainTrigger[] = [];
   const dropped: EncodeResult['dropped'] = [];
+  const flagged: EncodeResult['flagged'] = [];
 
   for (const r of resolved) {
     const t = r.trigger;
@@ -137,13 +201,41 @@ export function encodeTriggers(
       }
     }
 
+    const threshold = scaleThreshold(metric, t.threshold);
+    const scope = basketWide ? 'basket' : r.symbols.join(', ');
+    const description = `${scope}: ${metric} ${comparator} ${t.threshold}`;
+
+    switch (reachability(metric, comparator, threshold)) {
+      case 'never':
+        // Dropped, because it protects nothing. Installing it would cost gas and
+        // then sit in `mandate:show` looking like a risk control — the exact
+        // failure `describeOnchainTrigger`'s comment names one layer up: a wrong
+        // label on a safety control is worse than a missing one.
+        dropped.push({
+          description,
+          reason: `${metric} cannot reach ${t.threshold} — the rule could never fire`,
+        });
+        continue;
+      case 'always':
+        // Kept, unlike the unreachable case, and the asymmetry is deliberate. A
+        // rule that always fires makes the mandate refuse every trade, which is
+        // loud, safe and immediately visible. Dropping it would instead delete a
+        // risk rule the user asked for and leave the mandate trading. When this
+        // repo has to choose, it chooses refusing to trade.
+        flagged.push({
+          description,
+          reason: `${metric} always satisfies ${comparator} ${t.threshold} — this mandate will refuse every trade`,
+        });
+        break;
+    }
+
     triggers.push({
       metric: metricIndex(metric),
       comparator: comparatorIndex(comparator),
-      threshold: scaleThreshold(metric, t.threshold),
+      threshold,
       assets,
     });
   }
 
-  return { triggers, dropped };
+  return { triggers, dropped, flagged };
 }

@@ -1,4 +1,5 @@
 import type { Address, Hex } from 'viem';
+import type { ResolvedTrigger } from '@/src/thesis';
 
 /**
  * The page's cross-panel events, and the one payload any of them carries.
@@ -32,6 +33,30 @@ export const FILLED_EVENT = 'reckonz:filled';
  * that could disagree with the first.
  */
 export const MANDATES_CHANGED_EVENT = 'reckonz:mandates-changed';
+
+/**
+ * Fired when a run's compiled exit rules are handed to the mandate form (D76).
+ *
+ * Until this existed, `encodeTriggers` — the join between a compiled thesis and
+ * `PolicyGuard.setTriggers` — had no caller at all: the rules were rendered in
+ * the triggers panel and then the user retyped them by hand, if they installed
+ * them at all. "The same compilation produces the entry and the risk rules" was
+ * true of the pipeline and false of anything that wrote to the chain.
+ *
+ * Same shape of message as Follow, and for the same reason: two siblings under a
+ * server component, one message, one direction. It carries the compiled rules
+ * rather than encoded ones because the mandate's allowlist is not known until
+ * the user picks it — `encodeTriggers` runs in the form, against what is
+ * actually being allowed, and drops what falls outside it.
+ */
+export const INSTALL_TRIGGERS_EVENT = 'reckonz:install-triggers';
+
+export interface TriggerInstallRequest {
+  /** `CompiledMandate.exitTriggers`, straight from the run. */
+  exitTriggers: ResolvedTrigger[];
+  /** What no metric could capture, carried so the form can repeat the warning. */
+  manualWatch: string[];
+}
 
 export interface FollowRequest {
   thesisId: number;

@@ -9,7 +9,10 @@
  */
 import { formatEther, formatGwei, type Address } from 'viem';
 import { FAIR_VALUE_ORACLE_ABI } from './abi';
-import { ASSETS, computeFairValue, toOraclePayload } from './fairvalue';
+import { crossCheck, describeCrossCheck } from './crosscheck';
+import { ASSETS, computeFairValue, issuerSymbolFor, MEASURED, toOraclePayload } from './fairvalue';
+import { issuerBook } from './issuer';
+import { readAll } from './observations';
 import { capacity, loadVenues } from './planner';
 import { addressBySymbol } from './pool';
 import {
@@ -132,7 +135,26 @@ if (PUBLISH_SYMBOLS.length) {
   );
 }
 
+/**
+ * The evidence the cross-check needs, gathered once (D79).
+ *
+ * The book is one fetch for every asset, and `readAll()` is a file. Both are
+ * pulled outside the loop because neither changes inside it, and the issuer's
+ * book is cached for 30 seconds anyway — asking per asset would just make the
+ * loop's timing depend on the cache TTL.
+ */
+const book = await issuerBook();
+const lastMark = new Map<string, { mid: number; observedAt: number }>();
+for (const sample of readAll()) {
+  const seen = lastMark.get(sample.symbol);
+  if (!seen || sample.observedAt > seen.observedAt) {
+    lastMark.set(sample.symbol, { mid: sample.mid, observedAt: sample.observedAt });
+  }
+}
+
 const items: Item[] = [];
+/** Values a check refused. Printed together at the end, not buried in the loop. */
+const withheldByCheck: { symbol: string; reasons: string[] }[] = [];
 
 for (const spec of selected) {
   const address = ADDRESS_BY_SYMBOL.get(spec.symbol);
@@ -145,18 +167,35 @@ for (const spec of selected) {
   const report = await computeFairValue(spec, { now, onchainPrice });
   const p = toOraclePayload(report);
 
+  // The second opinion, between the engine and the chain. It never adjusts the
+  // number — a failed check withholds it, and the value publishes in exactly
+  // the shape an unpriceable asset already does, so consumers need no new case.
+  const quote = book.get(issuerSymbolFor(spec.symbol));
+  const previous = lastMark.get(spec.symbol);
+  const checked = crossCheck({
+    symbol: spec.symbol,
+    fairValue: report.fairValue,
+    quote: quote ? { bid: quote.bid, ask: quote.ask, mid: quote.mid, spreadBps: quote.spreadBps } : null,
+    previous: previous ? { mid: previous.mid, ageSeconds: now - previous.observedAt } : null,
+    overnightSd: MEASURED[spec.symbol]?.gaps.overnightSd ?? null,
+    onchainPrice: onchainPrice ?? null,
+  });
+
+  const refused = p.hasValue && !checked.publishable;
+  if (refused) withheldByCheck.push({ symbol: spec.symbol, reasons: checked.reasons });
+
   items.push({
     asset: address,
-    fairValueE8: p.fairValueE8,
+    fairValueE8: refused ? 0n : p.fairValueE8,
     confidenceBps: p.confidenceBps,
     // Withheld basis publishes as 0 — the guard only reaches a basis trigger
     // once the oracle gate has already passed, which requires a value.
-    basisBps: Math.round(report.basisBps ?? 0),
+    basisBps: refused ? 0 : Math.round(report.basisBps ?? 0),
     capacityUsdg,
     gapRisk: p.gapRisk,
     state: p.state,
     anchorAt: BigInt(p.anchorAt),
-    hasValue: p.hasValue,
+    hasValue: refused ? false : p.hasValue,
   });
 
   console.log(
@@ -165,8 +204,21 @@ for (const spec of selected) {
       `band=${(p.confidenceBps / 100).toFixed(2).padStart(6)}%  ` +
       `basis=${(report.basisBps === undefined ? '—' : (report.basisBps / 100).toFixed(2) + '%').padStart(8)}  ` +
       `cap=${(Number(capacityUsdg) / 1e6).toFixed(0).padStart(6)}  ` +
-      `gap=${String(p.gapRisk).padStart(3)}`,
+      `gap=${String(p.gapRisk).padStart(3)}` +
+      (refused ? '  ✗ WITHHELD by cross-check' : ''),
   );
+  if (refused) for (const line of describeCrossCheck(checked)) console.log(`      ${line}`);
+}
+
+if (withheldByCheck.length) {
+  console.log(
+    `\n  ${withheldByCheck.length} value(s) withheld by the cross-check (D79). They publish as` +
+      `\n  unpriceable, which is what the guard already refuses on — no number this` +
+      `\n  could not defend reaches the chain:`,
+  );
+  for (const w of withheldByCheck) {
+    for (const reason of w.reasons) console.log(`    ${w.symbol.padEnd(9)} ${reason}`);
+  }
 }
 
 // If nothing can be priced, do not spend gas saying so. The previous

@@ -1,3 +1,4 @@
+import { clientKey, createGate, tooMany } from '@/src/ratelimit';
 import { loadRegistry } from '@/src/track-record';
 
 // Reads the X Layer RPC over the Node runtime. The registries are append-only,
@@ -7,6 +8,14 @@ import { loadRegistry } from '@/src/track-record';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
+
+/**
+ * The loosest of the three, and it is a page load: `Theses` fetches this on
+ * mount and again after every fill. The index keeps a warm read near a second
+ * (D66), but a cold one re-enumerates both registries over the throttled RPC,
+ * so the concurrency cap matters more here than the rate does.
+ */
+const gate = createGate('registry read', { burst: 10, perMinute: 30, maxInFlight: 4 });
 
 /** BigInt reaches the wire as a decimal string rather than throwing. */
 const replacer = (_k: string, v: unknown) => (typeof v === 'bigint' ? v.toString() : v);
@@ -21,6 +30,9 @@ const replacer = (_k: string, v: unknown) => (typeof v === 'bigint' ? v.toString
  */
 export async function GET(request: Request) {
   const raw = new URL(request.url).searchParams.get('id');
+
+  const pass = gate.enter(clientKey(request));
+  if (!pass.ok) return tooMany(pass);
 
   try {
     const snapshot = await loadRegistry();
@@ -50,5 +62,7 @@ export async function GET(request: Request) {
       { error: e instanceof Error ? e.message : String(e) },
       { status: 502 },
     );
+  } finally {
+    pass.release();
   }
 }

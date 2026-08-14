@@ -27,8 +27,10 @@ import { pickProvider } from './provider';
 import {
   compileMandate,
   describeTrigger,
+  validateAllocation,
   type Allocation,
   type CompiledMandate,
+  type InventedLeg,
   type Thesis,
 } from './thesis';
 
@@ -57,7 +59,15 @@ export type RunEvent =
   | { stage: Stage; status: 'start'; label: string }
   | { stage: 'compile'; status: 'done'; label: string; data: { thesis: Thesis; provider: string; live: boolean } }
   | { stage: 'universe'; status: 'done'; label: string; data: UniverseEntry[] }
-  | { stage: 'allocate'; status: 'done'; label: string; data: Allocation }
+  // `invented` is additive to the frozen `Allocation` shape rather than part of
+  // it: an allocation is what the model proposed, and whether an asset exists is
+  // a fact about the chain, not about the proposal. See 08-parallel.md.
+  | {
+      stage: 'allocate';
+      status: 'done';
+      label: string;
+      data: Allocation & { invented: InventedLeg[]; weightBpsTotal: number };
+    }
   | {
       stage: 'mandate';
       status: 'done';
@@ -189,16 +199,27 @@ export async function* runPipeline(
 
   // 3 — the mapping, constrained to that universe
   yield { stage: 'allocate', status: 'start', label: 'mapping the thesis onto tradable assets' };
-  const allocation = await provider.allocate(thesis, uni);
+  const proposed = await provider.allocate(thesis, uni);
+  // Everything downstream runs on the validated allocation, and an invented
+  // symbol is named here rather than filtered away at the planner. See
+  // `validateAllocation` for what the silent filter used to cost.
+  const { allocation, invented, weightBpsTotal } = validateAllocation(
+    proposed,
+    uni.map((u) => u.symbol),
+  );
   yield {
     stage: 'allocate',
     status: 'done',
-    label: `${allocation.legs.length} legs, ${allocation.unmapped.length} unmapped`,
-    data: allocation,
+    label:
+      `${allocation.legs.length} legs, ${allocation.unmapped.length} unmapped` +
+      (invented.length ? `, ${invented.length} invented` : ''),
+    data: { ...allocation, invented, weightBpsTotal },
   };
 
   // 4 — the mandate, out of the same compilation as the entry
   yield { stage: 'mandate', status: 'start', label: 'compiling exit triggers' };
+  // The validated allocation, deliberately: a trigger scoped to an entity whose
+  // only leg was invented covers nothing, and `unresolved` should say so.
   const mandate = compileMandate(thesis, allocation);
   yield {
     stage: 'mandate',

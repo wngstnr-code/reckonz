@@ -16,7 +16,7 @@ colliding. `06-assessment.md` is the honest read on whether this is a business.
 ```bash
 cd /Users/mac/Desktop/okxai
 set -a && source .env && set +a     # PRIVATE_KEY, GEMINI_API_KEY, CASH
-pnpm typecheck && pnpm test         # expect: clean, 136 unit tests, then 106 passed
+pnpm typecheck && pnpm test         # expect: clean, 190 unit tests, then 106 passed
 git status --short                  # expect: clean; docs/ is tracked now, not ignored
 pnpm dev                            # the web app, port 3000 (falls back if taken)
 ```
@@ -314,7 +314,7 @@ That single run exercises every claim the product makes. It is the demo.
 | **The submission post** | The account exists (see Project identity above); what is still required is a post from it mentioning `@XLayerOfficial` **at submission time**. Not done until that post is up. |
 | ~~Mainnet deployment~~ | ✅ **Done 2026-08-11.** Addresses in `src/deployments.ts`; oracle seeded, mandate #1 live, one real fill. |
 | **Google Form submission** | Required by 21 Aug 23:59 UTC. Read 2026-08-14 — it is **eight fields**: name, description, project URL, optional GitHub, contacts, optional X post URL. **No track selector, no video field, no deck.** So AI-RWA is inferred from the description alone, and the description is the highest-leverage artifact in the submission. Form and analysis in `00-hackathon.md`. |
-| **Repo visibility decision** | The repo is private, and the form has an optional `Github` field. **Sharpened 2026-08-14**: Disclaimer §4 says the Organizer will consider **code quality** — so leaving that field blank forfeits a stated criterion, and code quality (106 Foundry + 136 unit tests, CI, 14 of 14 verified contracts, an append-only decision log) is one of the few places we beat a polished demo. Decide before submitting: public, or grant access. |
+| **Repo visibility decision** | The repo is private, and the form has an optional `Github` field. **Sharpened 2026-08-14**: Disclaimer §4 says the Organizer will consider **code quality** — so leaving that field blank forfeits a stated criterion, and code quality (106 Foundry + 190 unit tests including a red-team suite over the compiler, CI, 14 of 14 verified contracts, an append-only decision log) is one of the few places we beat a polished demo. Decide before submitting: public, or grant access. |
 
 ### Blocking for a credible demo
 
@@ -332,7 +332,41 @@ That single run exercises every claim the product makes. It is the demo.
 
 | ~~**Zero unit tests for `src/`**~~ — **136 of them, 2026-08-14** | `node:test` via `tsx --test`, no runner dependency (D71). `pnpm test:unit`, or `pnpm test` for both suites. Ten files: `guard`, `fill`, `exit-plan`, `v3math`, `planner`, `triggers`, `evidence`, `permit`, `observations`, `indexer`, `issuer`. The arithmetic mirrors are pinned against **receipts on mainnet** rather than invented vectors — a test against a real receipt cannot agree with a wrong mirror. Found and fixed three things on the first run: a wrong operator rendered for an undecodable comparator, dust deleted by `schedule()`, and a floating-point boundary where `guard.ts` is stricter than the chain (left in place, pinned, and written up). `pnpm check:tests` now guards both counts. |
 
+| ~~**Nothing tested the model's output as hostile input**~~ — **24 red-team tests, 2026-08-14** | `src/thesis-redteam.test.ts` (D75). Hand-written adversarial model responses run the whole distance from JSON to `setTriggers`: invented metrics, injected instructions in the prose, a trigger the model itself called unobservable, scope that resolves to nothing, thresholds outside the metric's domain. **It found two live defects.** An invented symbol used to vanish at the planner and surface as `unallocated` — a hallucination reported to the user as capacity the market refused; `validateAllocation` now names it. And `gapRisk > 5000` installed cleanly on a 0-100 score and could never fire; `METRIC_DOMAIN` + `reachability()` drop the unreachable and flag the always-firing. Unit suite 136 → **160**. |
+
+| ~~**An unmeasured exit rendered as a flawless one**~~ — **fixed 2026-08-14 (D77)** | With a stale or silent oracle `Executor._exitShortfallBps` returns zero, so `maxSlippageBps` bounds nothing — correct, and D51/D56 are why. But receipt #16 (`slippageBps: 0`, `fairValueE8: 0`, oracle 158,738s old) rendered as **0 bps**, the best number available, for the one case where no protection applied. `prepareExit` now returns `shortfallBps: null` with a `status`, selling in that state needs `--unmeasured` / `acknowledgeUnmeasured: true` and is recorded in the evidence bundle, and `shortfallMeasured()` in `abi.ts` makes the page and the terminal print `slip unmeasured`. The contract is unchanged: it is a **disclosed** limitation with consent attached, not a closed one. |
+
+| ~~**The public routes had no rate limit**~~ — **gated 2026-08-14 (D78)** | `src/ratelimit.ts`: a token bucket plus an in-flight cap on `/api/run` (3 burst, 6/min, 2 concurrent — the only route that spends an LLM quota), `/api/fill` and `/api/exit` (6, 20, 3) and `/api/theses` (10, 30, 4). `/api/universe` is cached for an hour and mostly never reaches a function. Inputs are bounded too: 2,000 characters of thesis, a notional in (0, 100M], an impact limit in (0, 10000] — `Number('abc')` used to reach the planner as NaN. **Exercised against the running server**, not just written: four served and four `429`s on eight concurrent reads, two and three on five concurrent runs. Per instance, not global — see D78 for what that is honestly worth. |
+
+| ~~**The oracle had one source and no second opinion**~~ — **cross-checked 2026-08-14 (D79)** | `src/crosscheck.ts`, between the engine and `publishMany`: the quote against itself, the spread against plausibility (2,000bp), the mid against our own `observations/` store (`max(8σ, 20%)`), and the value against the pool (50%). Every threshold derived from a number already measured here — see D79 for each derivation. It **withholds, never corrects**, publishing the shape an unpriceable asset already takes, and a check that cannot run reports `skipped` rather than `ok`. Run against live quotes for all 30 assets: **30 publishable, 0 withheld**. |
+
 ### Known gaps in the work itself
+
+- **The cross-check's history arm lapses without the worker.** Its window is 48 hours, so with
+  nothing sampling, `step-vs-history` degrades to `skipped` within two days of the last mark — the
+  arm that closes D41's re-anchoring hole is exactly the one that needs the publish worker up. One
+  more reason the 18–19 Aug item is the load-bearing one.
+- **The rate limit is per instance, and the key is spoofable.** D78 bounds one caller against one
+  warm instance; it does not coordinate across them, and `x-forwarded-for` is whatever a direct
+  caller says it is. It is a cost ceiling, not a guarantee. The global version is a Vercel firewall
+  rule rather than more code here.
+- **A stale oracle still means an unbounded exit on chain.** D77 made it visible and consented;
+  it did not make `PolicyGuard` able to stop it. The only protection in that state is the
+  `minAmountOutUsdg` floor the owner signed into the leg. Closing it properly needs an `Executor`
+  that takes the acknowledgement as a parameter, which means a redeploy and moving every mandate's
+  executor pointer — not eight days out. The publish worker running through judging is what keeps
+  the case rare; the receipt is what makes it visible when it happens.
+
+- ~~**The compiled exit triggers are displayed and never installed.**~~ — **closed the same day
+  (D76).** Found by the D75 sweep: `encodeTriggers` is the join between a compiled thesis and
+  `PolicyGuard.setTriggers`, it was tested twice over, and **no production path called it** —
+  `mandate-edit.ts`, `mandate-demo.ts` and `app/components/MandateManage.tsx` all hand-built
+  triggers from what the user typed, so "the same compilation produces the entry and the risk
+  rules" was true of `pipeline.ts` and false of anything that wrote to the chain. The triggers
+  panel now hands them to the mandate form over `reckonz:install-triggers`, the form encodes them
+  against the allowlist as it is picked, and `setTriggers` goes out as a second transaction after
+  the mandate is readable. **Written and type-checked, never run against a wallet** — same status
+  the fill path had before D65, and the same lesson applies: D35.
 
 - ~~**Claude provider never executed**~~ — **deleted 2026-08-12 (D59)**. Gemini is the only live
   provider. The risk was never the unused code, it was that `pickProvider` selected on whichever

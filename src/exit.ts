@@ -33,7 +33,7 @@
 import { formatUnits, parseUnits, type Address } from 'viem';
 import { ERC20_ABI, EXECUTOR_ABI, FAIR_VALUE_ORACLE_ABI, POLICY_GUARD_ABI } from './abi';
 import { ADDR, client, USDG } from './chain';
-import { prepareExit } from './exit-plan';
+import { describeShortfallStatus, prepareExit } from './exit-plan';
 import { buildPermit, describePermit } from './permit';
 import { addressBySymbol, loadToken } from './pool';
 import {
@@ -54,6 +54,17 @@ const unitsFlag = args.indexOf('--units');
 const UNITS_ARG = unitsFlag === -1 ? null : args[unitsFlag + 1];
 const TARGET_USDG = unitsFlag === -1 ? (args[1] ?? '0.1') : null;
 
+/**
+ * Sell even though nothing can measure the shortfall (D77).
+ *
+ * With a stale or silent oracle `Executor._exitShortfallBps` returns zero, so
+ * `maxSlippageBps` compares against nothing and cannot block the sale. That is
+ * the right behaviour — an unpublished oracle trapping every open position is
+ * worse — but it is not something to discover afterwards from a receipt that
+ * reads `slippageBps: 0`.
+ */
+const ACKNOWLEDGE_UNMEASURED = args.includes('--unmeasured');
+
 const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000' as const;
 const MANDATE_ID = process.env.MANDATE_ID ? BigInt(process.env.MANDATE_ID) : null;
 const THESIS_HASH = (process.env.THESIS_HASH ?? ZERO_HASH) as `0x${string}`;
@@ -61,6 +72,7 @@ const THESIS_HASH = (process.env.THESIS_HASH ?? ZERO_HASH) as `0x${string}`;
 if (!SYMBOL_OR_ADDRESS || (UNITS_ARG !== null && !/^\d+(\.\d+)?$/.test(UNITS_ARG))) {
   console.error('usage: TARGET=mainnet pnpm exit <symbol|address> [usdgTarget]');
   console.error('       TARGET=mainnet pnpm exit <symbol|address> --units <amount>');
+  console.error('       --unmeasured   sell with no slippage protection when the oracle has lapsed');
   process.exit(1);
 }
 
@@ -220,6 +232,7 @@ const plan = await prepareExit({
   sender: owner.address,
   agent: agent.address,
   thesisHash: THESIS_HASH,
+  acknowledgeUnmeasured: ACKNOWLEDGE_UNMEASURED,
 }).catch((e: unknown) => {
   console.error(`\n  ${e instanceof Error ? e.message : String(e)}\n`);
   process.exit(1);
@@ -244,14 +257,22 @@ console.log(
   `  fair      ${formatUnits(plan.oracle.fairValueE8, 8)}` +
     ` (${plan.oracle.ageSeconds}s old${plan.oracle.stale ? ', STALE' : ''})`,
 );
-// Zero here is a measurement, not a missing one: `_exitShortfallBps` returns
-// zero against a value the oracle refuses to defend, and so does the planner.
+// A shortfall of zero and no shortfall at all are different facts and used to
+// print the same way (D77). The planner returns `null` for the second, and this
+// line refuses to invent a number for it.
 console.log(
-  `  shortfall ${plan.predicted.shortfallBps} bps below fair value` +
-    (plan.oracle.stale || !plan.oracle.hasValue
-      ? '  (not measured — the oracle is not defending a number, and neither is the contract)'
-      : ''),
+  plan.predicted.shortfallBps === null
+    ? `  shortfall unmeasured — ${describeShortfallStatus(plan.predicted.status)}`
+    : `  shortfall ${plan.predicted.shortfallBps} bps below fair value`,
 );
+
+if (!plan.signable.ok) {
+  console.error(`\n  Refusing to sign: ${plan.signable.reason}`);
+  console.error(`  The sale would go out with no slippage protection: PolicyGuard will see a`);
+  console.error(`  shortfall of zero whatever price the pool gives, so maxSlippageBps cannot`);
+  console.error(`  block it. Re-run with --unmeasured if that is what you want.\n`);
+  process.exit(1);
+}
 
 if (!plan.verdict.allow) {
   console.error(`\n  guard would REJECT: ${plan.verdict.reason}  ${plan.verdict.offendingAsset}`);

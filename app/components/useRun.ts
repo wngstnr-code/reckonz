@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import type { Allocation, CompiledMandate, Thesis } from '@/src/thesis';
+import type { Allocation, CompiledMandate, InventedLeg, Thesis } from '@/src/thesis';
 import type { AssetVerdict, RunEvent, Stage, UniverseEntry } from '@/src/pipeline';
 import type { BasketPlan } from '@/src/planner';
 
@@ -23,7 +23,10 @@ export interface RunState {
   label: Partial<Record<Stage, string>>;
   compile: { thesis: Thesis; provider: string; live: boolean } | null;
   universe: UniverseEntry[] | null;
-  allocate: Allocation | null;
+  // The intersection, not the bare `Allocation`: `invented` and `weightBpsTotal`
+  // are additive to the frozen shape (D75, 08-parallel.md) and the panel must be
+  // able to see them. Typed as `Allocation` they would compile and vanish.
+  allocate: (Allocation & { invented: InventedLeg[]; weightBpsTotal: number }) | null;
   mandate: (CompiledMandate & { described: { text: string; unresolved: string[] }[] }) | null;
   plan: (BasketPlan & { maxImpactBps: number }) | null;
   oracle: { verdicts: AssetVerdict[] } | null;

@@ -1,3 +1,4 @@
+import { INSTALL_TRIGGERS_EVENT, type TriggerInstallRequest } from './follow';
 import type { RunState } from './useRun';
 import { Bar, Card, Legend, Note, Num, Pill, pct, usd } from './ui';
 
@@ -100,6 +101,32 @@ export function AllocationPanel({
         </tbody>
       </table>
 
+      {allocation.invented.length > 0 && (
+        <div className="mt-5 border-l-2 border-refuse pl-4">
+          <h3 className="mb-1.5 text-[10.5px] font-semibold tracking-[0.09em] text-refuse uppercase">
+            Named an asset that does not exist
+          </h3>
+          {/* Distinct from "refused to substitute" below, and the distinction is
+              the point: that one is the model being honest about an entity with
+              no tradable asset, this one is the model inventing a token. Before
+              D75 these legs were filtered out silently and their share of the
+              notional reappeared as capacity the market refused — a
+              hallucination reported as a fact about liquidity. */}
+          <ul className="list-disc space-y-1 pl-5 text-[13px] text-dim">
+            {allocation.invented.map((l) => (
+              <li key={l.symbol}>
+                <span className="font-mono text-ink">{l.symbol}</span> — not in the universe read
+                from the chain. Its {(l.weightBps / 100).toFixed(0)}% was not planned, and is not
+                counted as capacity the market refused.
+              </li>
+            ))}
+          </ul>
+          <p className="mt-1.5 font-mono text-[11.5px] text-faint">
+            {(allocation.weightBpsTotal / 100).toFixed(0)}% of the basket survived validation
+          </p>
+        </div>
+      )}
+
       {allocation.unmapped.length > 0 && (
         <div className="mt-5 border-l-2 border-caution pl-4">
           <h3 className="mb-1.5 text-[10.5px] font-semibold tracking-[0.09em] text-caution uppercase">
@@ -167,6 +194,29 @@ export function MandatePanel({ mandate }: { mandate: NonNullable<RunState['manda
         <p className="mt-4 font-mono text-[11.5px] text-faint">
           implied mandate ceiling: maxGapRisk {mandate.maxGapRisk}
         </p>
+      )}
+
+      {mandate.exitTriggers.length > 0 && (
+        <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-line pt-4">
+          <button
+            onClick={() =>
+              window.dispatchEvent(
+                new CustomEvent<TriggerInstallRequest>(INSTALL_TRIGGERS_EVENT, {
+                  detail: {
+                    exitTriggers: mandate.exitTriggers,
+                    manualWatch: mandate.manualWatch,
+                  },
+                }),
+              )
+            }
+            className="rounded-full border border-signal-deep bg-signal/6 px-4 py-1 font-mono text-[12px] text-signal hover:bg-signal/12"
+          >
+            install these as a mandate&apos;s exit rules
+          </button>
+          <span className="text-[12px] text-faint">
+            Sends them to the mandate form below. Nothing is signed until you create the mandate.
+          </span>
+        </div>
       )}
     </Card>
   );

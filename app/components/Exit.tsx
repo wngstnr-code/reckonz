@@ -67,8 +67,17 @@ interface WirePlan {
     maxAgeSeconds: number;
     stale: boolean;
   };
-  predicted: { executionPriceE8: string; shortfallBps: number };
+  predicted: {
+    executionPriceE8: string;
+    /** `null` when nothing measured it — never render a zero here (D77). */
+    shortfallBps: number | null;
+    status: 'measured' | 'unmeasured-stale' | 'unmeasured-no-value';
+    /** What the contract will compute and the guard will check. */
+    guardSlippageBps: number;
+  };
   verdict: { allow: boolean; reason: string; offendingAsset: Address | null };
+  /** Our own refusal, separate from the guard's: see D77. */
+  signable: { ok: boolean; reason: string | null };
   thesis: { hash: Hex; id: number; publishedAt: number } | null;
   evidence: { hash: Hex; stored: boolean; bundle: unknown };
   mandate: { id: string; owner: Address; agent: Address; executor: Address; active: boolean };
@@ -114,6 +123,8 @@ export function Exit() {
   const [asset, setAsset] = useState<Address | null>(null);
   const [units, setUnits] = useState('');
   const [plan, setPlan] = useState<WirePlan | null>(null);
+  /** Consent to sell with no slippage protection, when nothing can measure it. */
+  const [ack, setAck] = useState(false);
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -271,6 +282,9 @@ export function Exit() {
   // that sells something other than what the form now says.
   useEffect(() => {
     setPlan(null);
+    // The acknowledgement is about one sale of one size. Carrying it across a
+    // change of asset or size would be consent to something else.
+    setAck(false);
   }, [asset, units, mandateId]);
 
   const busy = !['idle', 'done', 'failed'].includes(phase.kind);
@@ -278,7 +292,9 @@ export function Exit() {
   const wanted = holding && validUnits ? parseUnits(units, holding.decimals) : null;
   const shortOfAsset = wanted !== null && holding !== null && holding.balance < wanted;
 
-  async function check() {
+  // `acknowledged` is passed rather than read from state: ticking the box calls
+  // this immediately, and a state update is not visible until the next render.
+  async function check(acknowledged = ack) {
     if (!address || !mandateId || !asset) return;
     setPlan(null);
     setPhase({ kind: 'quoting' });
@@ -286,7 +302,13 @@ export function Exit() {
       const response = await fetch('/api/exit', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ asset, units, mandateId: mandateId.toString(), sender: address }),
+        body: JSON.stringify({
+          asset,
+          units,
+          mandateId: mandateId.toString(),
+          sender: address,
+          acknowledgeUnmeasured: acknowledged,
+        }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body?.error ?? `the quote failed (${response.status})`);
@@ -540,7 +562,7 @@ export function Exit() {
             </label>
 
             <button
-              onClick={check}
+              onClick={() => void check()}
               disabled={busy || !asset || !validUnits || shortOfAsset}
               className="rounded-full border border-line bg-raised px-4 py-1 font-mono text-[12px] text-ink hover:border-signal-deep disabled:opacity-40"
             >
@@ -581,7 +603,33 @@ export function Exit() {
 
           {plan && <Plan plan={plan} />}
 
-          {plan?.verdict.allow && (
+          {/* Our refusal, above the guard's. The plan is real and worth reading —
+              the quote, the pool, the floor — but with a lapsed oracle
+              `maxSlippageBps` compares against a shortfall of zero whatever the
+              pool pays, so nothing bounds this sale. The user may still want it;
+              they may not discover it afterwards from a receipt reading 0 bps. */}
+          {plan && !plan.signable.ok && (
+            <div className="mb-4 rounded-lg border border-refuse/40 bg-refuse/6 px-4 py-3">
+              <p className="text-[12.5px] leading-relaxed text-refuse">
+                This sale would go out <strong>with no slippage protection</strong>.{' '}
+                {plan.signable.reason}
+              </p>
+              <label className="mt-2 flex items-center gap-2 text-[12.5px] text-dim">
+                <input
+                  type="checkbox"
+                  checked={ack}
+                  onChange={(e) => {
+                    setAck(e.target.checked);
+                    if (e.target.checked) void check(true);
+                  }}
+                  className="accent-refuse"
+                />
+                Sell anyway — I accept that the mandate&apos;s slippage cap cannot apply
+              </label>
+            </div>
+          )}
+
+          {plan?.verdict.allow && plan.signable.ok && (
             <>
               <Legend>what you are about to sign</Legend>
               <ul className="mb-3 grid gap-0.5">
@@ -724,7 +772,7 @@ function Plan({ plan }: { plan: WirePlan }) {
           )}
         </Row>
         <Row label="shortfall">
-          {plan.oracle.stale || !plan.oracle.hasValue ? (
+          {plan.predicted.shortfallBps === null ? (
             <span className="text-faint">
               not measured — a value the oracle has stopped defending would compute a large false
               shortfall, and the mandate&apos;s slippage limit would then block the exit. The

@@ -64,7 +64,7 @@ pnpm dev                     # the web app — thesis in, guard verdict out
 pnpm build                   # next build (what Vercel runs); contracts are build:contracts
 pnpm typecheck               # covers src/ and app/
 pnpm test:sol                # 106 Foundry tests
-pnpm test:unit               # 136 unit tests over src/ — node:test, no runner dependency (D71)
+pnpm test:unit               # 190 unit tests over src/ — node:test, no runner dependency (D71)
 pnpm test                    # both suites
 pnpm check:tests             # both numbers, checked against every doc that states them (D60, D71)
 ```
@@ -78,6 +78,7 @@ TARGET=mainnet pnpm mandate            # create a mandate, install triggers, han
 TARGET=mainnet pnpm execute <sym> [n]  # quote -> dryRun -> Permit2 -> one real fill
 TARGET=mainnet pnpm exit <sym> [usdg]  # the reverse: sell a position back to USDG (D51)
 TARGET=mainnet pnpm exit <sym> --units <n>   # size in the asset, not through the oracle (D68)
+TARGET=mainnet pnpm exit <sym> --unmeasured  # sell with no slippage protection, said out loud (D77)
 TARGET=mainnet pnpm swap [okb]         # OKB -> USDG, to fund the deployer
 TARGET=mainnet pnpm safe:admin status  # the 2-of-3, and which owner keys you hold
 TARGET=mainnet pnpm safe:admin treasury|feebps <v>   # admin-only, needs two signatures
@@ -101,6 +102,10 @@ TARGET=mainnet pnpm fees [withdraw]    # what the fee earned, and sweep it to th
   shares per token, and publishes it with its uncertainty and a risk score so consumers can refuse
   to execute. It does not forecast — that stopped with D62. When it cannot defend a number it marks
   the value unpublishable rather than inventing one. Never weaken this.
+  Since D79 a **cross-check** sits between the engine and the chain: the quote against itself, the
+  spread against plausibility, the mid against our own `observations/` history, and the value
+  against the pool. It withholds, never corrects — and a check that cannot run reports `skipped`,
+  never `ok`.
 - **Tooling, not investment advice.** The user writes the thesis; the system maps and
   executes it. Never invert.
 - **Report capacity honestly.** Telling users what the chain cannot absorb is the product.
@@ -129,6 +134,11 @@ TARGET=mainnet pnpm fees [withdraw]    # what the fee earned, and sweep it to th
   against a value the oracle has stopped defending computes an enormous false shortfall, and
   `maxSlippageBps` then blocks the exit — D51's trap one layer down. `src/exit-plan.ts` mirrors
   this; anything that plans an exit must use that module rather than its own arithmetic (D68).
+  **But that zero has two meanings and only one is a measurement** (D77): the sale landed at or
+  above fair value, or nothing measured it at all. Never render the second as `0` — `prepareExit`
+  returns `shortfallBps: null` for it, `shortfallMeasured()` in `abi.ts` derives the same fact from
+  a receipt, and selling in that state needs an explicit acknowledgement (`--unmeasured`, or
+  `acknowledgeUnmeasured` on `POST /api/exit`).
 - **On `FairValueOracle`, `peek` is the safe read and `observation` reverts.** Not the other way
   round, whatever the names suggest — `observation` throws `NoData` / `Stale`. `src/abi.ts` said
   the opposite for weeks and the browser fill path believed it (D64). Render with `peek`; decide
@@ -158,6 +168,9 @@ TARGET=mainnet pnpm fees [withdraw]    # what the fee earned, and sweep it to th
   Bound the value before casting, even where it looks unreachable.
 - `src/guard.ts` mirrors `FairValueOracle.checkExecution` line for line. If they diverge,
   the off-chain mirror is wrong.
+- **Every public route is gated** (D78). `src/ratelimit.ts` holds the buckets and the in-flight
+  caps; a new route under `app/api/` takes one before it does any work and releases it in a
+  `finally`. It is a per-instance cost ceiling, not a global guarantee — do not describe it as one.
 - **One source per kind of fact:** addresses in `src/deployments.ts`, ABIs in `src/abi.ts`.
   Never inline a second copy in a script — the copy is what drifts. `src/abi.ts`,
   `src/deployments.ts` and `src/chain.ts` must stay importable from the browser: no `node:`
