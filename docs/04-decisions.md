@@ -1251,6 +1251,16 @@ non-zero — out of gas, a bad key and an hour-long RPC outage look identical fr
 handing the decision to the host's restart policy makes the failure visible instead of looping
 quietly on a broken configuration for days.
 
+**Amended 2026-08-14: `restartPolicyMaxRetries` 10 → 100.** The original ten leaned on the
+deployment dying to make a failure visible. That reasoning is now wrong twice over. Visibility
+came from somewhere better — `GET /api/health` (D81) answers whether a fill could succeed right
+now and returns 503 when nothing can trade, which reports a stale oracle whether the worker is
+dead, restarting, or up and failing. And the cost of the two failure modes is not symmetric: the
+worker only exits after six consecutive failures, so ten restarts is roughly ten hours of a broken
+configuration before Railway gives up — long enough that nobody is saved from the noise, short
+enough that a long RPC outage during the judging window kills the oracle permanently and silently.
+A hundred means the host keeps trying; the health route is what says whether the trying is working.
+
 **The Actions workflow stays, with its cron removed.** It is the manual button now, and a way to
 check that the key and the runner still work when the worker is the thing under suspicion. The cron
 is *absent* rather than slowed on purpose: running both on a schedule would double the gas burn for

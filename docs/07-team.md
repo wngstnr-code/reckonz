@@ -154,6 +154,11 @@ deliberately idle until then; the reasoning, the funding and the runway are in
 of OKB** (a plain transfer, no Safe signatures), then bring the worker up with `TARGET=mainnet`,
 `PUBLISHER_KEY`, `PUBLISH_INTERVAL_SEC=600`.
 
+`railway.json` restarts it up to **100** times on failure, not 10 (D46, amended). The worker exits
+only after six consecutive failed cycles, so ten restarts is about ten hours before the host gives
+up for good — and a deployment that has given up is a permanently stale oracle. Whether it is
+actually publishing is `GET /api/health`'s job (D81), not the restart count's.
+
 **Before starting it, attach a Railway volume at `/data` and set
 `OBSERVATIONS_PATH=/data/issuer-marks.jsonl`** (D67). Without it the sampler writes to a container
 filesystem that is wiped on redeploy, and the price history the worker exists to accumulate is lost
