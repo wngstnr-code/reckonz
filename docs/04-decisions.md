@@ -4191,6 +4191,9 @@ is set the phone path does not exist — the picker says so plainly rather than
 offering a button that cannot work. It is public by design; it ships in every
 WalletConnect dapp's bundle.
 
-And **no real phone has paired with this**. The modal opens, the failure paths
-are exercised, the happy path is not. D35, again, and it stays written down until
-someone scans it.
+~~And **no real phone has paired with this**.~~ — **paired 2026-08-14**, once the project id was
+set and deployed. Verified against production before the phone: the picker lists the three
+announced extensions and then WalletConnect, the QR renders and the wallet registry loads 70+
+entries — with the earlier dummy id the same modal showed an empty box and `0`, so the difference
+is a fact rather than a reading. The owner then completed a real pairing from a phone. D35 is
+satisfied for this dependency; the phone path exists.
