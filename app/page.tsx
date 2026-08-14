@@ -1,4 +1,5 @@
 import { Console } from './components/Console';
+import { Exit } from './components/Exit';
 import { Fill } from './components/Fill';
 import { Mandate } from './components/Mandate';
 import { MandateManage } from './components/MandateManage';
@@ -74,6 +75,8 @@ export default function Page() {
         <Theses />
 
         <Fill />
+
+        <Exit />
 
         <section className="mb-4 rounded-xl border border-line bg-panel px-6 py-5">
           <h2 className="mb-3 text-[15px] font-semibold tracking-tight">

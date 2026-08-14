@@ -1,0 +1,796 @@
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
+import { formatUnits, parseUnits, type Address, type Hex } from 'viem';
+import { ERC20_ABI, EXECUTOR_ABI, POLICY_GUARD_ABI } from '@/src/abi';
+import { ADDR } from '@/src/chain';
+import { awaitReceipt } from './awaitReceipt';
+import type { UniverseEntry } from '@/src/pipeline';
+import { buildPermit, describePermit, PERMIT_TTL_SEC } from '@/src/permit';
+import { FILLED_EVENT, MANDATES_CHANGED_EVENT } from './follow';
+import { Card, Legend, Note, Num, Pill } from './ui';
+import { useWallet } from './useWallet';
+
+/**
+ * The way out, from the browser.
+ *
+ * `Fill` could enter a position and nothing here could leave one: `pnpm exit`
+ * has sold a position back to USDG since D51, but only as a Node script holding
+ * a private key. A product whose claim is risk tooling cannot have an entrance
+ * on the page and an exit in a terminal — the moment you actually want to leave
+ * is the moment you are least able to go and find a shell.
+ *
+ * The split is the same as `Fill`, for the same reason:
+ *
+ *  - The **server** (`POST /api/exit`) simulates every fee tier in the sell
+ *    direction, checks the pool the executor will derive, reads the oracle, asks
+ *    `PolicyGuard.dryRun` and hashes the evidence. It holds no key.
+ *  - The **browser** approves Permit2 once for the token being sold, signs an
+ *    authorisation scoped to that token, that many units, one spender and twenty
+ *    minutes, and sends the transaction.
+ *
+ * Two things differ from the entry path and both are the direction. The permit
+ * names the **asset**, not the cash — so the one-off Permit2 approval is a
+ * separate approval per xStock. And the oracle is **advisory** here: since D56
+ * the guard does not run `checkExecution` on an exit, because an unpublished
+ * oracle trapping every open position is worse than one that pauses new ones.
+ * The floor derived from the pool simulation is what protects the sale.
+ */
+
+/** `POST /api/exit` serialises BigInt as a decimal string — see the route. */
+interface WirePlan {
+  chainId: number;
+  executor: Address;
+  guard: Address;
+  cash: Address;
+  cashDecimals: number;
+  leg: { asset: Address; amountIn: string; minAmountOutUsdg: string; fee: number };
+  symbol: string;
+  decimals: number;
+  units: string;
+  held: string;
+  quote: {
+    amountOut: string;
+    effectivePrice: number;
+    pool: Address;
+    feeTier: number;
+    considered: { fee: number; out: string }[];
+  };
+  oracle: {
+    fairValueE8: string;
+    confidenceBps: number;
+    gapRisk: number;
+    capacityUsdg: string;
+    updatedAt: number;
+    ageSeconds: number;
+    hasValue: boolean;
+    maxAgeSeconds: number;
+    stale: boolean;
+  };
+  predicted: { executionPriceE8: string; shortfallBps: number };
+  verdict: { allow: boolean; reason: string; offendingAsset: Address | null };
+  thesis: { hash: Hex; id: number; publishedAt: number } | null;
+  evidence: { hash: Hex; stored: boolean; bundle: unknown };
+  mandate: { id: string; owner: Address; agent: Address; executor: Address; active: boolean };
+}
+
+interface Holding {
+  address: Address;
+  symbol: string;
+  decimals: number;
+  balance: bigint;
+}
+
+interface Usable {
+  id: bigint;
+  assets: Address[];
+  breaker: boolean;
+  /** An exit spends one of these, the same as an entry — `dryRun` returns EPOCH_LIMIT either way. */
+  fillsThisEpoch: number;
+  maxFillsPerEpoch: number;
+}
+
+type Phase =
+  | { kind: 'idle' }
+  | { kind: 'quoting' }
+  | { kind: 'approving' }
+  | { kind: 'signing' }
+  | { kind: 'sending' }
+  | { kind: 'mining'; hash: Hex }
+  | { kind: 'confirming'; hash: Hex }
+  | { kind: 'done'; hash: Hex; received: bigint; decimals: number }
+  | { kind: 'failed'; message: string };
+
+const e8 = (raw: string) => (Number(BigInt(raw)) / 1e8).toFixed(4);
+const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000' as const;
+
+export function Exit() {
+  const { address, option, walletClient, publicClient } = useWallet();
+
+  const [universe, setUniverse] = useState<UniverseEntry[]>([]);
+  const [mandates, setMandates] = useState<Usable[] | null>(null);
+  const [mandateId, setMandateId] = useState<bigint | null>(null);
+  const [holdings, setHoldings] = useState<Holding[]>([]);
+  const [asset, setAsset] = useState<Address | null>(null);
+  const [units, setUnits] = useState('');
+  const [plan, setPlan] = useState<WirePlan | null>(null);
+  const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const mainnet = option?.chain.id === 196;
+  const executor = option?.deployment.contracts.Executor as Address | undefined;
+
+  useEffect(() => {
+    fetch('/api/universe')
+      .then((r) => r.json())
+      .then((d) => Array.isArray(d) && setUniverse(d))
+      .catch(() => {});
+  }, []);
+
+  const symbolOf = new Map(universe.map((u) => [u.address.toLowerCase(), u.symbol]));
+
+  /**
+   * The mandates this wallet can exit through, and what it actually holds of
+   * each allowed asset.
+   *
+   * The balance is read from the token, not from `getPosition`. The guard's
+   * position is what *it* recorded from settled fills; the permit pulls from the
+   * wallet. When the two disagree — an asset bought under a different mandate,
+   * or transferred in — the wallet balance is the one that decides whether the
+   * transfer succeeds.
+   */
+  const load = useCallback(async () => {
+    if (!publicClient || !option || !address || !executor) return;
+    const guard = option.deployment.contracts.PolicyGuard as Address | undefined;
+    if (!guard) return;
+
+    setLoadError(null);
+    try {
+      const next = await publicClient.readContract({
+        address: guard,
+        abi: POLICY_GUARD_ABI,
+        functionName: 'nextMandateId',
+      });
+
+      const found: Usable[] = [];
+      // Serial: the public RPC throttles, the same discipline `serial()`
+      // enforces on the server side.
+      for (let id = 1n; id < next; id++) {
+        const m = await publicClient.readContract({
+          address: guard,
+          abi: POLICY_GUARD_ABI,
+          functionName: 'getMandate',
+          args: [id],
+        });
+        if (
+          !m.active ||
+          m.owner.toLowerCase() !== address.toLowerCase() ||
+          m.agent.toLowerCase() !== address.toLowerCase() ||
+          m.executor.toLowerCase() !== executor.toLowerCase()
+        ) {
+          continue;
+        }
+        const assets = await publicClient.readContract({
+          address: guard,
+          abi: POLICY_GUARD_ABI,
+          functionName: 'allowedAssets',
+          args: [id],
+        });
+        found.push({
+          id,
+          assets: [...assets],
+          breaker: m.circuitBreaker,
+          fillsThisEpoch: Number(m.fillsThisEpoch),
+          maxFillsPerEpoch: Number(m.policy.maxFillsPerEpoch),
+        });
+      }
+      setMandates(found);
+    } catch (e) {
+      // A throttled RPC is not an empty list of mandates.
+      setLoadError(e instanceof Error ? e.message : String(e));
+      setMandates([]);
+    }
+  }, [publicClient, option, address, executor]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  // A fill placed above, or a mandate whose allowlist changed, changes what
+  // there is to sell here.
+  useEffect(() => {
+    const reload = () => void load();
+    window.addEventListener(FILLED_EVENT, reload);
+    window.addEventListener(MANDATES_CHANGED_EVENT, reload);
+    return () => {
+      window.removeEventListener(FILLED_EVENT, reload);
+      window.removeEventListener(MANDATES_CHANGED_EVENT, reload);
+    };
+  }, [load]);
+
+  const mandate = mandates?.find((m) => m.id === mandateId) ?? null;
+
+  useEffect(() => {
+    if (!mandates || mandates.length === 0) return;
+    if (!mandates.some((m) => m.id === mandateId)) {
+      setMandateId(mandates[mandates.length - 1]!.id);
+    }
+  }, [mandates, mandateId]);
+
+  // What this wallet holds of the selected mandate's allowlist. Read here rather
+  // than after quoting: an exit that cannot be funded should say so before the
+  // user reads a price.
+  useEffect(() => {
+    let cancelled = false;
+    if (!publicClient || !address || !mandate) {
+      setHoldings([]);
+      return;
+    }
+    (async () => {
+      const read: Holding[] = [];
+      for (const a of mandate.assets) {
+        const [balance, decimals] = await Promise.all([
+          publicClient.readContract({
+            address: a,
+            abi: ERC20_ABI,
+            functionName: 'balanceOf',
+            args: [address],
+          }),
+          publicClient.readContract({ address: a, abi: ERC20_ABI, functionName: 'decimals' }),
+        ]);
+        read.push({
+          address: a,
+          symbol: symbolOf.get(a.toLowerCase()) ?? a.slice(0, 10),
+          decimals: Number(decimals),
+          balance,
+        });
+      }
+      if (!cancelled) setHoldings(read);
+    })().catch((e) => {
+      if (!cancelled) setLoadError(e instanceof Error ? e.message : String(e));
+    });
+    return () => {
+      cancelled = true;
+    };
+    // `universe.length` rather than `symbolOf`: the map is rebuilt every render
+    // and would re-read the chain on each one.
+  }, [publicClient, address, mandate, universe.length]);
+
+  // Default to something there is actually a position in — offering a zero
+  // balance as the first choice makes the panel look broken when it is not.
+  useEffect(() => {
+    if (holdings.length === 0) return;
+    if (asset && holdings.some((h) => h.address === asset)) return;
+    setAsset((holdings.find((h) => h.balance > 0n) ?? holdings[0]!).address);
+  }, [holdings, asset]);
+
+  const holding = holdings.find((h) => h.address === asset) ?? null;
+
+  // A plan describes one asset at one size against one mandate. Changing any of
+  // them and keeping the old plan on screen would leave a "sign & exit" button
+  // that sells something other than what the form now says.
+  useEffect(() => {
+    setPlan(null);
+  }, [asset, units, mandateId]);
+
+  const busy = !['idle', 'done', 'failed'].includes(phase.kind);
+  const validUnits = /^\d+(\.\d+)?$/.test(units) && Number(units) > 0;
+  const wanted = holding && validUnits ? parseUnits(units, holding.decimals) : null;
+  const shortOfAsset = wanted !== null && holding !== null && holding.balance < wanted;
+
+  async function check() {
+    if (!address || !mandateId || !asset) return;
+    setPlan(null);
+    setPhase({ kind: 'quoting' });
+    try {
+      const response = await fetch('/api/exit', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ asset, units, mandateId: mandateId.toString(), sender: address }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body?.error ?? `the quote failed (${response.status})`);
+      setPlan(body as WirePlan);
+      setPhase({ kind: 'idle' });
+    } catch (e) {
+      setPhase({ kind: 'failed', message: e instanceof Error ? e.message : String(e) });
+    }
+  }
+
+  async function sell() {
+    if (!plan || !walletClient || !publicClient || !address || !option) return;
+
+    const amountIn = BigInt(plan.leg.amountIn);
+    try {
+      // 1. Permit2 pulls through an ERC20 allowance the owner grants it once —
+      //    per token. The approval the entry path made was for USDG, so the
+      //    first exit in each asset needs its own.
+      const allowance = await publicClient.readContract({
+        address: plan.leg.asset,
+        abi: ERC20_ABI,
+        functionName: 'allowance',
+        args: [address, ADDR.permit2 as Address],
+      });
+      if (allowance < amountIn) {
+        setPhase({ kind: 'approving' });
+        const approval = await walletClient.writeContract({
+          address: plan.leg.asset,
+          abi: ERC20_ABI,
+          functionName: 'approve',
+          args: [ADDR.permit2 as Address, (1n << 160n) - 1n],
+          chain: option.chain,
+          account: address,
+        });
+        await awaitReceipt(publicClient, approval);
+
+        // Confirmed is not readable on this chain, and the next transaction
+        // depends on this allowance: gas estimation for it can revert against a
+        // node that has not seen the approval yet (D18). Waiting is cheaper than
+        // a failed estimate the user reads as a broken app.
+        let visible = false;
+        for (let attempt = 0; attempt < 30 && !visible; attempt++) {
+          const seen = await publicClient.readContract({
+            address: plan.leg.asset,
+            abi: ERC20_ABI,
+            functionName: 'allowance',
+            args: [address, ADDR.permit2 as Address],
+          });
+          visible = seen >= amountIn;
+          if (!visible) await new Promise((r) => setTimeout(r, 500));
+        }
+        if (!visible) {
+          throw new Error(
+            'the Permit2 approval was mined but is not readable yet — wait a moment and press ' +
+              'exit again rather than signing against state the chain has not served.',
+          );
+        }
+      }
+
+      // 2. The authorisation, over the asset being sold rather than the cash.
+      //    Same module the CLI exit uses; the signed struct names `spender` and
+      //    the calldata struct does not, because Permit2 reconstructs it from
+      //    `msg.sender`.
+      setPhase({ kind: 'signing' });
+      const payload = await buildPermit(publicClient, {
+        token: plan.leg.asset,
+        amount: amountIn,
+        spender: plan.executor,
+        owner: address,
+        chainId: option.chain.id,
+      });
+      const signature = await walletClient.signTypedData({
+        account: address,
+        ...payload.typedData,
+      });
+
+      const before = await publicClient.readContract({
+        address: plan.cash,
+        abi: ERC20_ABI,
+        functionName: 'balanceOf',
+        args: [address],
+      });
+
+      setPhase({ kind: 'sending' });
+      const hash = await walletClient.writeContract({
+        address: plan.executor,
+        abi: EXECUTOR_ABI,
+        functionName: 'exit',
+        args: [
+          BigInt(plan.mandate.id),
+          [
+            {
+              asset: plan.leg.asset,
+              amountIn,
+              minAmountOutUsdg: BigInt(plan.leg.minAmountOutUsdg),
+              fee: plan.leg.fee,
+            },
+          ],
+          payload.permit,
+          signature,
+          plan.thesis?.hash ?? ZERO_HASH,
+          plan.evidence.hash,
+          // evidenceCID — the bundle is pinned nowhere, so this stays empty
+          // rather than becoming a pointer to nothing (D57).
+          '',
+        ],
+        chain: option.chain,
+        account: address,
+      });
+
+      setPhase({ kind: 'mining', hash });
+      const receipt = await awaitReceipt(publicClient, hash);
+      if (receipt.status !== 'success') {
+        throw new Error(`the exit reverted on chain — ${hash}`);
+      }
+
+      // A confirmed receipt does not mean the next read lands on a node that has
+      // seen the block. Polling until the cash moves rather than reporting a
+      // zero for a sale that worked (D18).
+      setPhase({ kind: 'confirming', hash });
+      let received = 0n;
+      for (let attempt = 0; attempt < 30; attempt++) {
+        const after = await publicClient.readContract({
+          address: plan.cash,
+          abi: ERC20_ABI,
+          functionName: 'balanceOf',
+          args: [address],
+        });
+        if (after > before) {
+          received = after - before;
+          break;
+        }
+        await new Promise((r) => setTimeout(r, 500));
+      }
+
+      setPhase({ kind: 'done', hash, received, decimals: plan.cashDecimals });
+      setPlan(null);
+      setUnits('');
+      // The position this closed belongs to the panels above — the mandate's
+      // recorded position moved, a receipt now exists, and the fill panel's cash
+      // line just went up. The listener above re-reads this panel, so there is
+      // no explicit `load()` here.
+      window.dispatchEvent(new Event(FILLED_EVENT));
+    } catch (e) {
+      const code = (e as { code?: number })?.code;
+      if (code === 4001) {
+        setPhase({ kind: 'idle' });
+        return;
+      }
+      // A guard revert decodes into a sentence, because every refusal is in the
+      // ABI. Showing it verbatim is the product.
+      setPhase({
+        kind: 'failed',
+        message: (e as { shortMessage?: string }).shortMessage ?? (e as Error).message,
+      });
+    }
+  }
+
+  return (
+    <Card step={11} title="Exit a position">
+      <Note>
+        The reverse trade, and the same division of labour: the server simulates every fee tier and
+        asks the guard, your wallet does the approving, the signing and the sending. The permit here
+        names the <em>asset</em> rather than USDG, so each xStock needs its own one-off Permit2
+        approval.
+      </Note>
+
+      {!address ? (
+        <p className="text-[13px] text-dim">Connect a wallet to sell one.</p>
+      ) : !option ? (
+        <p className="text-[13px] text-caution">
+          This wallet is on a chain with no deployment. Switch to X&nbsp;Layer using the control in
+          the header.
+        </p>
+      ) : !mainnet ? (
+        <p className="text-[13px] leading-relaxed text-caution">
+          Only mainnet means anything here: X&nbsp;Layer testnet has no xStock pools, so there is
+          nothing to sell into. Switch to X&nbsp;Layer 196.
+        </p>
+      ) : loadError ? (
+        <div className="rounded-lg border border-refuse/40 bg-refuse/6 px-4 py-3">
+          <p className="font-mono text-[12px] leading-relaxed break-words text-refuse">
+            {loadError}
+          </p>
+          <p className="mt-1 text-[12px] text-faint">
+            The chain could not be read, which is not the same as holding nothing.
+          </p>
+        </div>
+      ) : mandates === null ? (
+        <p className="text-[13px] text-dim">Reading your mandates from the chain…</p>
+      ) : mandates.length === 0 ? (
+        <p className="text-[13px] leading-relaxed text-dim">
+          No mandate this wallet can exit through. An exit is a fill, so it needs the same mandate
+          an entry does — active, this wallet as both owner and agent, pointing at the executor
+          deployed here.
+        </p>
+      ) : (
+        <>
+          <div className="mb-1 flex flex-wrap items-end gap-4">
+            <label className="flex flex-col gap-1">
+              <span className="text-[10.5px] tracking-[0.09em] text-faint uppercase">mandate</span>
+              <select
+                value={mandateId?.toString() ?? ''}
+                onChange={(e) => setMandateId(BigInt(e.target.value))}
+                className="rounded-md border border-line bg-raised px-2 py-1 font-mono text-[12px] text-ink outline-none focus:border-signal-deep"
+              >
+                {mandates.map((m) => (
+                  <option key={m.id.toString()} value={m.id.toString()}>
+                    #{m.id.toString()}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="flex flex-col gap-1">
+              <span className="text-[10.5px] tracking-[0.09em] text-faint uppercase">sell</span>
+              <select
+                value={asset ?? ''}
+                onChange={(e) => setAsset(e.target.value as Address)}
+                className="rounded-md border border-line bg-raised px-2 py-1 font-mono text-[12px] text-ink outline-none focus:border-signal-deep"
+              >
+                {holdings.map((h) => (
+                  <option key={h.address} value={h.address}>
+                    {h.symbol}
+                    {h.balance === 0n ? ' — none held' : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="flex flex-col gap-1">
+              <span className="text-[10.5px] tracking-[0.09em] text-faint uppercase">units</span>
+              <span className="flex items-baseline gap-1.5">
+                <input
+                  value={units}
+                  inputMode="decimal"
+                  placeholder="0.0"
+                  onChange={(e) => setUnits(e.target.value)}
+                  className="w-32 rounded-md border border-line bg-raised px-2 py-1 font-mono text-[12px] text-ink outline-none focus:border-signal-deep"
+                />
+                <button
+                  onClick={() =>
+                    holding && setUnits(formatUnits(holding.balance, holding.decimals))
+                  }
+                  disabled={!holding || holding.balance === 0n}
+                  className="rounded-full border border-line bg-raised px-2 py-0.5 font-mono text-[10.5px] text-faint hover:text-ink disabled:opacity-40"
+                >
+                  all
+                </button>
+              </span>
+            </label>
+
+            <button
+              onClick={check}
+              disabled={busy || !asset || !validUnits || shortOfAsset}
+              className="rounded-full border border-line bg-raised px-4 py-1 font-mono text-[12px] text-ink hover:border-signal-deep disabled:opacity-40"
+            >
+              {phase.kind === 'quoting' ? 'quoting…' : 'quote & check'}
+            </button>
+          </div>
+
+          {holdings.length === 0 && (
+            <p className="mb-2 text-[13px] leading-relaxed text-dim">
+              This mandate allows no assets, so there is nothing it can sell. An exit is a fill and
+              the guard checks the allowlist, so an asset has to be allowed to be left.
+            </p>
+          )}
+
+          {holding && mandate && (
+            <p className="mb-2 font-mono text-[11px] text-faint">
+              you hold <Num>{formatUnits(holding.balance, holding.decimals)}</Num> {holding.symbol} ·{' '}
+              {/* An exit spends one of the epoch's fills. Showing it here rather
+                  than letting the user meet EPOCH_LIMIT at the quote: the point
+                  of a rate limit is to be visible before it binds. */}
+              {mandate.fillsThisEpoch}/{mandate.maxFillsPerEpoch} fills this epoch, and this would
+              be one
+              {mandate.breaker && (
+                <span className="text-refuse">
+                  {' '}
+                  · breaker tripped — exits are stopped too, release it above
+                </span>
+              )}
+            </p>
+          )}
+
+          {shortOfAsset && (
+            <p className="mb-2 text-[12px] leading-relaxed text-caution">
+              That is more {holding?.symbol} than this wallet holds. Permit2 authorises a pull, it
+              does not create the balance.
+            </p>
+          )}
+
+          {plan && <Plan plan={plan} />}
+
+          {plan?.verdict.allow && (
+            <>
+              <Legend>what you are about to sign</Legend>
+              <ul className="mb-3 grid gap-0.5">
+                {describePermit(
+                  {
+                    token: plan.leg.asset,
+                    amount: BigInt(plan.leg.amountIn),
+                    spender: plan.executor,
+                    owner: address,
+                    chainId: option.chain.id,
+                  },
+                  // The permit is built when you commit, moments from now, so
+                  // this is the TTL it will carry rather than one already
+                  // running.
+                  BigInt(Math.floor(Date.now() / 1000) + PERMIT_TTL_SEC),
+                  plan.symbol,
+                  plan.decimals,
+                ).map((line) => (
+                  <li key={line} className="font-mono text-[12px] text-dim">
+                    · {line}
+                  </li>
+                ))}
+              </ul>
+
+              <button
+                onClick={sell}
+                disabled={busy}
+                className="rounded-full border border-signal-deep bg-signal/6 px-4 py-1 font-mono text-[12px] text-signal hover:bg-signal/12 disabled:opacity-40"
+              >
+                {phase.kind === 'approving'
+                  ? `approving Permit2 for ${plan.symbol} in your wallet…`
+                  : phase.kind === 'signing'
+                    ? 'sign the permit in your wallet…'
+                    : phase.kind === 'sending'
+                      ? 'confirm the exit in your wallet…'
+                      : phase.kind === 'mining'
+                        ? 'mining…'
+                        : phase.kind === 'confirming'
+                          ? 'waiting for the chain to serve the balance…'
+                          : 'sign & exit'}
+              </button>
+            </>
+          )}
+
+          {phase.kind === 'confirming' && (
+            <p className="mt-3 text-[12px] leading-relaxed text-faint">
+              Mined. The public RPC load-balances, so a confirmed write is not immediately
+              readable — polling until the balance moves rather than reporting a zero (D18).
+            </p>
+          )}
+
+          {phase.kind === 'done' && (
+            <div className="mt-4 rounded-lg border border-signal-deep bg-signal/6 px-4 py-3">
+              {phase.received > 0n ? (
+                <p className="text-[13px] text-ink">
+                  Exited — <Num>{formatUnits(phase.received, phase.decimals)}</Num> USDG landed in
+                  your own wallet, net of the execution fee. The executor held it only long enough
+                  to split that fee off.
+                </p>
+              ) : (
+                <p className="text-[13px] leading-relaxed text-ink">
+                  Mined, and the USDG balance has not become readable within 15 seconds. The
+                  transaction is below — check it on the explorer rather than trusting a zero.
+                </p>
+              )}
+              {option.deployment.explorer && (
+                <a
+                  href={`${option.deployment.explorer}/tx/${phase.hash}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-1 block font-mono text-[11px] break-all text-faint hover:text-signal"
+                >
+                  {phase.hash}
+                </a>
+              )}
+            </div>
+          )}
+
+          {phase.kind === 'failed' && (
+            <div className="mt-4 rounded-lg border border-refuse/40 bg-refuse/6 px-4 py-3">
+              <p className="font-mono text-[12px] leading-relaxed break-words text-refuse">
+                {phase.message}
+              </p>
+            </div>
+          )}
+        </>
+      )}
+    </Card>
+  );
+}
+
+/** The decision, laid out before anything is signed. */
+function Plan({ plan }: { plan: WirePlan }) {
+  return (
+    <>
+      <Legend>quote</Legend>
+      <ul className="grid gap-0.5 font-mono text-[12px] tabular-nums">
+        <Row label="sells">
+          <Num>{formatUnits(BigInt(plan.units), plan.decimals)}</Num> {plan.symbol} for{' '}
+          <Num>{formatUnits(BigInt(plan.quote.amountOut), plan.cashDecimals)}</Num> USDG
+        </Row>
+        <Row label="price">
+          <Num>{e8(plan.predicted.executionPriceE8)}</Num>{' '}
+          <span className="text-faint">
+            per {plan.symbol}, gross of the execution fee · fee tier {plan.quote.feeTier} · pool{' '}
+            {plan.quote.pool.slice(0, 10)}…, the one the executor derives
+          </span>
+        </Row>
+        <Row label="floor">
+          {formatUnits(BigInt(plan.leg.minAmountOutUsdg), plan.cashDecimals)} USDG{' '}
+          <span className="text-faint">or the swap reverts</span>
+        </Row>
+        {plan.quote.considered.length > 1 && (
+          <Row label="tiers">
+            <span className="text-faint">
+              {plan.quote.considered
+                .map((c) => `${c.fee}: ${formatUnits(BigInt(c.out), plan.cashDecimals)}`)
+                .join(' · ')}
+            </span>
+          </Row>
+        )}
+      </ul>
+
+      <Legend>oracle</Legend>
+      <ul className="grid gap-0.5 font-mono text-[12px] tabular-nums">
+        <Row label="fair value">
+          {plan.oracle.hasValue ? (
+            <>
+              <Num tone={plan.oracle.stale ? 'caution' : undefined}>
+                {e8(plan.oracle.fairValueE8)}
+              </Num>{' '}
+              <span className="text-faint">
+                ±{(plan.oracle.confidenceBps / 100).toFixed(2)}% · {plan.oracle.ageSeconds}s old
+              </span>
+            </>
+          ) : (
+            <span className="text-caution">
+              withheld — the oracle will not defend a number for this asset
+            </span>
+          )}
+        </Row>
+        <Row label="shortfall">
+          {plan.oracle.stale || !plan.oracle.hasValue ? (
+            <span className="text-faint">
+              not measured — a value the oracle has stopped defending would compute a large false
+              shortfall, and the mandate&apos;s slippage limit would then block the exit. The
+              contract catches the same revert and does the same thing.
+            </span>
+          ) : (
+            <>
+              <Num tone={plan.predicted.shortfallBps > 100 ? 'caution' : undefined}>
+                {plan.predicted.shortfallBps}
+              </Num>{' '}
+              <span className="text-faint">bps below fair value</span>
+            </>
+          )}
+        </Row>
+        {plan.oracle.stale && (
+          <Row label="">
+            <span className="text-caution">
+              past the oracle&apos;s {plan.oracle.maxAgeSeconds}s freshness limit. On the way out
+              that is a warning, not a refusal — trapping an open position because the publisher
+              stopped would be worse than letting it leave (D56). The floor above is the protection.
+            </span>
+          </Row>
+        )}
+      </ul>
+
+      <Legend>verdict</Legend>
+      <div className="mb-1 flex flex-wrap items-center gap-2">
+        {plan.verdict.allow ? (
+          <Pill tone="ok">ALLOW — the guard would let this through</Pill>
+        ) : (
+          <Pill tone="warn">REJECT · {plan.verdict.reason}</Pill>
+        )}
+        {plan.verdict.offendingAsset && (
+          <span className="font-mono text-[11px] text-faint">on {plan.verdict.offendingAsset}</span>
+        )}
+      </div>
+      {!plan.verdict.allow && (
+        <p className="mb-2 text-[12px] leading-relaxed text-faint">
+          Asked before any gas was spent. The same check runs inside the transaction, so exiting
+          anyway would revert — this is the trip not taken, not a trip that failed.
+        </p>
+      )}
+
+      <ul className="grid gap-0.5 font-mono text-[11.5px]">
+        <Row label="evidence">
+          <span className="break-all text-dim">{plan.evidence.hash}</span>
+        </Row>
+        <Row label="">
+          <span className="text-faint">
+            {!plan.verdict.allow
+              ? 'hashed but not stored — nothing was decided to happen here'
+              : plan.evidence.stored
+                ? 'written to evidence/ — the hash binds, the file is how anyone checks it'
+                : 'not stored: this runtime has no writable filesystem. The hash still goes on chain'}
+          </span>
+        </Row>
+      </ul>
+    </>
+  );
+}
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <li className="flex flex-wrap items-baseline gap-3">
+      <span className="w-20 shrink-0 text-faint">{label}</span>
+      <span className="text-dim">{children}</span>
+    </li>
+  );
+}
