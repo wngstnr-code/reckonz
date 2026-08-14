@@ -4048,3 +4048,71 @@ Correct on both sides of the boundary, on real state, without anyone arranging i
 check on a one-minute timer against `https://reckonz.vercel.app/api/health`, alerting on non-2xx,
 is the whole remaining step and it takes minutes. Until that exists this is a thing a human can
 look at, which is better than nothing and is not the same as being told.
+
+---
+
+## D82 — One RPC was the whole product's single point of failure
+
+`rpc.xlayer.tech` was the only endpoint in the repo. Every quote, every capacity
+number, every oracle read, every fill and every read-back went through it, and
+it is a public RPC that throttles hard. One outage there and nothing works —
+`/api/health` (D81) would now say so clearly, which is an improvement on finding
+out by hand and no help whatsoever in staying up.
+
+**Endpoints were measured, not collected.** Seven commonly-listed X Layer RPCs
+were probed; three survived, and each was made to do the *actual work* rather
+than merely respond, because D35 is the rule here:
+
+| Endpoint | `eth_chainId` | `eth_call` `maxAge()` | latency |
+|---|---|---|---|
+| `rpc.xlayer.tech` | 0xc4 | 900s | 0.93s |
+| `xlayerrpc.okx.com` | 0xc4 | 900s | **0.21s** |
+| `xlayer.drpc.org` | 0xc4 | 900s | 2.06s |
+
+Rejected in the same pass: Ankr now requires a key (403), omniatech answered
+521, publicnode 404, 1rpc "unknown network". Testnet has two: `testrpc.xlayer.
+tech` and `xlayertestrpc.okx.com`, both chain 1952.
+
+**viem's `fallback`, with `rank: false`.** Ranking pings every endpoint on a
+timer to sort by latency, which against RPCs that throttle spends the request
+budget measuring the thing you were trying to conserve. Ordered failover costs
+nothing while the primary is healthy. The retry budget was redistributed rather
+than increased — two per endpoint, two passes, against the old flat six — so the
+same effort now spreads across hosts instead of hammering one.
+
+**`rpc.xlayer.tech` stays primary even though OKX's own endpoint is 4x faster**,
+and there is a test saying so. Every gas figure, latency note and receipt in this
+repo was taken through that host; switching the primary silently would make
+every number recorded before today incomparable to the ones after. Worth doing
+deliberately later, with a note. Not as a side effect.
+
+**`walletFor` uses the same transport**, from the same function, so reads and
+writes cannot drift onto different endpoint sets. It matters more on the write
+side, not less: the read-back that follows a write (D18) is the call most likely
+to hit a node that has not caught up.
+
+### Proven, then pinned
+
+Failover watched happening rather than assumed — a client with a dead primary
+ahead of the real three:
+
+```
+primary dead   -> block 67942755 in 1706ms (failed over)
+all dead       -> failed, as it must: HTTP request failed.
+```
+
+The second line matters as much as the first: a fallback that swallowed a total
+outage into a silent success would be worse than none.
+
+`pnpm verify` — the Uniswap math regression against live pool state — passes
+through the new transport, which is the check CLAUDE.md names for anything that
+touches chain access.
+
+The suite pins what measurement cannot: that each chain gets its own list (
+crossing them would send mainnet reads to testnet, where the same addresses hold
+different state), that no endpoint is duplicated (a duplicate is a wasted retry
+against a host that just failed, wearing the costume of redundancy), that there
+is still **more than one** — the regression being someone deleting the extras
+while debugging — and that the chain definitions carry the same lists as the
+transport, so a client built from `xLayer` rather than from `transportFor` is not
+quietly left on a single endpoint.

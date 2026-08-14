@@ -5,13 +5,76 @@
  * 0x1F98431c8aD98523631AE4a59f267346ea31F984. Resolved on-chain by reading
  * factory() on a live pool. Using an SDK default here fails silently.
  */
-import { createPublicClient, defineChain, http, type Address } from 'viem';
+import { createPublicClient, defineChain, fallback, http, type Address } from 'viem';
+
+/**
+ * Every X Layer endpoint we have verified, primary first.
+ *
+ * Until 2026-08-14 there was exactly one, and a single public RPC that throttles
+ * hard was the whole product's single point of failure: no quote, no capacity,
+ * no oracle read, no fill. `/api/health` (D81) would now say so, which is an
+ * improvement on finding out by hand and no help at all in staying up.
+ *
+ * **Measured, not collected from a list.** Each of these answered `eth_chainId`
+ * with the right chain *and* executed a real `eth_call` — `FairValueOracle.
+ * maxAge()`, all three returning 900s — because a deployed endpoint that
+ * responds proves nothing until a call that does the actual work succeeds
+ * against it (D35). Four other commonly-listed endpoints were rejected in the
+ * same pass: Ankr now requires a key (403), omniatech answered 521, publicnode
+ * 404, 1rpc "unknown network".
+ *
+ * Order is preference, not quality: `rpc.xlayer.tech` stays first because every
+ * measurement, gas figure and receipt in this repo was taken through it, and a
+ * silent switch of the primary would make those incomparable. OKX's own
+ * endpoint was in fact the fastest of the three (0.21s against 0.93s).
+ */
+export const XLAYER_RPCS = [
+  'https://rpc.xlayer.tech',
+  'https://xlayerrpc.okx.com',
+  'https://xlayer.drpc.org',
+] as const;
+
+export const XLAYER_TESTNET_RPCS = [
+  'https://testrpc.xlayer.tech',
+  'https://xlayertestrpc.okx.com',
+] as const;
+
+/**
+ * The transport, with the throttling budget this chain needs.
+ *
+ * `fallback` moves to the next endpoint when one errors — and `rank: false` is
+ * deliberate. Ranking makes viem ping every endpoint on a timer to sort them by
+ * latency, which against RPCs that throttle is a way to spend the request
+ * budget measuring the thing you were trying to conserve. Ordered failover
+ * costs nothing while the primary is healthy.
+ */
+/** Which endpoints belong to a chain. Pure, and the one place that decides. */
+export function rpcsFor(chainId: number): readonly string[] {
+  return chainId === 1952 ? XLAYER_TESTNET_RPCS : XLAYER_RPCS;
+}
+
+export function rpcTransport(urls: readonly string[]) {
+  return fallback(
+    urls.map((url) =>
+      http(url, {
+        batch: { batchSize: 12, wait: 24 },
+        retryCount: 2,
+        retryDelay: 400,
+        timeout: 30_000,
+      }),
+    ),
+    // Two passes over three endpoints before giving up, which keeps the old
+    // total retry budget (6) roughly intact while spreading it across hosts
+    // instead of hammering one.
+    { rank: false, retryCount: 2, retryDelay: 400 },
+  );
+}
 
 export const xLayer = defineChain({
   id: 196,
   name: 'X Layer',
   nativeCurrency: { name: 'OKB', symbol: 'OKB', decimals: 18 },
-  rpcUrls: { default: { http: ['https://rpc.xlayer.tech'] } },
+  rpcUrls: { default: { http: [...XLAYER_RPCS] } },
   contracts: {
     multicall3: { address: '0xcA11bde05977b3631167028862bE2a173976CA11' },
   },
@@ -21,23 +84,25 @@ export const xLayerTestnet = defineChain({
   id: 1952,
   name: 'X Layer Testnet',
   nativeCurrency: { name: 'OKB', symbol: 'OKB', decimals: 18 },
-  rpcUrls: { default: { http: ['https://testrpc.xlayer.tech'] } },
+  rpcUrls: { default: { http: [...XLAYER_TESTNET_RPCS] } },
 });
 
 /**
  * The public X Layer RPC throttles aggressively. Small JSON-RPC batches plus a
  * generous retry budget keeps the planner's thousands of reads from tripping
- * it — the simulation itself is offline, so this only costs us on load.
+ * it — the simulation itself is offline, so this only costs us on load. Since
+ * 2026-08-14 a failed endpoint hands over to the next rather than failing the
+ * read (D82).
  */
 export const client = createPublicClient({
   chain: xLayer,
-  transport: http(undefined, {
-    batch: { batchSize: 12, wait: 24 },
-    retryCount: 6,
-    retryDelay: 400,
-    timeout: 30_000,
-  }),
+  transport: rpcTransport(XLAYER_RPCS),
 });
+
+/** The same transport for testnet, exported so `wallet.ts` cannot drift from it. */
+export function transportFor(chainId: number) {
+  return rpcTransport(rpcsFor(chainId));
+}
 
 /** Serial map — the public RPC rejects wide fan-out. */
 export async function serial<T, R>(

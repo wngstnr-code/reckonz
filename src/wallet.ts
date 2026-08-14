@@ -6,9 +6,9 @@
  * confirms, and prints success. `TARGET=mainnet` is the only switch, and it is
  * read here so no script can disagree with another.
  */
-import { createWalletClient, http, publicActions, type Address, type Chain } from 'viem';
+import { createWalletClient, publicActions, type Address, type Chain } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { xLayer, xLayerTestnet } from './chain';
+import { transportFor, xLayer, xLayerTestnet } from './chain';
 import { MAINNET, TESTNET, type Deployment } from './deployments';
 
 export type Target = 'mainnet' | 'testnet';
@@ -53,7 +53,12 @@ export function walletFor(account: ReturnType<typeof accountFrom>, t: Target = t
   return createWalletClient({
     account,
     chain: chainFor(t),
-    transport: http(undefined, { retryCount: 6, retryDelay: 400, timeout: 30_000 }),
+    // The same failover the read client uses (D82), from the same place so the
+    // two cannot drift. It matters more here, not less: a write that fails
+    // because one endpoint is down still costs the caller a nonce's worth of
+    // uncertainty, and the read-back that follows it (D18) is the part most
+    // likely to hit a node that has not caught up.
+    transport: transportFor(chainFor(t).id),
   }).extend(publicActions);
 }
 

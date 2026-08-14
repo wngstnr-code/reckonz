@@ -64,7 +64,7 @@ pnpm dev                     # the web app — thesis in, guard verdict out
 pnpm build                   # next build (what Vercel runs); contracts are build:contracts
 pnpm typecheck               # covers src/ and app/
 pnpm test:sol                # 106 Foundry tests
-pnpm test:unit               # 206 unit tests over src/ — node:test, no runner dependency (D71)
+pnpm test:unit               # 212 unit tests over src/ — node:test, no runner dependency (D71)
 pnpm test                    # both suites
 pnpm check:tests             # both numbers, checked against every doc that states them (D60, D71)
 ```
@@ -147,6 +147,9 @@ TARGET=mainnet pnpm fees [withdraw]    # what the fee earned, and sweep it to th
 - **DexScreener does not index X Layer.** GeckoTerminal does, as network `x-layer`.
 - The public RPC throttles hard: serialise reads, batch ~12, retry with backoff. Use
   `serial()` from `src/chain.ts` rather than `Promise.all` over many RPC calls.
+- **There are three mainnet endpoints and two testnet ones, with failover** (D82). Add one only
+  after it has executed a real `eth_call`, not merely answered `eth_chainId`. `rpc.xlayer.tech`
+  stays primary on purpose: every recorded number in this repo was measured through it.
 - **The RPC load-balances, so a confirmed write is not immediately readable.** A read straight
   after a write can hit an unsynced node and return **zeroes, not an error** — and the gas
   estimation for a *dependent transaction* can revert for the same reason. Poll until the state
