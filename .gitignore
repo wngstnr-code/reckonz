@@ -17,3 +17,5 @@ tsconfig.tsbuildinfo
 
 # Throwaway probes. Never a place for anything that must survive.
 .scratch
+.vercel
+.env*.local

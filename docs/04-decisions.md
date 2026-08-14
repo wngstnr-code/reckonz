@@ -3911,15 +3911,37 @@ project, the store is not connected to it, so no `BLOB_READ_WRITE_TOKEN` reaches
 `EVIDENCE_BLOB_BASE` is still empty. Until both happen, production fills still report `none` —
 correctly and loudly now, which is the part that was broken.
 
-**A successful upload has never run.** The unit suite exercises the SDK against a deliberately
-invalid token and asserts the fallback to disk keeps the bundle, so the import, the call and the
-failure path are real. The success path is not, and D35 is the rule: an external dependency is
-unverified until a call that does the actual work succeeds against it. Three commands close it:
+### Closed the same day, and the last step taught something
 
-```bash
-vercel link                     # choose the reckonz project
-# connect reckonz-evidence to it (dashboard → Storage → Connect Project)
-vercel env pull .env.local      # BLOB_READ_WRITE_TOKEN lands locally
+The project was linked, the store connected, and `vercel env pull` returned **`BLOB_STORE_ID` and
+`VERCEL_OIDC_TOKEN` — and no `BLOB_READ_WRITE_TOKEN` at all.** The gate in `persistBundle` tested
+for exactly the variable that is no longer provisioned, so it would have skipped the archive in the
+only configuration we have. Read out of `@vercel/blob@2.8.0`'s own resolver rather than assumed:
+
+```
+if (BLOB_STORE_ID)         → { kind: "oidc", token: VERCEL_OIDC_TOKEN, storeId }
+if (BLOB_READ_WRITE_TOKEN) → { kind: "readWrite", … }
 ```
 
-then one fill against the store, and paste the returned host into `EVIDENCE_BLOB_BASE`.
+OIDC is tried **first**. `hasBlobCredentials()` now knows both shapes and is pinned by a test. This
+is D2 in miniature: the plausible-looking variable was not the one in play, and the package was one
+grep away.
+
+**Then the loop, proven end to end rather than asserted.** A bundle uploaded through
+`persistBundle`, the local copy deliberately absent, and `readEvidence` run with **every credential
+unset** — the position a verifier is in:
+
+```
+local copy exists: false
+fetched from the archive, kind = entry
+hash re-derives:   true
+```
+
+`EVIDENCE_BLOB_BASE` is pinned to `https://kqjdljzlkaan4s05.public.blob.vercel-storage.com`, which
+is **what the upload returned** rather than a URL inferred from the store id — the two do not look
+alike, and guessing it would have been D5's mistake. The probe object was deleted afterwards: a
+fake bundle sitting in the evidence namespace is a receipt that never existed, and the store now
+holds zero.
+
+What remains is a redeploy, so the running app picks up the connected store. Until then production
+answers `none` — correctly.

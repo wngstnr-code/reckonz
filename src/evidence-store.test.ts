@@ -14,7 +14,12 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { evidenceHash, type EvidenceBundle } from './evidence';
-import { describePersistence, evidenceKey, persistBundle } from './evidence-store';
+import {
+  describePersistence,
+  evidenceKey,
+  hasBlobCredentials,
+  persistBundle,
+} from './evidence-store';
 
 const BUNDLE: EvidenceBundle = {
   kind: 'entry',
@@ -88,8 +93,17 @@ test('a bundle that could not be stored says so, with the reason', async () => {
   // The production case. There is no token and the filesystem refuses, and the
   // result must carry a sentence a user can act on rather than a false.
   await inTempDir(async () => {
-    const token = process.env.BLOB_READ_WRITE_TOKEN;
+    // All three, not just the read-write token: the SDK authenticates with
+    // `BLOB_STORE_ID` + `VERCEL_OIDC_TOKEN` first, and a test that unset only
+    // the obvious one would quietly upload to the real store from CI.
+    const saved = {
+      rw: process.env.BLOB_READ_WRITE_TOKEN,
+      storeId: process.env.BLOB_STORE_ID,
+      oidc: process.env.VERCEL_OIDC_TOKEN,
+    };
     delete process.env.BLOB_READ_WRITE_TOKEN;
+    delete process.env.BLOB_STORE_ID;
+    delete process.env.VERCEL_OIDC_TOKEN;
     const readOnly = join(process.cwd(), 'not-a-directory');
     const cwd = process.cwd();
     // A file where `evidence/` wants to be: mkdir fails, and so does the write.
@@ -103,7 +117,9 @@ test('a bundle that could not be stored says so, with the reason', async () => {
       if (where.kind !== 'none') return;
       assert.match(where.reason, /not archived anywhere/);
     } finally {
-      if (token !== undefined) process.env.BLOB_READ_WRITE_TOKEN = token;
+      if (saved.rw !== undefined) process.env.BLOB_READ_WRITE_TOKEN = saved.rw;
+      if (saved.storeId !== undefined) process.env.BLOB_STORE_ID = saved.storeId;
+      if (saved.oidc !== undefined) process.env.VERCEL_OIDC_TOKEN = saved.oidc;
     }
   });
 });
@@ -117,6 +133,29 @@ test('the description of an unarchived bundle is loud, not neutral', () => {
     /archived at https/,
   );
   assert.match(describePersistence({ kind: 'file', path: 'evidence/0xabc.json' }), /written to/);
+});
+
+test('the credential check knows both shapes, and OIDC is the one Vercel provisions', () => {
+  // Read out of `@vercel/blob@2.8.0`'s own resolver: `BLOB_STORE_ID` +
+  // `VERCEL_OIDC_TOKEN` is tried *before* `BLOB_READ_WRITE_TOKEN`, and
+  // connecting a store to a project provisions the first pair and no static
+  // token at all. This gated on the read-write token until that was checked,
+  // which would have skipped the archive in the only configuration we have.
+  const saved = { ...process.env };
+  try {
+    delete process.env.BLOB_READ_WRITE_TOKEN;
+    delete process.env.BLOB_STORE_ID;
+    delete process.env.VERCEL_OIDC_TOKEN;
+    assert.equal(hasBlobCredentials(), false);
+
+    process.env.BLOB_STORE_ID = 'store_kqJdljzlkaaN4S05';
+    assert.equal(hasBlobCredentials(), false, 'a store id alone is not a credential');
+
+    process.env.VERCEL_OIDC_TOKEN = 'header.payload.signature';
+    assert.equal(hasBlobCredentials(), true);
+  } finally {
+    process.env = saved;
+  }
 });
 
 test('a broken token falls back to disk rather than losing the bundle', async () => {

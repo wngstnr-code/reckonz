@@ -19,8 +19,9 @@
  *
  * ## Three backends, in order, and none of them lie
  *
- *   1. **Vercel Blob**, when `BLOB_READ_WRITE_TOKEN` is set. Deterministic key,
- *      public read.
+ *   1. **Vercel Blob**, when this runtime has credentials for it — see
+ *      `hasBlobCredentials`, which is not the variable you would guess.
+ *      Deterministic key, public read.
  *   2. **The filesystem**, when it is writable — the CLI, and any local run. The
  *      repo's `evidence/` directory stays what it has always been.
  *   3. **Nothing**, reported as `none` with the reason.
@@ -48,14 +49,36 @@ import type { Hex } from 'viem';
  * none of our credentials. An env var here would mean verification only works
  * for us, which is the opposite of the point.
  *
- * Empty until the store is provisioned:
+ * The store is `reckonz-evidence` (`store_kqJdljzlkaaN4S05`, public, iad1), and
+ * this host is what a real upload returned on 2026-08-14 rather than a URL
+ * pattern inferred from the store id — D5, and the two do not look alike.
  *
- *     vercel blob create-store reckonz-evidence
- *
- * then paste the store's public host here. Until then production fills report
- * `none`, honestly, and the browser offers the download instead.
+ * The environment variable is an override for a fork running its own store, not
+ * the source of truth. Verification has to work for a stranger.
  */
-export const EVIDENCE_BLOB_BASE = process.env.EVIDENCE_BLOB_BASE ?? '';
+export const EVIDENCE_BLOB_BASE =
+  process.env.EVIDENCE_BLOB_BASE ?? 'https://kqjdljzlkaan4s05.public.blob.vercel-storage.com';
+
+/**
+ * Whether this runtime can talk to the blob store at all.
+ *
+ * **Two credential shapes, and the newer one is first** — read out of
+ * `@vercel/blob@2.8.0`'s own resolver rather than assumed:
+ *
+ *     if (BLOB_STORE_ID)         → { kind: "oidc", token: VERCEL_OIDC_TOKEN, storeId }
+ *     if (BLOB_READ_WRITE_TOKEN) → { kind: "readWrite", … }
+ *
+ * Connecting a store to a project now provisions `BLOB_STORE_ID` plus a
+ * short-lived `VERCEL_OIDC_TOKEN`, and **no** static read-write token. This
+ * function gated on `BLOB_READ_WRITE_TOKEN` alone until that was checked, which
+ * would have skipped the archive in exactly the configuration Vercel hands you
+ * — the D2 mistake in miniature: the documented-looking variable was not the one
+ * in play, and the package was one grep away.
+ */
+export function hasBlobCredentials(): boolean {
+  if (process.env.BLOB_READ_WRITE_TOKEN) return true;
+  return Boolean(process.env.BLOB_STORE_ID && process.env.VERCEL_OIDC_TOKEN);
+}
 
 export type Persistence =
   | { kind: 'blob'; url: string }
@@ -79,7 +102,7 @@ export async function persistBundle(bundle: EvidenceBundle): Promise<Persistence
   const hash = evidenceHash(bundle);
   const body = `${JSON.stringify(bundle, null, 2)}\n`;
 
-  if (process.env.BLOB_READ_WRITE_TOKEN) {
+  if (hasBlobCredentials()) {
     try {
       const { put } = await import('@vercel/blob');
       const result = await put(evidenceKey(hash), body, {
@@ -108,7 +131,7 @@ export async function persistBundle(bundle: EvidenceBundle): Promise<Persistence
     file ?? {
       kind: 'none',
       reason:
-        'no BLOB_READ_WRITE_TOKEN and the filesystem is read-only — this bundle is not archived anywhere',
+        'no blob store is reachable from this runtime and the filesystem is read-only — this bundle is not archived anywhere',
     }
   );
 }

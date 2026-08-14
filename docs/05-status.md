@@ -16,7 +16,7 @@ colliding. `06-assessment.md` is the honest read on whether this is a business.
 ```bash
 cd /Users/mac/Desktop/okxai
 set -a && source .env && set +a     # PRIVATE_KEY, GEMINI_API_KEY, CASH
-pnpm typecheck && pnpm test         # expect: clean, 195 unit tests, then 106 passed
+pnpm typecheck && pnpm test         # expect: clean, 196 unit tests, then 106 passed
 git status --short                  # expect: clean; docs/ is tracked now, not ignored
 pnpm dev                            # the web app, port 3000 (falls back if taken)
 ```
@@ -314,7 +314,7 @@ That single run exercises every claim the product makes. It is the demo.
 | **The submission post** | The account exists (see Project identity above); what is still required is a post from it mentioning `@XLayerOfficial` **at submission time**. Not done until that post is up. |
 | ~~Mainnet deployment~~ | ✅ **Done 2026-08-11.** Addresses in `src/deployments.ts`; oracle seeded, mandate #1 live, one real fill. |
 | **Google Form submission** | Required by 21 Aug 23:59 UTC. Read 2026-08-14 — it is **eight fields**: name, description, project URL, optional GitHub, contacts, optional X post URL. **No track selector, no video field, no deck.** So AI-RWA is inferred from the description alone, and the description is the highest-leverage artifact in the submission. Form and analysis in `00-hackathon.md`. |
-| **Repo visibility decision** | The repo is private, and the form has an optional `Github` field. **Sharpened 2026-08-14**: Disclaimer §4 says the Organizer will consider **code quality** — so leaving that field blank forfeits a stated criterion, and code quality (106 Foundry + 195 unit tests including a red-team suite over the compiler, CI, 14 of 14 verified contracts, an append-only decision log) is one of the few places we beat a polished demo. Decide before submitting: public, or grant access. |
+| **Repo visibility decision** | The repo is private, and the form has an optional `Github` field. **Sharpened 2026-08-14**: Disclaimer §4 says the Organizer will consider **code quality** — so leaving that field blank forfeits a stated criterion, and code quality (106 Foundry + 196 unit tests including a red-team suite over the compiler, CI, 14 of 14 verified contracts, an append-only decision log) is one of the few places we beat a polished demo. Decide before submitting: public, or grant access. |
 
 ### Blocking for a credible demo
 
@@ -340,13 +340,13 @@ That single run exercises every claim the product makes. It is the demo.
 
 | ~~**The oracle had one source and no second opinion**~~ — **cross-checked 2026-08-14 (D79)** | `src/crosscheck.ts`, between the engine and `publishMany`: the quote against itself, the spread against plausibility (2,000bp), the mid against our own `observations/` store (`max(8σ, 20%)`), and the value against the pool (50%). Every threshold derived from a number already measured here — see D79 for each derivation. It **withholds, never corrects**, publishing the shape an unpriceable asset already takes, and a check that cannot run reports `skipped` rather than `ok`. Run against live quotes for all 30 assets: **30 publishable, 0 withheld**. |
 
-| ~~**Evidence bundles were never stored in production**~~ — **fixed 2026-08-14 (D80), pending one account step** | Measured against the live app: `evidence.stored false`. Vercel's filesystem is read-only, so every fill placed through the website put a hash on chain whose bundle existed nowhere — the audit trail worked only on the machine it was written on. `src/evidence-store.ts` archives to Vercel Blob, falls back to disk, and otherwise reports `none` **with the reason**; `readEvidence` reads the archive as well as the disk, so `pnpm evidence` can verify a production fill from a fresh clone; and both panels offer the bundle as a download. Store created (`reckonz-evidence`, `store_kqJdljzlkaaN4S05`). **Still to do: link the project, connect the store, pin `EVIDENCE_BLOB_BASE`** — until then production reports `none`, correctly. |
+| ~~**Evidence bundles were never stored in production**~~ — **fixed 2026-08-14 (D80), pending one account step** | Measured against the live app: `evidence.stored false`. Vercel's filesystem is read-only, so every fill placed through the website put a hash on chain whose bundle existed nowhere — the audit trail worked only on the machine it was written on. `src/evidence-store.ts` archives to Vercel Blob, falls back to disk, and otherwise reports `none` **with the reason**; `readEvidence` reads the archive as well as the disk, so `pnpm evidence` can verify a production fill from a fresh clone; and both panels offer the bundle as a download. Store `reckonz-evidence` (`store_kqJdljzlkaaN4S05`) is created, connected and **proven**: a bundle uploaded, the local copy absent, every credential unset, `readEvidence` fetched it from the archive and the hash re-derived. `EVIDENCE_BLOB_BASE` is pinned to the host the upload actually returned. **Left: one redeploy** so the running app picks up the store. |
 
 ### Known gaps in the work itself
 
-- **No successful blob upload has run yet.** D80's fallback path is tested against an invalid
-  token; the success path needs the store connected to the project. Until that happens the archive
-  is written code, not proven code — D35.
+- **The deployed app has not picked up the blob store yet.** D80 is proven locally against the real
+  store; production keeps answering `none` until the next deploy, which is correct and is also the
+  last step.
 - **The cross-check's history arm lapses without the worker.** Its window is 48 hours, so with
   nothing sampling, `step-vs-history` degrades to `skipped` within two days of the last mark — the
   arm that closes D41's re-anchoring hole is exactly the one that needs the publish worker up. One
