@@ -313,15 +313,15 @@ That single run exercises every claim the product makes. It is the demo.
 |---|---|
 | **The submission post** | The account exists (see Project identity above); what is still required is a post from it mentioning `@XLayerOfficial` **at submission time**. Not done until that post is up. |
 | ~~Mainnet deployment~~ | ✅ **Done 2026-08-11.** Addresses in `src/deployments.ts`; oracle seeded, mandate #1 live, one real fill. |
-| **Google Form submission** | Required by 21 Aug 23:59 UTC. Link in `00-hackathon.md`. |
-| **Repo visibility decision** | The repo is private. The rules do not demand a public one, but judges scoring "product completeness" will want to read it. Decide before submitting: make it public, or grant access. |
+| **Google Form submission** | Required by 21 Aug 23:59 UTC. Read 2026-08-14 — it is **eight fields**: name, description, project URL, optional GitHub, contacts, optional X post URL. **No track selector, no video field, no deck.** So AI-RWA is inferred from the description alone, and the description is the highest-leverage artifact in the submission. Form and analysis in `00-hackathon.md`. |
+| **Repo visibility decision** | The repo is private, and the form has an optional `Github` field. **Sharpened 2026-08-14**: Disclaimer §4 says the Organizer will consider **code quality** — so leaving that field blank forfeits a stated criterion, and code quality (242 tests, CI, 14/14 verified contracts, an append-only decision log) is one of the few places we beat a polished demo. Decide before submitting: public, or grant access. |
 
 ### Blocking for a credible demo
 
 | Item | Notes |
 |---|---|
 | ~~Real fill on mainnet~~ | ✅ **Done 2026-08-11.** `0x7240759d327d468f9a7086ed439abf42dead17887105d986ca0870ebf46d6545` — 0.5 USDG into wSPYx, guard and receipt in the same transaction. |
-| **Demo video / walkthrough** | Not started. The web app is now the thing to record. **Script it from the corrected positioning (D49), not from memory** — two of the three "nobody does this" claims are dead, and the ICE/OKX context is the strongest card available. |
+| **Demo video / walkthrough** | Not started, and **not a submission requirement** — the form has no video field (checked 2026-08-14). Still worth linking from the description or the site, but it now competes for time rather than blocking. The web app is now the thing to record. **Script it from the corrected positioning (D49), not from memory** — two of the three "nobody does this" claims are dead, and the ICE/OKX context is the strongest card available. |
 | ~~Deploy the web app~~ | ✅ **https://reckonz.vercel.app** — verified end to end in production: live Gemini, 30-asset universe, capacity-limited plan, 1/2 assets would execute. |
 | ~~**Wallet connect**~~ — **built 2026-08-12** | The header connects, switches between 1952 and 196, and hands out a viem `WalletClient`. EIP-6963 + viem's `custom()` transport, so no wallet library and no change to `package.json`. No WalletConnect, therefore no mobile QR path. Taken over from FE, see `07-team.md`. |
 | ~~**Mandate creation in the UI**~~ — **built 2026-08-12** | `app/components/Mandate.tsx`: set the blast radius, pick assets from `GET /api/universe`, `createMandate` from the user's own wallet, then poll until the mandate is readable (D18) and show its id with an explorer link. The user is `owner` *and* `agent`; `executor` is the deployed `Executor`, which is what `Executor.execute` checks before it will pull funds. **Not yet exercised against a real wallet extension** — see below. |

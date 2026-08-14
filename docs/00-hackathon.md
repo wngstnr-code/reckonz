@@ -25,10 +25,71 @@ Hard requirements — failing any one makes the project ineligible:
 
 Target: **AI-RWA track + Hackathon Grant = 80k**.
 
-## Judging criteria (from the T&C)
+## Judging criteria — there are **three** lists, not one
+
+Read from the live page 2026-08-14; it matches `hackathon.md` word for word, so nothing has been
+amended since we copied it. But this file quoted only the first of three, and the two it skipped
+are the ones that favour us.
+
+**T&C §4 — the general one.**
 
 > application of AI, innovation, product completeness, user value, integration with
 > X Layer, growth potential, and contribution to the X Layer ecosystem
+
+**Disclaimer §4 — what the Organizer says it will actually look at.**
+
+> The Organizer will consider **onchain data, code quality, innovation, and market potential**.
+> Final rankings will be determined at the Organizer's sole discretion.
+
+Two words there are not in the first list and are two of our strongest assets. **Onchain data**:
+18 receipts on mainnet, every one carrying an evidence hash that `pnpm evidence` re-derives, plus
+a fee collector that has actually taken revenue. **Code quality**: 106 Foundry + 136 unit tests,
+CI on every push, all fourteen deployed addresses verified on Sourcify, and a decision log that
+records the mistakes rather than hiding them. Neither is visible from a demo — both need the repo
+and the explorer, which is the next section.
+
+**Liquidity Grant FAQ — the criteria for the 50k, which is our actual target.**
+
+> The Organizer will evaluate projects based on their overall performance during the Hackathon,
+> including **product quality, innovation, user value, and contribution to the ecosystem**. The
+> best-performing project will receive the grant.
+
+Note what this one *drops*: "application of AI" and "integration with X Layer" are not in it. The
+50k is decided on product, not on how much AI is in the product. That is worth knowing before
+writing copy that leads with the LLM.
+
+## The submission form — read 2026-08-14, and it is eight fields
+
+This changes what is worth spending the last week on. The whole submission is:
+
+| Field | Required | Ours |
+|---|---|---|
+| Project Name | ✅ | Reckonz |
+| **Project Description** | ✅ | **the single highest-leverage artifact in the entire submission** |
+| **Project URL** | ✅ | reckonz.vercel.app |
+| **Github** | optional | ⚠️ **the repo is private** — see below |
+| Email / Telegram / X handle | ✅ | |
+| X post URL | optional | the `@XLayerOfficial` post |
+
+Three consequences, and each one moves an item on the status board.
+
+**1. There is no track selector.** Nothing in the form asks which track you are in — so **AI-RWA is
+inferred from the description**. The 50k Liquidity Grant is awarded to "the best-performing project
+in the AI-RWA track", and the only way we enter that track is by writing a description that
+unmistakably says *tokenised real-world assets*. If the description reads as "AI trading agent",
+we are competing for the 30k against every trading agent instead of for the 50k in a thinner field.
+This is the whole strategic bet in `## Prizes` above, and it lives or dies in one text box.
+
+**2. There is no video field, and no deck field.** "Demo video / walkthrough" has been sitting on
+the status board as *blocking for a credible demo* — it is **not blocking for submission**. It can
+still earn its place linked from the description or the site, but it is now a choice, not a
+requirement, and it competes for time with the description and the repo.
+
+**3. `Github` is optional, and the repo is private — while "code quality" is a stated criterion.**
+These two facts have to be resolved together. A private repo means the Disclaimer §4 criterion has
+nothing to read, and code quality is one of the few places we would beat a polished demo. The
+"repo visibility decision" item stops being administrative: leaving the field blank forfeits a
+criterion the Organizer says it will consider.
 
 ## What the previous hackathon reveals
 
@@ -147,16 +208,25 @@ the owner's Permit2 signature can activate it, and the server never holds a key.
 whatever it does with the answer. TraceGuard Relay sells a weaker version of that for
 0.15 USDT/use.
 
-**3. The one structural gap: we are not an ASP.** Every Best Product winner has an
-`okx.ai/agents/<id>` listing, the marketplace is live and monetised, and `05-status.md` has
-carried "ASP / x402 registration — unblocked and simply not started" for days. This is the item
-that has moved from *nice-to-have* to *the thing every winner did*.
+**3. ~~The one structural gap: we are not an ASP.~~ — corrected the same day, and the correction
+matters more than the point did.**
 
-Two honest caveats before anyone treats it as free. Leadpoet's own listing reads
-**"This ASP is under review"** — so a submission now may not be publicly visible by judging, and
-the artifact we would be relying on is the registration plus a working endpoint, not a live
-storefront. And it is the only item on this list that is a *build* rather than a rewrite: the
-other two are copy.
+Written after reading the Best Product thread, before re-reading *our own* rules. Every Genesis
+winner is an ASP at `okx.ai/agents/<id>` because **Genesis was the agent-marketplace hackathon** —
+the build-x-series page lists it as its own event, ended 27 Jul. AI Season is a different
+competition with different rules, and its requirements are: AI in the product, deployed on X Layer
+testnet then mainnet, a dedicated X account, a post tagging `@XLayerOfficial`, and the Google Form.
+**`okx.ai` and ASPs appear nowhere in them.**
+
+So registering is *not* a requirement and there is no evidence it is a criterion here. It could
+argue for "contribution to the X Layer ecosystem", which is a real line in T&C §4 — but that is an
+inference, and it would be the only *build* on a list where everything else is writing. Reading
+one competition's results and inferring another's rules is exactly the mistake D2 is in this repo
+to prevent: **never trust a summary when the primary source is one click away.**
+
+What survives from the Best Product round is points 1 and 2 above, which are about how we describe
+what already exists. Those hold regardless of which hackathon announced them, because they are
+about how these particular judges read a product.
 
 **What not to do.** Not breadth. Seven days out, with a loop that closes on mainnet and two suites
 guarding it, the failure mode is starting something that is half-finished on 21 Aug. `06-assessment.md`
