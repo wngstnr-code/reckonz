@@ -119,6 +119,11 @@ FE should not sit idle waiting for BE. Two unblocks:
 - **The fixture provider.** `src/thesis-fixture.ts` produces a deterministic compile — no LLM
   call, no API key, same output every time. Use it to build UI without burning two minutes and a
   Gemini quota per iteration.
+
+  **Ask for it by name: `LLM_PROVIDER=fixture pnpm dev`.** It used to be what you got automatically
+  with no key, which meant a real thesis pasted into the box came back as the recorded one and
+  looked like a working compile. Since D69 a missing key is an error instead. Nothing about the
+  fixture changed — only that it has to be chosen.
 - **A captured stream.** Run the app once, save the SSE events to a JSON file, replay them from a
   local mock. A recorded run is a perfectly good fixture and it is instant.
 
@@ -135,6 +140,13 @@ FE should not sit idle waiting for BE. Two unblocks:
 > (`page.tsx`, `ui.tsx`, `useWallet.ts`, `Mandate.tsx`, `MandateManage.tsx`). Every crossing is
 > listed file by file in `07-team.md § 3`. If you have any of them open on a branch, read that
 > before you rebase.
+
+> **And again, 2026-08-14.** Six commits straight to `main`: the browser exit, the CLI rebuilt on
+> the same planner, the mandate policy editor, and the two receipts they produced. Recorded for the
+> same reason as the entry above — **four files under `app/` changed, three of which already
+> existed**: `page.tsx` (one import, one `<Exit />`), `Fill.tsx` (a `reckonz:filled` listener, and
+> one `load()` removed), and `MandateManage.tsx` (the four owner-only calls that were CLI-only).
+> `app/components/Exit.tsx` is new. Every crossing is listed file by file in `07-team.md § 3`.
 
 ```bash
 git switch -c fe/wallet-connect     # FE prefix: fe/

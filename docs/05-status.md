@@ -316,15 +316,19 @@ That single run exercises every claim the product makes. It is the demo.
 | ~~Deploy the web app~~ | ✅ **https://reckonz.vercel.app** — verified end to end in production: live Gemini, 30-asset universe, capacity-limited plan, 1/2 assets would execute. |
 | ~~**Wallet connect**~~ — **built 2026-08-12** | The header connects, switches between 1952 and 196, and hands out a viem `WalletClient`. EIP-6963 + viem's `custom()` transport, so no wallet library and no change to `package.json`. No WalletConnect, therefore no mobile QR path. Taken over from FE, see `07-team.md`. |
 | ~~**Mandate creation in the UI**~~ — **built 2026-08-12** | `app/components/Mandate.tsx`: set the blast radius, pick assets from `GET /api/universe`, `createMandate` from the user's own wallet, then poll until the mandate is readable (D18) and show its id with an explorer link. The user is `owner` *and* `agent`; `executor` is the deployed `Executor`, which is what `Executor.execute` checks before it will pull funds. **Not yet exercised against a real wallet extension** — see below. |
-
 | ~~**Simple mode in the UI**~~ — **built 2026-08-12** | `app/components/Theses.tsx`: every published thesis with its basket derived from settled fills, its notional-weighted slippage, whether it was published before every fill, and the receipts underneath — plus the unattributed receipts and any orphaned hashes, rendered rather than dropped. It reads `GET /api/theses`, so the page and `pnpm track-record` cannot disagree (D28). **Follow** hands the executed basket to the mandate form (`app/components/follow.ts`, a one-way DOM event) which preselects those assets and nothing else — the caps, the size and the signature stay with the follower. A followed thesis's hash is carried into the fill below, so a follower's execution lands back in that thesis's track record. |
 | ~~**Fill from the browser**~~ — **done 2026-08-12, receipt #15 on mainnet** | `app/components/Fill.tsx` + `POST /api/fill` + `src/fill.ts` (D64). The server quotes, checks the pool the executor derives, reads the oracle, runs `dryRun` and hashes the evidence; the browser approves Permit2, signs an authorisation scoped to one token/amount/spender/20 minutes, and sends `execute`. **No key on the server.** **Exercised end to end against the OKX extension** (D65): receipt **#15**, tx `0xcdb607a8…`, 0.49925 USDG into wSPYx at 776.8877 against fair value 776.9450 — 0 bps slippage, gap 4 — carrying thesis #0's hash and evidence `0xf0e8df15…`, which `pnpm evidence` re-derives. It appears in thesis #0's track record on the same page. Two bugs were in the way and are fixed: `useWallet` gave every component its own connection, and `waitForTransactionReceipt` never returned through the injected provider — the replacement is `app/components/awaitReceipt.ts`, proven by tripping and releasing the breaker from the browser (two writes, no funds moved). The connection now survives a reload, and Follow re-points the asset at the thesis's basket. |
+| ~~**Exit from the browser**~~ — **done 2026-08-14, receipt #16 on mainnet** | `app/components/Exit.tsx` + `POST /api/exit` + `src/exit-plan.ts` (D68), the mirror of the fill chain. Entering was a page and leaving was a terminal, which is the wrong asymmetry for risk tooling. The permit names the **asset** rather than USDG, so each xStock needs its own one-off Permit2 approval; size is named in units rather than as a dollar target, so a stale oracle cannot decide how much you may sell. **Exercised end to end against the OKX extension:** receipt **#16**, tx `0x85501e91…`, 0.0005 wTSLAx → 0.169961 USDG gross (0.169707 net) at fee tier 500, evidence `0xedaeaefc…` which `pnpm evidence` re-derives. The oracle was 158,738s stale and the receipt records `slippageBps: 0` with `fairValueE8: 0` — the guard catching its own Stale revert, which is what the off-chain mirror predicted. `src/exit.ts` now calls the same planner, so the CLI cannot drift from it. |
+| ~~**Mandate policy editing in the UI**~~ — **built 2026-08-14** | `updatePolicy`, `setAgent`, `setExecutor` and `setAssetAllowed` are in `MandateManage` (D70). The policy form is pre-filled and sends the **whole** struct back, because `updatePolicy` replaces wholesale. Field widths are checked before gas. |
 
 ### Known gaps in the work itself
 
 - ~~**Claude provider never executed**~~ — **deleted 2026-08-12 (D59)**. Gemini is the only live
-  provider; the fixture is the floor. The risk was never the unused code, it was that
-  `pickProvider` selected on whichever credential happened to be present.
+  provider. The risk was never the unused code, it was that `pickProvider` selected on whichever
+  credential happened to be present.
+- ~~**The fixture answered anything**~~ — **fixed 2026-08-14 (D69)**. With no `GEMINI_API_KEY` the
+  compile stage returned the same recorded thesis for any input. It was labelled, which is not the
+  same as honest. It now needs `LLM_PROVIDER=fixture`; a missing key is an error with a sentence.
 
   **Scheduled: deploy the worker 18–19 Aug 2026**, two to three days before submission closes, and
   leave it up through judging. Not before — the web app needs no publishing at all, since fair
@@ -399,6 +403,8 @@ and the fee swept (`0x5004b6fa…`) — `FeeCollector` went to **0 USDG** and th
   — **`pnpm mandate:edit <id> close|agent|asset|policy|trigger`**, plus the browser panel below.
   Every one is owner-checked before gas, read back after writing, and `trigger add` appends to the
   existing set rather than replacing it, because `setTriggers` replaces wholesale on chain.
+  **All of them are in the browser too as of 2026-08-14 (D70)**, `setExecutor` included — the panel
+  had only the breaker, close and triggers, which left the rules themselves CLI-only.
 - ~~**`getPosition` and `getTriggers` are never surfaced**~~ — **`pnpm mandate:show [id]`** and
   `app/components/MandateManage.tsx`: policy, allowed assets with recorded positions, decoded
   triggers, what is firing, and which assets have a stale oracle.
@@ -482,7 +488,36 @@ worker down; either is fine, silently running dry is not.
 
 ## Log
 
-**2026-08-12 (latest, sixteenth)** — **the last unlicensed source is deleted, and the gaps D62 left
+**2026-08-14 (latest, seventeenth)** — **the way out is a page** (D68). `src/exit-plan.ts` →
+`POST /api/exit` → `app/components/Exit.tsx`, the mirror of the fill chain and the same split:
+the server simulates every fee tier in the sell direction, checks the pool the executor derives,
+reads the oracle, asks `dryRun` and hashes the evidence; the wallet approves, signs and sends. The
+permit names the **asset**, so each xStock needs its own Permit2 approval, and size is named in
+units rather than as a dollar target — `pnpm exit` converts dollars through the oracle, which lets
+a stale value decide how much you may sell. Verified against mainnet mandate #1 with the oracle
+**43h stale**: 0.0005 wTSLAx → 0.169961 USDG at fee tier 500, shortfall 0, `dryRun` **ALLOW** — then
+signed in the OKX extension and sent: **receipt #16**, tx `0x85501e91…`, 585,619 gas, 0.169707 USDG
+net into the owner wallet. The receipt records `slippageBps: 0` and `fairValueE8: 0`, which is the
+guard catching its own `Stale` revert — the off-chain mirror checked against the chain. **Receipt
+#17** is the same trade from the rewritten CLI (tx `0xa6c68a5e…`, 0.0002 wTSLAx → 0.067879 USDG net),
+whose printed plan now comes from `prepareExit`. Two receipts, two front ends, one planner.
+
+Two things were found on the way. `pnpm exit` measured shortfall against `peek` unconditionally and
+fed it into `dryRun`, while `Executor._exitShortfallBps` reads through `observation` and returns
+**zero** when it reverts — so with a stale oracle the CLI could refuse an exit the chain would have
+executed. Rather than patch the second copy, **`src/exit.ts` now calls `prepareExit`** and does
+nothing but parse arguments, hold a key and send; it also gained `--units` and became mainnet-only,
+which it silently always was (`pool.ts` reads the mainnet client whatever TARGET says). And
+`pnpm mandate:show` was still printing *"a stale value blocks exits too (D51)"*, which D56 made
+false — corrected in place.
+
+Also: **the fixture has to be asked for** (D69) — no `GEMINI_API_KEY` used to mean the compile
+stage answered any input with the same recorded thesis, labelled but not honest. It now needs
+`LLM_PROVIDER=fixture`. And **the mandate is governable from the browser** (D70): `updatePolicy`,
+`setAgent`, `setExecutor` and `setAssetAllowed` join the breaker, close and triggers in
+`MandateManage`. `pnpm typecheck` and `pnpm build` clean.
+
+**2026-08-12 (sixteenth)** — **the last unlicensed source is deleted, and the gaps D62 left
 are closed** (D63). Four things, none of them large on their own.
 
 **`PUBLISH_SYMBOLS`** narrows what the publisher writes. Measured on chain, not estimated: 919,563

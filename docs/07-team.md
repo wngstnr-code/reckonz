@@ -210,7 +210,8 @@ separately as `unattributed`. Render them; dropping them would overstate the dis
 Updated 2026-08-11 after D38–D42.
 
 - ~~**Claude provider is typechecked and has never executed**~~ — **removed 2026-08-12 (D59)**.
-  Gemini Flash 3.6 is the only live provider and the fixture is the floor. Bring-your-own-key
+  Gemini Flash 3.6 is the only live provider; the fixture is a deliberate choice rather than a
+  fallback since D69, so no key now means an error rather than a recorded answer. Bring-your-own-key
   (D43) was aimed at this gap and would not have closed it: a path is unproven until it runs once,
   whoever pays. Deleting it was the closure.
 - ~~**Yahoo Finance is not a production data source.** The blocker is licensing, not engineering.~~ — **done 2026-08-12 (D62).** The oracle now prices from the issuer's own mark. Yahoo is **deleted** (D63); the gap σ now comes from `observations/`, sampled from the issuer by the publish worker.
@@ -371,6 +372,26 @@ gained a listener each: `Mandate.tsx` fires `reckonz:mandates-changed` after it 
 `MandateManage.tsx` re-reads on that and on `reckonz:filled`. Both are additive — a `useEffect`
 and an import, nothing existing rewritten. Without them, creating a mandate left the fill panel
 saying none existed, and a fill left positions and the track record showing pre-trade state.
+
+**Twice more on 2026-08-14, for the exit and the policy editor.** New file
+`app/components/Exit.tsx` (panel 11), plus one import and one `<Exit />` in `app/page.tsx`
+immediately after `<Fill />`. Nothing else in `page.tsx` changed.
+
+`app/components/MandateManage.tsx` is the one existing file with real new surface in it: the four
+owner-only calls that were CLI-only (`updatePolicy`, `setAgent`, `setExecutor`, `setAssetAllowed`),
+added as new sub-components at the bottom of the file plus four blocks inside the mandate card. The
+existing render — positions, triggers, the trigger form, the breaker and close buttons — is
+untouched, and every new write goes through the `write()` helper that was already there. If you
+have this file open on a branch, that is where the conflict will be.
+
+`app/components/Fill.tsx` gained three lines and lost one: it now listens for `reckonz:filled` as
+well as `reckonz:mandates-changed`, because an *exit* raises the USDG that panel reports and it was
+showing a balance the chain had already left behind. The explicit `load()` it ran after dispatching
+that event is gone — the listener does it, and doing both walked the chain twice at once against an
+RPC that throttles.
+
+Reword any of the copy. What has to stay true: the policy form sends the **whole** struct back
+(`updatePolicy` replaces wholesale), and disallowing an asset does not sell it.
 
 ### 4. The logo — asset ready, drop-in is yours
 

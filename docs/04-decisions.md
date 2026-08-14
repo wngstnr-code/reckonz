@@ -3160,3 +3160,127 @@ costs one HTTP call and no gas, so it stays.
 The growth is worth knowing before it is a surprise: ~113 bytes per mark × 28 assets × 144 cycles a
 day ≈ **455 KB/day, ~14 MB/month**. With the volume, none of that reaches git until someone merges
 on purpose.
+
+---
+
+## D68 — The way out is a page now, and the CLI has been mismeasuring it
+
+`Fill` could enter a position from the browser since D65. Leaving one was still `pnpm exit` in a
+terminal. For a product whose claim is *risk tooling* that is the wrong asymmetry: the moment you
+most want out is the moment you are least able to go and find a shell.
+
+**Built: `src/exit-plan.ts` → `POST /api/exit` → `app/components/Exit.tsx`**, the mirror of the
+`fill.ts` / `/api/fill` / `Fill.tsx` chain and with the same split — the server simulates, checks
+the derived pool, reads the oracle, asks `dryRun` and hashes the evidence; the wallet approves,
+signs and sends. No key on the server side, as before.
+
+Three things differ, and all three are the direction:
+
+- **The permit names the asset, not the cash.** So each xStock needs its own one-off Permit2
+  approval, and the panel says so before the user meets a second wallet prompt they did not expect.
+- **Shortfall is measured below fair value**, inverted from the entry path.
+- **Size is named in units, not in dollars.** `pnpm exit` converts a USDG target into units through
+  `observation.fairValueE8`, which means a stale or silent oracle decides how much you are allowed
+  to sell — D51's trap in a different costume. The browser already knows the wallet balance, so the
+  caller names units and the oracle is left doing the one job it has.
+
+### The correction: `pnpm exit` can talk itself out of an exit the chain would allow
+
+`Executor._exitShortfallBps` reads through `observation`, which **reverts** on `Stale` and `NoData`,
+and catches it — returning **zero**. That is deliberate and it is the whole of D56 one layer down: a
+value the oracle has stopped defending, measured against a market that has since moved, computes an
+enormous false shortfall, and `maxSlippageBps` then blocks the exit.
+
+`src/exit.ts` measures against `peek` unconditionally and feeds that number into `dryRun`. So with a
+stale oracle it can print `guard would REJECT: SLIPPAGE` and stop, for a transaction the contract
+would have executed. `exitShortfallBps` in `exit-plan.ts` mirrors the Solidity instead — stale or
+absent means zero — and the panel says why the number is absent rather than showing a blank.
+
+**The fix was not to patch it.** Patching the second copy leaves two copies of arithmetic that
+decides whether the guard rejects, which is how they diverged in the first place. `src/exit.ts` now
+*calls* `prepareExit` and does nothing else but parse arguments, hold a key and send a transaction —
+so the CLI and the browser cannot disagree about a price, a floor, a shortfall or an evidence hash,
+by construction rather than by discipline. Two things fell out of it:
+
+- **`pnpm exit` is mainnet-only now, and says so.** `pool.ts` reads through the mainnet-pinned
+  `client` in `chain.ts` whatever `TARGET` says, so `TARGET=testnet pnpm exit` had always quoted
+  mainnet pools while writing to testnet. Testnet has no xStock pool to sell into either. Refusing
+  is honest; the silence was not.
+- **`--units` exists.** The dollar-target path is kept for compatibility and still sizes through the
+  oracle, but it now refuses rather than guesses when the oracle has never published or has no
+  publishable value, and points at `--units` — which consults the oracle for nothing at all.
+
+### Verified on mainnet, from the browser, 2026-08-14
+
+**Receipt #16**, tx `0x85501e9180f290b8ae6dfcdcc07ac85e4c4d1bdc48af07cd012b47c899e78414`, block
+67918335, 585,619 gas. 0.0005 wTSLAx sold for **0.169961 USDG** gross at fee tier 500, 0.169707 net
+of the 15 bps fee, into the owner's own wallet. Signed in the OKX extension; the server never held a
+key.
+
+The number that matters is `slippageBps: **0**` in the receipt, with the oracle 158,738s stale and
+`fairValueE8` stamped **0** by the guard. That is the contract catching its own `Stale` revert and
+returning zero — and it is exactly what `exitShortfallBps` predicted off-chain. The mirror is now
+checked against the chain rather than against a careful reading. The old inline copy would have
+computed a shortfall against a 43-hour-old value and could have refused this exit outright.
+
+`pnpm evidence 0xedaeaefc…` re-derives the bundle from the file and matches.
+
+**Receipt #17** is the same trade from the rewritten CLI, minutes later: tx
+`0xa6c68a5ef98044c8a1b3c0124e2d8c0f6ef25f776305c1479ee86c85d75d62f6`, block 67918758, 584,298 gas,
+0.0002 wTSLAx → 0.06798 USDG gross, 0.067879 net. Same pool, same floor derivation, `slippageBps: 0`
+again — and the point of running it is that the printed plan came from `prepareExit`, not from a
+second copy. Two receipts, two front ends, one planner.
+
+### Left out on purpose
+
+**An exit from the browser carries no thesis hash.** `pnpm exit` takes one through `THESIS_HASH`
+and defaults to zero; the panel has no Follow equivalent and always sends zero, so the receipt lands
+in `unattributed` rather than in a thesis's track record. That is the honest default: `basketFrom`
+and the slippage average in `track-record.ts` skip exits entirely, so an attributed exit would
+change nothing they report — while a hash stamped on the way out claims the thesis *told you to
+leave*, which the panel has no way to know. If exits ever need attributing, the thing to attribute
+them to is the trigger that fired, not the thesis.
+
+Verified against mainnet mandate #1 on 2026-08-14, oracle 43h stale: `prepareExit` quoted 0.0005
+wTSLAx → 0.169919 USDG at fee tier 500, the pool the executor derives, shortfall 0, `dryRun`
+**ALLOW**. The stale value did not block the exit — which is D56 working, and which
+`pnpm mandate:show` was still describing backwards (*"a stale value blocks exits too (D51)"*). That
+line is now corrected in place.
+
+---
+
+## D69 — The fixture has to be asked for
+
+Without `GEMINI_API_KEY`, `pickProvider` returned `fixtureProvider()`: the compile stage answered
+**any** input with the same recorded thesis. It was labelled, and the label was rendered in the
+header, which is not the same thing as the run being honest — anyone could paste a thesis, watch six
+stages complete, and read an answer that was written before the question.
+
+D59 already fixed the sibling of this bug (a stray credential silently selecting a provider nobody
+had run). This is the other half: a *missing* credential silently selecting one that ignores the
+input.
+
+**Decided: the fixture is reachable only through `LLM_PROVIDER=fixture`.** A missing key is now an
+error with a sentence in it. A recorded output is a perfectly legitimate thing to run against — FE
+uses it to iterate without burning quota, and `08-parallel.md` recommends it — so it stays, it just
+has to be named. Five lines in `src/provider.ts`, and `.env.example` says which of the two you want.
+
+---
+
+## D70 — The mandate is governable from the browser, not just readable
+
+`MandateManage` exposed `setCircuitBreaker`, `closeMandate` and `setTriggers`. `updatePolicy`,
+`setAgent`, `setExecutor` and `setAssetAllowed` were owner-only, implemented, and reachable only
+from `pnpm mandate:edit` — the same shape as the gap D52 closed one level up, left over because the
+panel was built around the two controls that mattered on the day.
+
+All four are now in the panel. The one that needed care is `updatePolicy`: it replaces the **whole**
+`Policy` struct, so the form is pre-filled from what was just read and sends every field back,
+touched or not. Building the struct from what happens to be on screen would silently reset the
+fields the user did not open the form to change — the hazard `mandate-edit.ts` calls out in a
+comment, now present in two places for the same reason.
+
+Field widths are checked before sending (`uint16`, `uint8`, `uint32`), so an out-of-range value
+fails with a sentence rather than a revert. The allowlist carries the CLI's warning across:
+disallowing stops new fills, it does **not** sell what is held, and an exit is itself a fill the
+guard checks against the list — so exit first, then disallow.

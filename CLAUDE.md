@@ -75,6 +75,7 @@ PUBLISH_SYMBOLS=wTSLAx,wSPYx …         # publish a subset — 6.4x cheaper at 
 TARGET=mainnet pnpm mandate            # create a mandate, install triggers, hand to Executor
 TARGET=mainnet pnpm execute <sym> [n]  # quote -> dryRun -> Permit2 -> one real fill
 TARGET=mainnet pnpm exit <sym> [usdg]  # the reverse: sell a position back to USDG (D51)
+TARGET=mainnet pnpm exit <sym> --units <n>   # size in the asset, not through the oracle (D68)
 TARGET=mainnet pnpm swap [okb]         # OKB -> USDG, to fund the deployer
 TARGET=mainnet pnpm safe:admin status  # the 2-of-3, and which owner keys you hold
 TARGET=mainnet pnpm safe:admin treasury|feebps <v>   # admin-only, needs two signatures
@@ -121,6 +122,11 @@ TARGET=mainnet pnpm fees [withdraw]    # what the fee earned, and sweep it to th
   has already gone $17.5M → $22.9M. Re-run `pnpm capacity` before quoting it. See D49.
 - **Never trust a prose summary of a large JSON API** for X Layer facts — parse the JSON
   or hit the RPC. That is how D2 happened.
+- **On an exit, a stale oracle means shortfall zero — not a large shortfall.** `Executor.
+  _exitShortfallBps` reads through `observation`, which reverts on `Stale`, and catches it. Measuring
+  against a value the oracle has stopped defending computes an enormous false shortfall, and
+  `maxSlippageBps` then blocks the exit — D51's trap one layer down. `src/exit-plan.ts` mirrors
+  this; anything that plans an exit must use that module rather than its own arithmetic (D68).
 - **On `FairValueOracle`, `peek` is the safe read and `observation` reverts.** Not the other way
   round, whatever the names suggest — `observation` throws `NoData` / `Stale`. `src/abi.ts` said
   the opposite for weeks and the browser fill path believed it (D64). Render with `peek`; decide
