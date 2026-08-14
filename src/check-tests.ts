@@ -1,5 +1,5 @@
 /**
- * The Foundry test count, checked against every doc that states it.
+ * Every test count this repo states, checked against the suites that produce them.
  *
  * D60 found the number stale in five files at once — 89, 98 and 99 against an
  * actual 105. Individually trivial; the reason it is worth a script is that it
@@ -21,7 +21,7 @@
  * entries, which is how superseded statements are marked everywhere in `docs/`.
  */
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 
 /** Files that state the current count. `docs/04-decisions.md` is not here on
  *  purpose: it is append-only and every count in it is a historical one. */
@@ -33,60 +33,123 @@ const FILES = [
   'docs/08-parallel.md',
 ];
 
-/** Each pattern must capture the claimed number in group 1. */
-const CLAIMS: RegExp[] = [
-  /(\d+)\s+(?:Foundry\s+)?tests?\b/gi,
-  /(\d+)\s+passed\b/gi,
-  /\b(\d+)\s*\/\s*(\d+)\b/g, // "105/105", only on lines that mention tests
-];
+/**
+ * There are two suites now, and therefore two numbers a doc can be wrong about.
+ *
+ * They are told apart by the words around the number, which is why the unit
+ * suite must always be described as *unit* tests in prose. A bare "38 tests"
+ * would be read as a Foundry claim and fail — deliberately: an ambiguous count
+ * is the state D60 found, and the fix is to make the sentence say which suite
+ * it means rather than to teach the checker to guess.
+ */
+interface Suite {
+  name: string;
+  /** Derived by running the suite. Not a cached number, not a count of function
+   *  names — the thing that would fail CI is the thing that defines it. */
+  actual: () => number;
+  /** Each pattern must capture the claimed number in group 1. */
+  claims: RegExp[];
+}
 
-function actualCount(): number {
-  // `forge test` is the source. Not a cached number, not a count of function
-  // names — the thing that would fail CI is the thing that gets to define it.
+function forgeCount(): number {
   const out = execFileSync('forge', ['test'], { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
   const m = out.match(/\((\d+)\s+total tests\)/);
   if (!m) throw new Error('could not read a total from `forge test` output');
   return Number(m[1]);
 }
 
+function unitCount(): number {
+  const files = readdirSync('src')
+    .filter((f) => f.endsWith('.test.ts'))
+    .map((f) => `src/${f}`);
+  if (files.length === 0) return 0;
+
+  // Node's runner exits non-zero on a failure, which `execFileSync` throws on.
+  // The output is still on the error, and a red suite is worth reporting here
+  // rather than crashing with a stack trace.
+  let out: string;
+  try {
+    out = execFileSync('node_modules/.bin/tsx', ['--test', ...files], {
+      encoding: 'utf8',
+      maxBuffer: 32 * 1024 * 1024,
+    });
+  } catch (e) {
+    out = String((e as { stdout?: string }).stdout ?? '');
+    const failed = out.match(/^.\s*fail (\d+)$/m);
+    if (failed && Number(failed[1]) > 0) {
+      throw new Error(`the unit suite has ${failed[1]} failing test(s) — fix those first`);
+    }
+    throw e;
+  }
+  // The total, which includes `todo` entries: a test marked todo is a claim
+  // about behaviour that is written down and not yet true, and hiding it from
+  // the count would be the same as not writing it.
+  const m = out.match(/^.\s*tests (\d+)$/m);
+  if (!m) throw new Error('could not read a total from the unit test output');
+  return Number(m[1]);
+}
+
+const SUITES: Suite[] = [
+  {
+    name: 'forge test',
+    actual: forgeCount,
+    claims: [
+      /(\d+)\s+(?:Foundry\s+)?tests?\b/gi,
+      /(\d+)\s+passed\b/gi,
+      /\b(\d+)\s*\/\s*(\d+)\b/g, // "105/105", only on lines that mention tests
+    ],
+  },
+  {
+    name: 'unit tests',
+    actual: unitCount,
+    claims: [/(\d+)\s+(?:unit|TypeScript)\s+tests?\b/gi],
+  },
+];
+
 /** A line whose number is about the past, not about now. */
 function isHistorical(line: string): boolean {
   return line.includes('~~') || /^\s*\*\*20\d\d-\d\d-\d\d/.test(line);
 }
 
-const expected = actualCount();
 const problems: string[] = [];
 let checked = 0;
 
-for (const file of FILES) {
-  const lines = readFileSync(file, 'utf8').split('\n');
-  for (const [i, line] of lines.entries()) {
-    // Everything below the log heading is history and stays as it was written.
-    if (/^##+\s+(Log|History|Timeline)\b/i.test(line)) break;
-    if (isHistorical(line)) continue;
+console.log();
+for (const suite of SUITES) {
+  const expected = suite.actual();
+  console.log(`  ${suite.name}: ${expected}`);
 
-    for (const pattern of CLAIMS) {
-      // The N/N form is ambiguous on its own — "2 of 3", "28/30" — so it only
-      // counts as a test claim when the line says so.
-      if (pattern.source.includes('\\/') && !/test/i.test(line)) continue;
+  for (const file of FILES) {
+    const lines = readFileSync(file, 'utf8').split('\n');
+    for (const [i, line] of lines.entries()) {
+      // Everything below the log heading is history and stays as it was written.
+      if (/^##+\s+(Log|History|Timeline)\b/i.test(line)) break;
+      if (isHistorical(line)) continue;
 
-      pattern.lastIndex = 0;
-      for (const match of line.matchAll(pattern)) {
-        const claimed = Number(match[1]);
-        // A pattern like `(\d+) tests?` also matches "9 tests" inside prose
-        // about something else. Only numbers in the plausible range of a suite
-        // size are treated as claims; below that it is not this script's call.
-        if (claimed < 20) continue;
-        checked += 1;
-        if (claimed !== expected) {
-          problems.push(`  ${file}:${i + 1}  claims ${claimed}, actual ${expected}\n      ${line.trim()}`);
+      for (const pattern of suite.claims) {
+        // The N/N form is ambiguous on its own — "2 of 3", "28/30" — so it only
+        // counts as a test claim when the line says so.
+        if (pattern.source.includes('\\/') && !/test/i.test(line)) continue;
+
+        pattern.lastIndex = 0;
+        for (const match of line.matchAll(pattern)) {
+          const claimed = Number(match[1]);
+          // A pattern like `(\d+) tests?` also matches "9 tests" inside prose
+          // about something else. Only numbers in the plausible range of a suite
+          // size are treated as claims; below that it is not this script's call.
+          if (claimed < 20) continue;
+          checked += 1;
+          if (claimed !== expected) {
+            problems.push(
+              `  ${file}:${i + 1}  claims ${claimed} ${suite.name}, actual ${expected}\n      ${line.trim()}`,
+            );
+          }
         }
       }
     }
   }
 }
 
-console.log(`\n  forge test: ${expected} tests`);
 console.log(`  claims checked: ${checked} across ${FILES.length} files\n`);
 
 if (problems.length > 0) {

@@ -16,6 +16,8 @@
     "build": "next build",
     "build:contracts": "forge build",
     "test:sol": "forge test",
+    "test:unit": "tsx --test src/*.test.ts",
+    "test": "pnpm test:unit && pnpm test:sol",
     "check:tests": "tsx src/check-tests.ts",
     "deploy": "forge script script/Deploy.s.sol --tc Deploy --rpc-url xlayer_testnet --broadcast",
     "thesis": "tsx src/thesis-demo.ts",
