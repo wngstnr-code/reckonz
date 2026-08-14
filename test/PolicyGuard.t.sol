@@ -362,6 +362,44 @@ contract PolicyGuardTest is Test {
         assertEq(slippage, 30);
     }
 
+    /// `performance` counts exits, and that changes what the number means.
+    ///
+    /// Its doc comment calls it "the primitive a track record page reads" and
+    /// notes it cannot be inflated by the agent. Both true, and neither is the
+    /// hazard: on an exit `amountInUsdg` is the cash that came *back*, so the
+    /// notional adds money out to money in, and an exit's shortfall is averaged
+    /// into the slippage alongside an entry's.
+    ///
+    /// Found on 2026-08-14, the first time anything read the view: mainnet
+    /// mandate #1 reports 6.620806 USDG at 17bp here against 3.545425 USDG at
+    /// 25bp for its entries alone — the figure `src/track-record.ts` computes,
+    /// deliberately, by filtering exits out.
+    ///
+    /// Pinned rather than changed. `ReceiptRegistry` is kept across every
+    /// migration because it holds the whole history, so its semantics are not
+    /// ours to revise; what was missing was anyone stating them. See D72.
+    function test_PerformanceCountsExitsAsNotionalToo() public {
+        uint256 t0 = block.timestamp;
+        _exec(_fill(address(wNVDAx), 2_000_000000, NVDA_FV, 40));
+
+        vm.warp(t0 + 2 hours);
+        _publish(address(wNVDAx), NVDA_FV, 24, 27); // observations expire after 15 minutes
+
+        // Selling the position back: 1,000 USDG of proceeds, and a shortfall of
+        // zero because the oracle could not defend a value to measure against.
+        ReceiptRegistry.Fill[] memory exitFill = _fill(address(wNVDAx), 1_000_000000, NVDA_FV, 0);
+        exitFill[0].isExit = true;
+        _exec(exitFill);
+
+        (uint256 notional, uint256 slippage, uint256 count) = receipts.performance(mandateId);
+
+        // 2,000 in and 1,000 back out reads as 3,000 of notional, not 2,000.
+        assertEq(notional, 3_000_000000, "an exit adds to notional rather than closing it");
+        assertEq(count, 2);
+        // (2000*40 + 1000*0) / 3000 = 26, against 40 for the capital deployed.
+        assertEq(slippage, 26, "the exit's zero shortfall drags the average down");
+    }
+
     // ------------------------------------------------------- the refusals
 
     function test_RejectsUnknownAsset() public {
