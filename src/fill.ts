@@ -28,7 +28,8 @@ import {
   THESIS_REGISTRY_ABI,
 } from './abi';
 import { client } from './chain';
-import { evidenceHash, writeEvidence, type EvidenceBundle } from './evidence';
+import { evidenceHash, type EvidenceBundle } from './evidence';
+import { persistBundle, type Persistence } from './evidence-store';
 import { bestQuote, loadVenues } from './planner';
 import { loadToken } from './pool';
 import { MAINNET } from './deployments';
@@ -125,7 +126,8 @@ export interface FillPlan {
   evidence: {
     hash: Hex;
     /** False when the runtime has no writable filesystem — the hash still binds. */
-    stored: boolean;
+    /** Where the bundle actually went. `none` means nobody can audit this fill. */
+    persistence: Persistence;
     bundle: EvidenceBundle;
   };
   mandate: { id: bigint; owner: Address; agent: Address; executor: Address; active: boolean };
@@ -371,16 +373,10 @@ export async function prepareFill(req: FillRequest): Promise<FillPlan> {
   // and `evidence/` is the record of fills that happened — filling it with
   // bundles for trades nobody made would make the directory worth less, not
   // more. The hash is returned either way.
-  let stored = false;
   const hash = evidenceHash(bundle);
-  if (allow) {
-    try {
-      await writeEvidence(bundle);
-      stored = true;
-    } catch {
-      stored = false;
-    }
-  }
+  const persistence: Persistence = allow
+    ? await persistBundle(bundle)
+    : { kind: 'none', reason: 'the guard refused this fill, so no bundle was archived' };
 
   return {
     chainId: deployment.chainId,
@@ -414,7 +410,7 @@ export async function prepareFill(req: FillRequest): Promise<FillPlan> {
     predicted: { executionPriceE8: priceE8, slippageBps },
     verdict: { allow, reason, offendingAsset: allow ? null : offending },
     thesis,
-    evidence: { hash, stored, bundle },
+    evidence: { hash, persistence, bundle },
     mandate: {
       id: req.mandateId,
       owner: mandate.owner,

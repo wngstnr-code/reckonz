@@ -116,10 +116,31 @@ export async function writeEvidence(bundle: EvidenceBundle): Promise<Hex> {
   return hash;
 }
 
+/**
+ * The bundle for a hash, from wherever it ended up.
+ *
+ * Disk first — that is where the CLI writes and what the repo commits. Then the
+ * archive, because a fill placed through the website was never on this machine
+ * (D80): its bundle went to a blob store, and a verifier who has just cloned
+ * this repo has no other way to reach it. Without the second half `pnpm
+ * evidence` could only ever check the fills we made ourselves, which is the
+ * weakest possible version of an audit trail.
+ */
 export async function readEvidence(hash: Hex): Promise<EvidenceBundle | null> {
   const { readFile } = await import('node:fs/promises');
   try {
     return JSON.parse(await readFile(evidencePath(hash), 'utf8')) as EvidenceBundle;
+  } catch {
+    /* not on disk — try the archive below */
+  }
+
+  const { EVIDENCE_BLOB_BASE, evidenceKey } = await import('./evidence-store');
+  if (!EVIDENCE_BLOB_BASE) return null;
+
+  try {
+    const response = await fetch(`${EVIDENCE_BLOB_BASE.replace(/\/$/, '')}/${evidenceKey(hash)}`);
+    if (!response.ok) return null;
+    return (await response.json()) as EvidenceBundle;
   } catch {
     return null;
   }

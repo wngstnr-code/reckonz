@@ -38,7 +38,8 @@ import {
 } from './abi';
 import { client } from './chain';
 import { MAINNET } from './deployments';
-import { evidenceHash, writeEvidence, type EvidenceBundle } from './evidence';
+import { evidenceHash, type EvidenceBundle } from './evidence';
+import { persistBundle, type Persistence } from './evidence-store';
 import { executionPriceE8, DEFAULT_SLIPPAGE_TOLERANCE_BPS, ZERO_HASH } from './fill';
 import { findAllPools, loadPool, loadToken, simulateExactInput } from './pool';
 
@@ -205,7 +206,7 @@ export interface ExitPlan {
    */
   signable: { ok: boolean; reason: string | null };
   thesis: { hash: Hex; id: number; publishedAt: number } | null;
-  evidence: { hash: Hex; stored: boolean; bundle: EvidenceBundle };
+  evidence: { hash: Hex; persistence: Persistence; bundle: EvidenceBundle };
   mandate: { id: bigint; owner: Address; agent: Address; executor: Address; active: boolean };
 }
 
@@ -504,16 +505,16 @@ export async function prepareExit(req: ExitRequest): Promise<ExitPlan> {
   // unmeasured exit is a plan the caller is being shown, not one that can
   // happen, and writing its bundle would put a file in `evidence/` for a sale
   // that was refused on our side.
-  let stored = false;
   const hash = evidenceHash(bundle);
-  if (allow && signable) {
-    try {
-      await writeEvidence(bundle);
-      stored = true;
-    } catch {
-      stored = false;
-    }
-  }
+  const persistence: Persistence =
+    allow && signable
+      ? await persistBundle(bundle)
+      : {
+          kind: 'none',
+          reason: allow
+            ? 'unacknowledged unmeasured exit — this plan cannot be signed, so nothing was archived'
+            : 'the guard refused this exit, so no bundle was archived',
+        };
 
   return {
     chainId: deployment.chainId,
@@ -553,7 +554,7 @@ export async function prepareExit(req: ExitRequest): Promise<ExitPlan> {
         : `the shortfall is ${describeShortfallStatus(status)}. Acknowledge that to sell anyway.`,
     },
     thesis,
-    evidence: { hash, stored, bundle },
+    evidence: { hash, persistence, bundle },
     mandate: {
       id: req.mandateId,
       owner: mandate.owner,

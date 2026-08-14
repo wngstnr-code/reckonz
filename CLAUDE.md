@@ -64,7 +64,7 @@ pnpm dev                     # the web app — thesis in, guard verdict out
 pnpm build                   # next build (what Vercel runs); contracts are build:contracts
 pnpm typecheck               # covers src/ and app/
 pnpm test:sol                # 106 Foundry tests
-pnpm test:unit               # 190 unit tests over src/ — node:test, no runner dependency (D71)
+pnpm test:unit               # 195 unit tests over src/ — node:test, no runner dependency (D71)
 pnpm test                    # both suites
 pnpm check:tests             # both numbers, checked against every doc that states them (D60, D71)
 ```
@@ -168,6 +168,10 @@ TARGET=mainnet pnpm fees [withdraw]    # what the fee earned, and sweep it to th
   Bound the value before casting, even where it looks unreachable.
 - `src/guard.ts` mirrors `FairValueOracle.checkExecution` line for line. If they diverge,
   the off-chain mirror is wrong.
+- **An evidence bundle must end up somewhere it can be fetched from** (D80). `writeEvidence` is
+  the local half; `persistBundle` in `src/evidence-store.ts` is the one to call, and it reports
+  `blob`, `file` or `none` rather than a boolean. `none` is a receipt nobody can audit — render it
+  as loudly as a refusal, never as grey text.
 - **Every public route is gated** (D78). `src/ratelimit.ts` holds the buckets and the in-flight
   caps; a new route under `app/api/` takes one before it does any work and releases it in a
   `finally`. It is a per-instance cost ceiling, not a global guarantee — do not describe it as one.

@@ -3849,3 +3849,77 @@ Two things to know about it operationally. The history window is 48 hours, so wi
 these comparisons lapse into `skipped` within two days of the last sample — the check gets stronger
 exactly when the worker runs, which is the same 18–19 Aug item everything else depends on. And the
 pool check only runs where `publish.ts` read a venue, which it does for every asset it publishes.
+
+---
+
+## D80 — The evidence bundle was never stored in production
+
+The technical-readiness read on 2026-08-14 asked a plainer question than the others: does the
+deployed thing actually do what the repo says. One answer came back no, and it was on the claim
+this project is proudest of.
+
+`writeEvidence` writes `evidence/<hash>.json`. Vercel's filesystem is read-only outside `/tmp`, so
+in production the write throws, `prepareFill` catches it, and the plan returns `stored: false`.
+Measured, not inferred — `POST /api/fill` against the live app:
+
+```
+evidence.hash    0x2a872bd69476ebe168f3c8b92c87ce59f237c938ec4182454191227b4e6f32bf
+evidence.stored  false
+```
+
+So a fill placed through the website puts a hash on chain whose bundle exists **nowhere**.
+`pnpm evidence` would answer "no bundle on disk" for that receipt forever. Locally, 13 of 13
+receipts verify; the audit trail worked perfectly on the machine it was written on and silently
+degraded to an unverifiable 32 bytes on the path a real user takes. A claim that only holds on the
+founder's laptop is worse than no claim, because it is made in public.
+
+Nobody had noticed because `stored: false` was rendered as grey body text in the same style as
+everything else, and because every fill so far was placed from a terminal or a local dev server.
+
+### What changed
+
+**`src/evidence-store.ts`, three backends and no silence.** Vercel Blob when
+`BLOB_READ_WRITE_TOKEN` is set, the filesystem when it is writable, and otherwise `none` **with
+the reason**. `persistBundle` never throws: a fill must not fail because an archive did — the trade
+is the user's, the record is ours. What it must never do instead is claim the bundle is somewhere
+it is not.
+
+**The key is the hash.** `evidence/<hash>.json`, no random suffix, because the 32 bytes in the
+receipt are the whole address of the bundle and anything else leaves a verifier with nowhere to
+look. `allowOverwrite`, since an identical bundle hashes identically and rewriting it with itself
+is correct.
+
+**Public, deliberately.** The bundle is a quote, an oracle reading, a dry-run verdict and the
+addresses involved — nothing private, and its entire purpose is for a third party to fetch it and
+re-derive the hash the chain already holds. Evidence behind a credential proves nothing to the
+person who needs it most.
+
+**`readEvidence` reads the archive too.** Disk first, then the store, so `pnpm evidence` can verify
+a fill made through the website **from a fresh clone with none of our credentials**. That is why
+`EVIDENCE_BLOB_BASE` is a committed constant rather than an environment variable: an env var would
+mean verification works for us and for nobody else, which is the opposite of the point.
+
+**The browser hands the user their own copy.** A download button on both the fill and the exit
+panel, offered whether or not the archive worked — and when it did not, the panel says so in
+`caution` rather than in grey.
+
+### State, honestly
+
+The store exists — `reckonz-evidence`, `store_kqJdljzlkaaN4S05`, public, iad1, created
+2026-08-14. What is **not** done is the account plumbing: this folder is not linked to the Vercel
+project, the store is not connected to it, so no `BLOB_READ_WRITE_TOKEN` reaches the deployment and
+`EVIDENCE_BLOB_BASE` is still empty. Until both happen, production fills still report `none` —
+correctly and loudly now, which is the part that was broken.
+
+**A successful upload has never run.** The unit suite exercises the SDK against a deliberately
+invalid token and asserts the fallback to disk keeps the bundle, so the import, the call and the
+failure path are real. The success path is not, and D35 is the rule: an external dependency is
+unverified until a call that does the actual work succeeds against it. Three commands close it:
+
+```bash
+vercel link                     # choose the reckonz project
+# connect reckonz-evidence to it (dashboard → Storage → Connect Project)
+vercel env pull .env.local      # BLOB_READ_WRITE_TOKEN lands locally
+```
+
+then one fill against the store, and paste the returned host into `EVIDENCE_BLOB_BASE`.

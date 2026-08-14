@@ -68,7 +68,15 @@ interface WirePlan {
   predicted: { executionPriceE8: string; slippageBps: number };
   verdict: { allow: boolean; reason: string; offendingAsset: Address | null };
   thesis: { hash: Hex; id: number; publishedAt: number } | null;
-  evidence: { hash: Hex; stored: boolean; bundle: unknown };
+  evidence: {
+    hash: Hex;
+    /** Where the bundle went. `none` means nobody can ever audit this fill (D80). */
+    persistence:
+      | { kind: 'blob'; url: string }
+      | { kind: 'file'; path: string }
+      | { kind: 'none'; reason: string };
+    bundle: unknown;
+  };
   mandate: { id: string; owner: Address; agent: Address; executor: Address; active: boolean };
 }
 
@@ -792,13 +800,42 @@ function Plan({ plan }: { plan: WirePlan }) {
           <span className="break-all text-dim">{plan.evidence.hash}</span>
         </Row>
         <Row label="">
-          <span className="text-faint">
-            {!plan.verdict.allow
-              ? 'hashed but not stored — nothing was decided to happen here'
-              : plan.evidence.stored
-                ? 'written to evidence/ — the hash binds, the file is how anyone checks it'
-                : 'not stored: this runtime has no writable filesystem. The hash still goes on chain'}
-          </span>
+          {/* The hash goes on chain either way, so an unarchived bundle is not a
+              broken fill — it is a fill nobody can ever audit, which is a
+              different and quieter kind of loss. It used to read "not stored"
+              in the same grey as everything else; in production that was every
+              fill (D80). */}
+          {plan.evidence.persistence.kind === 'none' ? (
+            <span className="text-caution">
+              {!plan.verdict.allow
+                ? 'hashed but not archived — nothing was decided to happen here'
+                : `not archived — ${plan.evidence.persistence.reason}. Download it below, or the hash on chain will point at nothing.`}
+            </span>
+          ) : plan.evidence.persistence.kind === 'blob' ? (
+            <a
+              href={plan.evidence.persistence.url}
+              target="_blank"
+              rel="noreferrer"
+              className="break-all text-faint hover:text-signal"
+            >
+              archived — anyone can fetch it and re-derive this hash
+            </a>
+          ) : (
+            <span className="text-faint">
+              written to {plan.evidence.persistence.path} — the hash binds, the file is how anyone
+              checks it
+            </span>
+          )}
+        </Row>
+        <Row label="">
+          {/* Offered whatever happened above: the bundle is the user's own
+              record of what they were shown before they signed. */}
+          <button
+            onClick={() => downloadBundle(plan.evidence.hash, plan.evidence.bundle)}
+            className="text-faint underline decoration-dotted hover:text-signal"
+          >
+            download the bundle
+          </button>
         </Row>
         {plan.thesis && (
           <Row label="thesis">
@@ -821,4 +858,22 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
       <span className="text-dim">{children}</span>
     </li>
   );
+}
+
+/**
+ * Hand the user their own copy.
+ *
+ * The bundle is what they were shown before they signed, and its hash is on
+ * chain. When nothing archived it — a read-only runtime with no blob store —
+ * this is the only copy that will ever exist, so the button is offered even
+ * when the archive worked.
+ */
+function downloadBundle(hash: string, bundle: unknown) {
+  const blob = new Blob([`${JSON.stringify(bundle, null, 2)}\n`], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${hash}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
 }

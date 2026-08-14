@@ -33,6 +33,7 @@
 import { formatUnits, parseUnits, type Address } from 'viem';
 import { ERC20_ABI, EXECUTOR_ABI, FAIR_VALUE_ORACLE_ABI, POLICY_GUARD_ABI } from './abi';
 import { ADDR, client, USDG } from './chain';
+import { describePersistence } from './evidence-store';
 import { describeShortfallStatus, prepareExit } from './exit-plan';
 import { buildPermit, describePermit } from './permit';
 import { addressBySymbol, loadToken } from './pool';
@@ -280,7 +281,8 @@ if (!plan.verdict.allow) {
   process.exit(1);
 }
 console.log(`  dryRun    ALLOW`);
-console.log(`  evidence  ${plan.evidence.hash}${plan.evidence.stored ? '' : '  (not stored)'}`);
+console.log(`  evidence  ${plan.evidence.hash}`);
+console.log(`            ${describePersistence(plan.evidence.persistence)}`);
 
 // --------------------------------- 3. Permit2, over the asset being sold
 
