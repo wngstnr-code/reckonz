@@ -219,10 +219,19 @@ export function Fill() {
   // A mandate created in the panel above is not visible here until something
   // re-reads the chain. Without this the flow "create a mandate, then fill"
   // ends at "no mandate this wallet can execute against", which is false.
+  //
+  // `reckonz:filled` for the same reason, and it is not only this panel's own
+  // fills: the exit panel below fires it too, and an exit *raises* the USDG this
+  // one reports. Without it, selling a position leaves the cash line here
+  // showing a balance the chain has already left behind.
   useEffect(() => {
     const onChanged = () => void load();
     window.addEventListener(MANDATES_CHANGED_EVENT, onChanged);
-    return () => window.removeEventListener(MANDATES_CHANGED_EVENT, onChanged);
+    window.addEventListener(FILLED_EVENT, onChanged);
+    return () => {
+      window.removeEventListener(MANDATES_CHANGED_EVENT, onChanged);
+      window.removeEventListener(FILLED_EVENT, onChanged);
+    };
   }, [load]);
 
   // A plan describes one asset at one size against one mandate. Changing any of
@@ -446,8 +455,10 @@ export function Fill() {
       setPlan(null);
       // The receipt this produced belongs to a thesis's track record if it
       // carried a hash. Tell the panel above to read the registries again.
+      // Which re-reads this panel too, through the listener above — so there is
+      // no explicit `load()` here any more. Doing both ran two serial chain
+      // walks at once against an RPC that throttles.
       window.dispatchEvent(new Event(FILLED_EVENT));
-      await load();
     } catch (e) {
       const code = (e as { code?: number })?.code;
       if (code === 4001) {
