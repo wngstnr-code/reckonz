@@ -13,7 +13,7 @@
  *   TARGET=mainnet pnpm mandate:show          # every mandate this key owns
  */
 import { erc20Abi, formatUnits, type Address } from 'viem';
-import { POLICY_GUARD_ABI } from './abi';
+import { POLICY_GUARD_ABI, RECEIPT_REGISTRY_ABI } from './abi';
 import { USDG } from './chain';
 import { loadToken } from './pool';
 import { describeOnchainTrigger } from './triggers';
@@ -185,7 +185,109 @@ for (const id of ids) {
     // oracle cannot trap an open position. Verified against mainnet mandate #1
     // on 2026-08-14 — `dryRun` allowed a wTSLAx exit with the value 43h stale.
   }
+
+  await showHistory(id, symbolOf);
   console.log();
+}
+
+/**
+ * What this mandate actually did — the half `mandate:show` never had.
+ *
+ * `receiptsOf` and `performance` were deployed, correct, and had never been
+ * called by anything in this repo. A view nobody reads is a view nobody has
+ * verified: the same argument D35 makes about the Universal Router, one layer
+ * down and far less costly to settle. Both were checked against a full scan of
+ * the registry on mainnet on 2026-08-14 and agreed exactly.
+ */
+async function showHistory(id: bigint, symbolOf: Map<string, string>) {
+  const registry = deployment.contracts.ReceiptRegistry as Address | undefined;
+  if (!registry) return;
+
+  // One call instead of walking `count()` and filtering — which is the whole
+  // point of the view, and why the scan below is over this mandate's ids only.
+  const ids = await wallet.readContract({
+    address: registry,
+    abi: RECEIPT_REGISTRY_ABI,
+    functionName: 'receiptsOf',
+    args: [id],
+  });
+
+  console.log(`\n     receipts (${ids.length})`);
+  if (ids.length === 0) {
+    console.log(`       none — this mandate has never executed.`);
+    return;
+  }
+
+  const records = [];
+  for (const receiptId of ids) {
+    const [receipt, fills] = await wallet.readContract({
+      address: registry,
+      abi: RECEIPT_REGISTRY_ABI,
+      functionName: 'get',
+      args: [receiptId],
+    });
+    records.push({ receiptId, receipt, fills });
+  }
+
+  const SHOWN = 8;
+  const recent = records.slice(-SHOWN);
+  if (records.length > SHOWN) {
+    console.log(`       … ${records.length - SHOWN} older, not shown`);
+  }
+  for (const { receiptId, receipt, fills } of recent) {
+    const when = new Date(Number(receipt.timestamp) * 1000).toISOString().slice(0, 16).replace('T', ' ');
+    const legs = fills
+      .map((f) => {
+        const symbol = symbolOf.get(f.asset.toLowerCase()) ?? f.asset.slice(0, 8);
+        // The sign is the direction, and on an exit `amountInUsdg` is the cash
+        // that came *back* rather than the cash that went out.
+        return `${f.isExit ? '-' : '+'}${symbol} ${formatUnits(f.amountInUsdg, USDG.decimals)}`;
+      })
+      .join(', ');
+    console.log(`       #${String(receiptId).padStart(3)}  ${when}Z  ${legs}`);
+  }
+
+  const [notional, slippageBps, fillCount] = await wallet.readContract({
+    address: registry,
+    abi: RECEIPT_REGISTRY_ABI,
+    functionName: 'performance',
+    args: [id],
+  });
+
+  // `performance` sums **every** fill, exits included — and on an exit
+  // `amountInUsdg` is proceeds, not capital deployed. So its notional adds money
+  // in to money out, and since D68 an exit against a stale oracle records
+  // `slippageBps: 0`, which drags the weighted average down. On mainnet mandate
+  // #1 that is 6.620806 USDG at 17bp against 3.545425 USDG at 25bp for the
+  // entries alone.
+  //
+  // The contract's own comment calls it the primitive a track-record page reads
+  // and says it "cannot be inflated by the agent". True — it is inflated by the
+  // arithmetic instead. So it is printed, and printed next to the number that
+  // answers the question a reader actually has. `src/track-record.ts` computes
+  // only the second pair, deliberately, and stays the authority (D50, D72).
+  let entryNotional = 0n;
+  let entryWeighted = 0n;
+  let entryFills = 0;
+  for (const { fills } of records) {
+    for (const f of fills) {
+      if (f.isExit) continue;
+      entryNotional += f.amountInUsdg;
+      entryWeighted += f.amountInUsdg * BigInt(f.slippageBps);
+      entryFills += 1;
+    }
+  }
+  const entrySlippage = entryNotional === 0n ? 0n : entryWeighted / entryNotional;
+
+  console.log(
+    `\n     performance()  ${formatUnits(notional, USDG.decimals)} ${USDG.symbol}` +
+      ` · ${slippageBps} bps · ${fillCount} fills`,
+  );
+  console.log(
+    `       counts exits as notional and averages their slippage in. Capital actually` +
+      `\n       deployed: ${formatUnits(entryNotional, USDG.decimals)} ${USDG.symbol}` +
+      ` over ${entryFills} entries at ${entrySlippage} bps — what pnpm track-record reports.`,
+  );
 }
 
 if (shown === 0) {
