@@ -1,0 +1,77 @@
+# Run both suites and the checker on every push and pull request.
+#
+# Until 2026-08-14 nothing ran the tests automatically. `publish-oracle.yml` was
+# the only workflow, so 106 Foundry tests and 136 unit tests existed and neither
+# was executed by anything except a person remembering to. `src/check-tests.ts`
+# even carries the sentence "the thing that would fail CI is the thing that gets
+# to define it", about a CI that did not exist. See D71, D73.
+#
+# **Nothing here touches the chain and nothing here needs a secret.** The unit
+# suite is hermetic — it stubs `fetch`, hand-writes fake clients, and writes only
+# to a temp directory — and Foundry runs against its own mocks. `pnpm verify`,
+# `pnpm reconcile` and anything under `TARGET=` are deliberately absent: they are
+# regressions against live on-chain state, they need an RPC that throttles, and a
+# red build caused by someone else's node is a build people learn to ignore.
+name: tests
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+# A second push to the same branch makes the first run's answer irrelevant.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      # `lib/` is gitignored and forge-std is neither committed nor a submodule,
+      # so a fresh clone has no Solidity dependencies at all — `forge test` fails
+      # before it compiles. Found while writing this file. Pinned to the version
+      # the suite was written against rather than tracking a moving tag: a
+      # dependency that changes under a passing suite is the failure this whole
+      # workflow exists to catch.
+      - name: solidity dependencies
+        run: forge install foundry-rs/forge-std@v1.16.2
+
+      # The one check that spans the FE/BE seam, so it goes first: a break here
+      # is a break in both halves at once.
+      - name: typecheck
+        run: pnpm typecheck
+
+      - name: unit tests
+        run: pnpm test:unit
+
+      - name: solidity tests
+        run: pnpm test:sol
+
+      # Runs both suites again to derive the two counts, then checks them against
+      # every doc that states one. Deliberately last: when it is the only red
+      # step, the suites are fine and a number in the docs is stale, which is a
+      # different fix from a failing test.
+      - name: stated test counts
+        run: pnpm check:tests
+
+      # `next build` typechecks the app and compiles the routes. It needs no
+      # secret: every page is `force-dynamic` and nothing is fetched at build.
+      - name: build
+        run: pnpm build
