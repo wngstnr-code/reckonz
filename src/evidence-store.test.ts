@@ -135,23 +135,28 @@ test('the description of an unarchived bundle is loud, not neutral', () => {
   assert.match(describePersistence({ kind: 'file', path: 'evidence/0xabc.json' }), /written to/);
 });
 
-test('the credential check knows both shapes, and OIDC is the one Vercel provisions', () => {
-  // Read out of `@vercel/blob@2.8.0`'s own resolver: `BLOB_STORE_ID` +
-  // `VERCEL_OIDC_TOKEN` is tried *before* `BLOB_READ_WRITE_TOKEN`, and
-  // connecting a store to a project provisions the first pair and no static
-  // token at all. This gated on the read-write token until that was checked,
-  // which would have skipped the archive in the only configuration we have.
+test('a configured store is enough to try — the SDK owns the credential question', () => {
+  // Twice now this gated on a variable we guessed at. First
+  // `BLOB_READ_WRITE_TOKEN`, which Vercel no longer provisions; then that plus
+  // `VERCEL_OIDC_TOKEN`, which the runtime injects rather than the project
+  // setting — production had `BLOB_STORE_ID` and still answered "no blob store
+  // is reachable", a sentence we had written while guessing.
+  //
+  // Whether a token can be obtained is `@vercel/blob`'s question and it answers
+  // it precisely. This asks only whether a store exists to talk to; a failure
+  // then comes back in the SDK's own words, which is a diagnosis instead of an
+  // assumption.
   const saved = { ...process.env };
   try {
     delete process.env.BLOB_READ_WRITE_TOKEN;
     delete process.env.BLOB_STORE_ID;
-    delete process.env.VERCEL_OIDC_TOKEN;
     assert.equal(hasBlobCredentials(), false);
 
     process.env.BLOB_STORE_ID = 'store_kqJdljzlkaaN4S05';
-    assert.equal(hasBlobCredentials(), false, 'a store id alone is not a credential');
+    assert.equal(hasBlobCredentials(), true, 'a configured store must at least be tried');
 
-    process.env.VERCEL_OIDC_TOKEN = 'header.payload.signature';
+    delete process.env.BLOB_STORE_ID;
+    process.env.BLOB_READ_WRITE_TOKEN = 'vercel_blob_rw_x';
     assert.equal(hasBlobCredentials(), true);
   } finally {
     process.env = saved;

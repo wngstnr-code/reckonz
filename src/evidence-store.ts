@@ -68,16 +68,24 @@ export const EVIDENCE_BLOB_BASE =
  *     if (BLOB_STORE_ID)         → { kind: "oidc", token: VERCEL_OIDC_TOKEN, storeId }
  *     if (BLOB_READ_WRITE_TOKEN) → { kind: "readWrite", … }
  *
- * Connecting a store to a project now provisions `BLOB_STORE_ID` plus a
- * short-lived `VERCEL_OIDC_TOKEN`, and **no** static read-write token. This
- * function gated on `BLOB_READ_WRITE_TOKEN` alone until that was checked, which
- * would have skipped the archive in exactly the configuration Vercel hands you
- * — the D2 mistake in miniature: the documented-looking variable was not the one
- * in play, and the package was one grep away.
+ * Connecting a store to a project provisions `BLOB_STORE_ID` and **no** static
+ * read-write token; the OIDC half is injected by the runtime rather than set as
+ * project configuration. This gated on `BLOB_READ_WRITE_TOKEN` alone until the
+ * resolver above was read, which would have skipped the archive in exactly the
+ * configuration Vercel hands you.
+ *
+ * **And then it gated on `VERCEL_OIDC_TOKEN` too, which was the same mistake
+ * twice.** Production has `BLOB_STORE_ID` and answered *"no blob store is
+ * reachable"* — a sentence written by us, guessing, about a credential the SDK
+ * resolves in ways we do not own. Whether a token can be obtained is the SDK's
+ * question, and it already answers it precisely.
+ *
+ * So this asks only whether a store is configured at all. If it is, the upload
+ * is attempted and any failure comes back carrying **the SDK's own words**,
+ * which is a diagnosis rather than our guess at one.
  */
 export function hasBlobCredentials(): boolean {
-  if (process.env.BLOB_READ_WRITE_TOKEN) return true;
-  return Boolean(process.env.BLOB_STORE_ID && process.env.VERCEL_OIDC_TOKEN);
+  return Boolean(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
 }
 
 export type Persistence =
@@ -131,7 +139,7 @@ export async function persistBundle(bundle: EvidenceBundle): Promise<Persistence
     file ?? {
       kind: 'none',
       reason:
-        'no blob store is reachable from this runtime and the filesystem is read-only — this bundle is not archived anywhere',
+        'no blob store is configured for this runtime and the filesystem is read-only — this bundle is not archived anywhere',
     }
   );
 }
