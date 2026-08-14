@@ -177,8 +177,13 @@ for (const id of ids) {
     console.log(
       `     ⚠ oracle stale for ${staleAssets
         .map((a) => symbolOf.get(a.toLowerCase()) ?? a)
-        .join(', ')} — a stale value blocks exits too (D51)`,
+        .join(', ')} — entries into these are refused; exits are not (D56)`,
     );
+    // The line above used to say a stale value blocked exits too, which was
+    // true when it was written and stopped being true with D56: the guard no
+    // longer runs `checkExecution` on the way out, precisely so an unpublished
+    // oracle cannot trap an open position. Verified against mainnet mandate #1
+    // on 2026-08-14 — `dryRun` allowed a wTSLAx exit with the value 43h stale.
   }
   console.log();
 }

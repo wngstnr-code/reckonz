@@ -1,33 +1,41 @@
 /**
- * One real exit, end to end: size it, sign for exactly those units, ask the
- * guard, then sell the position back to USDG.
+ * One real exit, end to end: size it, ask the guard, sign for exactly those
+ * units, then sell the position back to USDG.
  *
- * The mirror of `execute.ts`, and it could not exist until `Executor.exit` did.
- * Until then the system could *detect* an exit condition and never act on one —
- * `ExitTriggers` evaluated it, `PolicyGuard.firedTriggers` reported it, and
- * every path that moved money bought.
+ *   TARGET=mainnet pnpm exit wSPYx 0.1          # sell ~$0.10 of wSPYx
+ *   TARGET=mainnet pnpm exit wSPYx --units 0.0005   # sell exactly 0.0005 units
  *
- *   TARGET=mainnet pnpm exit wSPYx 0.1      # sell ~$0.10 of wSPYx back to USDG
+ * ## This script no longer plans anything
  *
- * Two things differ from the entry path, and both are the direction:
+ * It used to: quote every fee tier, mirror `_priceE8` and `_exitShortfallBps`,
+ * assemble the evidence bundle, all inline. The browser then needed the same
+ * work and got `src/exit-plan.ts`, so there were two copies of arithmetic that
+ * decides whether the guard rejects — and they had already diverged. **The copy
+ * here was the wrong one** (D68): it measured shortfall against `peek`
+ * unconditionally, while `Executor._exitShortfallBps` reads through
+ * `observation`, catches the `Stale` revert and returns zero. With a stale
+ * oracle and a market that had moved, this script computed an enormous false
+ * shortfall, fed it to `dryRun`, and printed `REJECT: SLIPPAGE` for a
+ * transaction the chain would have executed — refusing an exit is the one
+ * failure this system is least allowed to have.
  *
- *  - The Permit2 authorisation is over the **asset**, not the settlement
- *    currency, so the owner must have approved Permit2 for that token.
- *  - Shortfall is measured *below* fair value. Selling badly means receiving
- *    less; the entry path's comparison would report zero for any sale under
- *    fair value. `Executor._exitShortfallBps` inverts it, and so does this.
+ * Patching the second copy would have left two copies. So `prepareExit` is now
+ * the only planner, shared with `POST /api/exit`, and this file is what it
+ * always should have been: argument parsing, a key, and a transaction.
+ *
+ * ## Mainnet only, said out loud
+ *
+ * `pool.ts` reads through the mainnet-pinned `client` in `chain.ts`, so
+ * `TARGET=testnet` here has always quoted mainnet pools while writing to
+ * testnet. Testnet has no xStock pools to sell into either. Refusing is honest;
+ * the previous silence was not.
  */
 import { formatUnits, parseUnits, type Address } from 'viem';
-import {
-  ERC20_ABI,
-  EXECUTOR_ABI,
-  FAIR_VALUE_ORACLE_ABI,
-  PERMIT2_ABI,
-  POLICY_GUARD_ABI,
-} from './abi';
-import { ADDR, USDG } from './chain';
-import { writeEvidence, type EvidenceBundle } from './evidence';
-import { addressBySymbol, findAllPools, loadPool, loadToken, simulateExactInput } from './pool';
+import { ERC20_ABI, EXECUTOR_ABI, FAIR_VALUE_ORACLE_ABI, POLICY_GUARD_ABI } from './abi';
+import { ADDR, client, USDG } from './chain';
+import { prepareExit } from './exit-plan';
+import { buildPermit, describePermit } from './permit';
+import { addressBySymbol, loadToken } from './pool';
 import {
   accountFrom,
   chainFor,
@@ -38,20 +46,32 @@ import {
   walletFor,
 } from './wallet';
 
-const SYMBOL_OR_ADDRESS = process.argv[2];
-const TARGET_USDG = process.argv[3] ?? '0.1';
+const args = process.argv.slice(2);
+const SYMBOL_OR_ADDRESS = args[0];
+
+const unitsFlag = args.indexOf('--units');
+/** When given, the size is in the asset's own units and the oracle is not consulted to size. */
+const UNITS_ARG = unitsFlag === -1 ? null : args[unitsFlag + 1];
+const TARGET_USDG = unitsFlag === -1 ? (args[1] ?? '0.1') : null;
 
 const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000' as const;
-const SLIPPAGE_TOLERANCE_BPS = Number(process.env.SLIPPAGE_TOLERANCE_BPS ?? 100);
 const MANDATE_ID = process.env.MANDATE_ID ? BigInt(process.env.MANDATE_ID) : null;
 const THESIS_HASH = (process.env.THESIS_HASH ?? ZERO_HASH) as `0x${string}`;
 
-if (!SYMBOL_OR_ADDRESS) {
+if (!SYMBOL_OR_ADDRESS || (UNITS_ARG !== null && !/^\d+(\.\d+)?$/.test(UNITS_ARG))) {
   console.error('usage: TARGET=mainnet pnpm exit <symbol|address> [usdgTarget]');
+  console.error('       TARGET=mainnet pnpm exit <symbol|address> --units <amount>');
   process.exit(1);
 }
 
 const t = target();
+if (t !== 'mainnet') {
+  console.error(`\n  This command is mainnet only. See the header: the pool reads go through the`);
+  console.error(`  mainnet client whatever TARGET says, and testnet has no xStock pool to sell`);
+  console.error(`  into. Re-run with TARGET=mainnet.\n`);
+  process.exit(1);
+}
+
 const chain = chainFor(t);
 const deployment = deploymentFor(t);
 const EXECUTOR = deployment.contracts.Executor as Address;
@@ -76,9 +96,9 @@ if (!asset) {
 const token = await loadToken(asset);
 console.log(`\n  Executor ${EXECUTOR}  (${deployment.name}, chain ${chain.id})`);
 console.log(`  owner    ${owner.address}`);
-console.log(`  selling  ${token.symbol} for ~${TARGET_USDG} ${USDG.symbol}\n`);
+if (agent.address !== owner.address) console.log(`  agent    ${agent.address}`);
 
-// ------------------------------------------------- 1. size it from the pool
+// -------------------------------------------------------- 1. how many units
 
 const held = await ownerWallet.readContract({
   address: asset,
@@ -86,69 +106,66 @@ const held = await ownerWallet.readContract({
   functionName: 'balanceOf',
   args: [owner.address],
 });
-console.log(`  holding   ${formatUnits(held, token.decimals)} ${token.symbol}`);
+console.log(`  holding  ${formatUnits(held, token.decimals)} ${token.symbol}`);
 if (held === 0n) {
   console.error(`\n  Nothing to sell. Buy some first with pnpm execute.\n`);
   process.exit(1);
 }
 
-// The oracle's fair value converts a dollar target into units. It is a guard,
-// not a price — so it is used here only to *size* the trade, never to decide
-// whether the fill was good. That judgement comes from what the pool paid.
-// `peek` rather than `observation`: the latter reverts on stale, and a stale
-// oracle is the single most likely reason an exit cannot proceed today (D51).
-// Letting viem throw would answer a question the user is entitled to a sentence
-// about with two hundred lines of stack trace.
-const observation = await ownerWallet.readContract({
-  address: ORACLE,
-  abi: FAIR_VALUE_ORACLE_ABI,
-  functionName: 'peek',
-  args: [asset],
-});
+/**
+ * A dollar target has to be turned into units by something, and the only
+ * candidate is the oracle's fair value — which is why `--units` exists. Sizing
+ * through a value the oracle has stopped defending lets a stale publisher decide
+ * how much of your own position you may sell, and that is the shape of D51.
+ * The browser names units for this reason (D68).
+ */
+let units: bigint;
+if (UNITS_ARG !== null) {
+  units = parseUnits(UNITS_ARG, token.decimals);
+} else {
+  const observation = await ownerWallet.readContract({
+    address: ORACLE,
+    abi: FAIR_VALUE_ORACLE_ABI,
+    functionName: 'peek',
+    args: [asset],
+  });
 
-if (observation.updatedAt === 0n) {
-  console.error(`\n  The oracle has never published a value for ${token.symbol}.\n`);
-  process.exit(1);
+  if (observation.updatedAt === 0n) {
+    console.error(`\n  The oracle has never published a value for ${token.symbol}, so a dollar`);
+    console.error(`  target cannot be turned into units. Name the units instead:`);
+    console.error(`    TARGET=mainnet pnpm exit ${SYMBOL_OR_ADDRESS} --units <amount>\n`);
+    process.exit(1);
+  }
+  if (!observation.hasValue || observation.fairValueE8 === 0n) {
+    console.error(`\n  The oracle has no publishable value for ${token.symbol}. Refusing to size a`);
+    console.error(`  trade against a number it will not stand behind — use --units.\n`);
+    process.exit(1);
+  }
+
+  const maxAge = await ownerWallet.readContract({
+    address: ORACLE,
+    abi: FAIR_VALUE_ORACLE_ABI,
+    functionName: 'maxAge',
+  });
+  const ageSeconds = BigInt(Math.floor(Date.now() / 1000)) - observation.updatedAt;
+  if (ageSeconds > maxAge) {
+    console.log(
+      `\n  ⚠ the oracle's ${token.symbol} value is ${(Number(ageSeconds) / 60).toFixed(0)} min old,` +
+        ` past its ${Number(maxAge) / 60} min maxAge.`,
+    );
+    console.log(`    It is being used to size only, because it is the only estimate there is —`);
+    console.log(`    the protection on the fill is the min-out floor below, not this number.`);
+    console.log(`    --units skips it entirely, and publishing first would be better:`);
+    console.log(`      TARGET=mainnet pnpm oracle:publish`);
+  }
+
+  // units = usd / price, at chain precision throughout
+  units = (parseUnits(TARGET_USDG!, USDG.decimals) * 10n ** BigInt(token.decimals) * 100n) /
+    observation.fairValueE8;
 }
-if (!observation.hasValue || observation.fairValueE8 === 0n) {
-  console.error(`\n  The oracle has no publishable value for ${token.symbol}. Refusing to size a`);
-  console.error(`  trade against a number it will not stand behind.\n`);
-  process.exit(1);
-}
-
-const maxAge = await ownerWallet.readContract({
-  address: ORACLE,
-  abi: FAIR_VALUE_ORACLE_ABI,
-  functionName: 'maxAge',
-});
-const ageSeconds = BigInt(Math.floor(Date.now() / 1000)) - observation.updatedAt;
-
-// A warning, not a refusal — and the difference is the whole of D56. A guard
-// built before it rejects a stale exit with STALE; a guard built after it lets
-// the position out. Deciding here which of those is deployed would be this
-// script guessing at the chain's rules, so it says what it sees and lets
-// `dryRun` below give the authoritative answer.
-//
-// The sizing above still used this value, because a stale estimate is the only
-// estimate there is. What protects the fill is `minAmountOutUsdg`, derived from
-// the pool simulation rather than from the oracle.
-if (ageSeconds > maxAge) {
-  console.log(
-    `\n  ⚠ the oracle's ${token.symbol} value is ${(Number(ageSeconds) / 60).toFixed(0)} min old,` +
-      ` past its ${Number(maxAge) / 60} min maxAge.`,
-  );
-  console.log(`    Sizing used it anyway — it is the only estimate available — so the real`);
-  console.log(`    protection on this fill is the min-out floor, not the oracle.`);
-  console.log(`    Publishing first would be better:  TARGET=mainnet pnpm oracle:publish`);
-}
-
-const targetUsdg = parseUnits(TARGET_USDG, USDG.decimals);
-// units = usd / price, at chain precision throughout
-const units =
-  (targetUsdg * 10n ** BigInt(token.decimals) * 100n) / observation.fairValueE8;
 
 if (units === 0n) {
-  console.error(`\n  ${TARGET_USDG} ${USDG.symbol} rounds to zero units of ${token.symbol}.\n`);
+  console.error(`\n  That rounds to zero units of ${token.symbol}.\n`);
   process.exit(1);
 }
 if (units > held) {
@@ -159,57 +176,7 @@ if (units > held) {
   process.exit(1);
 }
 
-// --------------------------------------------- 2. simulate every fee tier
-
-const candidates = await findAllPools(asset, cash);
-if (candidates.length === 0) {
-  console.error(`\n  No ${token.symbol}/${USDG.symbol} pool on this chain.\n`);
-  process.exit(1);
-}
-
-let best: { fee: number; out: bigint } | null = null;
-for (const candidate of candidates) {
-  const pool = await loadPool(candidate.address);
-  // Selling the asset: it is the input. `zeroForOne` is true when the input
-  // token sorts first, which is exactly how `V3Swapper` derives it.
-  const zeroForOne = pool.token0.address.toLowerCase() === asset.toLowerCase();
-  const result = simulateExactInput(pool, units, zeroForOne);
-  const out = result.amountOut < 0n ? -result.amountOut : result.amountOut;
-  console.log(
-    `  fee ${String(candidate.fee).padStart(5)}  ->  ${formatUnits(out, USDG.decimals)} ${USDG.symbol}`,
-  );
-  if (out > 0n && (best === null || out > best.out)) best = { fee: candidate.fee, out };
-}
-
-if (!best) {
-  console.error(`\n  No pool could absorb the sale.\n`);
-  process.exit(1);
-}
-
-const minAmountOut = (best.out * BigInt(10_000 - SLIPPAGE_TOLERANCE_BPS)) / 10_000n;
-// Settlement currency paid per whole asset unit, 8dp — the same arithmetic as
-// `Executor._priceE8`, so the guard sees the number the contract will compute.
-const executionPriceE8 =
-  (best.out * 10n ** BigInt(token.decimals) * 100_000_000n) /
-  (units * 10n ** BigInt(USDG.decimals));
-
-// Inverted against the entry path, deliberately. See the header.
-const shortfallBps =
-  executionPriceE8 >= observation.fairValueE8
-    ? 0
-    : Number(
-        ((observation.fairValueE8 - executionPriceE8) * 10_000n) / observation.fairValueE8,
-      );
-
-console.log(
-  `\n  selling   ${formatUnits(units, token.decimals)} ${token.symbol}` +
-    ` -> ${formatUnits(best.out, USDG.decimals)} ${USDG.symbol} at fee ${best.fee}`,
-);
-console.log(`  price     ${formatUnits(executionPriceE8, 8)} ${USDG.symbol} per ${token.symbol}`);
-console.log(`  fair      ${formatUnits(observation.fairValueE8, 8)}`);
-console.log(`  shortfall ${shortfallBps} bps below fair value`);
-
-// ------------------------------------------------------------ 3. the guard
+// --------------------------------------------- 2. the plan, from one planner
 
 const mandateId =
   MANDATE_ID ??
@@ -226,9 +193,8 @@ const mandateId =
         functionName: 'getMandate',
         args: [id],
       });
-      // Same three conditions as `execute.ts`: owned, active, and pointing at
-      // the executor this build targets. Any one of them missing means the
-      // mandate cannot be used, however recent it is.
+      // Owned, active, and pointing at the executor this build targets. Any one
+      // missing means the mandate cannot be used, however recent it is.
       if (
         m.active &&
         m.owner.toLowerCase() === owner.address.toLowerCase() &&
@@ -240,81 +206,62 @@ const mandateId =
     throw new Error('no active mandate for this owner — run pnpm mandate first');
   })());
 
-console.log(`\n  mandate   #${mandateId}`);
+console.log(`  mandate  #${mandateId}`);
+console.log(`\n  planning…`);
 
-const [ok, reason, offending] = await ownerWallet.readContract({
-  address: GUARD,
-  abi: POLICY_GUARD_ABI,
-  functionName: 'dryRun',
-  args: [
-    mandateId,
-    [
-      {
-        asset,
-        isExit: true,
-        amountInUsdg: best.out,
-        amountOut: units,
-        executionPriceE8,
-        slippageBps: shortfallBps,
-        fairValueE8: 0n,
-        gapRisk: 0,
-      },
-    ],
-  ],
+// Everything `prepareExit` throws is a sentence about why this exit cannot
+// honestly be planned — a closed mandate, a wallet that is not its agent, no
+// pool deep enough. Letting viem's stack trace answer a question the user is
+// entitled to one line about is what this file used to complain about.
+const plan = await prepareExit({
+  asset,
+  units: formatUnits(units, token.decimals),
+  mandateId,
+  sender: owner.address,
+  agent: agent.address,
+  thesisHash: THESIS_HASH,
+}).catch((e: unknown) => {
+  console.error(`\n  ${e instanceof Error ? e.message : String(e)}\n`);
+  process.exit(1);
 });
 
-if (!ok) {
-  const decoded = Buffer.from(reason.slice(2), 'hex').toString('utf8').replace(/\0+$/, '');
-  console.error(`\n  guard would REJECT: ${decoded}  ${offending}`);
+for (const tier of plan.quote.considered) {
+  const chosen = tier.fee === plan.quote.feeTier ? ' ←' : '';
+  console.log(
+    `  fee ${String(tier.fee).padStart(5)}  ->  ` +
+      `${formatUnits(tier.out, plan.cashDecimals)} ${USDG.symbol}${chosen}`,
+  );
+}
+
+console.log(
+  `\n  selling   ${formatUnits(plan.units, plan.decimals)} ${plan.symbol}` +
+    ` -> ${formatUnits(plan.quote.amountOut, plan.cashDecimals)} ${USDG.symbol}`,
+);
+console.log(`  pool      ${plan.quote.pool}  (the one the executor derives)`);
+console.log(`  floor     ${formatUnits(plan.leg.minAmountOutUsdg, plan.cashDecimals)} ${USDG.symbol}`);
+console.log(`  price     ${formatUnits(plan.predicted.executionPriceE8, 8)} per ${plan.symbol}`);
+console.log(
+  `  fair      ${formatUnits(plan.oracle.fairValueE8, 8)}` +
+    ` (${plan.oracle.ageSeconds}s old${plan.oracle.stale ? ', STALE' : ''})`,
+);
+// Zero here is a measurement, not a missing one: `_exitShortfallBps` returns
+// zero against a value the oracle refuses to defend, and so does the planner.
+console.log(
+  `  shortfall ${plan.predicted.shortfallBps} bps below fair value` +
+    (plan.oracle.stale || !plan.oracle.hasValue
+      ? '  (not measured — the oracle is not defending a number, and neither is the contract)'
+      : ''),
+);
+
+if (!plan.verdict.allow) {
+  console.error(`\n  guard would REJECT: ${plan.verdict.reason}  ${plan.verdict.offendingAsset}`);
   console.error('  Refusing to spend gas on a transaction the guard will revert.\n');
   process.exit(1);
 }
 console.log(`  dryRun    ALLOW`);
+console.log(`  evidence  ${plan.evidence.hash}${plan.evidence.stored ? '' : '  (not stored)'}`);
 
-// ------------------------------- 3b. the evidence this decision rests on
-
-// The exit's bundle records the one thing that matters most on the way out:
-// how old the oracle's view was when the decision was taken. Since D56 a stale
-// value no longer blocks an exit, so the age is no longer implied by the fill
-// having happened — it has to be written down (D57).
-const bundle: EvidenceBundle = {
-  kind: 'exit',
-  chainId: chain.id,
-  decidedAt: Math.floor(Date.now() / 1000),
-  mandateId: mandateId.toString(),
-  executor: EXECUTOR,
-  guard: GUARD,
-  thesisHash: THESIS_HASH,
-  legs: [
-    {
-      asset,
-      symbol: token.symbol,
-      amountIn: units.toString(),
-      minAmountOut: minAmountOut.toString(),
-      feeTier: best.fee,
-      simulatedOut: best.out.toString(),
-      impactBps: null,
-    },
-  ],
-  observations: [
-    {
-      asset,
-      fairValueE8: observation.fairValueE8.toString(),
-      confidenceBps: Number(observation.confidenceBps),
-      gapRisk: Number(observation.gapRisk),
-      capacityUsdg: observation.capacityUsdg.toString(),
-      updatedAt: Number(observation.updatedAt),
-      ageSeconds: Math.max(0, Math.floor(Date.now() / 1000) - Number(observation.updatedAt)),
-      hasValue: observation.hasValue,
-    },
-  ],
-  dryRun: { ok, reason: 'ALLOW', offendingAsset: null },
-};
-
-const EVIDENCE_HASH = await writeEvidence(bundle);
-console.log(`  evidence  ${EVIDENCE_HASH}`);
-
-// --------------------------------- 4. Permit2, over the asset being sold
+// --------------------------------- 3. Permit2, over the asset being sold
 
 const allowance = await ownerWallet.readContract({
   address: asset,
@@ -322,8 +269,8 @@ const allowance = await ownerWallet.readContract({
   functionName: 'allowance',
   args: [owner.address, ADDR.permit2],
 });
-if (allowance < units) {
-  console.log(`\n  approving Permit2 to move ${token.symbol}…`);
+if (allowance < plan.leg.amountIn) {
+  console.log(`\n  approving Permit2 to move ${plan.symbol}…`);
   const hash = await ownerWallet.writeContract({
     address: asset,
     abi: ERC20_ABI,
@@ -339,60 +286,40 @@ if (allowance < units) {
         functionName: 'allowance',
         args: [owner.address, ADDR.permit2],
       }),
-    (a) => a >= units,
+    (a) => a >= plan.leg.amountIn,
     { what: 'Permit2 allowance' },
   );
   console.log(`  approved`);
 }
 
-async function unusedNonce(): Promise<bigint> {
-  for (let word = 0n; word < 16n; word++) {
-    const bitmap = await ownerWallet.readContract({
-      address: ADDR.permit2,
-      abi: PERMIT2_ABI,
-      functionName: 'nonceBitmap',
-      args: [owner.address, word],
-    });
-    for (let bit = 0n; bit < 256n; bit++) {
-      if ((bitmap >> bit) % 2n === 0n) return word * 256n + bit;
-    }
-  }
-  throw new Error('no unused Permit2 nonce found in the first 16 words');
-}
+// The same module the browser signs with, so a CLI exit and a browser exit
+// cannot authorise subtly different things. It reads the nonce bitmap through
+// the mainnet public client — which this script is now pinned to anyway, and
+// which is the only chain the rest of the plan came from.
+const payload = await buildPermit(client, {
+  token: asset,
+  amount: plan.leg.amountIn,
+  spender: EXECUTOR,
+  owner: owner.address,
+  chainId: chain.id,
+});
 
-const nonce = await unusedNonce();
-const deadline = BigInt(Math.floor(Date.now() / 1000) + 20 * 60);
+console.log(`\n  permit    nonce ${payload.nonce}, over the asset rather than the cash`);
+for (const line of describePermit(
+  { token: asset, amount: plan.leg.amountIn, spender: EXECUTOR, owner: owner.address, chainId: chain.id },
+  payload.deadline,
+  plan.symbol,
+  plan.decimals,
+)) {
+  console.log(`            · ${line}`);
+}
 
 const signature = await ownerWallet.signTypedData({
   account: owner,
-  domain: { name: 'Permit2', chainId: chain.id, verifyingContract: ADDR.permit2 },
-  types: {
-    TokenPermissions: [
-      { name: 'token', type: 'address' },
-      { name: 'amount', type: 'uint256' },
-    ],
-    PermitBatchTransferFrom: [
-      { name: 'permitted', type: 'TokenPermissions[]' },
-      { name: 'spender', type: 'address' },
-      { name: 'nonce', type: 'uint256' },
-      { name: 'deadline', type: 'uint256' },
-    ],
-  },
-  primaryType: 'PermitBatchTransferFrom',
-  message: {
-    permitted: [{ token: asset, amount: units }],
-    spender: EXECUTOR,
-    nonce,
-    deadline,
-  },
+  ...payload.typedData,
 });
 
-console.log(
-  `\n  permit    ${formatUnits(units, token.decimals)} ${token.symbol} max, nonce ${nonce}` +
-    `\n            over the asset, not the cash — spender is the executor and nothing else`,
-);
-
-// -------------------------------------------------------------- 5. exit
+// -------------------------------------------------------------- 4. exit
 
 const cashBefore = await ownerWallet.readContract({
   address: cash,
@@ -408,11 +335,18 @@ const hash = await agentWallet.writeContract({
   functionName: 'exit',
   args: [
     mandateId,
-    [{ asset, amountIn: units, minAmountOutUsdg: minAmountOut, fee: best.fee }],
-    { permitted: [{ token: asset, amount: units }], nonce, deadline },
+    [
+      {
+        asset,
+        amountIn: plan.leg.amountIn,
+        minAmountOutUsdg: plan.leg.minAmountOutUsdg,
+        fee: plan.leg.fee,
+      },
+    ],
+    payload.permit,
     signature,
     THESIS_HASH,
-    EVIDENCE_HASH,
+    plan.evidence.hash,
     '', // evidenceCID — nothing pins the bundle yet, so this stays empty
   ],
 });
