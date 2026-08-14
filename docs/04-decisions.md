@@ -3478,3 +3478,62 @@ then both suites, then `pnpm check:tests`, then `pnpm build`.
 
 The clone step is now in the start-of-day checklist too, because the checklist is what someone
 follows on a machine that has never built this.
+
+---
+
+## D74 — Sweeping the rest: three stale claims, one of them the frightening kind
+
+Nothing new was built here. This is the pass that reads what the docs assert and checks it against
+the chain, because `pnpm check:tests` guards exactly one class of claim — a test count — and every
+other number in `docs/` is on trust.
+
+**1. The treasury warning was false, and the document said both things.** `05-status.md` carried
+`⚠️ Still open: treasury is the deployer EOA` three bullets above an entry recording that
+`setTreasury` had been executed on 2026-08-12. Read from the chain 2026-08-14: `treasury()` and
+`admin()` are both the Safe `0x98d19BE6…`, `feeBps()` is 15. Fee revenue has been landing in the
+2-of-3 for two days while the doc warned it was landing in an EOA.
+
+The direction matters. A stale ✅ makes you complacent about something already fixed; a stale ⚠️
+sends someone to *fix a thing that is not broken* — here, a Safe transaction needing two signatures,
+against a contract whose state is already correct. That is worse, and it is the half that survived.
+
+**2. The funding plan recommended against a feature it already had.** The runway block still read
+"needs a `PUBLISH_SYMBOLS` filter that `publish.ts` does not have … not worth code changes at this
+point in the calendar". D63 built that filter two days earlier and measured it; D65 noted the
+funding note had gone stale and did not come back to it. Corrected with the measured numbers:
+
+```
+30 assets   919,563 gas   0.002648 OKB/day    $5 →  ~20 days
+ 4 assets   142,872 gas   0.000411 OKB/day         → ~129 days
+ 1 asset     53,739 gas   0.000155 OKB/day         → ~342 days
+```
+
+The mandate's four assets are the only set anything on chain can execute against, so $5 covers the
+entire judging window several times over and the "runs dry 9 Sep, remind at 5 Sep" plan applies only
+to publishing all thirty — which buys nothing, because the web app computes fair value off-chain for
+everything it displays.
+
+**3. Every deployed address is verified — and one was not until today.** The rule in CLAUDE.md is
+that anything listed in `src/deployments.ts` should be readable on Sourcify. Checked all fourteen:
+thirteen were `exact_match`, and `TestUSDG` on testnet — the mock settlement token
+`Deploy.s.sol` stands up when the configured `CASH` has no code — was not verified at all. Now it
+is (`match`, creation and runtime).
+
+Two things worth knowing for the next check. **Sourcify's v1 API is in a brownout until
+2027-01-08**, so the obvious `check-all-by-addresses` endpoint answers with an error that looks like
+an outage rather than a migration notice. The v2 form is what to use:
+
+```bash
+curl -s https://sourcify.dev/server/v2/contract/196/<address>   # "match": "exact_match"
+```
+
+And `forge verify-contract … --verifier sourcify` is **unaffected** — it already submits to v2 and
+returns a job id to poll. The documented command still works; only a hand-rolled check breaks.
+
+### The pattern under all three
+
+Every one of these was recorded correctly when it happened and then contradicted by a neighbouring
+paragraph that nobody re-read. `check:tests` exists because a number repeated across a repo is an
+unverified claim in several copies (D60). The same is true of a *state* repeated in several
+paragraphs, and there is no script for that one — only someone reading it against the chain, which
+is what this entry is.

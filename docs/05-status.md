@@ -73,7 +73,7 @@ history. `receipts.count()` was 3 before and 3 after.
 FairValueOracle  0xDB7949c99e6d234C0eD374a71966d9e6CbfcfD09   new — publish-time jump bound
 PolicyGuard      0x9C8F1af1cF0FaD14C46617c573bFed8C90a783be   redeployed 2026-08-12 — D56 exit fix
 Executor         0xD3d4aeD69f045dAb75390b2a1431A2161C02fBE2   redeployed 2026-08-12 with the guard
-ReceiptRegistry  0x9D04575894F570C3638Bc1f6ECaD6EF36D479Fa6   kept — 16 fills; #9-#13 exits, #14 an entry, #15 the first from a browser (D65)
+ReceiptRegistry  0x9D04575894F570C3638Bc1f6ECaD6EF36D479Fa6   kept — 18 receipts; #15 the first fill from a browser (D65), #16 the first exit from one (D68), #17 the same from the rebuilt CLI
 ThesisRegistry   0xD4b503d002Fb77019d7BB1a26DCe1d60F32dfa1E   kept
 FeeCollector     0x3A1D6b9129E69fEF189E538996B18cebd56C3Dd0   kept — 15 bps, ceiling 50
 PoolSwapper      0x1f3b67d8209060eC68d0eDCD6E60Ba53A8e9ac28
@@ -351,27 +351,28 @@ That single run exercises every claim the product makes. It is the demo.
   ```
 
   **Funding: ~$5 into the publisher `0x40101A49…`, before the worker goes up.** A plain transfer;
-  it needs no Safe signatures. The runway, at the current gas floor:
+  it needs no Safe signatures. The runway depends entirely on how many symbols it publishes, and
+  `PUBLISH_SYMBOLS` (D63) is what decides that — measured, at 0.02 gwei and 144 publishes a day:
 
   ```
-  884k gas per publish (30 warm slots) × 0.02 gwei = 0.0000177 OKB
-  × 144 publishes/day                              = 0.00255 OKB/day  (~$0.24)
-  $5 ≈ 0.053 OKB                                   → ~21 days
+  30 assets   919,563 gas   0.002648 OKB/day    $5 ≈ 0.053 OKB →  ~20 days
+   4 assets   142,872 gas   0.000411 OKB/day                    → ~129 days
+   1 asset     53,739 gas   0.000155 OKB/day                    → ~342 days
   ```
 
-  **From 19 Aug that runs dry around 9 Sep.** Winners are announced two to four weeks after
-  submission, so the four-week case is *not* covered. **Put a reminder at 5 Sep** to either top up
-  again or shut the worker down — by then the video and the fills are long done, and nothing is
-  executing. `publish.ts` warns at 20 runs left, which is only ~3.3 hours; do not rely on it as
-  the reminder for a month-long run.
+  **Publish the mandate's four.** `PUBLISH_SYMBOLS=wTSLAx,wNVDAx,wQQQx,wSPYx` is the only set
+  anything on chain can execute against, and at four assets $5 covers the whole judging window with
+  months to spare — so the "runs dry around 9 Sep, put a reminder at 5 Sep" plan below applies only
+  if the worker is left publishing all thirty. Publishing thirty buys nothing: the web app computes
+  fair value off-chain for every asset it displays, and only a real fill needs the on-chain value.
 
-  Two cheaper shapes were considered and **declined for this submission**, recorded so nobody
-  re-derives them: publishing only the mandate's allowlist (3–4 assets instead of 30 — 884k gas
-  falls to ~103k, and $5 would last months) needs a `PUBLISH_SYMBOLS` filter that `publish.ts`
-  does not have; and stretching the interval past 600s eats the five-minute margin that 600s
-  exists to hold against RPC lag (D18) and a publish cycle that itself takes a minute or two.
-  Neither is worth code changes at this point in the calendar. The first is the one to build if
-  the worker ever needs to run past September.
+  > This block said the opposite until 2026-08-14: that a `PUBLISH_SYMBOLS` filter "`publish.ts`
+  > does not have" was needed and was not worth building this close to the deadline. D63 built it
+  > two days earlier, D65 noted the funding note had gone stale, and nothing came back to fix it —
+  > which is how a document ends up recommending against a thing it already contains.
+
+  `publish.ts` warns at 20 runs left, which is only ~3.3 hours; do not rely on it as the reminder
+  for a run measured in weeks.
 
   While it is off — and after it runs dry — the on-chain observation is stale between manual
   publishes. The page says so in a note and does **not** turn it into a rejection, which would be
@@ -407,9 +408,11 @@ and the fee swept (`0x5004b6fa…`) — `FeeCollector` went to **0 USDG** and th
 - ~~**`FeeCollector.withdraw` has no caller**~~ — **`pnpm fees [withdraw]`**, 2026-08-12. Reports
   the rate, the ceiling, the admin, the treasury and the balance; sweeps only when asked. `withdraw`
   is callable by anyone because the destination is fixed in storage, so this needs no Safe
-  signatures. ⚠️ **Still open: `treasury` is the deployer EOA** while `admin` is the 2-of-3 Safe —
-  the control moved in D42 and the payout address did not. `setTreasury` is admin-only, so fixing
-  it is a Safe transaction, not a script.
+  signatures. ~~⚠️ **Still open: `treasury` is the deployer EOA**~~ — **closed the same day**, and
+  this file contradicted itself about it for two days: `setTreasury` was executed 2026-08-12
+  (`0xb49827b1…`), which the entry three bullets down already said. Read from the chain 2026-08-14:
+  `treasury()` **and** `admin()` are both the Safe `0x98d19BE6…`, `feeBps()` is 15. The alarming
+  half of the contradiction was the false half, which is the worse way round.
 - ~~**`closeMandate`, `updatePolicy`, `setAgent`, `setAssetAllowed`, `setTriggers` have no path**~~
   — **`pnpm mandate:edit <id> close|agent|asset|policy|trigger`**, plus the browser panel below.
   Every one is owner-checked before gas, read back after writing, and `trigger add` appends to the
@@ -508,14 +511,39 @@ before trusting it: `pnpm oracle` should show a fresh observation, not a stale o
 **21 Aug, before 23:59 UTC** — the `@XLayerOfficial` post from @reckonz_xyz, then the Google Form.
 Both are hard requirements and neither takes long, which is exactly how they get missed.
 
-**~5 Sep — decide whether to keep publishing.** The $5 runs out around 9 Sep. Top up, or shut the
-worker down; either is fine, silently running dry is not.
+**~5 Sep — decide whether to keep publishing.** Only if the worker was left publishing all thirty
+assets: that is the ~20-day runway. At the mandate's four it is ~129 days and this reminder is
+noise. Either way, top up or shut it down — silently running dry is the one option that is not
+fine.
 
 ---
 
 ## Log
 
-**2026-08-14 (latest, twentieth)** — **nothing was running the tests** (D73). `.github/workflows/`
+**2026-08-14 (latest, twenty-first)** — **swept the remaining gaps; nothing built, three claims
+corrected** (D74). The docs assert plenty that `pnpm check:tests` cannot guard — it checks test
+counts and nothing else — so this pass read them against the chain.
+
+The **treasury warning was false**: `05-status.md` warned that fee revenue lands in the deployer
+EOA, three bullets above the entry recording that `setTreasury` had moved it to the Safe two days
+earlier. `treasury()` and `admin()` both read `0x98d19BE6…`. A stale ⚠️ is worse than a stale ✅ —
+it sends someone to fix what is not broken, here with a two-signature Safe transaction.
+
+The **funding plan recommended against a feature it already had**, telling a reader that
+`PUBLISH_SYMBOLS` did not exist and was not worth building. D63 built it; D65 flagged the note as
+stale; nothing returned. At the mandate's four assets $5 buys **~129 days**, not the ~20 the block
+was sized for, so the 5 Sep reminder applies only to publishing all thirty — which buys nothing.
+
+And **all fourteen deployed addresses are now verified on Sourcify**: thirteen already were, and
+testnet `TestUSDG` was not until today. Worth knowing for the next check — Sourcify's **v1 API is
+in a brownout until 2027-01-08**, so a hand-rolled `check-all-by-addresses` call returns what looks
+like an outage; use `/server/v2/contract/<chain>/<address>`. `forge verify-contract --verifier
+sourcify` already speaks v2 and is unaffected.
+
+Also corrected: the deployed-contracts block still said "16 fills", and CI went green on its first
+run.
+
+**2026-08-14 (twentieth)** — **nothing was running the tests** (D73). `.github/workflows/`
 held one manual workflow for the oracle and nothing else, so 106 Foundry tests and 136 unit tests
 ran only when someone remembered. And a fresh clone could not compile the contracts at all: `lib/`
 is gitignored and `forge-std` is neither committed nor a submodule, so `forge test` fails before it

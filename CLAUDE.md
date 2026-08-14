@@ -190,7 +190,9 @@ TARGET=mainnet pnpm fees [withdraw]    # what the fee earned, and sweep it to th
 - **Contracts are verified on Sourcify** (`forge verify-contract <addr> <path>:<name> --chain 196
   --verifier sourcify`, no API key needed). Anything deployed and listed in `src/deployments.ts`
   should be verified — an address we publish that nobody can read the source of is worth less
-  than the redeploy costs.
+  than the redeploy costs. All fourteen were, as of 2026-08-14. To check one, use the **v2** API;
+  v1 is in a brownout until 2027-01-08 and answers with what looks like an outage (D74):
+  `curl -s https://sourcify.dev/server/v2/contract/196/<address>` → `"match": "exact_match"`.
 
 ## Network
 
