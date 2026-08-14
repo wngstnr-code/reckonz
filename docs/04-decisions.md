@@ -3943,5 +3943,43 @@ alike, and guessing it would have been D5's mistake. The probe object was delete
 fake bundle sitting in the evidence namespace is a receipt that never existed, and the store now
 holds zero.
 
-What remains is a redeploy, so the running app picks up the connected store. Until then production
-answers `none` — correctly.
+### And the same mistake a third time, which is the part worth keeping
+
+After the redeploy, production **still** answered `none` — with the reason *"no blob store is
+reachable from this runtime"*, a sentence we had written while guessing. `vercel env ls` showed
+`BLOB_STORE_ID` present in Production. What was missing was `VERCEL_OIDC_TOKEN`, which the runtime
+injects at request time rather than the project exposing as configuration — so a local
+`vercel env pull` never shows it, and a gate built on seeing it locally refuses in production for
+no reason.
+
+Twice the gate tested for a credential we had reasoned about instead of one the SDK actually
+requires. The fix is not a better guess: **`hasBlobCredentials()` now asks only whether a store is
+configured at all**, attempts the upload, and lets any failure come back in `@vercel/blob`'s own
+words. Whether a token can be obtained is the SDK's question and it answers it precisely; our job
+is to report the answer, not to pre-empt it.
+
+### Proven in production
+
+Same fill, after that deploy:
+
+```
+verdict     true ALLOW | oracle 242s
+persistence {"kind":"blob","url":"https://kqjdljzlkaan4s05.public.blob.vercel-storage.com/evidence/0xb0272e25….json"}
+```
+
+and then, from a clean position — no local copy, every credential unset:
+
+```
+local copy exists : false
+fetched           : yes (entry, chain 196)
+hash re-derives   : true
+```
+
+That is the claim, finally true on the path a user takes. The probe objects were deleted afterwards
+and the store holds zero.
+
+**One property to know, and it is not new.** A bundle is archived when the guard *allows*, which is
+before anything is signed — so the store accumulates plans that were permitted, not only fills that
+happened. `evidence/` on disk has always behaved this way; a public store makes it visible. The
+receipt is still what proves a fill occurred, and the bundle is what proves what was known when it
+was decided.
