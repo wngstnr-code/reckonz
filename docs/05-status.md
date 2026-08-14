@@ -16,7 +16,7 @@ colliding. `06-assessment.md` is the honest read on whether this is a business.
 ```bash
 cd /Users/mac/Desktop/okxai
 set -a && source .env && set +a     # PRIVATE_KEY, GEMINI_API_KEY, CASH
-pnpm typecheck && forge test        # expect: clean, 105 passed
+pnpm typecheck && pnpm test         # expect: clean, 136 unit tests, then 105 passed
 git status --short                  # expect: clean; docs/ is tracked now, not ignored
 pnpm dev                            # the web app, port 3000 (falls back if taken)
 ```
@@ -321,6 +321,8 @@ That single run exercises every claim the product makes. It is the demo.
 | ~~**Exit from the browser**~~ — **done 2026-08-14, receipt #16 on mainnet** | `app/components/Exit.tsx` + `POST /api/exit` + `src/exit-plan.ts` (D68), the mirror of the fill chain. Entering was a page and leaving was a terminal, which is the wrong asymmetry for risk tooling. The permit names the **asset** rather than USDG, so each xStock needs its own one-off Permit2 approval; size is named in units rather than as a dollar target, so a stale oracle cannot decide how much you may sell. **Exercised end to end against the OKX extension:** receipt **#16**, tx `0x85501e91…`, 0.0005 wTSLAx → 0.169961 USDG gross (0.169707 net) at fee tier 500, evidence `0xedaeaefc…` which `pnpm evidence` re-derives. The oracle was 158,738s stale and the receipt records `slippageBps: 0` with `fairValueE8: 0` — the guard catching its own Stale revert, which is what the off-chain mirror predicted. `src/exit.ts` now calls the same planner, so the CLI cannot drift from it. |
 | ~~**Mandate policy editing in the UI**~~ — **built 2026-08-14** | `updatePolicy`, `setAgent`, `setExecutor` and `setAssetAllowed` are in `MandateManage` (D70). The policy form is pre-filled and sends the **whole** struct back, because `updatePolicy` replaces wholesale. Field widths are checked before gas. |
 
+| ~~**Zero unit tests for `src/`**~~ — **136 of them, 2026-08-14** | `node:test` via `tsx --test`, no runner dependency (D71). `pnpm test:unit`, or `pnpm test` for both suites. Ten files: `guard`, `fill`, `exit-plan`, `v3math`, `planner`, `triggers`, `evidence`, `permit`, `observations`, `indexer`, `issuer`. The arithmetic mirrors are pinned against **receipts on mainnet** rather than invented vectors — a test against a real receipt cannot agree with a wrong mirror. Found and fixed three things on the first run: a wrong operator rendered for an undecodable comparator, dust deleted by `schedule()`, and a floating-point boundary where `guard.ts` is stricter than the chain (left in place, pinned, and written up). `pnpm check:tests` now guards both counts. |
+
 ### Known gaps in the work itself
 
 - ~~**Claude provider never executed**~~ — **deleted 2026-08-12 (D59)**. Gemini is the only live
@@ -488,7 +490,30 @@ worker down; either is fine, silently running dry is not.
 
 ## Log
 
-**2026-08-14 (latest, seventeenth)** — **the way out is a page** (D68). `src/exit-plan.ts` →
+**2026-08-14 (latest, eighteenth)** — **the TypeScript side gets a suite** (D71). 136 unit tests
+over ten modules in `src/`, on Node's built-in runner through `tsx --test` — **no new dependency**,
+because `package.json` is a shared file and Node 24 already ships the capability. `pnpm test:unit`,
+`pnpm test` for both suites, and `pnpm check:tests` now derives and guards **two** counts instead
+of one.
+
+Until today, 105 Foundry tests covered the contracts and `src/` had none. What stood in for them —
+`pnpm verify`, `pnpm reconcile` — are regressions against live on-chain state: stronger than a unit
+test for what they cover, and no cover at all for a pure function. `executionPriceE8`,
+`scaleThreshold`, `evidenceHash`, `merge` and `checkExecution` were guarded by the next run.
+
+The first run found three things. **`describeOnchainTrigger` printed the wrong operator** for a
+comparator index it could not decode — it computed a `comparator#N` label and then discarded it,
+falling through to `<`, in the renderer `pnpm mandate:show` and the browser panel both use. Fixed.
+**`schedule()` deleted dust**: floor division with nowhere to put the remainder, so a 5,000,000
+USDG order over three slices planned 4,999,999.999998. Fixed with a `lastSlice`. And **`guard.ts`
+is stricter than the chain at exactly the tolerance boundary**, by one floating-point epsilon —
+left in place because the direction is the safe one, but written down, because "mirrors it line for
+line" is a claim this repo makes out loud.
+
+The arithmetic mirrors are pinned against receipts #16 and #17 on mainnet rather than invented
+vectors. A test against a real receipt cannot agree with a wrong mirror.
+
+**2026-08-14 (seventeenth)** — **the way out is a page** (D68). `src/exit-plan.ts` →
 `POST /api/exit` → `app/components/Exit.tsx`, the mirror of the fill chain and the same split:
 the server simulates every fee tier in the sell direction, checks the pool the executor derives,
 reads the oracle, asks `dryRun` and hashes the evidence; the wallet approves, signs and sends. The

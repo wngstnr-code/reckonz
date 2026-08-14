@@ -3284,3 +3284,71 @@ Field widths are checked before sending (`uint16`, `uint8`, `uint32`), so an out
 fails with a sentence rather than a revert. The allowlist carries the CLI's warning across:
 disallowing stops new fills, it does **not** sell what is held, and an exit is itself a fill the
 guard checks against the list — so exit first, then disallow.
+
+---
+
+## D71 — The TypeScript side gets a suite, and the first one found a bug
+
+105 Foundry tests covered the contracts. `src/` had **none**. What stood in for them was
+`pnpm verify`, `pnpm reconcile` and `pnpm check:tests` — regressions against live on-chain state,
+which is a genuinely stronger check for the things they cover and no check at all for anything
+else. They need the network, they need the chain to be up, and a pure function has no guard in them
+at all: `executionPriceE8`, `shortfallBps`, `scaleThreshold`, `evidenceHash`, `merge` and
+`checkExecution` were defended by nothing but the next run.
+
+**Decided: `node:test`, no new dependency.** Node 24 ships a stable test runner and `tsx --test`
+executes it. Adding vitest would mean touching `package.json` and the lockfile — a shared file, one
+dependency per commit, negotiated with the other side of the repo — for a capability already
+present. Tests live at `src/<module>.test.ts`, run with `pnpm test:unit`, and `pnpm test` runs both
+suites.
+
+`src/check-tests.ts` now checks **two** counts rather than one, deriving each by running its suite.
+The two are told apart by the words around the number, so prose must say *unit* tests where it
+means them; a bare "38 tests" is read as a Foundry claim and fails. That is deliberate — an
+ambiguous count is the state D60 found in five files at once, and the fix is to make the sentence
+name its suite, not to teach the checker to guess.
+
+### What the first run found
+
+**A real defect in `describeOnchainTrigger`.** It computed a `comparator#N` fallback for an index
+it could not decode, then discarded it: the render line tested `comparator === 'gt' ? '>' : '<'`,
+so anything unrecognised came out as **`<`** — the wrong operator, in a sentence describing a risk
+control, in the renderer `pnpm mandate:show` and the browser panel both print. `metric#N` did not
+have the bug because it was interpolated directly, and that asymmetry is what hid it. Unreachable
+with today's contract, where the comparator is only 0 or 1; it is exactly the "the contract is
+newer than this file" case `metricName` in `abi.ts` exists to handle, and its rule applies —
+**a wrong label on a risk metric is worse than a missing one.** Fixed.
+
+**Dust deleted by `schedule()`.** `perSlice = total / BigInt(slices)` is a floor division and the
+`Schedule` shape had nowhere to put the remainder, so a 5,000,000 USDG order over three slices
+planned 3 × 1,666,666.666666 and lost two base units. Two USDG-millionths is economically nothing;
+the objection is that chain precision throughout is this repo's rule and a plan that does not add up
+to its own order is D29's per-leg sizing mistake in miniature — and that nothing was checking, which
+is why it survived. `Schedule` gained a `lastSlice` that carries the remainder. The function has no
+callers today, which is exactly why it needed a test rather than a reader.
+
+**A divergence in `guard.ts`, left in place and now pinned.** CLAUDE.md says `checkExecution`
+mirrors the Solidity line for line. At exactly the tolerance boundary it does not: the contract
+computes `(diff * 10_000) / fv` in integers and gets exactly 100 for a price of 101 against a fair
+value of 100, so `> 100` is false and the chain **allows** it; the mirror computes
+`Math.abs(101 / 100 - 1) * 10_000`, which in IEEE-754 is 100.00000000000009, and **refuses**. Left
+alone because the direction is the safe one — the planner declining a trade the chain would have
+permitted costs a user a boundary they cannot have aimed for, while the reverse would have the page
+promise a fill that reverts. Recorded because "mirrors it line for line" is a claim this repo makes
+out loud, and it is true to within floating point rather than exactly.
+
+Two other things `guard.ts` does deliberately are now tests rather than comments, because they are
+the kind of thing a later reader "corrects" into agreement with the contract: there is **no STALE
+check**, since this mirror runs against a report computed seconds ago and there is no publication
+whose age is in question; and **`NO_REFERENCE` is answered before `NO_DATA`**, which is not the
+contract's order, because "we computed a value and refused to stand behind it" is a more useful
+sentence than "we have no observation". Both are refusals, so no trade is decided differently — and
+if that ever stops being true, those two tests are what fail.
+
+### The vectors that are not invented
+
+The arithmetic mirrors are pinned against **receipts on X Layer mainnet**, where the contract
+computed the same number from the same inputs. Receipt #16 gives `executionPriceE8` 33,992,200,000
+from 169,961 cash units and 0.0005 wTSLAx, and `slippageBps` **0** with the oracle 158,738s stale;
+receipt #17 gives 33,990,000,000. A test against a real receipt cannot agree with a wrong mirror,
+which is the difference between a test and a restatement of the code.
