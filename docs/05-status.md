@@ -21,6 +21,15 @@ git status --short                  # expect: clean; docs/ is tracked now, not i
 pnpm dev                            # the web app, port 3000 (falls back if taken)
 ```
 
+**On a fresh clone, install the Solidity dependency first.** `lib/` is gitignored and `forge-std` is
+neither committed nor a submodule, so `forge test` fails before it compiles and nothing said so
+until 2026-08-14:
+
+```bash
+pnpm install
+forge install foundry-rs/forge-std@v1.16.2   # the version the suite is written against
+```
+
 Nothing is half-finished in the tree. Every unfinished thing is in **Not done** below, not
 lurking in the code.
 
@@ -427,12 +436,14 @@ agree with a full scan of the same registry.
 - **`receiptsOf` and `performance` now have a reader**: `pnpm mandate:show`, which is keyed by
   mandate — exactly their shape — and had been showing policy, positions and triggers with nothing
   about what the mandate actually did.
-- **`performance()` counts exits**, and that changes what it means: on an exit `amountInUsdg` is
-  cash returning, so the notional adds money out to money in, and an exit's zero shortfall is
-  averaged into the slippage. Mandate #1 reads **6.620806 USDG at 17bp** where its entries alone are
-  **3.545425 USDG at 25bp** — the figure `pnpm track-record` reports. Not fixable without redeploying
-  the registry that holds all the history, so it is pinned by
-  `test_PerformanceCountsExitsAsNotionalToo` and printed beside the honest number instead.
+- **`performance()` counts exits, and is keyed by an id that migrations reuse.** On an exit
+  `amountInUsdg` is cash returning, so the notional adds money out to money in, and an exit's zero
+  shortfall is averaged into the slippage. And the registry is kept across guard redeploys that
+  restart mandate ids, so `receiptsOf(1)` mixes in three receipts from a previous guard's mandate
+  #1. Id 1 reads **6.620806 USDG at 17bp** where this mandate's own entries are **2.046925 USDG at
+  11bp**. Not fixable without redeploying the registry that holds all the history, so it is pinned by
+  `test_PerformanceCountsExitsAsNotionalToo`, and `mandate:show` marks the foreign receipts with `‡`
+  and prints the honest figure beside it.
 - **`thesesOf` / `authorOf` stay unread on purpose**: `loadRegistry` already carries `author` on
   every thesis, so a caller would be ceremony. They earn one when a third party wants one author's
   record without pulling the whole registry.
@@ -504,7 +515,19 @@ worker down; either is fine, silently running dry is not.
 
 ## Log
 
-**2026-08-14 (latest, nineteenth)** — **the four unread views, called for the first time** (D72).
+**2026-08-14 (latest, twentieth)** — **nothing was running the tests** (D73). `.github/workflows/`
+held one manual workflow for the oracle and nothing else, so 106 Foundry tests and 136 unit tests
+ran only when someone remembered. And a fresh clone could not compile the contracts at all: `lib/`
+is gitignored and `forge-std` is neither committed nor a submodule, so `forge test` fails before it
+reaches a test — true since the repo existed, invisible on a machine where `forge install` had once
+been run.
+
+`test.yml` now runs typecheck, both suites, `check:tests` and `pnpm build` on every push and PR,
+with no secrets and nothing that touches the chain — the live-state regressions stay out, because a
+build that goes red on someone else's throttled RPC is a build people learn to ignore. `forge-std`
+is installed pinned at v1.16.2, and the clone step is in the start-of-day checklist.
+
+**2026-08-14 (nineteenth)** — **the four unread views, called for the first time** (D72).
 `receiptsOf`, `performance`, `thesesOf` and `authorOf` were deployed, correct-looking and never
 executed. Not building a page for them was a fair call; leaving them unverified was a different
 one — D35's lesson one layer down, and far cheaper to settle, because a `view` can be checked
@@ -517,6 +540,14 @@ reads **6.620806 USDG at 17bp** against **3.545425 USDG at 25bp** for its entrie
 overstated by 87%, slippage understated by a third, on the same chain at the same instant.
 `src/track-record.ts` has always filtered exits out of both, so the two have disagreed by
 construction since the first exit settled.
+
+**Corrected two hours later, by sweeping this same work:** `receiptsOf` is keyed by **id**, and the
+registry is kept across guard redeploys that restart ids — so three of those sixteen receipts belong
+to a *previous* guard's mandate #1, and two more sit under a mandate #3 no deployed guard has ever
+had. The 17bp figure is right; the number beside it was not this mandate's. Its own entries are
+**2.046925 USDG over 6 fills at 11bp**. `mandate:show` now proves the one direction that can be
+proved — a mandate cannot have written a receipt at a policy version above its own — marks those
+`‡`, and computes the honest figure over the rest.
 
 Not fixed: `ReceiptRegistry` is kept across every migration because it holds the whole history, and
 editing its source would break Sourcify verification of the deployed bytecode for no gain. The

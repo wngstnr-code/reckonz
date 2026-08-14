@@ -3407,3 +3407,74 @@ does, in the suite, where a future reader trips over it.
   `author` on every thesis it returns, so both the CLI and the panel can answer "which of these are
   mine" without another call. A caller would be ceremony. They earn one the day a third party wants
   one author's record without pulling the whole registry — which is a real use, and still not ours.
+
+### Correction, two hours later: `receiptsOf` answers by **id**, not by mandate
+
+Found by sweeping the work above, and it makes the numbers in this entry mislabelled.
+
+`ReceiptRegistry` is *kept* across every migration — that is the whole point of it, one append-only
+history — while `PolicyGuard` has been redeployed **twice** (D42, D56). Each new guard starts its
+mandate ids at 1. So "mandate #1" names a different mandate on each guard, and all of them write to
+this one registry.
+
+```
+current  guard 0x9C8F1af1…   nextMandateId 2   mandate #1 at v2
+previous guard 0x481e0A60…   nextMandateId 2   mandate #1 at v3
+receipts #0–#2   mandate 1, policyVersion 3   <- the previous guard's mandate #1
+receipts #3–#4   mandate 3                    <- a guard older still; neither deployed guard has one
+receipts #5–#17  mandate 1, policyVersion 2   <- this mandate
+```
+
+So `receiptsOf(1)` returning 16 is correct and is **not** this mandate's history: three of them are
+another guard's. `performance(1)` aggregates all sixteen. The 17bp-vs-25bp comparison above is
+arithmetically right — both figures were computed over the same sixteen — but only the first is
+labelled correctly. **This mandate's own entries are 2.046925 USDG over 6 fills at 11 bps.**
+
+No stored field names the guard, so this cannot be resolved exactly. One direction can be proved:
+a mandate can never have written a receipt at a policy version **above its own**, since the version
+only increases and only on this guard. `mandate:show` now marks those with `‡`, says how many, and
+computes the deployed-capital figure over the rest. Anything at or below the current version is
+merely unproven rather than certainly this mandate's, and saying which is which beats implying the
+whole list belongs here.
+
+Worth stating plainly because it generalises: **any per-mandate view on a kept registry is keyed by
+a number that a later deployment will reuse.** `src/track-record.ts` is unaffected — it aggregates
+by `thesisHash`, which is content-addressed and cannot collide.
+
+---
+
+## D73 — Nothing was running the tests, and a fresh clone could not compile them
+
+Found by sweeping D71 and D72. Two facts that had been true for as long as the repo has existed and
+that neither of us had reason to notice, because a working laptop hides both.
+
+**1. There was no CI.** `.github/workflows/` held exactly one file, `publish-oracle.yml`, a manual
+`workflow_dispatch` for the oracle. So 106 Foundry tests and 136 unit tests ran only when a person
+remembered to run them. `src/check-tests.ts` carries the sentence *"the thing that would fail CI is
+the thing that gets to define it"* — written about a CI that did not exist. A suite nobody runs
+automatically decays into a suite that is red and nobody knows.
+
+**2. A fresh clone cannot compile the contracts.** `lib/` is gitignored, and `forge-std` is neither
+committed nor registered as a submodule — there is no `.gitmodules`, and `git ls-files lib` returns
+nothing. It is simply present on the machine where `forge install` was once run. Anyone cloning this
+repo — the other side of the team on a new machine, a judge, a CI runner — gets a checkout where
+`forge test` fails before it reaches a test, and nothing in the README or the checklist said so.
+
+**Added: `.github/workflows/test.yml`**, on every push and every pull request. `pnpm typecheck`,
+then both suites, then `pnpm check:tests`, then `pnpm build`.
+
+- **No secrets and no chain.** The unit suite is hermetic by construction — it stubs `fetch`, hands
+  fake clients to anything that wants one, and writes only under `os.tmpdir()`; verified by running
+  it with the environment stripped. Foundry runs against its own mocks. `pnpm verify` and
+  `pnpm reconcile` are deliberately **absent**: they are regressions against live on-chain state, so
+  a red build could mean a throttled public RPC rather than a broken change, and a build that is red
+  for reasons outside the diff is a build people learn to ignore.
+- **`check:tests` runs last on purpose.** When it is the only red step, both suites passed and a
+  number in the docs is stale — a different fix from a failing test, and worth being able to tell
+  apart at a glance.
+- **`forge-std` is installed pinned at `v1.16.2`**, the version the suite was written against,
+  rather than a moving tag. A dependency that changes underneath a passing suite is precisely the
+  failure this workflow exists to catch.
+
+The clone step is now in the start-of-day checklist too, because the checklist is what someone
+follows on a machine that has never built this.
