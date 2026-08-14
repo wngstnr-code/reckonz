@@ -91,6 +91,12 @@ Rules:
 - **`import type` only, from FE into `src/`.** A value import drags the RPC client and the LLM SDK
   into the browser bundle.
 
+### A new endpoint: `GET /api/health`
+
+**2026-08-14 (D81).** `{ status: 'ok' | 'degraded' | 'down', problems: string[], assets: [...] }`,
+**503 when `down`**. Not part of any FE surface and FE need not render it — it is for a monitor.
+Worth knowing it exists before anyone writes a second one.
+
 ### Every endpoint can now answer 429
 
 **2026-08-14 (D78).** `/api/run`, `/api/fill`, `/api/exit` and `/api/theses` are rate-limited and

@@ -3983,3 +3983,68 @@ before anything is signed — so the store accumulates plans that were permitted
 happened. `evidence/` on disk has always behaved this way; a public store makes it visible. The
 receipt is still what proves a fill occurred, and the bundle is what proves what was known when it
 was decided.
+
+---
+
+## D81 — Nothing watched the thing most likely to break
+
+The oracle had been stale for **173,242 seconds** — nearly two days — when a probe of `/api/fill`
+happened to reveal it on 2026-08-14. Every fill was being refused. The deployment answered every
+request in milliseconds throughout, no error was logged anywhere, and nothing would ever have said
+so. A publisher that stops is this project's most likely outage and it was the one with no watcher.
+
+`GET /api/health` answers the only question worth asking: **could a fill succeed right now?**
+
+The rule lives in `src/health.ts` as a pure function, so it has tests rather than being woven
+through a handler:
+
+| | |
+|---|---|
+| **down** (503) | the RPC is unreachable, **or** every asset the live mandate allows has a stale or withheld value, **or** the allowlist is empty |
+| **degraded** (200) | some assets stale, no evidence archive configured, or no compiler key |
+| **ok** (200) | none of the above |
+
+**`down` is not reserved for "the process is dead", and that is the whole point.** A deployment
+serving 200s in 200ms while refusing every trade is down for the only purpose it has. A monitor
+that calls that healthy is the monitor we effectively had, and it let the state stand for two days.
+
+It reads what the live mandate can actually hold rather than a hardcoded list — `allowedAssets`,
+then `peek` per asset, serially because the public RPC throttles and a healthcheck that trips the
+rate limiter reports its own noise as an outage. Cached 30 seconds: monitors and humans hit the
+same reads, and the underlying facts move at best every ten minutes. Gated like every other route
+(D78) — an unbounded health endpoint is a way to exhaust the thing it watches.
+
+Public, and safe to be: every address in the response is already on chain and in `docs/`, and the
+configuration flags are booleans about whether a credential exists, never the credential.
+
+### The test that failed first
+
+`an empty allowlist is down, because nothing is executable`. The guard read
+`assets.length > 0 && usable.length === 0`, so an **empty** list — a failed mandate read, or a
+mandate holding nothing — fell straight through to `ok`. That is the same mistake as the one being
+fixed, one level down: reporting on the web server rather than on the product. Fixed, and the
+comment in the code names it.
+
+### Exercised against live data, and it flipped
+
+wSPYx had been published 862 seconds earlier and the other three assets were 182,739 seconds stale:
+
+```
+200  degraded  3 of 4 allowed assets have a stale or withheld value: wTSLAx, wNVDAx, wQQQx
+```
+
+Seventy-five seconds later wSPYx crossed the 900-second `maxAge`:
+
+```
+503  down  every asset mandate #1 allows has an unusable oracle value — the guard will
+           refuse every fill (oldest 182834s). The publisher has almost certainly stopped.
+```
+
+Correct on both sides of the boundary, on real state, without anyone arranging it.
+
+### What this does not do
+
+**It does not alert.** An endpoint is not a monitor; something has to call it. One free uptime
+check on a one-minute timer against `https://reckonz.vercel.app/api/health`, alerting on non-2xx,
+is the whole remaining step and it takes minutes. Until that exists this is a thing a human can
+look at, which is better than nothing and is not the same as being told.
