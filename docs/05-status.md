@@ -16,7 +16,7 @@ colliding. `06-assessment.md` is the honest read on whether this is a business.
 ```bash
 cd /Users/mac/Desktop/okxai
 set -a && source .env && set +a     # PRIVATE_KEY, GEMINI_API_KEY, CASH
-pnpm typecheck && pnpm test         # expect: clean, 136 unit tests, then 105 passed
+pnpm typecheck && pnpm test         # expect: clean, 136 unit tests, then 106 passed
 git status --short                  # expect: clean; docs/ is tracked now, not ignored
 pnpm dev                            # the web app, port 3000 (falls back if taken)
 ```
@@ -194,7 +194,7 @@ old one.
 | `V3Swapper` — direct pool swaps, derived addresses | `contracts/V3Swapper.sol` | ✅ the Universal Router cannot swap here (D35) |
 | `FeeCollector` — 15 bps, ceiling 50 in code | `contracts/FeeCollector.sol` | ✅ took a real fee |
 | `ThesisRegistry` — append-only, no admin | `contracts/ThesisRegistry.sol` | ✅ receipt #2 resolves to thesis #0 |
-| Test suite | `test/*.t.sol` | ✅ 105/105 — `pnpm check:tests` fails if this number drifts |
+| Test suite | `test/*.t.sol` | ✅ 106/106 — `pnpm check:tests` fails if this number drifts |
 | Chain selection + Permit2 helpers | `src/wallet.ts` | ✅ `TARGET=mainnet\|testnet` |
 | ABIs, one source, browser-safe | `src/abi.ts` | ✅ `pnpm verify:abi` checks every selector vs bytecode |
 | **One real fill, end to end** | `src/execute.ts` | ✅ **run on mainnet twice**; refuses truncated quotes and pool mismatches |
@@ -418,10 +418,24 @@ and the fee swept (`0x5004b6fa…`) — `FeeCollector` went to **0 USDG** and th
   0 → 1). ⚠️ Both signing keys sat in one `.env` for that run, which made the 2-of-3 a 1-of-1 for
   its duration; `SAFE_OWNER_2_KEY` should live elsewhere between admin actions. See D55.
 
-The remaining unused view surface — `ReceiptRegistry.performance` / `receiptsOf`,
-`ThesisRegistry.thesesOf` / `authorOf` — is deliberate, not a gap. `performance()` is keyed by
-mandate and Simple mode needs per-thesis aggregation (D50); the others are conveniences for
-consumers we do not have yet.
+~~The remaining unused view surface — `ReceiptRegistry.performance` / `receiptsOf`,
+`ThesisRegistry.thesesOf` / `authorOf` — is deliberate, not a gap.~~ — **settled 2026-08-14 (D72).**
+Not building a page for them was a fair call; leaving them **unexecuted** was a different thing, and
+a view nobody reads is a view nobody has verified. All four were called against mainnet and all four
+agree with a full scan of the same registry.
+
+- **`receiptsOf` and `performance` now have a reader**: `pnpm mandate:show`, which is keyed by
+  mandate — exactly their shape — and had been showing policy, positions and triggers with nothing
+  about what the mandate actually did.
+- **`performance()` counts exits**, and that changes what it means: on an exit `amountInUsdg` is
+  cash returning, so the notional adds money out to money in, and an exit's zero shortfall is
+  averaged into the slippage. Mandate #1 reads **6.620806 USDG at 17bp** where its entries alone are
+  **3.545425 USDG at 25bp** — the figure `pnpm track-record` reports. Not fixable without redeploying
+  the registry that holds all the history, so it is pinned by
+  `test_PerformanceCountsExitsAsNotionalToo` and printed beside the honest number instead.
+- **`thesesOf` / `authorOf` stay unread on purpose**: `loadRegistry` already carries `author` on
+  every thesis, so a caller would be ceremony. They earn one when a third party wants one author's
+  record without pulling the whole registry.
 
 ### The encoder nobody had written
 
@@ -490,7 +504,31 @@ worker down; either is fine, silently running dry is not.
 
 ## Log
 
-**2026-08-14 (latest, eighteenth)** — **the TypeScript side gets a suite** (D71). 136 unit tests
+**2026-08-14 (latest, nineteenth)** — **the four unread views, called for the first time** (D72).
+`receiptsOf`, `performance`, `thesesOf` and `authorOf` were deployed, correct-looking and never
+executed. Not building a page for them was a fair call; leaving them unverified was a different
+one — D35's lesson one layer down, and far cheaper to settle, because a `view` can be checked
+against a full scan of the same registry. All four agree with the scan.
+
+**`performance()` counts exits, and that changes what it means.** On an exit `amountInUsdg` is the
+cash coming *back*, so the notional adds money out to money in; and since D68 an exit against a
+stale oracle records `slippageBps: 0`, averaged in beside an entry's real shortfall. Mandate #1
+reads **6.620806 USDG at 17bp** against **3.545425 USDG at 25bp** for its entries alone — notional
+overstated by 87%, slippage understated by a third, on the same chain at the same instant.
+`src/track-record.ts` has always filtered exits out of both, so the two have disagreed by
+construction since the first exit settled.
+
+Not fixed: `ReceiptRegistry` is kept across every migration because it holds the whole history, and
+editing its source would break Sourcify verification of the deployed bytecode for no gain. The
+semantics are not ours to revise — what was missing was anyone stating them.
+`test_PerformanceCountsExitsAsNotionalToo` now does, which takes Foundry to **106**.
+
+`pnpm mandate:show` gained the half it never had: the mandate's receipts via `receiptsOf`, and
+`performance()` printed *next to* the entries-only figure with a sentence saying which question each
+answers. `thesesOf` and `authorOf` stay unread on purpose — `loadRegistry` already carries `author`
+on every thesis, so a caller would be ceremony.
+
+**2026-08-14 (eighteenth)** — **the TypeScript side gets a suite** (D71). 136 unit tests
 over ten modules in `src/`, on Node's built-in runner through `tsx --test` — **no new dependency**,
 because `package.json` is a shared file and Node 24 already ships the capability. `pnpm test:unit`,
 `pnpm test` for both suites, and `pnpm check:tests` now derives and guards **two** counts instead

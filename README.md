@@ -120,7 +120,7 @@ pnpm thesis "free text"      # thesis -> assets -> sizing -> mandate
 pnpm track-record            # every published thesis and what it actually did
 pnpm index [--verify]        # keep the registry index current; --verify re-reads it from the chain
 pnpm evidence <hash>         # re-derive a receipt's evidence bundle and compare
-pnpm test:sol                # 105 tests
+pnpm test:sol                # 106 tests
 ```
 
 On-chain writes take their chain from `TARGET` (`testnet` by default), so nothing can

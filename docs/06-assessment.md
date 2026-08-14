@@ -27,7 +27,7 @@ so they can be disagreed with but not disputed.
 
 **The architectural claim is real, not marketing, and it is now on mainnet.** "The AI holds no key
 that can move funds" is easy to say. Here the enforcement is inside the trade's own transaction:
-break the mandate and the whole thing unwinds. 105 tests exist because that claim has to survive
+break the mandate and the whole thing unwinds. 106 tests exist because that claim has to survive
 contact with an adversary — and sixteen real fills exist because tests are not the same as contact.
 Receipt `#1` records a price the agent did not author, stamped by the guard from the oracle.
 

@@ -157,7 +157,7 @@ Before you open a PR:
 
 ```bash
 pnpm typecheck        # covers src/ and app/ together — both of you run this
-forge test            # BE only; expect 105 passed
+forge test            # BE only; expect 106 passed
 git switch main && git pull --ff-only
 git switch -          # then rebase or merge main into your branch
 ```

@@ -63,7 +63,7 @@ pnpm index [--verify|--rebuild]  # keep observations/registry.jsonl current (D66
 pnpm dev                     # the web app — thesis in, guard verdict out
 pnpm build                   # next build (what Vercel runs); contracts are build:contracts
 pnpm typecheck               # covers src/ and app/
-pnpm test:sol                # 105 Foundry tests
+pnpm test:sol                # 106 Foundry tests
 pnpm test:unit               # 136 unit tests over src/ — node:test, no runner dependency (D71)
 pnpm test                    # both suites
 pnpm check:tests             # both numbers, checked against every doc that states them (D60, D71)

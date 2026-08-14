@@ -3352,3 +3352,58 @@ computed the same number from the same inputs. Receipt #16 gives `executionPrice
 from 169,961 cash units and 0.0005 wTSLAx, and `slippageBps` **0** with the oracle 158,738s stale;
 receipt #17 gives 33,990,000,000. A test against a real receipt cannot agree with a wrong mirror,
 which is the difference between a test and a restatement of the code.
+
+---
+
+## D72 — The four unread views, and the one that flatters itself
+
+`ReceiptRegistry.receiptsOf` / `performance` and `ThesisRegistry.thesesOf` / `authorOf` were
+deployed, correct-looking, and had **never been called** by anything in this repo. `05-status.md`
+called that deliberate: `performance()` is keyed by mandate while Simple mode needs per-thesis
+aggregation (D50), and the other three were conveniences for consumers we do not have.
+
+That was a reason not to build a page. It was not a reason to leave them unexecuted, which is a
+different claim: **a view nobody reads is a view nobody has verified.** It is D35's lesson one layer
+down — a deployed address with the right selector proves nothing — and far cheaper to settle, since
+these are `view` functions and the answer can be checked against a full scan of the same registry.
+
+**All four were called against mainnet on 2026-08-14 and all four agree with the scan.**
+`receiptsOf(1)` returns the same 16 ids, `receiptsOf(3)` the same 2, `thesesOf(deployer)` the same
+`[0,1,2]`, `authorOf` resolves every published hash and returns the zero address for one that was
+never published.
+
+### `performance()` counts exits, and that changes what it means
+
+The finding. On an exit, `amountInUsdg` is the cash that came **back**, not capital deployed — so
+the sum adds money out to money in. And since D68 an exit against a stale oracle records
+`slippageBps: 0`, which is averaged in alongside an entry's real shortfall.
+
+```
+performance(1)              6.620806 USDG · 17 bps · 16 fills
+entries only                3.545425 USDG · 25 bps ·  9 fills   <- pnpm track-record
+```
+
+Same mandate, same chain, same instant. The notional is overstated by 87% and the slippage
+understated by a third. The contract's own comment says it "cannot be inflated by the agent" —
+true, and beside the point: it is inflated by the arithmetic. `src/track-record.ts` has always
+filtered exits out of both figures, deliberately and with a comment, so the two were **wrong about
+each other by construction** the moment the first exit settled.
+
+**Not fixed, and not fixable here.** `ReceiptRegistry` is *kept* across every migration precisely
+because it holds the whole history — 18 receipts as of today — so redeploying it to change an
+arithmetic nuance would orphan the evidence it exists to preserve. Editing the comment would break
+the Sourcify verification of the deployed bytecode for no gain. The semantics are not ours to
+revise; what was missing was anyone stating them, and now `test_PerformanceCountsExitsAsNotionalToo`
+does, in the suite, where a future reader trips over it.
+
+### What earned a reader, and what did not
+
+- **`receiptsOf` and `performance` → `pnpm mandate:show`.** It is keyed by mandate, which is exactly
+  their shape, and it had been showing policy, positions and triggers with **nothing about what the
+  mandate actually did**. `performance()` is now printed *next to* the entries-only figure and a
+  sentence saying which question each answers. That is a better resolution than leaving it unread:
+  the view has a caller, and the caller does not repeat its mistake.
+- **`thesesOf` and `authorOf` stay unread, now with evidence.** `loadRegistry` already carries
+  `author` on every thesis it returns, so both the CLI and the panel can answer "which of these are
+  mine" without another call. A caller would be ceremony. They earn one the day a third party wants
+  one author's record without pulling the whole registry — which is a real use, and still not ours.
