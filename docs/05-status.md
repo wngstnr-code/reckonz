@@ -16,7 +16,7 @@ colliding. `06-assessment.md` is the honest read on whether this is a business.
 ```bash
 cd /Users/mac/Desktop/okxai
 set -a && source .env && set +a     # PRIVATE_KEY, GEMINI_API_KEY, CASH
-pnpm typecheck && pnpm test         # expect: clean, 212 unit tests, then 106 passed
+pnpm typecheck && pnpm test         # expect: clean, 216 unit tests, then 106 passed
 git status --short                  # expect: clean; docs/ is tracked now, not ignored
 pnpm dev                            # the web app, port 3000 (falls back if taken)
 ```
@@ -314,7 +314,7 @@ That single run exercises every claim the product makes. It is the demo.
 | **The submission post** | The account exists (see Project identity above); what is still required is a post from it mentioning `@XLayerOfficial` **at submission time**. Not done until that post is up. |
 | ~~Mainnet deployment~~ | ✅ **Done 2026-08-11.** Addresses in `src/deployments.ts`; oracle seeded, mandate #1 live, one real fill. |
 | **Google Form submission** | Required by 21 Aug 23:59 UTC. Read 2026-08-14 — it is **eight fields**: name, description, project URL, optional GitHub, contacts, optional X post URL. **No track selector, no video field, no deck.** So AI-RWA is inferred from the description alone, and the description is the highest-leverage artifact in the submission. Form and analysis in `00-hackathon.md`. |
-| **Repo visibility decision** | The repo is private, and the form has an optional `Github` field. **Sharpened 2026-08-14**: Disclaimer §4 says the Organizer will consider **code quality** — so leaving that field blank forfeits a stated criterion, and code quality (106 Foundry + 212 unit tests including a red-team suite over the compiler, CI, 14 of 14 verified contracts, an append-only decision log) is one of the few places we beat a polished demo. Decide before submitting: public, or grant access. |
+| **Repo visibility decision** | The repo is private, and the form has an optional `Github` field. **Sharpened 2026-08-14**: Disclaimer §4 says the Organizer will consider **code quality** — so leaving that field blank forfeits a stated criterion, and code quality (106 Foundry + 216 unit tests including a red-team suite over the compiler, CI, 14 of 14 verified contracts, an append-only decision log) is one of the few places we beat a polished demo. Decide before submitting: public, or grant access. |
 
 ### Blocking for a credible demo
 
@@ -346,8 +346,14 @@ That single run exercises every claim the product makes. It is the demo.
 
 | ~~**One RPC, and everything went through it**~~ — **three, with failover, 2026-08-14 (D82)** | Seven endpoints probed, three survived and each was made to execute a real `eth_call` before being trusted (D35): `rpc.xlayer.tech`, `xlayerrpc.okx.com`, `xlayer.drpc.org`; testnet has two. viem's `fallback` with `rank: false` — ranking would ping every endpoint on a timer, which against throttling RPCs spends the budget it is meant to conserve. `walletFor` shares the transport so reads and writes cannot drift apart. Failover watched happening with a dead primary (1,706ms, served by the next), and `pnpm verify` passes through it. |
 
+| ~~**No WalletConnect, so no phone path**~~ — **built 2026-08-14 (D83)** | A second connector on the same EIP-1193 store, so no panel or call site changed. `optionalChains` so wallets that have never heard of X Layer still pair; dynamically imported, and measured out of the wallet chunk (0.53 MB in its own two chunks). Clicking it with a wrong project id found two real bugs: `init` never rejected and the button spun forever, and one failure poisoned every retry. Both fixed and pinned. **Needs `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`** from WalletConnect Cloud, and no real phone has paired yet. |
+
 ### Known gaps in the work itself
 
+- **The phone path has no project id, so it does not exist yet.** D83 is built and its failure
+  paths are exercised; the happy path needs one free credential from WalletConnect Cloud and one
+  real scan. Until then the picker tells a phone visitor there is no way in, which is honest and
+  still a dead end.
 - **`/api/health` exists and nothing calls it.** An endpoint is not a monitor. One free uptime
   check against `https://reckonz.vercel.app/api/health` alerting on non-2xx closes it, and until
   then the two-day outage in D81 could happen again in exactly the same way.

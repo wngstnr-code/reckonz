@@ -4116,3 +4116,81 @@ is still **more than one** — the regression being someone deleting the extras
 while debugging — and that the chain definitions carry the same lists as the
 transport, so a client built from `xLayer` rather than from `transportFor` is not
 quietly left on a single endpoint.
+
+---
+
+## D83 — WalletConnect, and the button that spun forever
+
+The page could only be used by someone sitting at a desktop with an extension
+installed. Open it on a phone and you could read it and do nothing else — no
+mandate, no fill, no exit. For a hackathon whose judges may well open the link
+on whatever is in their hand, that is the difference between a product and a
+screenshot.
+
+**A second connector, not a rewrite.** `useWallet` was already built on the only
+thing that matters here: everything downstream — `bind`, `connect`,
+`switchChain`, viem's `custom()` — speaks EIP-1193 and nothing else. A
+WalletConnect provider is EIP-1193, so it joins the same store as one more
+`DiscoveredWallet` and **no panel, client or call site changed**. That is the
+whole integration; the rest is failure handling.
+
+Three decisions inside it:
+
+- **`optionalChains`, never `chains`.** A required namespace makes a wallet that
+  has never heard of X Layer refuse the pairing outright, which is most of them.
+  Optional lets it connect and then decline the chain — a state the page already
+  handles, because `option` is null and every panel asks the user to switch.
+- **Dynamic import.** The package is 0.53 MB of relay client across two chunks.
+  Measured after the build: it is **not** in the 150 KB chunk that carries the
+  wallet code, so a judge with an extension never downloads it.
+- **`disconnect` is a real operation here**, unlike everywhere else in this file.
+  An extension session is local and a dapp cannot revoke its own permission; a
+  WalletConnect session lives on the relay and in the phone. Forgetting it
+  locally would leave a pairing the user believes they ended.
+
+### What clicking it actually found
+
+Two bugs, neither visible from reading the code, both found by pointing a
+browser at it with a deliberately wrong project id.
+
+**The button spun forever.** `EthereumProvider.init` did not reject — the relay
+closed the socket with `code: 3000 (Project not found)` and the error surfaced as
+an **unhandled exception**, outside the promise being awaited. The header sat on
+`connecting…` indefinitely: no error, no way back, nothing to suggest anything
+had gone wrong. A promise that never settles is the worst state a button can be
+in, because it looks like patience. `withDeadline` now bounds `init` at twenty
+seconds — and only `init`: `enable()` waits for a human to unlock a phone and
+scan, which is not something to put a clock on.
+
+**One failure poisoned every retry.** The provider is cached in a module-level
+promise so that two panels cannot open two sessions. With `??=` and no cleanup,
+a single failed attempt cached a rejected — or worse, forever-pending — promise
+and the button stayed dead for the life of the page, *including after the
+project id was fixed*. It clears itself on failure now.
+
+Verified in the browser afterwards: the picker lists the three announced
+extensions and then WalletConnect, the QR modal opens, and closing it returns
+the header to `connect wallet` with WalletConnect's own message —
+*"Connection request reset. Please try again."* — instead of a spinner.
+
+### `pnpm test:unit` now covers `app/components` too
+
+The bug above lives in a client module, and the suite could not see the
+directory it is in. A suite that structurally cannot test the wallet layer is a
+suite that guarantees this class of bug stays untested, so the runner and
+`check-tests.ts` read both directories. Four tests pin the deadline, including
+that a real rejection passes through unchanged — replacing *"Project not found"*
+with *"timed out"* would send the next person to look at their network instead
+of at their configuration.
+
+### Not done
+
+**There is no project id yet.** WalletConnect Cloud issues one and the relay
+refuses unauthenticated pairings, so until `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`
+is set the phone path does not exist — the picker says so plainly rather than
+offering a button that cannot work. It is public by design; it ships in every
+WalletConnect dapp's bundle.
+
+And **no real phone has paired with this**. The modal opens, the failure paths
+are exercised, the happy path is not. D35, again, and it stays written down until
+someone scans it.

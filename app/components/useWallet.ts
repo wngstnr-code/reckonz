@@ -11,7 +11,7 @@ import {
   type PublicClient,
   type WalletClient,
 } from 'viem';
-import { xLayer, xLayerTestnet } from '@/src/chain';
+import { xLayer, xLayerTestnet, XLAYER_RPCS, XLAYER_TESTNET_RPCS } from '@/src/chain';
 import { MAINNET, TESTNET, type Deployment } from '@/src/deployments';
 
 /**
@@ -24,9 +24,15 @@ import { MAINNET, TESTNET, type Deployment } from '@/src/deployments';
  * EIP-6963 announcement protocol plus viem's `custom()` transport, and viem is
  * already a dependency because every module in `src/` uses it.
  *
- * The consequence worth stating: **no WalletConnect**, so no phone-scans-a-QR
- * path. Only browser extensions are discoverable. Judges use a laptop with the
- * OKX extension installed, which is the case this is built for.
+ * **WalletConnect was added on 2026-08-14 (D83)** as a second connector rather
+ * than a rewrite, and the reason it fits in a few dozen lines is the shape
+ * above: everything downstream — `bind`, `connect`, `switchChain`, viem's
+ * `custom()` — speaks EIP-1193 and nothing else, and a WalletConnect provider is
+ * EIP-1193. So it joins the same store as one more `DiscoveredWallet`, and no
+ * panel, client or call site changed.
+ *
+ * Until then only browser extensions were reachable, which meant anyone opening
+ * this page on a phone could read it and do nothing else.
  *
  * No key, no signature and no RPC call from this hook ever reaches our server.
  * The transport is the injected provider; the page only ever holds an address.
@@ -75,6 +81,121 @@ export const CHAINS: ChainOption[] = [
 
 export function chainOptionFor(chainId: number | null): ChainOption | null {
   return CHAINS.find((c) => c.chain.id === chainId) ?? null;
+}
+
+/**
+ * WalletConnect's identifier in the same namespace as EIP-6963's `rdns`.
+ *
+ * Not a real reverse-DNS name and deliberately not disguised as one: it is the
+ * key `remember()` writes, and a reader finding `walletconnect` in localStorage
+ * should not go looking for an extension that announced it.
+ */
+export const WALLETCONNECT_RDNS = 'walletconnect';
+
+/**
+ * Needs a project id from WalletConnect Cloud, and there is no way around it —
+ * the relay refuses unauthenticated pairings. `NEXT_PUBLIC_` because the browser
+ * is what connects; it is a public identifier, not a secret, and it appears in
+ * every WalletConnect dapp's bundle.
+ */
+const WC_PROJECT_ID = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ?? '';
+
+export const walletConnectConfigured = () => WC_PROJECT_ID.length > 0;
+
+/** Inline, so the wallet list still makes no third-party image request. */
+export const WC_ICON =
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#3b99fc"/><path d="M9 13.2a9.9 9.9 0 0 1 14 0l.5.5a.5.5 0 0 1 0 .7l-1.6 1.6a.26.26 0 0 1-.36 0l-.7-.68a6.9 6.9 0 0 0-9.68 0l-.74.73a.26.26 0 0 1-.36 0l-1.6-1.6a.5.5 0 0 1 0-.7Zm17.3 2.3 1.43 1.4a.5.5 0 0 1 0 .71l-6.44 6.3a.52.52 0 0 1-.72 0l-4.57-4.47a.13.13 0 0 0-.18 0l-4.57 4.47a.52.52 0 0 1-.72 0l-6.44-6.3a.5.5 0 0 1 0-.71l1.43-1.4a.52.52 0 0 1 .72 0l4.57 4.47a.13.13 0 0 0 .18 0l4.57-4.47a.52.52 0 0 1 .72 0l4.57 4.47a.13.13 0 0 0 .18 0l4.57-4.47a.52.52 0 0 1 .72 0Z" fill="#fff"/></svg>`,
+  );
+
+/**
+ * One provider per page, created on demand.
+ *
+ * `init` opens a relay connection and restores any existing session, so calling
+ * it twice would mean two sessions and two sets of listeners for one user. The
+ * import is dynamic because the package is large and most visitors have an
+ * extension and will never pair — an unconditional import would put the whole
+ * relay client in the first byte every judge downloads.
+ */
+let wcProvider: Promise<DiscoveredWallet> | null = null;
+
+/**
+ * `init` can hang rather than reject, so everything that waits on it needs a
+ * deadline.
+ *
+ * Found by clicking the button with a deliberately wrong project id: the relay
+ * answered `WebSocket connection closed abnormally with code: 3000 (Project not
+ * found)` as an **unhandled exception**, outside the promise being awaited. The
+ * header sat on `connecting…` indefinitely, with no error, no way back, and
+ * nothing in the UI to suggest anything had gone wrong. A wrong project id, an
+ * offline relay or a captive network all land there.
+ *
+ * Twenty seconds is generous for a relay handshake and short enough that a user
+ * has not yet decided the page is broken. It applies to `init` only — `enable()`
+ * waits for a human to unlock a phone and scan, which is not something to put a
+ * clock on.
+ */
+export function withDeadline<T>(work: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    work.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
+function walletConnect(): Promise<DiscoveredWallet> {
+  // The cache is cleared on failure below. Without that, one failed attempt
+  // would poison every later one: `??=` would keep handing back the same
+  // rejected — or worse, forever-pending — promise, and the button would stay
+  // dead even after the project id was fixed.
+  wcProvider ??= (async () => {
+    const { EthereumProvider } = await import('@walletconnect/ethereum-provider');
+    const provider = await withDeadline(
+      EthereumProvider.init({
+        projectId: WC_PROJECT_ID,
+        // **Optional, never required.** A required namespace makes a wallet that
+        // has never heard of X Layer refuse the pairing outright — which is most
+        // of them. Optional lets it connect and then say no to the chain, which
+        // is a state this page already handles: `option` is null and every panel
+        // asks the user to switch.
+        optionalChains: [xLayer.id, xLayerTestnet.id],
+        rpcMap: {
+          [xLayer.id]: XLAYER_RPCS[0],
+          [xLayerTestnet.id]: XLAYER_TESTNET_RPCS[0],
+        },
+        showQrModal: true,
+        metadata: {
+          name: 'Reckonz',
+          description: 'Non-custodial execution and risk tooling for tokenised equities on X Layer',
+          url: typeof window === 'undefined' ? 'https://reckonz.vercel.app' : window.location.origin,
+          icons: ['https://reckonz.vercel.app/logo-reckonz.png'],
+        },
+      }),
+      20_000,
+      'WalletConnect could not reach its relay — check the project id, or the network',
+    );
+
+    return {
+      uuid: WALLETCONNECT_RDNS,
+      name: 'WalletConnect',
+      icon: WC_ICON,
+      rdns: WALLETCONNECT_RDNS,
+      provider: provider as unknown as EIP1193Provider,
+    };
+  })().catch((e) => {
+    wcProvider = null;
+    throw e;
+  });
+  return wcProvider;
 }
 
 interface AnnounceEvent extends CustomEvent {
@@ -189,6 +310,7 @@ function discover() {
     void reconnect(wallet);
   });
   window.dispatchEvent(new Event('eip6963:requestProvider'));
+  void reconnectWalletConnect();
 }
 
 /** Account and chain changes come from the wallet, not from us. */
@@ -245,8 +367,82 @@ async function connect(wallet: DiscoveredWallet) {
   }
 }
 
+/**
+ * Pair with a phone. The QR modal is WalletConnect's own.
+ *
+ * `enable()` is its `eth_requestAccounts`: it opens the modal, waits for the
+ * scan, and resolves with the accounts. A user who closes the modal rejects,
+ * which arrives as the same 4001 an extension sends and is therefore not an
+ * error worth a red banner.
+ */
+async function connectWalletConnect() {
+  if (!walletConnectConfigured()) {
+    set({ error: 'WalletConnect is not configured on this deployment' });
+    return;
+  }
+  set({ connecting: true, error: null });
+  try {
+    const wallet = await walletConnect();
+    const accounts = (await (
+      wallet.provider as unknown as { enable: () => Promise<string[]> }
+    ).enable()) as Address[];
+    const id = (await wallet.provider.request({ method: 'eth_chainId' })) as string;
+
+    bind(wallet);
+    remember(WALLETCONNECT_RDNS);
+    set({ connected: wallet, address: accounts[0] ?? null, chainId: Number(id) });
+  } catch (e) {
+    set({ error: readableError(e) });
+  } finally {
+    set({ connecting: false });
+  }
+}
+
+/**
+ * Restore a WalletConnect session, if the last connection was one.
+ *
+ * `init` alone rehydrates the session from storage, so a page reload picks the
+ * phone back up with no modal and no scan — the same silence `reconnect()` gives
+ * an extension. Only attempted when this browser last paired that way; calling
+ * it otherwise would open a relay connection for a user who never asked.
+ */
+async function reconnectWalletConnect() {
+  if (!walletConnectConfigured() || snapshot.connected) return;
+  try {
+    if (localStorage.getItem(REMEMBERED) !== WALLETCONNECT_RDNS) return;
+    const wallet = await walletConnect();
+    const session = (wallet.provider as unknown as { session?: unknown }).session;
+    if (!session || snapshot.connected) return;
+
+    const accounts = (await wallet.provider.request({ method: 'eth_accounts' })) as Address[];
+    if (accounts.length === 0) return;
+    const id = (await wallet.provider.request({ method: 'eth_chainId' })) as string;
+
+    bind(wallet);
+    set({ connected: wallet, address: accounts[0] ?? null, chainId: Number(id) });
+  } catch {
+    /* no session to restore; the button is still there */
+  }
+}
+
 /** Forgets the wallet here only. A dapp cannot revoke its own permission. */
 function disconnect() {
+  // …except over WalletConnect, where it can and must: the session lives on the
+  // relay and in the phone's wallet, so forgetting it here alone would leave a
+  // pairing the user believes they ended. This is the one connector where
+  // disconnect is a real operation rather than a local one.
+  const wc = snapshot.connected?.rdns === WALLETCONNECT_RDNS ? snapshot.connected : null;
+  if (wc) {
+    void (wc.provider as unknown as { disconnect: () => Promise<void> })
+      .disconnect()
+      .catch(() => {
+        /* already gone, or the relay is unreachable — the local state still clears */
+      });
+    // The provider cannot be reused after disconnecting: a fresh pairing needs a
+    // fresh instance, and keeping this one would hand the next `connect()` a
+    // dead session.
+    wcProvider = null;
+  }
   unbind();
   // Also stop reconnecting to it on the next load: "disconnect" that undoes
   // itself on refresh is not a disconnect.
@@ -338,6 +534,8 @@ export function useWallet() {
     // Stable identities: these are module functions, and wrapping them keeps
     // the hook's return shape identical to what every call site already uses.
     connect: useCallback(connect, []),
+    connectWalletConnect: useCallback(connectWalletConnect, []),
+    walletConnectConfigured: walletConnectConfigured(),
     disconnect: useCallback(disconnect, []),
     switchChain: useCallback(switchChain, []),
     walletClient,

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { CHAINS, useWallet, type DiscoveredWallet } from './useWallet';
+import { CHAINS, useWallet, WC_ICON, type DiscoveredWallet } from './useWallet';
 
 const short = (address: string) => `${address.slice(0, 6)}…${address.slice(-4)}`;
 
@@ -22,6 +22,8 @@ export function Wallet() {
     connecting,
     error,
     connect,
+    connectWalletConnect,
+    walletConnectConfigured,
     disconnect,
     switchChain,
   } = useWallet();
@@ -41,6 +43,11 @@ export function Wallet() {
   const choose = async (wallet: DiscoveredWallet) => {
     setOpen(false);
     await connect(wallet);
+  };
+
+  const pair = async () => {
+    setOpen(false);
+    await connectWalletConnect();
   };
 
   return (
@@ -97,25 +104,42 @@ export function Wallet() {
 
       {open && !connected && (
         <div className="absolute top-7 right-0 z-20 w-60 rounded-xl border border-line bg-panel p-1.5 shadow-xl">
-          {wallets.length === 0 ? (
-            <p className="px-2.5 py-2 text-[12px] leading-relaxed text-dim">
-              No browser wallet announced itself. Install the OKX Wallet extension, then
-              reload — this page discovers wallets over EIP-6963 and has no WalletConnect
-              fallback.
-            </p>
+          {wallets.map((w) => (
+            <button
+              key={w.uuid}
+              onClick={() => choose(w)}
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] text-ink hover:bg-raised"
+            >
+              {/* EIP-6963 mandates a data URI, so this loads no third party. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={w.icon} alt="" className="h-5 w-5 rounded" />
+              {w.name}
+            </button>
+          ))}
+
+          {/* The phone path (D83). Listed last: someone with an extension
+              installed should take the extension, and someone without one is
+              here precisely because there is nothing above this line. */}
+          {walletConnectConfigured ? (
+            <button
+              onClick={pair}
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] text-ink hover:bg-raised"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={WC_ICON} alt="" className="h-5 w-5 rounded" />
+              <span>
+                WalletConnect
+                <span className="ml-1.5 text-[11px] text-faint">scan with a phone</span>
+              </span>
+            </button>
           ) : (
-            wallets.map((w) => (
-              <button
-                key={w.uuid}
-                onClick={() => choose(w)}
-                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] text-ink hover:bg-raised"
-              >
-                {/* EIP-6963 mandates a data URI, so this loads no third party. */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={w.icon} alt="" className="h-5 w-5 rounded" />
-                {w.name}
-              </button>
-            ))
+            wallets.length === 0 && (
+              <p className="px-2.5 py-2 text-[12px] leading-relaxed text-dim">
+                No browser wallet announced itself, and WalletConnect is not configured on this
+                deployment — so there is no way to connect from here. Install the OKX Wallet
+                extension and reload.
+              </p>
+            )
           )}
         </div>
       )}

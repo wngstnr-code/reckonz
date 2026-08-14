@@ -16,7 +16,7 @@
     "build": "next build",
     "build:contracts": "forge build",
     "test:sol": "forge test",
-    "test:unit": "tsx --test src/*.test.ts",
+    "test:unit": "tsx --test src/*.test.ts app/components/*.test.ts",
     "test": "pnpm test:unit && pnpm test:sol",
     "check:tests": "tsx src/check-tests.ts",
     "deploy": "forge script script/Deploy.s.sol --tc Deploy --rpc-url xlayer_testnet --broadcast",
@@ -50,6 +50,7 @@
   "dependencies": {
     "@google/genai": "^2.16.0",
     "@vercel/blob": "^2.8.0",
+    "@walletconnect/ethereum-provider": "^2.23.10",
     "next": "^16.3.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

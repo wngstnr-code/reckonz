@@ -59,9 +59,15 @@ function forgeCount(): number {
 }
 
 function unitCount(): number {
-  const files = readdirSync('src')
-    .filter((f) => f.endsWith('.test.ts'))
-    .map((f) => `src/${f}`);
+  // `app/components` as well as `src` since 2026-08-14: the wallet layer grew
+  // logic worth pinning — a promise that never settles left the connect button
+  // spinning forever (D83) — and a suite that cannot see the file where that
+  // lives is a suite that guarantees the bug class stays untested.
+  const files = ['src', 'app/components'].flatMap((dir) =>
+    readdirSync(dir)
+      .filter((f) => f.endsWith('.test.ts'))
+      .map((f) => `${dir}/${f}`),
+  );
   if (files.length === 0) return 0;
 
   // Node's runner exits non-zero on a failure, which `execFileSync` throws on.
