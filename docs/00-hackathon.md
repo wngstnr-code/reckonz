@@ -46,6 +46,65 @@ Aug 2026 via `@XLayerOfficial` threads.
 Other categories: **Lifestyle Companion** (Is This Edible?, Understand 看, Iris Care),
 **Software Utility**, **Art Creation**.
 
+### Best Product — announced 13 Aug 2026, eight days before our deadline
+
+The same judges, still announcing, while we are still building. Their framing sentence is the
+brief:
+
+> *"The strongest agents do more than demo. They solve real workflows, create clear user value,
+> and feel ready to scale."*
+
+| Place | Project | Official description |
+|---|---|---|
+| 1st | **Leadpoet** | AI sales-intelligence for B2B teams, on Bittensor's Subnet 71. *"Focuses on companies showing **real buying intent** rather than delivering large volumes of low-quality contacts."* |
+| 2nd | **bench3.ai** | AI security-scanning for public repos and smart-contract assets, using *"multi-path exploration, **hallucination filtering** and **severity grading** to improve reliability."* Tagline: *"On-chain finance needs a benchmark."* |
+| 3rd | **Clawby** | *"A unified real-time financial-data and trading **infrastructure layer for AI agents**, designed to reduce the cost of integrating many separate market, on-chain and compliance sources."* |
+
+Closing post: *"Congratulations to the builders who turned promising agent concepts into refined
+products designed for real workflows and meaningful adoption."*
+
+**6. Restraint is the product, and it is what they pay first place for.** Leadpoet's entire pitch
+is *fewer, better* — it beat the field by promising **not** to hand you volume. bench3 sells
+hallucination filtering and severity grading: two features whose job is to suppress output. This
+is the sharpest version of pattern 3, and it is the pattern we are already built on — the oracle
+marks a value unpublishable rather than inventing one, `capacity()` reports what the chain cannot
+absorb, `PolicyGuard` reverts inside the trade. **We have been treating that as engineering
+hygiene. It is the headline.**
+
+**7. All three winners are listed at `okx.ai/agents/<id>`.** They are not just projects, they are
+**Agent Service Providers** in OKX's own marketplace. See below — this is the one structural gap
+between us and every winner they have announced.
+
+## The marketplace the winners are listed in
+
+`okx.ai/agents` is live, monetised and busy — not a directory of demos. Read 14 Aug 2026:
+
+| Listing | Price | Sold | Why it is worth knowing |
+|---|---|---|---|
+| **AlphaTerminal** | 20 USDT/mo | 52 | Quant research and signals **for U.S. stocks**, *"missing data and validation boundaries transparently disclosed… provides research and signals only; **it does not custody funds or execute trades**"* |
+| **AgentFund** | 0.03 USDT/use | 1.05K | *"Paid **X Layer** strategy intelligence for autonomous finance agents"* — WOKB/xETH/xSOL/xBTC, *"**user-approved** trade signals"* |
+| **TraceGuard Relay** | 0.15 USDT/use | 639 | *"Reviews transaction payloads and simulation traces **before broadcasting** risky contract interactions"* |
+| **CoinAnk OpenAPI** | 0.01 USDT/use | 14.91K | Derivatives data **for AI agents**, 80 API services |
+| **PolyDesk** | 5 USDT/mo | 31 | The Genesis winner, now selling: *"provides **buyer agents** with… **buyer-governed** trading via **machine-readable** services"* |
+| **Otto AI** | 5 USDT/mo | 327 | *"DeFi agent on X Layer… pay-per-call swaps… **AI tools for agents and traders**"* |
+
+Three things fall out of that table.
+
+**AlphaTerminal is the closest thing to a competitor, and it confirms our thesis by name.** US
+equities, deterministic, boundaries disclosed — and it stops exactly where we start: *no custody,
+no execution*. "The judges already paid for the research half" is no longer an inference from
+Serenity; there is a priced, selling product that is the research half and says so.
+
+**Nothing here touches tokenised equities.** AgentFund is the X Layer finance agent and it trades
+WOKB/xETH/xSOL/xBTC. The xStocks lane is still empty.
+
+**The vocabulary of the whole marketplace is evidence, proof and receipts** — *"evidence
+receipts"*, *"XLayer release evidence"*, *"clear evidence and defined generation blockers"*,
+*"keeps a record of every call it makes"*. We hash an evidence bundle **before** anything is
+signed and put that hash on chain in the same transaction as the fill, and `pnpm evidence`
+re-derives it from the file. That is a stronger claim than anything on that page, and it is
+currently explained only in `docs/`.
+
 ### The patterns that matter
 
 1. **Narrow and deep, never a general chatbot.** OKX said it outright:
@@ -65,6 +124,43 @@ SK Hynix, DELL.
 
 **The judges already paid for the research half. Nobody built the execution half, and the
 assets are sitting on their chain.**
+
+## What the Best Product round changes for us — read before the submission
+
+Nothing about the product. Three things about how it is presented, and one gap that is real.
+
+**1. Lead with what we refuse.** First place went to a product whose pitch is that it hands you
+*less*. Our submission copy currently leads with the pipeline — thesis in, basket out. The
+pipeline is the least differentiated thing we have; every entrant has a pipeline. What almost
+nobody has is a system that **declines**: an oracle that marks a value unpublishable rather than
+guessing (D62), a capacity number that tells you what the chain cannot absorb, a guard that
+reverts inside the trade's own transaction rather than reporting afterwards, and a CLI that
+refuses to spend gas on a fill `dryRun` says will fail. That is Leadpoet's argument applied to
+money, and it is already shipped and tested.
+
+**2. Say "and agents", not only "and you".** Both Genesis rounds rewarded serving other agents —
+PolyDesk explicitly, Clawby entirely. `POST /api/fill` and `POST /api/exit` already **are** an
+agent service and we have never described them as one: they take a request, quote it against live
+pool state, ask the on-chain guard, hash the evidence, and return a plan that is **inert** — only
+the owner's Permit2 signature can activate it, and the server never holds a key. An agent can ask
+"may I do this, and what will it cost me" and get a verdict with reasons, and cannot move funds
+whatever it does with the answer. TraceGuard Relay sells a weaker version of that for
+0.15 USDT/use.
+
+**3. The one structural gap: we are not an ASP.** Every Best Product winner has an
+`okx.ai/agents/<id>` listing, the marketplace is live and monetised, and `05-status.md` has
+carried "ASP / x402 registration — unblocked and simply not started" for days. This is the item
+that has moved from *nice-to-have* to *the thing every winner did*.
+
+Two honest caveats before anyone treats it as free. Leadpoet's own listing reads
+**"This ASP is under review"** — so a submission now may not be publicly visible by judging, and
+the artifact we would be relying on is the registration plus a working endpoint, not a live
+storefront. And it is the only item on this list that is a *build* rather than a rewrite: the
+other two are copy.
+
+**What not to do.** Not breadth. Seven days out, with a loop that closes on mainnet and two suites
+guarding it, the failure mode is starting something that is half-finished on 21 Aug. `06-assessment.md`
+already made that call and the Best Product round backs it: every winner is narrow.
 
 ## Strategic context OKX cares about
 
