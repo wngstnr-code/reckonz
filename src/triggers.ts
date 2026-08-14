@@ -69,7 +69,14 @@ export function describeOnchainTrigger(t: OnchainTrigger, symbolOf?: Map<string,
     ? t.assets.map((a) => symbolOf?.get(a.toLowerCase()) ?? a).join(', ')
     : 'basket';
   const unit = CASH_DENOMINATED.has(metric as TriggerMetric) ? ' USDG' : '';
-  return `${scope}: exit when ${metric} ${comparator === 'gt' ? '>' : '<'} ${value}${unit}`;
+  // The fallback label above was computed and then thrown away: an unrecognised
+  // comparator fell through to `<` and the sentence claimed a rule the chain
+  // does not hold. `metric#N` survives into the output and `comparator#N` did
+  // not, which is the asymmetry that hid it. Same rule as `metricName` in
+  // `abi.ts` — a wrong label on a risk control is worse than a missing one, and
+  // this renderer is what `pnpm mandate:show` and the browser panel both print.
+  const operator = comparator === 'gt' ? '>' : comparator === 'lt' ? '<' : comparator;
+  return `${scope}: exit when ${metric} ${operator} ${value}${unit}`;
 }
 
 export interface EncodeResult {

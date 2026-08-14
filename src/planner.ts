@@ -131,6 +131,20 @@ export function capacity(venues: Venue[], maxBps: number): bigint {
 export interface Schedule {
   slices: number;
   perSlice: bigint;
+  /**
+   * What the **final** slice carries, so the slices sum to exactly `total`.
+   *
+   * `perSlice` is a floor division and cannot represent the remainder: the
+   * first unit tests written for this module found `3 × 1_666_666_666_666`
+   * reconstructing 4,999,999,999,998 of a requested 5,000,000,000,000, with two
+   * base units deleted in silence. Economically nothing; the objection is that
+   * this repo's rule is chain precision throughout, and a plan that does not add
+   * up to the order it is a plan for is the same class of mistake as D29.
+   *
+   * It exceeds `perSlice` by at most `slices - 1` base units, which cannot move
+   * the impact bound the schedule was built to respect.
+   */
+  lastSlice: bigint;
   /** Expected impact of the whole order once sliced, in bps. */
   expectedImpactBps: number;
   /** Impact if the same order were fired in one shot. */
@@ -157,6 +171,7 @@ export function schedule(
     return {
       slices: 1,
       perSlice: total,
+      lastSlice: total,
       expectedImpactBps: singleShotImpactBps,
       singleShotImpactBps,
     };
@@ -174,6 +189,8 @@ export function schedule(
   return {
     slices,
     perSlice,
+    // The remainder rides on the last slice rather than evaporating.
+    lastSlice: total - perSlice * BigInt(slices - 1),
     expectedImpactBps: Math.round(sliceImpact + drift),
     singleShotImpactBps,
   };
