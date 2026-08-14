@@ -371,9 +371,14 @@ contract PolicyGuardTest is Test {
     /// into the slippage alongside an entry's.
     ///
     /// Found on 2026-08-14, the first time anything read the view: mainnet
-    /// mandate #1 reports 6.620806 USDG at 17bp here against 3.545425 USDG at
-    /// 25bp for its entries alone — the figure `src/track-record.ts` computes,
-    /// deliberately, by filtering exits out.
+    /// mandate id 1 reports 6.620806 USDG at 17bp here, against 2.046925 USDG
+    /// at 11bp for the entries of the mandate that currently holds that id.
+    ///
+    /// Two effects are stacked in that gap and only the first is tested below.
+    /// The second is that `receiptsOf` and `performance` are keyed by **id**,
+    /// and this registry is kept across guard migrations that restart ids — so
+    /// three of those sixteen receipts belong to a previous guard's mandate #1.
+    /// See the correction appended to D72.
     ///
     /// Pinned rather than changed. `ReceiptRegistry` is kept across every
     /// migration because it holds the whole history, so its semantics are not

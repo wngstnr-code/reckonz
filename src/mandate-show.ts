@@ -186,7 +186,7 @@ for (const id of ids) {
     // on 2026-08-14 — `dryRun` allowed a wTSLAx exit with the value 43h stale.
   }
 
-  await showHistory(id, symbolOf);
+  await showHistory(id, symbolOf, Number(m.version));
   console.log();
 }
 
@@ -198,8 +198,25 @@ for (const id of ids) {
  * verified: the same argument D35 makes about the Universal Router, one layer
  * down and far less costly to settle. Both were checked against a full scan of
  * the registry on mainnet on 2026-08-14 and agreed exactly.
+ *
+ * ## `receiptsOf` answers by **id**, not by mandate
+ *
+ * `ReceiptRegistry` is *kept* across every migration — that is the point of it,
+ * one append-only history — while `PolicyGuard` has been redeployed twice. Each
+ * new guard starts its ids at 1, so "mandate #1" names a different mandate on
+ * each of them and they all write to this registry. On mainnet today
+ * `receiptsOf(1)` returns 16 receipts of which **three belong to a previous
+ * guard's** mandate #1, and there are two more under a mandate #3 that no
+ * deployed guard has ever had.
+ *
+ * There is no stored field naming the guard, so this cannot be resolved
+ * exactly. What can be proved is one direction: a mandate can never have
+ * written a receipt at a policy version **above its own**, because the version
+ * only ever increases and only on this guard. Anything above is foreign with
+ * certainty; anything at or below is merely unproven, and saying which is which
+ * is better than implying the whole list is this mandate's (D72).
  */
-async function showHistory(id: bigint, symbolOf: Map<string, string>) {
+async function showHistory(id: bigint, symbolOf: Map<string, string>, version: number) {
   const registry = deployment.contracts.ReceiptRegistry as Address | undefined;
   if (!registry) return;
 
@@ -212,9 +229,8 @@ async function showHistory(id: bigint, symbolOf: Map<string, string>) {
     args: [id],
   });
 
-  console.log(`\n     receipts (${ids.length})`);
   if (ids.length === 0) {
-    console.log(`       none — this mandate has never executed.`);
+    console.log(`\n     receipts (0) — nothing has ever executed under mandate id ${id}.`);
     return;
   }
 
@@ -226,7 +242,17 @@ async function showHistory(id: bigint, symbolOf: Map<string, string>) {
       functionName: 'get',
       args: [receiptId],
     });
-    records.push({ receiptId, receipt, fills });
+    records.push({ receiptId, receipt, fills, foreign: receipt.policyVersion > version });
+  }
+
+  const foreign = records.filter((r) => r.foreign).length;
+  console.log(`\n     receipts (${ids.length} under mandate id ${id})`);
+  if (foreign > 0) {
+    console.log(
+      `       ⚠ ${foreign} marked ‡ were written at a policy version above this mandate's` +
+        ` (v${version}),\n         so they belong to an earlier guard's mandate ${id}. The registry is kept` +
+        `\n         across migrations and ids restart, so this view answers by id.`,
+    );
   }
 
   const SHOWN = 8;
@@ -234,7 +260,7 @@ async function showHistory(id: bigint, symbolOf: Map<string, string>) {
   if (records.length > SHOWN) {
     console.log(`       … ${records.length - SHOWN} older, not shown`);
   }
-  for (const { receiptId, receipt, fills } of recent) {
+  for (const { receiptId, receipt, fills, foreign: isForeign } of recent) {
     const when = new Date(Number(receipt.timestamp) * 1000).toISOString().slice(0, 16).replace('T', ' ');
     const legs = fills
       .map((f) => {
@@ -244,7 +270,7 @@ async function showHistory(id: bigint, symbolOf: Map<string, string>) {
         return `${f.isExit ? '-' : '+'}${symbol} ${formatUnits(f.amountInUsdg, USDG.decimals)}`;
       })
       .join(', ');
-    console.log(`       #${String(receiptId).padStart(3)}  ${when}Z  ${legs}`);
+    console.log(`       #${String(receiptId).padStart(3)}${isForeign ? '‡' : ' '} ${when}Z  ${legs}`);
   }
 
   const [notional, slippageBps, fillCount] = await wallet.readContract({
@@ -254,22 +280,22 @@ async function showHistory(id: bigint, symbolOf: Map<string, string>) {
     args: [id],
   });
 
-  // `performance` sums **every** fill, exits included — and on an exit
-  // `amountInUsdg` is proceeds, not capital deployed. So its notional adds money
-  // in to money out, and since D68 an exit against a stale oracle records
-  // `slippageBps: 0`, which drags the weighted average down. On mainnet mandate
-  // #1 that is 6.620806 USDG at 17bp against 3.545425 USDG at 25bp for the
-  // entries alone.
+  // `performance` sums **every** fill under this id — exits included, and other
+  // guards' mandates included. On an exit `amountInUsdg` is proceeds, not
+  // capital deployed, so the notional adds money in to money out; and since D68
+  // an exit against a stale oracle records `slippageBps: 0`, which drags the
+  // weighted average down.
   //
   // The contract's own comment calls it the primitive a track-record page reads
   // and says it "cannot be inflated by the agent". True — it is inflated by the
   // arithmetic instead. So it is printed, and printed next to the number that
-  // answers the question a reader actually has. `src/track-record.ts` computes
-  // only the second pair, deliberately, and stays the authority (D50, D72).
+  // answers the question a reader actually has: this mandate's own entries.
+  // `src/track-record.ts` computes the second kind, deliberately (D50, D72).
   let entryNotional = 0n;
   let entryWeighted = 0n;
   let entryFills = 0;
-  for (const { fills } of records) {
+  for (const { fills, foreign: isForeign } of records) {
+    if (isForeign) continue;
     for (const f of fills) {
       if (f.isExit) continue;
       entryNotional += f.amountInUsdg;
@@ -284,12 +310,8 @@ async function showHistory(id: bigint, symbolOf: Map<string, string>) {
       ` · ${slippageBps} bps · ${fillCount} fills`,
   );
   console.log(
-    `       counts exits as notional and averages their slippage in. Capital actually` +
-      `\n       deployed: ${formatUnits(entryNotional, USDG.decimals)} ${USDG.symbol}` +
-      ` over ${entryFills} entries at ${entrySlippage} bps — what pnpm track-record reports.`,
+    `       every fill ever recorded under id ${id}, exits counted as notional and their` +
+      `\n       slippage averaged in. Capital this mandate actually deployed:` +
+      `\n       ${formatUnits(entryNotional, USDG.decimals)} ${USDG.symbol} over ${entryFills} entries at ${entrySlippage} bps.`,
   );
-}
-
-if (shown === 0) {
-  console.log(`  No mandates owned by ${owner.address} on this guard.\n`);
 }
