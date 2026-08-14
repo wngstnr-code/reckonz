@@ -314,7 +314,7 @@ That single run exercises every claim the product makes. It is the demo.
 | **The submission post** | The account exists (see Project identity above); what is still required is a post from it mentioning `@XLayerOfficial` **at submission time**. Not done until that post is up. |
 | ~~Mainnet deployment~~ | ✅ **Done 2026-08-11.** Addresses in `src/deployments.ts`; oracle seeded, mandate #1 live, one real fill. |
 | **Google Form submission** | Required by 21 Aug 23:59 UTC. Read 2026-08-14 — it is **eight fields**: name, description, project URL, optional GitHub, contacts, optional X post URL. **No track selector, no video field, no deck.** So AI-RWA is inferred from the description alone, and the description is the highest-leverage artifact in the submission. Form and analysis in `00-hackathon.md`. |
-| **Repo visibility decision** | The repo is private, and the form has an optional `Github` field. **Sharpened 2026-08-14**: Disclaimer §4 says the Organizer will consider **code quality** — so leaving that field blank forfeits a stated criterion, and code quality (242 tests, CI, 14/14 verified contracts, an append-only decision log) is one of the few places we beat a polished demo. Decide before submitting: public, or grant access. |
+| **Repo visibility decision** | The repo is private, and the form has an optional `Github` field. **Sharpened 2026-08-14**: Disclaimer §4 says the Organizer will consider **code quality** — so leaving that field blank forfeits a stated criterion, and code quality (106 Foundry + 136 unit tests, CI, 14 of 14 verified contracts, an append-only decision log) is one of the few places we beat a polished demo. Decide before submitting: public, or grant access. |
 
 ### Blocking for a credible demo
 
