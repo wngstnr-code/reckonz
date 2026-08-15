@@ -3800,6 +3800,135 @@ dev server, 8 concurrent registry reads from one address returned `200 200 200 2
 `200`s and three `429`s; the same caller was served again once the in-flight requests finished,
 which is the release path; and the three input bounds answered `400`, `400` and `413`.
 
+### Amendment, 2026-08-15: the reason for deferring did not cover the option it named
+
+The paragraph above closes with *"a real global limit needs shared state — Vercel's own firewall
+rules, or a store — and neither is worth adding a dependency for eight days out."* That sentence
+prices two things as one. For a **store** it is right: a new dependency, in a `package.json` shared
+with FE, under the one-dependency-per-commit rule (08-parallel.md). For the **firewall** it is
+simply wrong — a WAF rule is not a dependency and not code. It touches no file in this repo and
+needs no deploy; it is configuration on a project that is already live. So the option named as the
+right shape was declined for a cost only the other option has.
+
+Worth separating because the mistake generalises: **two remedies listed in one sentence inherit
+each other's objections.** The store's price got charged to the firewall, and the entry then read
+as though both had been considered.
+
+What a firewall rule actually buys, beyond a lower number:
+
+- **The spoofable key, which cannot be fixed in code at all.** The firewall counts at the edge on
+  the real client IP, before a function is invoked. A function can never tell a forged
+  `x-forwarded-for` from a real one — the header is already there when it arrives. This is the
+  wrong layer for that fix, not a weak implementation of it.
+- **Blocked traffic is not billed.** `src/ratelimit.ts` still spends an invocation to say `429`.
+  A WAF rate limit refuses before the function runs, which for `GET /api/run` — `maxDuration = 300`,
+  an LLM quota and an RPC walker — is the difference that mattered in the first place.
+
+And what it does **not** buy, which has to be said with the same care the paragraph above used:
+
+- **WAF counters are per region.** N regions can collectively exceed the configured limit by ~N×.
+  This is per-region rather than per-instance — a real improvement, since warm instances far
+  outnumber regions — but it is the same class of caveat. It is not a per-caller guarantee either,
+  and must never be written up as one.
+- **The in-flight cap stays in code.** A rate limit bounds arrival, not concurrency. `maxInFlight`
+  is the half that protects a 300-second route, and no firewall rule replaces it.
+
+The intended rules, staged in `log` first — the limits are ~5x the table above, because a rule's
+blast radius is unknown until real traffic meets it, and a demo week is the worst time to discover
+it by locking out a judge:
+
+```bash
+vercel firewall rules add "Rate limit /api/run" \
+  --condition '{"type":"path","op":"pre","value":"/api/run"}' \
+  --action rate_limit --rate-limit-window 60 --rate-limit-requests 30 \
+  --rate-limit-keys ip --rate-limit-action log --yes
+
+vercel firewall rules add "Rate limit /api" \
+  --condition '{"type":"path","op":"pre","value":"/api"}' \
+  --action rate_limit --rate-limit-window 60 --rate-limit-requests 120 \
+  --rate-limit-keys ip --rate-limit-action log --yes
+```
+
+`/api/run` must sit above `/api`, since rules match top to bottom — `vercel firewall rules reorder
+"Rate limit /api/run" --first`. The account is on Hobby: `system-bypass` answers *"unavailable for
+this plan"* and `--duration` is Pro/Enterprise, so these evaluate per request with no persistence.
+That is the safer shape for this week anyway — a mis-tuned persistent rule keeps blocking after the
+rule is removed.
+
+**One trap when these are tightened past `log`:** `GET /api/health` matches the `/api` prefix, and
+it is the route that answers whether a fill could succeed right now (D81). Rate-limiting the
+health check is a way to lose the thing that tells you the deployment is broken. It needs its own
+rule above both, or an exclusion, before the action stops being `log`.
+
+### The plan gate, and why one rule staged and the other did not
+
+Both commands were run. The first **staged**. The second was refused:
+
+```
+Rate limiting is not available for this plan (401)
+```
+
+Same API, same `rate_limit` action, a minute apart, opposite answers. `rules list` confirms the
+state: one rule present, one pending change. So the plan check does not run on the path the first
+one took, and **a staged rule is not evidence that rate limiting works on this account** — only
+that the API accepted the object.
+
+That is D35 one layer further out. A deployed address with the right selector proves nothing; an
+external dependency is unverified until a call that does *the actual work* succeeds against it. A
+WAF rule that limits nothing is the same defect wearing configuration instead of bytecode, and it
+is worse than no rule, because the dashboard lists it and the next person reads it as cover.
+
+Reading an empty `rules list` as "custom rules are available on this plan" was the same error in
+miniature, made an hour earlier in this entry: it proves only that the listing is readable.
+
+**How to settle it, safely — the action is still `log`, so nothing is blocked either way.**
+
+1. `vercel firewall publish --yes`. A 401 here ends the question: Hobby has no rate limiting, and
+   `src/ratelimit.ts` is the only ceiling that exists. That would make the original deferral right
+   for a reason it never stated — the plan, not the dependency.
+2. If publish succeeds, that is **still not the answer.** Hit `/api/run` more than 30 times in a
+   minute from one address and check the rule's counter in the firewall dashboard. Zero hits means
+   the rule is listed and not counting, which is the state worth catching.
+
+**If the plan admits only one rule, the staged one is already the right one.** `GET /api/run` is
+the only route that spends an LLM quota while holding an RPC walker at `maxDuration = 300`. The
+others cost CPU rather than a third-party quota, and the per-instance bucket still covers them. It
+also retires the `/api/health` trap above: health does not match the `/api/run` prefix, so no
+exclusion rule is needed.
+
+### Settled: it counts, and the count is exact
+
+`publish` succeeded — so step 1 did not answer it, and the rule went live at
+`rule_rate_limit_api_run_CXxLli`, `valid: true`. A rule that publishes is still only a rule that
+publishes, so step 2 was run.
+
+**Not by hitting `/api/run`.** That would burn the Gemini quota and the RPC walk this rule exists
+to protect. The condition is a *prefix*, and the WAF evaluates ahead of routing, so
+`/api/run/waf-probe` matches the rule and then 404s in Next without reaching the pipeline — 0.58s,
+no quota, no chain read. Worth remembering as a technique: **a prefix condition can be exercised on
+a path that matches it and does nothing.**
+
+One probe plus forty requests from one address, limit 30 in the window:
+
+```
+Logged 11        Rate Limited –    Denied –    Challenged –
+41 requests − 30 allowed = 11
+```
+
+It counts at the threshold rather than logging every match, and the zero columns agree with the
+configuration — `log` fires, `rate_limit` does not, because exceeding the limit is set to log.
+Attribution was clean: one IP, `curl/8.7.1`, `/api/run/waf-probe`, `reckonz.vercel.app`.
+
+So **rate limiting is available on this plan**, and the 401 on the second rule is a cap on how many
+rate-limit rules the plan allows — the dashboard reads `Custom Rules 1`. Which means the earlier
+worry was the right worry and the wrong outcome: the rule is not decoration, and D35's lesson held
+in the direction of *check anyway*, not *it was broken*.
+
+What is still true: this stays `log` until the traffic has been watched for a few days, WAF
+counters remain per region, and `maxInFlight` in `src/ratelimit.ts` is still the only thing
+bounding concurrency. Tightening the action to `rate_limit` is a separate decision with its own
+evidence, and it is not this entry.
+
 ---
 
 ## D79 — The oracle had one source and no second opinion

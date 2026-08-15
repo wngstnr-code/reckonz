@@ -17,18 +17,28 @@
  * instances are warm.
  *
  * That is worth stating rather than dressing up. The honest description is *a
- * cost ceiling per instance*, not *a guarantee per caller*. A real global limit
- * needs shared state — Vercel's own firewall rules, or a store — and neither is
- * worth adding a dependency for eight days out. What this does buy is the whole
- * of the accidental case (a page in a reload loop, a crawler, a demo left open)
- * and a large share of the casual one.
+ * cost ceiling per instance*, not *a guarantee per caller*. What this does buy
+ * is the whole of the accidental case (a page in a reload loop, a crawler, a
+ * demo left open) and a large share of the casual one.
+ *
+ * The wider ceiling belongs one layer out, in a Vercel WAF rate-limit rule —
+ * configuration rather than a dependency, and so never really what this file was
+ * weighed against. One is live as of 2026-08-15 on `/api/run`, 30 per 60s keyed
+ * on the client IP at the edge, and measured rather than assumed. The plan
+ * allows a single such rule, so every other route below still has only this.
+ *
+ * Two reasons that does not retire anything here: the WAF bounds arrival, not
+ * concurrency, so `maxInFlight` is untouched by it; and its counters are per
+ * region. See the D78 amendment.
  *
  * ## The key
  *
  * `x-forwarded-for`'s first entry, which is what Vercel's proxy puts the client
  * IP in. It is trivially spoofable by anyone talking to the origin directly, so
  * this is a limit on the honest and the careless, not on an attacker. Again:
- * said, not hidden.
+ * said, not hidden — and not fixable here at any effort. The header is already
+ * present when a function receives it, so nothing at this layer can tell a
+ * forged one from a real one. Only the edge, which sets it, can.
  *
  * Deliberately no dependency: `package.json` is shared with FE and the rule is
  * one dependency per commit (08-parallel.md). A bucket is twenty lines.

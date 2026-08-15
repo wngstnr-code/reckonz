@@ -360,10 +360,16 @@ That single run exercises every claim the product makes. It is the demo.
   nothing sampling, `step-vs-history` degrades to `skipped` within two days of the last mark — the
   arm that closes D41's re-anchoring hole is exactly the one that needs the publish worker up. One
   more reason the 18–19 Aug item is the load-bearing one.
-- **The rate limit is per instance, and the key is spoofable.** D78 bounds one caller against one
-  warm instance; it does not coordinate across them, and `x-forwarded-for` is whatever a direct
-  caller says it is. It is a cost ceiling, not a guarantee. The global version is a Vercel firewall
-  rule rather than more code here.
+- **The rate limit is per instance, and the key is spoofable — partly closed 2026-08-15.** D78
+  bounds one caller against one warm instance; it does not coordinate across them, and
+  `x-forwarded-for` is whatever a direct caller says it is. It is a cost ceiling, not a guarantee.
+  A Vercel WAF rule now sits in front of `/api/run` — `rule_rate_limit_api_run_CXxLli`, 30 requests
+  per 60s keyed on the real client IP at the edge, so the spoofable header is out of the loop for
+  the one route that spends an LLM quota. **Verified, not assumed**: 41 probe requests logged
+  exactly 11 over the threshold. Two things it does not fix — the action is still `log`, so nothing
+  is refused yet, and WAF counters are per region rather than global. The plan allows one such
+  rule, so `/api/fill`, `/api/exit` and `/api/theses` keep only the in-process bucket, and
+  `maxInFlight` stays the only bound on concurrency anywhere. See the D78 amendment.
 - **A stale oracle still means an unbounded exit on chain.** D77 made it visible and consented;
   it did not make `PolicyGuard` able to stop it. The only protection in that state is the
   `minAmountOutUsdg` floor the owner signed into the leg. Closing it properly needs an `Executor`
