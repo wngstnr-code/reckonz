@@ -192,123 +192,210 @@ that has not built it.
 
 ## Images, one per thread
 
-Each block below is **one complete prompt**. Copy it, generate, post. Nothing to assemble and
-nothing to overlay afterwards.
+Each block below is **one complete prompt**. Copy it, generate, post. Nothing to assemble.
 
-Only Day 1 and Day 2 carry text, because only those two are about a specific figure. The other five
-compositions say what they mean without a single letter, which is also why they cannot render a
-number wrongly.
+### The mark, in every image
 
-**On the two that do carry text:** image models still misspell digits. Read the number in the
-result before posting, character by character, against the table at the bottom of this file. If it
-is wrong, regenerate rather than post it. A picture reading $97,3Z9 under a post asserting $97,329
-undoes the one claim every thread here makes.
+`public/logo-reckonz.svg` is four evenly spaced vertical tally strokes where the fourth bends at
+its base into an upward diagonal, turning the count into a tick. Counting, then confirming, which
+is what the product does. It is pure geometry, which is the only kind of logo an image model can
+draw consistently, and every prompt below describes it in the same words so the feed reads as one
+account.
+
+If a render gets the mark wrong, paste the real SVG over that corner rather than regenerating the
+whole image. It is a five second fix and the mark is the one element that should never be
+approximate.
+
+### On text
+
+Only Day 1 and Day 2 carry numbers, because only those two are about a figure. The other five say
+what they mean through composition, which is also why they cannot render a number wrongly. On the
+two that do: read the digits in the result one by one against the table at the end of this file
+before posting, and regenerate rather than post a mismatch.
 
 ### Day 1, the market doubled
 
 ```
-Flat 2D vector infographic on a near-black #0b0d10 background. Two thin horizontal
-bars with square ends, stacked with wide vertical spacing, both mint green #6ee7b7.
-The upper bar is short. The lower bar is exactly twice its length. To the right of
-the upper bar, the text "$48,000" in a clean monospace font, muted grey #5d6675.
-To the right of the lower bar, the text "$97,329" in the same monospace font, larger,
-in mint green #6ee7b7. Render both numbers exactly as written, with the dollar signs
-and commas. No other text anywhere. Generous empty space around everything.
-No drop shadows, no glow, no bloom, no gradient, no 3D, no perspective, no icons,
-no arrows, no charts, no people, no robots. Minimal technical instrument aesthetic.
-16:9.
+Editorial data visualisation in the Swiss International Style, flat 2D vector, extremely
+precise. Canvas 16:9, background a deep near-black #0b0d10 with a barely perceptible
+vertical shift to #10141a at the top edge, no visible banding.
+
+Centre composition: two horizontal bars with square ends, stacked with wide vertical
+separation, both flat mint green #6ee7b7, no outline. The upper bar is short. The lower
+bar is exactly twice its length, left edges aligned to a shared invisible baseline. A
+hairline #232830 vertical rule marks that shared left edge, running the full height of
+the frame.
+
+To the right of the upper bar, set the text "$48,000" in a clean geometric monospace,
+muted grey #5d6675. To the right of the lower bar, set "$97,329" in the same monospace,
+noticeably larger, in mint green #6ee7b7. Reproduce both strings exactly, including the
+dollar sign and comma. No other text in the image.
+
+Bottom left corner, small, occupying about seven percent of the frame height: the Reckonz
+mark, four evenly spaced vertical bars of equal thickness in mint green #6ee7b7 where the
+fourth and rightmost bar bends at its base into an upward diagonal stroke forming a tick.
+Flat, square ends, no outline, no container.
+
+Generous margins, calm, instrument-like. No drop shadows, no glow, no bloom, no lens
+flare, no gradient mesh, no 3D, no perspective, no texture overlay, no icons, no arrows,
+no candlestick charts, no people, no robots, no circuit boards.
 ```
 
 ### Day 2, $250,000 asked and $6,627 executed
 
 ```
-Flat 2D vector infographic on a near-black #0b0d10 background. One large rectangle
-occupying most of the frame, drawn as a thin unfilled outline in muted grey #5d6675,
-with the text "$250,000" in clean monospace along its top edge in the same grey.
-Inside the lower left corner of that rectangle sits a small solid mint green #6ee7b7
-rectangle covering roughly three percent of the large rectangle's area, with the text
-"$6,627" in monospace immediately beside it in mint green. Render both numbers exactly
-as written, with dollar signs and commas. No other text anywhere. The contrast in area
-between the two shapes is the subject. No drop shadows, no glow, no gradient, no 3D,
-no icons, no arrows, no charts. Minimal technical instrument aesthetic. 16:9.
-```
+Editorial data visualisation in the Swiss International Style, flat 2D vector, extremely
+precise. Canvas 16:9, background deep near-black #0b0d10.
 
-The three percent is the true ratio. Do not accept a result where the small rectangle merely looks
-small; it should be almost uncomfortably tiny.
+One large rectangle occupies most of the frame, drawn as a thin unfilled outline in muted
+grey #5d6675, corners sharp. Along its top edge, set outside the outline, the text
+"$250,000" in clean geometric monospace, same muted grey.
+
+Inside that rectangle, anchored to its lower left corner, sits a small solid mint green
+#6ee7b7 rectangle covering roughly three percent of the large rectangle's area. It should
+look almost uncomfortably small. Immediately to its right, the text "$6,627" in the same
+monospace, mint green. Reproduce both strings exactly, including dollar signs and commas.
+No other text in the image.
+
+The vast empty interior of the outlined rectangle is the subject and must stay empty.
+
+Bottom left corner, small, about seven percent of the frame height: the Reckonz mark, four
+evenly spaced vertical bars of equal thickness in mint green #6ee7b7 where the fourth and
+rightmost bar bends at its base into an upward diagonal stroke forming a tick. Flat, square
+ends, no outline.
+
+No drop shadows, no glow, no gradient, no 3D, no perspective, no texture, no icons, no
+arrows, no charts, no people, no robots.
+```
 
 ### Day 3, the week we lost
 
 ```
-Flat 2D vector composition on a near-black #0b0d10 background. A dense, evenly spaced
-grid of many small identical squares filling the frame, every square solid muted grey
-#5d6675. Exactly one square, positioned slightly off centre, is drawn instead as a
-hollow outline in amber #f0b429, identical in size and alignment to all the others so
-the difference is only noticeable on a second look. Absolutely no text, letters or
-numbers anywhere in the image. No drop shadows, no glow, no gradient, no 3D, no icons,
-no people, no robots. Minimal technical instrument aesthetic. 16:9.
-```
+Minimal technical schematic, flat 2D vector, Swiss International Style. Canvas 16:9,
+background deep near-black #0b0d10.
 
-Something that looks correct and is not. The whole thread in one frame.
+A dense, perfectly regular grid of small identical squares fills the central area, roughly
+fourteen columns by eight rows, evenly spaced with equal gutters. Every square is solid
+muted grey #5d6675. Exactly one square, positioned slightly right and above centre, is
+drawn instead as a hollow outline in amber #f0b429, identical in size and grid position to
+every other square so the difference reads only on a second look. No highlight, no ring,
+no arrow pointing at it, nothing else drawing attention to it.
+
+Wide even margin around the grid. Absolutely no text, letters or numbers anywhere.
+
+Bottom left corner, small, about seven percent of the frame height: the Reckonz mark, four
+evenly spaced vertical bars of equal thickness in mint green #6ee7b7 where the fourth and
+rightmost bar bends at its base into an upward diagonal stroke forming a tick. Flat, square
+ends.
+
+No drop shadows, no glow, no bloom, no gradient, no 3D, no perspective, no texture, no
+icons, no people, no robots.
+```
 
 ### Day 4, the fingerprint
 
 ```
-Flat 2D vector composition on a near-black #0b0d10 background. Two identical narrow
-vertical columns of small abstract rectangular blocks, side by side with a clear gap
-between them, all blocks muted grey #5d6675. The blocks are plain rectangles, never
-letters or characters. One single horizontal row across both columns is mint green
-#6ee7b7 instead, and the two mint blocks align exactly with each other, joined by a
-thin mint horizontal line spanning the gap. Absolutely no text, letters or numbers
-anywhere. No drop shadows, no glow, no gradient, no 3D, no icons. Minimal technical
-instrument aesthetic. 16:9.
-```
+Minimal technical schematic, flat 2D vector, Swiss International Style. Canvas 16:9,
+background deep near-black #0b0d10, with two subtly raised panel areas in #12151a, each
+bounded by a hairline #232830 border, sitting side by side with a clear vertical gap
+between them.
 
-Two things compared and found to match.
+Inside each panel, a vertical column of small abstract rectangular blocks of varying
+widths, stacked evenly, all muted grey #5d6675. The blocks are plain rectangles and must
+never resemble letters or characters. The two columns are exact mirrors of each other in
+rhythm and width, so the eye reads them as identical.
+
+One single horizontal row, about two thirds of the way down, is mint green #6ee7b7 in both
+panels, and the two mint blocks align precisely across the gap. A thin mint green line
+spans the gap on that row only, connecting them.
+
+Absolutely no text, letters or numbers anywhere.
+
+Bottom left corner, small, about seven percent of the frame height: the Reckonz mark, four
+evenly spaced vertical bars of equal thickness in mint green #6ee7b7 where the fourth and
+rightmost bar bends at its base into an upward diagonal stroke forming a tick.
+
+No drop shadows, no glow, no gradient, no 3D, no perspective, no texture, no icons.
+```
 
 ### Day 5, rules that can be measured
 
 ```
-Flat 2D vector composition on a near-black #0b0d10 background. Two vertical columns of
-short horizontal bars, evenly spaced, equal number of bars in each column, all bars the
-same size. Every bar in the left column is solid mint green #6ee7b7. Every bar in the
-right column is an unfilled outline drawn with a dashed amber #f0b429 stroke. Thin
-#232830 vertical divider between the columns. Absolutely no text, letters or numbers
-anywhere. No drop shadows, no glow, no gradient, no 3D, no icons, no arrows. Minimal
-technical instrument aesthetic. 16:9.
-```
+Minimal technical schematic, flat 2D vector, Swiss International Style. Canvas 16:9,
+background deep near-black #0b0d10.
 
-Measurable on the left, handed back to you on the right. Nothing hidden, nothing faked.
+Two vertical columns of short horizontal bars, evenly spaced, seven bars in each column,
+every bar the same length and thickness, the two columns aligned row for row. Every bar in
+the left column is solid flat mint green #6ee7b7. Every bar in the right column is an
+unfilled outline drawn with a dashed amber #f0b429 stroke, same dimensions exactly.
+
+A single hairline vertical rule in #232830 runs between the two columns, full frame height.
+
+The symmetry is the point: same count, same rhythm, different treatment. Absolutely no
+text, letters or numbers anywhere.
+
+Bottom left corner, small, about seven percent of the frame height: the Reckonz mark, four
+evenly spaced vertical bars of equal thickness in mint green #6ee7b7 where the fourth and
+rightmost bar bends at its base into an upward diagonal stroke forming a tick.
+
+No drop shadows, no glow, no gradient, no 3D, no perspective, no texture, no icons, no
+arrows.
+```
 
 ### Day 6, the refusals
 
 ```
-Flat 2D vector composition on a near-black #0b0d10 background. A vertical stack of nine
-thin horizontal rows spanning most of the width, like rows in a ledger, each separated
-by a hairline #232830 rule. Eight of the rows are filled amber #f0b429. Exactly one row
-is filled mint green #6ee7b7, and it sits neither at the top nor at the bottom of the
-stack. Absolutely no text, letters or numbers anywhere. No drop shadows, no glow, no
-gradient, no 3D, no icons. Minimal technical instrument aesthetic. 16:9.
+Minimal technical schematic, flat 2D vector, Swiss International Style. Canvas 16:9,
+background deep near-black #0b0d10.
+
+A vertical stack of nine thin horizontal rows, like rows in a ledger, each spanning most of
+the frame width and separated by hairline #232830 rules. Rows are equal in height, tightly
+and evenly spaced.
+
+Eight of the nine rows are filled flat amber #f0b429. Exactly one row is filled mint green
+#6ee7b7, and it sits fourth from the top, neither at the top nor the bottom of the stack.
+
+Wide even margins above and below the stack. Absolutely no text, letters or numbers
+anywhere.
+
+Bottom left corner, small, about seven percent of the frame height: the Reckonz mark, four
+evenly spaced vertical bars of equal thickness in mint green #6ee7b7 where the fourth and
+rightmost bar bends at its base into an upward diagonal stroke forming a tick.
+
+No drop shadows, no glow, no gradient, no 3D, no perspective, no texture, no icons, no red
+anywhere in the image.
 ```
 
-One executed, eight refused, and only the one pays us. Amber rather than red on purpose:
-`09-design.md` reserves red for a run that actually broke, and painting refusals with trading-UI
-semantics makes the most valuable thing the product does look like a failure.
+Amber rather than red on purpose. `09-design.md` reserves red for a run that actually broke, and
+painting refusals with trading-UI semantics makes the most valuable thing the product does look
+like a failure.
 
 ### Day 7, the submission
 
 ```
-Flat 2D vector composition on a near-black #0b0d10 background. Exactly eighteen small
-solid mint green #6ee7b7 squares, all identical in size, arranged in an evenly spaced
-grid of six columns and three rows, centred, with a wide empty margin all around. No
-highlight, no variation, no numbering. Absolutely no text, letters or numbers anywhere.
-No drop shadows, no glow, no gradient, no 3D, no icons. Minimal technical instrument
-aesthetic. 16:9.
+Minimal technical composition, flat 2D vector, Swiss International Style. Canvas 16:9,
+background deep near-black #0b0d10 with a barely perceptible vertical shift to #10141a at
+the top edge.
+
+Exactly eighteen small solid mint green #6ee7b7 squares, all identical in size, arranged in
+a precisely even grid of six columns and three rows, centred in the frame, with equal
+generous gutters between them and a wide empty margin all around. No highlight, no
+variation, no numbering, no connecting lines. The count must be exactly eighteen and each
+square must be clearly separated from its neighbours so they can be counted at a glance.
+
+Absolutely no text, letters or numbers anywhere.
+
+Bottom left corner, small, about seven percent of the frame height: the Reckonz mark, four
+evenly spaced vertical bars of equal thickness in mint green #6ee7b7 where the fourth and
+rightmost bar bends at its base into an upward diagonal stroke forming a tick.
+
+No drop shadows, no glow, no bloom, no gradient mesh, no 3D, no perspective, no texture, no
+icons, no people, no robots.
 ```
 
-Eighteen marks for eighteen receipts. Countable, and the count is true.
-
-**If the receipt count has moved by the 21st**, change the number of squares in the prompt to match
-and keep the grid even. That is the only edit any of these prompts should ever need.
+Eighteen marks for eighteen receipts, countable. **If the receipt count has moved by the 21st**,
+change the number of squares and the grid to match. That is the only edit any of these prompts
+should ever need.
 
 ## Numbers to re-check on the morning you post
 
