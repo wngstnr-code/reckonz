@@ -121,7 +121,7 @@ server that can sign is a server that has custody, and D6 forbids it.
 
 ### 3. Deploy the API runtime ✅ done
 
-**https://reckonz.vercel.app** — Root Directory is the repo root, not `app/`. The only environment
+**https://reckonz.xyz** — Root Directory is the repo root, not `app/`. The only environment
 variable that belongs there is `GEMINI_API_KEY`; the web path reads no key that can move funds, and
 it must stay that way. Checked 2026-08-12 by tracing every deployed route: `/api/theses` and
 `/api/universe` read nothing from the environment at all. **Contract addresses are compiled into
@@ -238,7 +238,7 @@ Updated 2026-08-11 after D38–D42.
 
 ### 1. Deploy the web app ✅ done by BE 2026-08-11
 
-**https://reckonz.vercel.app.** Redeploys on push to `main`. If you need to change build settings:
+**https://reckonz.xyz.** Redeploys on push to `main`. If you need to change build settings:
 Root Directory is the repo root (not `app/`), and `GEMINI_API_KEY` is the only environment
 variable — never add a key that can move funds to a host serving public traffic.
 

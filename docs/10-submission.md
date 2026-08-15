@@ -21,7 +21,7 @@ written with that in mind, and the phrase appears in the first sentence on purpo
 |---|---|
 | Project Name | **Reckonz** |
 | Project Description | below |
-| Project URL | `https://reckonz.vercel.app` |
+| Project URL | `https://reckonz.xyz` |
 | Github | `https://github.com/wngstnr-code/reckonz`. **Optional on the form, and blank forfeits a stated criterion:** Disclaimer §4 says the Organizer will consider *code quality*. The secret audit is clean (120 commits, nothing found). Decide before submitting. |
 | Email | Wangsit's |
 | Telegram | Wangsit's |
@@ -224,7 +224,7 @@ which is a mock nobody trades.
 >
 > 18 on-chain receipts, each with an evidence hash anyone can re-derive.
 >
-> reckonz.vercel.app
+> reckonz.xyz
 >
 > #AISeason #XLayer
 

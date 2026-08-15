@@ -1302,7 +1302,7 @@ real constraint and a different problem from the one "the gas is expensive" desc
 | The publish bound staying bound (`ANCHOR_MAX_AGE`) | 1 day | ~$0.003/day |
 
 The security property is nearly free. Only execution-freshness is expensive, and **the web app does
-not need it** — `pipeline.ts` computes fair value off-chain, so reckonz.vercel.app is correct with
+not need it** — `pipeline.ts` computes fair value off-chain, so reckonz.xyz is correct with
 zero publishing. What needs a fresh on-chain oracle is a real fill, and those are manual.
 
 **Decision: deploy the worker near submission, not now.** Publish by hand around demos, the video
@@ -3917,7 +3917,7 @@ Logged 11        Rate Limited –    Denied –    Challenged –
 
 It counts at the threshold rather than logging every match, and the zero columns agree with the
 configuration — `log` fires, `rate_limit` does not, because exceeding the limit is set to log.
-Attribution was clean: one IP, `curl/8.7.1`, `/api/run/waf-probe`, `reckonz.vercel.app`.
+Attribution was clean: one IP, `curl/8.7.1`, `/api/run/waf-probe`, `reckonz.xyz`.
 
 So **rate limiting is available on this plan**, and the 401 on the second rule is a cap on how many
 rate-limit rules the plan allows — the dashboard reads `Custom Rules 1`. Which means the earlier
@@ -4184,7 +4184,7 @@ Correct on both sides of the boundary, on real state, without anyone arranging i
 ### What this does not do
 
 **It does not alert.** An endpoint is not a monitor; something has to call it. One free uptime
-check on a one-minute timer against `https://reckonz.vercel.app/api/health`, alerting on non-2xx,
+check on a one-minute timer against `https://reckonz.xyz/api/health`, alerting on non-2xx,
 is the whole remaining step and it takes minutes. Until that exists this is a thing a human can
 look at, which is better than nothing and is not the same as being told.
 

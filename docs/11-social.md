@@ -102,7 +102,7 @@ figure as the caption.
 > which stocks are actually tradable on X Layer, and sizes each one to what the market can really
 > absorb.
 >
-> Your money never leaves your wallet. reckonz.vercel.app
+> Your money never leaves your wallet. reckonz.xyz
 
 ## Day 3, 17 Aug: the week we lost
 
@@ -205,7 +205,7 @@ that has not built it.
 > 18 trades on mainnet, each one auditable by anyone. Every contract published and verified. 322
 > tests on every change.
 >
-> reckonz.vercel.app
+> reckonz.xyz
 >
 > #AISeason #XLayer
 

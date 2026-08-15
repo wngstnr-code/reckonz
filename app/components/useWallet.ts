@@ -176,8 +176,8 @@ function walletConnect(): Promise<DiscoveredWallet> {
         metadata: {
           name: 'Reckonz',
           description: 'Non-custodial execution and risk tooling for tokenised equities on X Layer',
-          url: typeof window === 'undefined' ? 'https://reckonz.vercel.app' : window.location.origin,
-          icons: ['https://reckonz.vercel.app/logo-reckonz.png'],
+          url: typeof window === 'undefined' ? 'https://reckonz.xyz' : window.location.origin,
+          icons: ['https://reckonz.xyz/logo-reckonz.png'],
         },
       }),
       20_000,

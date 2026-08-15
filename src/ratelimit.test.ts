@@ -154,7 +154,7 @@ test('idle buckets are evicted, so the map does not grow forever', () => {
 
 test('the client is the first entry of x-forwarded-for', () => {
   // Vercel's proxy appends, so the client is at the front and the hops follow.
-  const request = new Request('https://reckonz.vercel.app/api/run', {
+  const request = new Request('https://reckonz.xyz/api/run', {
     headers: { 'x-forwarded-for': '203.0.113.7, 70.41.3.18, 150.172.238.178' },
   });
   assert.equal(clientKey(request), '203.0.113.7');
@@ -163,10 +163,10 @@ test('the client is the first entry of x-forwarded-for', () => {
 test('an unidentifiable caller shares one bucket rather than getting a fresh one', () => {
   // The safe direction. A per-request key would mean no limit at all for
   // exactly the requests we know least about.
-  assert.equal(clientKey(new Request('https://reckonz.vercel.app/api/run')), 'unknown');
+  assert.equal(clientKey(new Request('https://reckonz.xyz/api/run')), 'unknown');
   assert.equal(
     clientKey(
-      new Request('https://reckonz.vercel.app/api/run', { headers: { 'x-real-ip': '198.51.100.4' } }),
+      new Request('https://reckonz.xyz/api/run', { headers: { 'x-real-ip': '198.51.100.4' } }),
     ),
     '198.51.100.4',
   );

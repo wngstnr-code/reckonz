@@ -66,7 +66,7 @@ This changes what is worth spending the last week on. The whole submission is:
 |---|---|---|
 | Project Name | ✅ | Reckonz |
 | **Project Description** | ✅ | **the single highest-leverage artifact in the entire submission** |
-| **Project URL** | ✅ | reckonz.vercel.app |
+| **Project URL** | ✅ | reckonz.xyz |
 | **Github** | optional | ⚠️ **the repo is private** — see below |
 | Email / Telegram / X handle | ✅ | |
 | X post URL | optional | the `@XLayerOfficial` post |

@@ -209,7 +209,7 @@ old one.
 | **One real fill, end to end** | `src/execute.ts` | ✅ **run on mainnet twice**; refuses truncated quotes and pool mismatches |
 | OKB → USDG funding swap | `src/swap.ts` | ✅ resumable; used to fund the deployer |
 | Streamed pipeline (one run, six stages) | `src/pipeline.ts` | ✅ shared by CLI and web |
-| Web app — Next.js 16 App Router + Tailwind 4 | `app/` | ✅ **live at reckonz.vercel.app** |
+| Web app — Next.js 16 App Router + Tailwind 4 | `app/` | ✅ **live at reckonz.xyz** |
 | SSE endpoint | `app/api/run/route.ts` | ✅ streams each stage as it lands |
 
 ### Commands
@@ -336,7 +336,7 @@ figure in it is a reading with a date (D84).
 |---|---|
 | ~~Real fill on mainnet~~ | ✅ **Done 2026-08-11.** `0x7240759d327d468f9a7086ed439abf42dead17887105d986ca0870ebf46d6545` — 0.5 USDG into wSPYx, guard and receipt in the same transaction. |
 | **Demo video / walkthrough** | Not started, and **not a submission requirement** — the form has no video field (checked 2026-08-14). Still worth linking from the description or the site, but it now competes for time rather than blocking. The web app is now the thing to record. **Script it from the corrected positioning (D49), not from memory** — two of the three "nobody does this" claims are dead, and the ICE/OKX context is the strongest card available. |
-| ~~Deploy the web app~~ | ✅ **https://reckonz.vercel.app** — verified end to end in production: live Gemini, 30-asset universe, capacity-limited plan, 1/2 assets would execute. |
+| ~~Deploy the web app~~ | ✅ **https://reckonz.xyz** — verified end to end in production: live Gemini, 30-asset universe, capacity-limited plan, 1/2 assets would execute. |
 | ~~**Wallet connect**~~ — **built 2026-08-12** | The header connects, switches between 1952 and 196, and hands out a viem `WalletClient`. EIP-6963 + viem's `custom()` transport, so no wallet library and no change to `package.json`. No WalletConnect, therefore no mobile QR path. Taken over from FE, see `07-team.md`. |
 | ~~**Mandate creation in the UI**~~ — **built 2026-08-12** | `app/components/Mandate.tsx`: set the blast radius, pick assets from `GET /api/universe`, `createMandate` from the user's own wallet, then poll until the mandate is readable (D18) and show its id with an explorer link. The user is `owner` *and* `agent`; `executor` is the deployed `Executor`, which is what `Executor.execute` checks before it will pull funds. **Not yet exercised against a real wallet extension** — see below. |
 | ~~**Simple mode in the UI**~~ — **built 2026-08-12** | `app/components/Theses.tsx`: every published thesis with its basket derived from settled fills, its notional-weighted slippage, whether it was published before every fill, and the receipts underneath — plus the unattributed receipts and any orphaned hashes, rendered rather than dropped. It reads `GET /api/theses`, so the page and `pnpm track-record` cannot disagree (D28). **Follow** hands the executed basket to the mandate form (`app/components/follow.ts`, a one-way DOM event) which preselects those assets and nothing else — the caps, the size and the signature stay with the follower. A followed thesis's hash is carried into the fill below, so a follower's execution lands back in that thesis's track record. |
@@ -365,7 +365,7 @@ figure in it is a reading with a date (D84).
 ### Known gaps in the work itself
 
 - **`/api/health` exists and nothing calls it.** An endpoint is not a monitor. One free uptime
-  check against `https://reckonz.vercel.app/api/health` alerting on non-2xx closes it, and until
+  check against `https://reckonz.xyz/api/health` alerting on non-2xx closes it, and until
   then the two-day outage in D81 could happen again in exactly the same way.
 - **The evidence store fills up with allowed plans, not just executed fills.** A bundle is archived
   when the guard allows, which is before anything is signed. True of `evidence/` on disk since D57;
@@ -1026,7 +1026,7 @@ Note this is Sourcify, not OKLink: the source is public and checkable at
 `https://repo.sourcify.dev/196/<address>`, but OKLink's own explorer page may still show bytecode
 unless it pulls from Sourcify. Verifying there needs an OKLink API key.
 
-**2026-08-11 (latest, ninth)** — web app live at **https://reckonz.vercel.app**. Full pipeline
+**2026-08-11 (latest, ninth)** — web app live at **https://reckonz.xyz**. Full pipeline
 verified against production, not just a 200: six stages, `gemini-3.6-flash (live)` rather than the
 fixture, 30 assets read from the chain, capacity-limited plan, one of two assets refused at the
 guard. `pnpm build` now means `next build` — it pointed at `forge build`, which is what Vercel

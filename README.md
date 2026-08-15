@@ -4,7 +4,7 @@
 You write the thesis; Reckonz maps it to what actually trades, sizes it against real
 depth, and enforces the exits on chain.
 
-[reckonz.vercel.app](https://reckonz.vercel.app) · [@reckonz_xyz](https://x.com/reckonz_xyz)
+[reckonz.xyz](https://reckonz.xyz) · [@reckonz_xyz](https://x.com/reckonz_xyz)
 
 Most financial products sell *"you can"*. This one sells *"you cannot, and here is the
 number"*. A $250,000 thesis meets a market that can absorb $2,191 of it, and the system
