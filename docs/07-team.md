@@ -408,7 +408,9 @@ Both files are committed.
 | File | Use |
 |---|---|
 | `public/logo-reckonz.svg` | the header mark — `currentColor`, no background |
-| `public/logo-reckonz.png` | 1024×1024 source, dark background baked in |
+| `public/logo-reckonz.png` | 1024×1024 source, `#0b0d10` baked in |
+| `public/logo-reckonz-black.{svg,png}` | mint `#6ee7b7` on pure `#000000` — X profile and post images |
+| `public/logo-reckonz-grey.{svg,png}` | `#8b95a4` on pure `#000000` — greyscale treatments |
 
 **Use the SVG in the header, not the PNG.** The PNG has `#0b0d10` filled behind the mark, so
 anywhere the page is not exactly that colour it renders as a dark tile rather than a mark. The SVG

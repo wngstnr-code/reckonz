@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Reckonz">
+  <title>Reckonz</title>
+  <!--
+    The mint mark on **pure #000000**, for anywhere that sits on true black
+    rather than on the app's #0b0d10 ground: X profile and post images, and the
+    @XLayerOfficial-style treatment generally. logo-reckonz.png bakes #0b0d10
+    instead, which shows there as a visibly lighter square.
+
+    Geometry is logo-reckonz.svg's, which is the file to read: the tick is a
+    separate path, never a bend in the fourth bar, because a miter join there
+    puts a spike below the shared baseline that the original does not have.
+
+    Colour is a fixed #6ee7b7, the palette's `signal`, rather than
+    `currentColor`. This variant exists to stay mint regardless of context.
+
+    Three variants now, and they differ only in ground and fill:
+      logo-reckonz.svg        currentColor, no background   the app header
+      logo-reckonz-black.svg  #6ee7b7 on #000000            true-black surfaces
+      logo-reckonz-grey.svg   #8b95a4 on #000000            greyscale treatments
+  -->
+  <rect width="1024" height="1024" fill="#000000"/>
+  <g fill="none" stroke="#6ee7b7" stroke-width="31" stroke-linecap="butt">
+    <path d="M365.5 254.5V761.5" />
+    <path d="M431.5 254.5V761.5" />
+    <path d="M497.5 254.5V761.5" />
+    <path d="M563.5 254.5V761.5" />
+    <path d="M563.5 752.5L725 515" />
+  </g>
+</svg>
