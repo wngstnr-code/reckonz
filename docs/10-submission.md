@@ -93,15 +93,29 @@ the short version below rather than trimming the flow out of the top.
 
 ## Short version, if the field is capped
 
-> **Reckonz is non-custodial execution and risk tooling for tokenised real-world assets: the
-> xStocks equity tokens on X Layer.** You write an investment thesis in plain language; the AI
-> compiles it into a falsifiable claim *and* into the exit rules you said you would honour, and
-> those rules are enforced on-chain by a contract that reverts inside the trade. It sizes against
-> real pool depth and hands back what the market cannot absorb: $250,000 asked, $6,627 executable,
-> the rest refused with the slippage it would have cost. The agent holds no key, because every fill
-> pulls against a Permit2 signature the owner just produced. Live on X Layer mainnet with 18
-> on-chain receipts, each carrying a re-derivable evidence hash, and a fee collector taking real
-> revenue.
+**~160 words.** Same order as the long one — what it is, what you do, what it refuses, why it is
+safe, proof — just with each step reduced to a sentence. It is not the long version with paragraphs
+deleted, which is what makes it still readable.
+
+> **Reckonz turns an investment thesis into on-chain positions sized to what the market can
+> actually absorb.** It works on xStocks — tokenised Apple, Nvidia, Tesla and 27 more, trading as
+> ERC-20s on X Layer. Your funds never leave your wallet.
+>
+> You write a thesis in plain language. The AI compiles it into a falsifiable claim and into the
+> conditions you said would change your mind; those become exit triggers a contract enforces. It
+> sizes each leg against live pool depth rather than against the amount you asked for: request
+> $250,000 and it executes $6,627, hands back $243,373, and shows that forcing the rest would have
+> cost $55,148 in slippage against $33 for the part that fits.
+>
+> The AI never holds a key that can move funds — every fill pulls against a Permit2 signature you
+> just produced, and `PolicyGuard` reverts inside the trade's own transaction when a bound breaks.
+> Live on X Layer mainnet: 18 receipts, each carrying an evidence hash anyone can re-derive.
+
+### Shortest, if it is a one-line field
+
+> Write an investment thesis in plain language; Reckonz sizes it to what X Layer can actually
+> absorb, refuses the rest with the number, and enforces your own exit conditions on-chain — from a
+> wallet it never has the keys to.
 
 ---
 
