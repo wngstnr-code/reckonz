@@ -190,6 +190,112 @@ that has not built it.
 >
 > #AISeason #XLayer
 
+## Images, one per thread
+
+### Two rules before generating anything
+
+**No generated text, ever.** Image models cannot spell numbers reliably, and a post claiming
+$97,329 next to a picture reading $97,3Z9 destroys the one thing every thread here is asserting.
+Every prompt below produces a **textless** composition with deliberate empty space. Set the real
+numbers over it yourself afterwards, in a monospace face, using the palette below.
+
+**For Day 1 and Day 2, consider a screenshot instead.** `pnpm capacity` and `pnpm thesis` already
+print exactly the table the post is about, in the product's own voice. A real terminal readout beats
+any illustration for this account, and it is evidence rather than decoration. Generate an image for
+those two days only if the screenshot looks cramped at 16:9.
+
+### The style block, append to every prompt
+
+The palette is the product's, from `app/globals.css`, so the feed matches the app.
+
+```
+Flat 2D vector composition, dark technical instrument aesthetic. Background near-black
+#0b0d10. Panel surfaces #12151a separated by thin 1px borders #232830. No drop shadows,
+no glow, no bloom, no lens flare, no gradient mesh, no 3D render, no perspective.
+Single accent colour mint green #6ee7b7, used sparingly. Amber #f0b429 only where
+something is withheld or refused. Muted grey #5d6675 for anything inactive.
+Sparse composition with generous empty space in the upper left for text to be added
+later. No text, no letters, no numbers, no labels anywhere in the image.
+No people, no robots, no brains, no glowing orbs, no circuit-board motifs, no upward
+arrows, no candlestick charts. 16:9.
+```
+
+### Day 1, the market doubled
+
+```
+Two horizontal bars stacked with wide spacing on the near-black ground. The lower bar
+is roughly twice the length of the upper one. Both are thin, flat, mint green #6ee7b7,
+square ends. Nothing else in the frame. The whole left third is empty.
+```
+
+The image is the claim: same measurement, twice the length, four days apart.
+
+### Day 2, $250,000 asked and $6,627 executed
+
+```
+One large rectangle drawn as a thin muted grey #5d6675 outline, occupying most of the
+frame, unfilled. Inside its lower left corner sits a very small solid mint green
+#6ee7b7 rectangle covering roughly three percent of the outlined area. The contrast in
+area is the entire subject.
+```
+
+The proportion is literally accurate, which is why it works. Do not let it drift to something
+that merely looks small.
+
+### Day 3, the week we lost
+
+```
+A dense evenly spaced grid of small identical squares filling the frame, all in muted
+grey #5d6675, all solid. Exactly one square, slightly off centre, is drawn as a hollow
+outline in amber #f0b429 instead of being filled. Everything else is identical to it in
+size and position, so the difference is only visible on a second look.
+```
+
+Something that looks right and is not. That is the whole thread in one frame.
+
+### Day 4, the fingerprint
+
+```
+Two identical narrow vertical columns of small abstract glyph blocks, side by side with
+a gap between them, in muted grey #5d6675. The blocks are pure rectangles, not letters.
+A single horizontal row across both columns is mint green #6ee7b7, aligning exactly.
+Thin connecting line between the two columns on that row only.
+```
+
+Two things being compared and found to match.
+
+### Day 5, rules that can be measured
+
+```
+Two columns of short horizontal bars, evenly spaced. The left column bars are solid
+mint green #6ee7b7. The right column bars are the same size but drawn as dashed amber
+#f0b429 outlines, unfilled. Equal count, equal spacing, different treatment.
+```
+
+Measurable on the left, handed back to you on the right. Nothing is hidden and nothing is faked.
+
+### Day 6, the refusals
+
+```
+A vertical stack of eight or nine thin horizontal rows, like rows in a ledger, on the
+near-black ground with thin #232830 separators. Seven or eight rows are amber #f0b429.
+Exactly one row is mint green #6ee7b7. The mint row is not at the top or bottom.
+```
+
+One executed, the rest refused, and only the one pays us. Amber rather than red on purpose: a
+refusal is the product working, and `09-design.md` reserves red for a run that actually broke.
+
+### Day 7, the submission
+
+```
+Eighteen small solid mint green #6ee7b7 squares arranged in an even grid, generously
+spaced, on the near-black ground. All identical, all the same size, no highlight, no
+variation. Wide empty margin around the grid.
+```
+
+Eighteen marks for eighteen receipts. Count them and the number is true, which is the point of the
+account.
+
 ## Numbers to re-check on the morning you post
 
 All of these have moved at least once, and two of them moved 2x in four days:
