@@ -45,9 +45,10 @@ written with that in mind, and the phrase appears in the first sentence on purpo
 > is the number*.
 >
 > **The AI writes rules, not trades.** You state a thesis in plain language. The compiler turns it
-> into a falsifiable claim with a causal chain, named beneficiaries, and the part that matters: the
-> conditions that would prove you **wrong**. Each of those conditions is compiled into an exit
-> trigger the on-chain guard evaluates. A schema, not a prompt, bounds what the model may emit. It
+> into a falsifiable claim with a causal chain, named beneficiaries, and the part that matters:
+> **the conditions you said would change your mind**. Each becomes an exit trigger the on-chain
+> guard evaluates — the decision made while you are calm, and enforced when you are not. A schema,
+> not a prompt, bounds what the model may emit. It
 > can only name quantities the chain can measure, and a condition nothing can measure is surfaced
 > to you as a manual watch item instead of quietly becoming a rule that never fires. A red-team
 > suite runs hostile and prompt-injected theses through that path on every commit.
@@ -88,7 +89,7 @@ one on the site.
 
 > **Reckonz is non-custodial execution and risk tooling for tokenised real-world assets: the
 > xStocks equity tokens on X Layer.** You write an investment thesis in plain language; the AI
-> compiles it into a falsifiable claim *and* into the exit rules that would prove it wrong, and
+> compiles it into a falsifiable claim *and* into the exit rules you said you would honour, and
 > those rules are enforced on-chain by a contract that reverts inside the trade. It sizes against
 > real pool depth and hands back what the market cannot absorb: $250,000 asked, $6,627 executable,
 > the rest refused with the slippage it would have cost. The agent holds no key, because every fill
@@ -175,8 +176,8 @@ which is a mock nobody trades.
 > Non-custodial execution and risk tooling for tokenised real-world assets: the xStocks equity
 > tokens on X Layer.
 >
-> You write the thesis. The AI compiles it into the exit rules that would prove you wrong, and
-> PolicyGuard enforces them inside the trade's own transaction.
+> You write the thesis — and the conditions you would exit on. The AI compiles those into rules
+> PolicyGuard enforces inside the trade's own transaction, not in a reminder afterwards.
 >
 > Ask it for $250k and it tells you $6,627 fits, then hands the rest back rather than force it into
 > a market that cannot take it.
