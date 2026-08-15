@@ -111,7 +111,7 @@ the AI-RWA track.
 > not only on destination and size.
 >
 > The oracle marks a value *unpublishable* rather than guessing when the issuer will not quote, so
-> nothing executes against a price we cannot defend. Live on X Layer mainnet with 18 receipts, each
+> nothing executes against a price we cannot defend. Live on X Layer, each
 > carrying an evidence hash that is published before anything is signed and that anyone can
 > re-derive. Every contract is verified on Sourcify.
 
