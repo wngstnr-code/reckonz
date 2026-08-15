@@ -27,6 +27,18 @@ Two mechanics:
 - **Every post is under 280 characters** as drafted. Check again after editing, because the whole
   point of a thread is lost when the last line silently truncates.
 
+**Tagging `@XLayerOfficial`: three days, not seven.** Only the submission post is required to
+mention them, but the judges *are* X Layer and a mention is the only thing that actually notifies
+them. Hashtags are close to useless for reach now, so the mention is the mechanism and `#AISeason`
+stays on Day 7 alone.
+
+| Day | Tagged | Why |
+|---|---|---|
+| 1 | yes, in the opening post | the post is about the depth of their market and OKX's own order book deepening it |
+| 3 | yes, in the closing post | handing X Layer builders the traps that cost us a week is a contribution to their ecosystem |
+| 7 | yes, required | the submission post |
+| 2, 4, 5, 6 | no | these are about our product, not about X Layer, and tagging them anyway reads as farming |
+
 ## How these are written
 
 **For a general reader, not for engineers.** Nobody scrolling X wants a contract address. The
@@ -52,8 +64,8 @@ Three specifics:
 Opening with a finding rather than "introducing Reckonz". A new account that opens with an
 advertisement reads as one. This one is real news and happens to flatter X Layer.
 
-> Four days ago, the entire market for tokenised stocks on X Layer could absorb about $48,000
-> before the price started running away from you.
+> Four days ago, the entire market for tokenised stocks on @XLayerOfficial could absorb about
+> $48,000 before the price started running away from you.
 >
 > We measured again today. $97,000.
 >
@@ -107,8 +119,8 @@ story instead, which travels further and sends the people who want the detail to
 > Something that exists and looks correct is not something that works. A dependency is unverified
 > until you have watched it do the actual job, once, for real.
 
-> If you are building on X Layer, the specific traps that cost us that week are written down in our
-> repo. Take them, they are free.
+> If you are building on @XLayerOfficial, the specific traps that cost us that week are written
+> down in our repo. Take them, they are free.
 >
 > github.com/wngstnr-code/reckonz
 
