@@ -33,12 +33,12 @@ written with that in mind, and the phrase appears in the first sentence on purpo
 ## Description, the one to paste
 
 > **Reckonz turns an investment thesis into on-chain positions that are sized to what the market
-> can actually absorb — and into the exit rules that close them.** It works on xStocks, the
+> can actually absorb, and into the exit rules that close them.** It works on xStocks, the
 > tokenised US equities (Apple, Nvidia, Tesla and 27 others) that trade as ERC-20s on X Layer.
 > Your funds never leave your wallet, at any point.
 >
 > **How it works.** You write a thesis in plain language: *"HBM memory supply stays tight for two
-> more quarters."* The AI compiles it into a falsifiable claim — a causal chain, the companies that
+> more quarters."* The AI compiles it into a falsifiable claim: a causal chain, the companies that
 > benefit, and the conditions you said would change your mind. It resolves those companies to
 > tokens that actually exist on X Layer, and tells you when one does not instead of substituting
 > something close. It sizes each leg against live Uniswap V3 depth rather than against the amount
@@ -54,7 +54,7 @@ written with that in mind, and the phrase appears in the first sentence on purpo
 >
 > **The AI never holds a key that can move funds.** Every fill pulls against a Permit2 signature
 > you just produced: one token, a capped amount, twenty minutes. An agent with no fresh signature
-> moves nothing. `PolicyGuard` then bounds what it does with one — unusually, on **market
+> moves nothing. `PolicyGuard` then bounds what it does with one, and unusually it bounds on **market
 > conditions**: whether the price can be defended and the depth is really there, not only
 > destination and size. A schema rather than a prompt bounds what the model may emit, so it can
 > only name quantities the chain can measure; a condition nothing can measure is surfaced to you as
@@ -66,7 +66,7 @@ written with that in mind, and the phrase appears in the first sentence on purpo
 > was made on. That hash is published *before* anything is signed and the bundle is archived
 > publicly, so anyone can re-derive it and check that it matches. Fees have been collected on
 > mainnet; admin of the fee collector, the oracle and the receipt registry is a 2-of-3 Safe. Every
-> contract is verified on Sourcify — seven on mainnet, seven on testnet — and 106 Solidity plus 216
+> contract is verified on Sourcify (seven on mainnet, seven on testnet), and 106 Solidity plus 216
 > TypeScript tests run in CI on every push.
 >
 > **It serves agents as well as people.** `POST /api/fill` and `POST /api/exit` take a request,
@@ -76,7 +76,7 @@ written with that in mind, and the phrase appears in the first sentence on purpo
 > cannot override.
 >
 > **Honest about the market.** The entire xStock universe on X Layer absorbed $97,329 at 0.5%
-> price impact on 15 August 2026 — and about $48,000 four days earlier. We publish that number with
+> price impact on 15 August 2026, and about $48,000 four days earlier. We publish that number with
 > its date rather than hide it, because it is a reading of the pools and not a property of them:
 > OKX's own order book settles these tickers on X Layer, and arbitrage between the two is deepening
 > the market underneath us. The same pools traded $12.0M in 24 hours. Thin depth is the reason this
@@ -85,20 +85,20 @@ written with that in mind, and the phrase appears in the first sentence on purpo
 
 **Word count ~590**, up from ~430 when the "How it works" paragraph was added. That paragraph is
 the one that cannot be cut: without it a reader finishes the description without ever learning what
-a user actually does. If the field is capped, cut from the **bottom** — "It serves agents as well
-as people" and "Honest about the market" survive best as a follow-up post or on the site — and use
+a user actually does. If the field is capped, cut from the **bottom**. "It serves agents as well
+as people" and "Honest about the market" survive best as a follow-up post or on the site. Use
 the short version below rather than trimming the flow out of the top.
 
 ---
 
 ## Short version, if the field is capped
 
-**~160 words.** Same order as the long one — what it is, what you do, what it refuses, why it is
-safe, proof — just with each step reduced to a sentence. It is not the long version with paragraphs
+**~160 words.** Same order as the long one: what it is, what you do, what it refuses, why it is
+safe, proof, just with each step reduced to a sentence. It is not the long version with paragraphs
 deleted, which is what makes it still readable.
 
 > **Reckonz turns an investment thesis into on-chain positions sized to what the market can
-> actually absorb.** It works on xStocks — tokenised Apple, Nvidia, Tesla and 27 more, trading as
+> actually absorb.** It works on xStocks: tokenised Apple, Nvidia, Tesla and 27 more, trading as
 > ERC-20s on X Layer. Your funds never leave your wallet.
 >
 > You write a thesis in plain language. The AI compiles it into a falsifiable claim and into the
@@ -107,14 +107,14 @@ deleted, which is what makes it still readable.
 > $250,000 and it executes $6,627, hands back $243,373, and shows that forcing the rest would have
 > cost $55,148 in slippage against $33 for the part that fits.
 >
-> The AI never holds a key that can move funds — every fill pulls against a Permit2 signature you
+> The AI never holds a key that can move funds. Every fill pulls against a Permit2 signature you
 > just produced, and `PolicyGuard` reverts inside the trade's own transaction when a bound breaks.
 > Live on X Layer mainnet: 18 receipts, each carrying an evidence hash anyone can re-derive.
 
 ### Shortest, if it is a one-line field
 
 > Write an investment thesis in plain language; Reckonz sizes it to what X Layer can actually
-> absorb, refuses the rest with the number, and enforces your own exit conditions on-chain — from a
+> absorb, refuses the rest with the number, and enforces your own exit conditions on-chain, from a
 > wallet it never has the keys to.
 
 ---
@@ -164,11 +164,11 @@ Since D84 it does more than that: the figure doubled in four days, so publishing
 date and the previous value* turns the weakest fact into a demonstration that the system measures
 rather than recites. Judges can re-run `pnpm capacity` and get a third number; that is the point
 being made, not a risk to the claim. It also pre-empts the obvious objection and converts it into
-the growth argument — the layer is deployed *before* the liquidity arrives, on the chain whose
+the growth argument: the layer is deployed *before* the liquidity arrives, on the chain whose
 parent company has just tied itself to tokenised equities with ICE alongside, and whose own order
 book is visibly deepening these pools.
 
-**Numbers to re-check before pasting — and every one of these has already moved once.** Receipts
+**Numbers to re-check before pasting, and every one of these has already moved once.** Receipts
 (18), theses (3), tests (106 + 216), capacity ($97,329 at 0.5%, 2026-08-15), 24h pool volume
 ($12.0M, same day), and the $250,000 → $6,627 run. `pnpm capacity`, `pnpm plan 250000 50`,
 `pnpm check:tests` and a `count()` read settle all of them. **Re-run them on the day you paste**:
@@ -196,7 +196,7 @@ which is a mock nobody trades.
 > Non-custodial execution and risk tooling for tokenised real-world assets: the xStocks equity
 > tokens on X Layer.
 >
-> You write the thesis — and the conditions you would exit on. The AI compiles those into rules
+> You write the thesis, and the conditions you would exit on. The AI compiles those into rules
 > PolicyGuard enforces inside the trade's own transaction, not in a reminder afterwards.
 >
 > Ask it for $250k and it tells you $6,627 fits, then hands the rest back rather than force it into
