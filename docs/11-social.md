@@ -7,6 +7,26 @@ while the code passes every other one.
 
 Seven days, 15 to 21 August 2026. One post a day, and the last one is the required submission post.
 
+## Format: seven separate threads, not one running thread
+
+Each day below is **its own thread**, posted fresh: one opening post, then two or three replies to
+it from the same account. Every blockquote block is one post.
+
+They are not chained day to day. A thread that keeps being extended only reaches people who already
+saw the first post, whereas a new opening post gets distributed on its own. The requirement is an
+*active account*, and seven separate days demonstrate that better than one thread being appended to
+seven times. Each day also stands alone, so nothing needs reading in order.
+
+The one link worth making is Day 7 quoting Day 1: the capacity re-measurement is the evidence for
+the claim that we re-measure rather than quote.
+
+Two mechanics:
+
+- **Keep the site link out of the opening post**, and put it in the last reply. Common practice for
+  reach, and it costs nothing to follow.
+- **Every post is under 280 characters** as drafted. Check again after editing, because the whole
+  point of a thread is lost when the last line silently truncates.
+
 ## How these are written
 
 **For a general reader, not for engineers.** Nobody scrolling X wants a contract address. The
@@ -94,10 +114,10 @@ story instead, which travels further and sends the people who want the detail to
 
 ## Day 4, 18 Aug: how you know we are not lying
 
-> Every trade our system makes is recorded on the blockchain along with a fingerprint of exactly
-> what it was looking at when it decided. The price it saw. The checks it ran. The verdict it got.
+> Every trade our system makes is recorded on the blockchain with a fingerprint of what it was
+> looking at when it decided. The price it saw. The checks it ran. The verdict.
 >
-> The fingerprint is recorded before the trade is signed, not written up afterwards.
+> That fingerprint is recorded before the trade is signed, not written up afterwards.
 
 > Anyone can pull the file, recompute the fingerprint, and see whether it still matches.
 >
@@ -125,8 +145,9 @@ story instead, which travels further and sends the people who want the detail to
 >
 > Anything else is handed back to you as "you will have to watch this one yourself" instead of
 > quietly becoming a rule that never triggers.
->
-> We attack it with hostile inputs on every single code change.
+
+> We also attack it with hostile and manipulated inputs on every single code change, so a crafted
+> thesis cannot talk it into a rule that does not hold.
 
 ## Day 6, 20 Aug: the refusals cost us money
 
@@ -158,7 +179,7 @@ that has not built it.
 
 > You write the idea, and the conditions you would exit on. The AI turns those into rules a
 > contract enforces inside the trade itself, not a reminder that arrives afterwards.
->
+
 > Ask it for $250k and it tells you $6,627 fits, then hands the rest back rather than force it into
 > a market that cannot take it.
 
