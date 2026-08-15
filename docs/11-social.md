@@ -64,10 +64,17 @@ Three specifics:
 Opening with a finding rather than "introducing Reckonz". A new account that opens with an
 advertisement reads as one. This one is real news and happens to flatter X Layer.
 
+**The two figures are deliberately asymmetric.** "About $48,000" is approximate because that is all
+we ever wrote down: the 11 August measurement was only ever recorded as ~$48k, and no exact value
+for it exists anywhere in the repo. "$97,329" is exact because we measured it. Do not round the
+second one to match the first. $97,000 reads as an estimate, $97,329 reads as a measurement, and
+the whole post is about the difference between those two things. The image must carry the same
+figure as the caption.
+
 > Four days ago, the entire market for tokenised stocks on @XLayerOfficial could absorb about
 > $48,000 before the price started running away from you.
 >
-> We measured again today. $97,000.
+> We measured again today. $97,329.
 >
 > Nobody launched anything in between. It just got deeper.
 
@@ -253,7 +260,8 @@ frame like a degraded scan.
 
 In front of all that, the only colour in the image: two horizontal bars with square ends,
 flat mint green #6ee7b7, stacked with wide vertical separation, left edges aligned. The
-upper bar is short. The lower bar is exactly twice its length. Beside the upper bar the
+upper bar is short. The lower bar is exactly 2.03 times the length of the upper bar,
+measured precisely, not merely noticeably longer. Beside the upper bar the
 text "$48,000" in white monospace; beside the lower bar the text "$97,329" in mint green
 monospace, larger. Reproduce both strings exactly.
 
