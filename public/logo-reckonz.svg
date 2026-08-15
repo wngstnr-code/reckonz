@@ -2,19 +2,30 @@
   <title>Reckonz</title>
   <!--
     Traced from public/logo-reckonz.png by measuring the pixels, not by eye.
-    Four tally strokes; the fourth turns into a tick. Stroke weight is 31 on a
-    1024 canvas for all five strokes, including the diagonal — its horizontal
-    run measures 37, which is 31 perpendicular at this angle. Bars sit at
-    x 350 / 416 / 482 / 549 (pitch 66), spanning y 254 to 761.
+    Five strokes at weight 31 on a 1024 canvas. Bars sit at x 350 / 416 / 482 /
+    549 (pitch 66), and **all four span the same y 254 to 761**.
+
+    The tick is a **separate path, not a bend in the fourth bar** (corrected
+    2026-08-15). Drawing it as one polyline with a miter join put a spike well
+    below the shared baseline, which the PNG does not have: measured against the
+    original, every one of the four bars bottoms out at y 761 and no lit pixel
+    exists below it. The diagonal emerges from behind the fourth bar instead,
+    and its start cap is hidden inside that bar. Its lower cap corner lands at
+    (576, 761), exactly on the baseline, which is what the original's own
+    bottom row shows.
+
+    So: never join these two into one path, and never add stroke-linejoin.
 
     No background rect, deliberately: the PNG bakes in #0b0d10 and renders as a
     dark tile anywhere the page is not exactly that colour. `currentColor` lets
-    the mark take the surrounding text colour instead.
+    the mark take the surrounding text colour instead. See logo-reckonz-grey.svg
+    for the fixed-grey, true-black variant used in social images.
   -->
-  <g fill="none" stroke="currentColor" stroke-width="31" stroke-linecap="butt" stroke-linejoin="miter">
+  <g fill="none" stroke="currentColor" stroke-width="31" stroke-linecap="butt">
     <path d="M365.5 254.5V761.5" />
     <path d="M431.5 254.5V761.5" />
     <path d="M497.5 254.5V761.5" />
-    <path d="M563.5 254.5V745L725 514" />
+    <path d="M563.5 254.5V761.5" />
+    <path d="M563.5 752.5L725 515" />
   </g>
 </svg>

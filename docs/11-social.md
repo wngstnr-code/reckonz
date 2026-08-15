@@ -226,11 +226,13 @@ That is `09-design.md`'s own rule: ground, one accent, grey.
 
 ### The mark
 
-`public/logo-reckonz.svg` is four evenly spaced vertical tally strokes where the fourth bends at
-its base into an upward diagonal, turning the count into a tick. Counting, then confirming. Every
-prompt describes it identically and places it in the same spot, which is what makes seven separate
-posts read as one account. If a render gets it wrong, paste the real SVG over that corner rather
-than regenerating.
+`public/logo-reckonz.svg` is four evenly spaced vertical tally strokes, **all four ending flat on
+the same baseline**, with a diagonal rising from behind the fourth to form a tick. Counting, then
+confirming. The tick is not a bend in the fourth stroke and there is no point at the elbow: the
+bars bottom out level with each other, and the diagonal comes out from behind. Every prompt says it
+in those words, and placing it identically in every image is what makes seven separate posts read
+as one account. If a render gets it wrong, paste the real SVG over that corner rather than
+regenerating.
 
 ### On text
 
@@ -247,8 +249,10 @@ Editorial infographic poster, pure black #000000 background, entirely greyscale 
 for one accent colour. 16:9.
 
 Across the top edge: a slim header bar. At its far left, the Reckonz mark, four evenly
-spaced vertical bars of equal thickness in white where the fourth and rightmost bar bends
-at its base into an upward diagonal stroke forming a tick. A thin white hairline rule runs
+spaced vertical bars of equal thickness in white, all four ending flat on the same
+baseline, with a diagonal stroke rising to the upper right from behind the fourth bar to
+form a tick. The bars are level at the bottom with no point or spike at the elbow. A thin
+white hairline rule runs
 from beside the mark to the right edge. At the far right of that rule, the text "CAPACITY"
 in small uppercase monospace with wide letter spacing, white.
 
@@ -279,8 +283,10 @@ Editorial infographic poster, pure black #000000 background, entirely greyscale 
 one accent colour. 16:9.
 
 Across the top edge: a slim header bar. At its far left, the Reckonz mark, four evenly
-spaced vertical bars of equal thickness in white where the fourth and rightmost bar bends
-at its base into an upward diagonal stroke forming a tick. A thin white hairline rule runs
+spaced vertical bars of equal thickness in white, all four ending flat on the same
+baseline, with a diagonal stroke rising to the upper right from behind the fourth bar to
+form a tick. The bars are level at the bottom with no point or spike at the elbow. A thin
+white hairline rule runs
 to the right edge, and at the far right of it the text "SIZING" in small uppercase
 monospace with wide letter spacing, white.
 
@@ -308,8 +314,10 @@ Editorial infographic poster, pure black #000000 background, entirely greyscale 
 one accent colour. 16:9.
 
 Across the top edge: a slim header bar. At its far left, the Reckonz mark, four evenly
-spaced vertical bars of equal thickness in white where the fourth and rightmost bar bends
-at its base into an upward diagonal stroke forming a tick. A thin white hairline rule runs
+spaced vertical bars of equal thickness in white, all four ending flat on the same
+baseline, with a diagonal stroke rising to the upper right from behind the fourth bar to
+form a tick. The bars are level at the bottom with no point or spike at the elbow. A thin
+white hairline rule runs
 to the right edge, with the text "FIELD NOTE" in small uppercase monospace with wide letter
 spacing at its far right, white.
 
@@ -334,8 +342,9 @@ Editorial infographic poster, pure black #000000 background, entirely greyscale 
 one accent colour. 16:9.
 
 Across the top edge: a slim header bar. At its far left, the Reckonz mark, four evenly
-spaced vertical bars of equal thickness in white where the fourth and rightmost bar bends
-at its base into an upward diagonal stroke forming a tick. A thin white hairline rule to
+spaced vertical bars of equal thickness in white, all four ending flat on the same
+baseline, with a diagonal stroke rising to the upper right from behind the fourth bar to
+form a tick. The bars are level at the bottom with no point or spike at the elbow. A thin white hairline rule to
 the right edge, with "EVIDENCE" in small uppercase monospace with wide letter spacing at
 its far right, white.
 
@@ -362,8 +371,9 @@ Editorial infographic poster, pure black #000000 background, entirely greyscale 
 one accent colour. 16:9.
 
 Across the top edge: a slim header bar. At its far left, the Reckonz mark, four evenly
-spaced vertical bars of equal thickness in white where the fourth and rightmost bar bends
-at its base into an upward diagonal stroke forming a tick. A thin white hairline rule to
+spaced vertical bars of equal thickness in white, all four ending flat on the same
+baseline, with a diagonal stroke rising to the upper right from behind the fourth bar to
+form a tick. The bars are level at the bottom with no point or spike at the elbow. A thin white hairline rule to
 the right edge, with "RULES" in small uppercase monospace with wide letter spacing at its
 far right, white.
 
@@ -389,8 +399,9 @@ Editorial infographic poster, pure black #000000 background, entirely greyscale 
 one accent colour. 16:9.
 
 Across the top edge: a slim header bar. At its far left, the Reckonz mark, four evenly
-spaced vertical bars of equal thickness in white where the fourth and rightmost bar bends
-at its base into an upward diagonal stroke forming a tick. A thin white hairline rule to
+spaced vertical bars of equal thickness in white, all four ending flat on the same
+baseline, with a diagonal stroke rising to the upper right from behind the fourth bar to
+form a tick. The bars are level at the bottom with no point or spike at the elbow. A thin white hairline rule to
 the right edge, with "REFUSALS" in small uppercase monospace with wide letter spacing at
 its far right, white.
 
@@ -421,8 +432,9 @@ Editorial infographic poster, pure black #000000 background, entirely greyscale 
 one accent colour. 16:9.
 
 Across the top edge: a slim header bar. At its far left, the Reckonz mark, four evenly
-spaced vertical bars of equal thickness in white where the fourth and rightmost bar bends
-at its base into an upward diagonal stroke forming a tick. A thin white hairline rule to
+spaced vertical bars of equal thickness in white, all four ending flat on the same
+baseline, with a diagonal stroke rising to the upper right from behind the fourth bar to
+form a tick. The bars are level at the bottom with no point or spike at the elbow. A thin white hairline rule to
 the right edge, with "LIVE ON MAINNET" in small uppercase monospace with wide letter
 spacing at its far right, white.
 

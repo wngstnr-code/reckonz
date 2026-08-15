@@ -1,29 +1,28 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Reckonz">
   <title>Reckonz</title>
   <!--
-    Greyscale variant of logo-reckonz.svg. Same geometry, traced from the PNG by
-    measuring pixels: four tally strokes at x 350 / 416 / 482 / 549 (pitch 66),
-    spanning y 254 to 761, stroke weight 31 on a 1024 canvas including the
-    diagonal, whose horizontal run of 37 is 31 perpendicular at this angle.
+    Greyscale variant of logo-reckonz.svg, same geometry. Read that file first:
+    it explains why the tick is a separate path rather than a bend in the fourth
+    bar, and why joining them is the one edit that must never be made here.
 
-    Two deliberate differences from the mint original.
+    Two deliberate differences from it.
 
     The background is **pure #000000**, not the app's #0b0d10 ground. This file
     exists for the greyscale, black-backed treatment @XLayerOfficial uses, where
-    everything sits on true black — a #0b0d10 tile there reads as a visibly
-    lighter square, which is the exact bug the original file avoids by carrying
+    everything sits on true black. A #0b0d10 tile there reads as a visibly
+    lighter square, which is the exact failure the original avoids by carrying
     no background at all.
 
-    The mark is #8b95a4, the palette's `dim`. It is a fixed fill rather than
-    `currentColor` on purpose: the whole point of this variant is that the mark
-    stays grey regardless of the surrounding text colour. Use the original when
-    you want it to inherit.
+    The mark is #8b95a4, the palette's `dim`, as a fixed fill rather than
+    `currentColor`. The point of this variant is that it stays grey whatever the
+    surrounding text colour is. Use the original when it should inherit.
   -->
   <rect width="1024" height="1024" fill="#000000"/>
-  <g fill="none" stroke="#8b95a4" stroke-width="31" stroke-linecap="butt" stroke-linejoin="miter">
+  <g fill="none" stroke="#8b95a4" stroke-width="31" stroke-linecap="butt">
     <path d="M365.5 254.5V761.5" />
     <path d="M431.5 254.5V761.5" />
     <path d="M497.5 254.5V761.5" />
-    <path d="M563.5 254.5V745L725 514" />
+    <path d="M563.5 254.5V761.5" />
+    <path d="M563.5 752.5L725 515" />
   </g>
 </svg>
