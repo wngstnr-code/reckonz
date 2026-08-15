@@ -150,9 +150,11 @@ first, and the record is useful without the market on top of it.
 
 The last BE item with a date on it. `pnpm publish:loop` and `railway.json` are built and
 deliberately idle until then; the reasoning, the funding and the runway are in
-`05-status.md § Not done`. Two things to do in order: **fund the publisher `0x40101A49…` with ~$5
+`05-status.md § Not done`. Two things to do in order: **fund the publisher `0x40101A49…` with $5–6
 of OKB** (a plain transfer, no Safe signatures), then bring the worker up with `TARGET=mainnet`,
-`PUBLISHER_KEY`, `PUBLISH_INTERVAL_SEC=600`.
+`PUBLISHER_KEY`, `PUBLISH_INTERVAL_SEC=600`, and **no `PUBLISH_SYMBOLS`** — it publishes all thirty
+(D85), because the mandate picker offers all thirty and a narrowed publisher turns twenty-six of
+those checkboxes into a `STALE` revert.
 
 `railway.json` restarts it up to **100** times on failure, not 10 (D46, amended). The worker exits
 only after six consecutive failed cycles, so ten restarts is about ten hours before the host gives
@@ -172,11 +174,13 @@ pnpm sample --merge ./issuer-marks-from-worker.jsonl   # idempotent; dedupes on 
 git add observations/issuer-marks.jsonl                 # a σ from a file nobody has is a magic number
 ```
 
-That $5 lasts ~21 days at 30 assets, so it runs dry around **9 Sep** — a reminder sits at 5 Sep in
-the status doc. ~~If it ever needs to run longer, the fix is a `PUBLISH_SYMBOLS` filter…~~
-**`PUBLISH_SYMBOLS` is built (D63), and it changes this arithmetic entirely**: publishing one
-symbol costs 53,739 gas, and the publisher's existing 0.00276 OKB is **1,532 runs** at 0.02 gwei.
-The $5 was sized for thirty assets and is not the constraint it was written as.
+At 30 assets the burn is 0.002648 OKB/day — about **$0.28 a day** at WOKB $107.15, so $5 is 17.6
+days and $6 is 21.1 (measured 2026-08-15 at 0.020000001 gwei). Up on the 18th, that is dry around
+**6–9 Sep**, so the reminder in the status doc sits at **3 Sep** and top-up-or-shut-down is a
+decision someone has to make, not a thing to discover. `PUBLISH_SYMBOLS` (D63) still exists for a
+hand publish — one symbol is 53,739 gas, and the publisher's existing 0.00276 OKB is **1,532 runs**
+at 0.02 gwei — but it is deliberately *not* set on the worker, and narrowing it is not how the
+runway gets stretched. See D85 and its same-day amendment.
 
 ### 7. Next up
 

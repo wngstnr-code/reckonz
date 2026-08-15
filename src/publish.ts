@@ -88,23 +88,24 @@ type Item = {
 /**
  * Which assets to publish this run.
  *
- * Publishing all thirty every ten minutes costs ~900k gas a cycle and about
- * $5 of OKB every three weeks. A live mandate holds four assets. The other
- * twenty-six are being published so that nothing reads them, which is the
- * same trade the publish worker itself was scheduled to avoid — *"running it
- * from now so that nothing observes it is the wrong trade"* — applied one
- * level down.
+ * Publishing all thirty every ten minutes costs ~900k gas a cycle — about
+ * $0.28 a day at 0.02 gwei and WOKB $107.15 (measured 2026-08-15; both move,
+ * so re-measure rather than quote this). Narrowing to four costs ~$0.04.
  *
- * So the set is configurable, and the default stays all thirty because a demo
- * that shows an empty asset is worse than a slightly expensive one. Narrow it
- * on the worker, where the cost is recurring:
+ * **The worker publishes all thirty anyway** (D85), and the default here is
+ * what it relies on. The mandate form picks its allowlist from the same thirty
+ * `GET /api/universe` returns, so a narrowed publisher does not save money on
+ * assets nobody reads — it turns twenty-six checkboxes in the app into a fill
+ * that reverts STALE. Twenty-one cents a day is not worth a failure mode.
  *
- *   PUBLISH_SYMBOLS=wTSLAx,wNVDAx,wQQQx,wSPYx pnpm publish:loop
+ * The filter stays because it is right for a hand publish, where the cost is
+ * one transaction and the goal is clearing a single stale asset before a demo:
+ *
+ *   PUBLISH_SYMBOLS=wSPYx pnpm oracle:publish
  *
  * Measured rather than estimated: **919,563 gas for thirty against 142,872 for
- * four**, a 6.4x saving that turns three weeks of runway into roughly four and
- * a half months on the same $5. The saving is under-linear because the first
- * write in a transaction pays for the transaction, not because a slot is free.
+ * four**, 6.4x. The saving is under-linear because the first write in a
+ * transaction pays for the transaction, not because a slot is free.
  *
  * An unknown symbol is a hard error rather than a silent skip: a typo that
  * quietly publishes twenty-nine assets instead of thirty is exactly the kind

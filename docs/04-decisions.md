@@ -4402,3 +4402,81 @@ correct everywhere and then true nowhere, in four days, with no code change. Swe
 Not "the universe absorbs ~$48k" but "absorbed $97,329 on 2026-08-15". A number without its date
 reads as a property of the market rather than a reading of it, and that is what let this one sit
 unchallenged. `pnpm capacity` takes under a minute and settles it.
+
+---
+
+## D85 — Publish all thirty, because the picker offers all thirty
+
+Owner's call, 2026-08-15: the worker publishes the **whole universe**, not the mandate's four.
+`PUBLISH_SYMBOLS` stays in the code and stays unset on the worker.
+
+D63 argued the opposite and the argument was sound at the time: *"the other twenty-six are being
+published so that nothing reads them."* That premise has since stopped being true, and nothing
+came back to re-check it.
+
+**What changed is the mandate form.** `app/components/Mandate.tsx` renders its allowlist picker
+from `GET /api/universe` — thirty assets, read from the chain, deliberately *not* the oracle's
+`ASSETS` (D33). Anyone who opens the app can allow any of the thirty. With the publisher narrowed
+to four, twenty-six of the checkboxes on that page lead to a fill that reverts `STALE`: correct
+behaviour from the guard, and an inexplicable failure to the person clicking it. "Nothing reads
+them" was a statement about *our* mandate, and the product stopped being only our mandate the day
+the picker shipped.
+
+It also removes a coupling nothing checks. `PUBLISH_SYMBOLS` and a mandate's allowlist have to
+agree, and no test, no `pnpm check:tests` and no route compares them. Two lists that must match
+and are maintained in different places is the shape of D60's defect. Publishing everything makes
+the question disappear rather than answering it.
+
+**The cost of the decision, stated rather than waved at.** At 0.02 gwei and 144 publishes a day:
+
+```
+30 assets   919,563 gas   0.002648 OKB/day   ≈ $0.25/day
+ 4 assets   142,872 gas   0.000411 OKB/day   ≈ $0.04/day
+```
+
+So the choice costs about **$0.21 a day** — $7.50 for a month, $15 for two. The 6.4x in D63 is
+still the right ratio and it was never a large number to begin with; sized against a hackathon
+judging window it is not a constraint worth designing around. It only became one because the
+funding note picked $5 first and reasoned backwards from it.
+
+~~**Funding: ~$15 of OKB into `0x40101A49…`, not $5.**~~ — **amended below, same day.**
+
+**What did not change.** `PUBLISH_SYMBOLS` is not deleted — it is the right tool for a hand
+publish before a demo (`PUBLISH_SYMBOLS=wSPYx pnpm oracle:publish` to clear one `STALE`), and it
+is the answer if the worker ever needs to run for months rather than weeks. The default was always
+all thirty; this decision is about what the *worker* is configured with, and about deleting a
+recommendation that had outlived its premise.
+
+### Amended the same day — $5–6, not $15
+
+Owner's call, after the arithmetic above was re-measured against live state rather than recalled:
+
+```
+gas price   0.020000001 gwei   five samples, 2026-08-15, flat
+WOKB        $107.15            GeckoTerminal, x-layer
+30 assets   919,563 gas → 0.00264834 OKB/day ≈ $0.28/day at 144 publishes
+```
+
+| funded | OKB | runway (30 assets) | up 18 Aug → dry |
+|---|---|---|---|
+| $5 | 0.04666 | 17.6 days (+1.0 already on the key) | **~6 Sep** |
+| $6 | 0.05600 | 21.1 days (+1.0) | **~9 Sep** |
+| $15 | 0.13999 | 52.9 days | ~10 Oct |
+
+**The decision is $5–6 and all thirty assets.** Both halves matter and only one of them was ever
+in tension: the thirty is not negotiable, the runway is. Told that $15 removes the question of
+when judging ends, the owner chose to keep the spend at $5–6 and carry the reminder instead.
+
+**The exposure this accepts, written plainly so nobody rediscovers it in September.** Submissions
+close 21 Aug; nothing in `00-hackathon.md` states when judging *ends*. At $5–6 the oracle goes
+stale in the first week of September. If a judge opens the app after that, `GET /api/health`
+answers **503** and every fill reverts `STALE` — a correct refusal that reads as a broken product.
+
+**So the reminder moves to 3 Sep and is not optional.** Top up or shut down, deliberately. Do not
+rely on `publish.ts`'s own warning: it fires at 20 runs left, which at thirty assets is **3.3
+hours**. A reminder measured in hours is not a reminder for a runway measured in weeks.
+
+**What is explicitly not the fallback:** narrowing to four assets when the balance runs low. That
+re-opens exactly what this decision closed — twenty-six assets in the mandate picker that cannot
+be filled — and saves $0.21 a day. If the money runs out, the honest options are top up or stop
+publishing, and stopping is visible in `/api/health` where narrowing is not.

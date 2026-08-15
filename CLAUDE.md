@@ -74,7 +74,8 @@ Anything that writes on chain takes its chain from `TARGET` (default `testnet`):
 
 ```bash
 TARGET=mainnet pnpm oracle:publish     # run the engine, publish, read back
-PUBLISH_SYMBOLS=wTSLAx,wSPYx …         # publish a subset — 6.4x cheaper at four assets (D63)
+PUBLISH_SYMBOLS=wTSLAx,wSPYx …         # a subset, for a hand publish only (D63)
+                                       # the worker runs it UNSET — all thirty (D85)
 TARGET=mainnet pnpm mandate            # create a mandate, install triggers, hand to Executor
 TARGET=mainnet pnpm execute <sym> [n]  # quote -> dryRun -> Permit2 -> one real fill
 TARGET=mainnet pnpm exit <sym> [usdg]  # the reverse: sell a position back to USDG (D51)

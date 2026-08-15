@@ -45,10 +45,11 @@ publisher  0x40101A4932dEb95f0A5951BB7fB0fFa7c17e3Ab8   0.002755 OKB   + 0 USDG
 deployer   0xD7360Dc3ED4fE01bEbB8477594A76CBFb5c79BA5   0.002152 OKB   + 2.649781 USDG
 ```
 
-Re-read 2026-08-12 after the browser fill and two oracle publishes. The publisher's runway is no
-longer "~1.6 days": with `PUBLISH_SYMBOLS` (D63) one symbol costs 53,739 gas, so that balance is
-**~1,532 runs at one symbol, ~766 at the mandate's four** — about five days at a 600s interval. The
-"$5 for ~21 days" in `07-team.md` was sized for all thirty and predates the filter.
+Re-read 2026-08-12 after the browser fill and two oracle publishes. That balance is **~89 runs at
+all thirty assets** — under 15 hours at a 600s interval, and the worker publishes all thirty (D85).
+It is ~1,532 runs at one symbol and ~766 at four, which is what `PUBLISH_SYMBOLS` (D63) buys for a
+hand publish and not what the worker will run on. **It needs $5–6 before 18 Aug** — 17.6 days at
+$5, 21.1 at $6, measured at 0.02 gwei and WOKB $107.15 on 2026-08-15.
 
 Read those from the chain, not from here — two fills moved the deployer's USDG after an earlier
 version of this file recorded it, and a balance in a document is stale the moment it is written.
@@ -418,26 +419,33 @@ figure in it is a reading with a date (D84).
   TARGET=mainnet PUBLISHER_KEY=… PUBLISH_INTERVAL_SEC=600 pnpm publish:loop
   ```
 
-  **Funding: ~$5 into the publisher `0x40101A49…`, before the worker goes up.** A plain transfer;
-  it needs no Safe signatures. The runway depends entirely on how many symbols it publishes, and
-  `PUBLISH_SYMBOLS` (D63) is what decides that — measured, at 0.02 gwei and 144 publishes a day:
+  **Funding: $5–6 into the publisher `0x40101A49…`, before the worker goes up.** A plain transfer;
+  it needs no Safe signatures. Measured 2026-08-15 against live state — 0.020000001 gwei (five
+  samples, flat) and WOKB at $107.15 — at 144 publishes a day:
 
   ```
-  30 assets   919,563 gas   0.002648 OKB/day    $5 ≈ 0.053 OKB →  ~20 days
-   4 assets   142,872 gas   0.000411 OKB/day                    → ~129 days
-   1 asset     53,739 gas   0.000155 OKB/day                    → ~342 days
+  30 assets   919,563 gas   0.002648 OKB/day   ≈ $0.28/day   $5 → 17.6 days,  $6 → 21.1 days
+   4 assets   142,872 gas   0.000411 OKB/day   ≈ $0.04/day   $5 → ~113 days
+   1 asset     53,739 gas   0.000155 OKB/day                 $5 → ~301 days
   ```
 
-  **Publish the mandate's four.** `PUBLISH_SYMBOLS=wTSLAx,wNVDAx,wQQQx,wSPYx` is the only set
-  anything on chain can execute against, and at four assets $5 covers the whole judging window with
-  months to spare — so the "runs dry around 9 Sep, put a reminder at 5 Sep" plan below applies only
-  if the worker is left publishing all thirty. Publishing thirty buys nothing: the web app computes
-  fair value off-chain for every asset it displays, and only a real fill needs the on-chain value.
+  The key already holds 0.002754 OKB, about one more day. **Up on 18 Aug, $5 runs dry ~6 Sep and
+  $6 ~9 Sep.** That is the owner's choice, made against the $15/~53-day alternative and recorded
+  in D85 — the reminder below is what pays for it.
 
-  > This block said the opposite until 2026-08-14: that a `PUBLISH_SYMBOLS` filter "`publish.ts`
-  > does not have" was needed and was not worth building this close to the deadline. D63 built it
-  > two days earlier, D65 noted the funding note had gone stale, and nothing came back to fix it —
-  > which is how a document ends up recommending against a thing it already contains.
+  **Publish all thirty — leave `PUBLISH_SYMBOLS` unset (D85).** The mandate form renders its
+  allowlist picker from `GET /api/universe`, which is all thirty assets, so anyone who opens the
+  app can allow any of them. Narrowed to the mandate's four, twenty-six of those checkboxes lead to
+  a fill that reverts `STALE` — correct from the guard, inexplicable to whoever clicked it. The
+  difference is **$0.21 a day**, which is not a constraint worth designing a failure mode around.
+  **Narrowing is not the fallback when the balance runs low either** (D85 amendment): the honest
+  options are top up or stop, and stopping shows up in `/api/health` where narrowing does not.
+
+  > This block has been wrong in both directions. Until 2026-08-14 it said `PUBLISH_SYMBOLS`
+  > did not exist and was not worth building — D63 had built it two days earlier. It was then
+  > corrected to recommend the mandate's four, on D63's premise that nothing reads the other
+  > twenty-six; the mandate picker had already made that false. Both times the note was reasoning
+  > from a $5 budget picked first rather than from what the app lets a user do.
 
   `publish.ts` warns at 20 runs left, which is only ~3.3 hours; do not rely on it as the reminder
   for a run measured in weeks.
@@ -568,10 +576,11 @@ item never started.
 - **Repo visibility decision.** Private today. The rules do not demand public, but a judge scoring
   "product completeness" will want to read `04-decisions.md`. Decide, do not drift into a default.
 
-**18–19 Aug — deploy the publish worker.** Fund the publisher with ~$5 *first*, then bring up
-`pnpm publish:loop` on Railway with `TARGET=mainnet` and `PUBLISH_INTERVAL_SEC=600`. Full reasoning
-and the runway arithmetic are under **Not done → Known gaps**. Confirm it is actually publishing
-before trusting it: `pnpm oracle` should show a fresh observation, not a stale one.
+**18–19 Aug — deploy the publish worker.** Fund the publisher with **$5–6** *first*, then bring up
+`pnpm publish:loop` on Railway with `TARGET=mainnet` and `PUBLISH_INTERVAL_SEC=600`, and **no
+`PUBLISH_SYMBOLS`** — all thirty (D85). Full reasoning and the runway arithmetic are under
+**Not done → Known gaps**. Confirm it is actually publishing before trusting it: `pnpm oracle`
+should show a fresh observation, not a stale one.
 
 **20 Aug — record the video against a live oracle**, with the worker up. Leave a day of slack;
 21 Aug is the deadline, not the plan.
@@ -579,16 +588,31 @@ before trusting it: `pnpm oracle` should show a fresh observation, not a stale o
 **21 Aug, before 23:59 UTC** — the `@XLayerOfficial` post from @reckonz_xyz, then the Google Form.
 Both are hard requirements and neither takes long, which is exactly how they get missed.
 
-**~5 Sep — decide whether to keep publishing.** Only if the worker was left publishing all thirty
-assets: that is the ~20-day runway. At the mandate's four it is ~129 days and this reminder is
-noise. Either way, top up or shut it down — silently running dry is the one option that is not
-fine.
+**3 Sep — top up or shut down. Not optional, and not "~5 Sep" any more.** The worker publishes all
+thirty on $5–6 (D85 as amended), so it goes stale ~6 Sep at $5 and ~9 Sep at $6 — inside a judging
+window whose end nobody has written down. Silently running dry is the one option that is not fine:
+`/api/health` starts answering 503 and every fill reverts `STALE`. **Do not narrow to four to
+stretch it** — that saves $0.21 a day and re-opens twenty-six unfillable assets in the mandate
+picker. `publish.ts`'s own warning fires at 20 runs left, which is 3.3 hours here; it is not this
+reminder.
 
 ---
 
 ## Log
 
-**2026-08-15 (latest, twenty-second)** — **capacity doubled in four days, and the volume was never
+**2026-08-15 (latest, twenty-third)** — **the publish worker will publish all thirty assets, not
+the mandate's four** (D85). Owner's call. D63's premise for narrowing — *"the other twenty-six are
+being published so that nothing reads them"* — stopped being true when the mandate form shipped its
+allowlist picker over `GET /api/universe`: anyone who opens the app can allow any of the thirty, and
+a narrowed publisher turns twenty-six of those checkboxes into a fill that reverts `STALE`. The
+difference is **$0.21 a day**. Funding stays at **$5–6** by the owner's call, which is 17.6–21.1
+days at thirty assets (measured: 0.02 gwei, WOKB $107.15) rather than the $15/~53 days D85 first
+recommended — so the top-up reminder moves to **3 Sep**, and narrowing to four is explicitly *not*
+the fallback when it runs low. `PUBLISH_SYMBOLS` is kept for hand publishes and swept out of
+`05-status.md`, `07-team.md`
+and the `publish.ts` comment that still recommended narrowing the worker.
+
+**2026-08-15 (twenty-second)** — **capacity doubled in four days, and the volume was never
 measured at all** (D84). `pnpm capacity` re-run: **$97,329 at 0.5%**, $759,633 at 5%, up from ~$48k
 and ~$515k on 11 August with no change on our side. D49 predicted exactly this and nothing was
 watching for it. Alongside it, the number this repo had never taken: those pools traded
