@@ -33,7 +33,7 @@ Receipt `#1` records a price the agent did not author, stamped by the guard from
 
 **The revenue line stopped being a diagram.** `FeeCollector` took 15 bps on a real fill. The amount
 is trivial — 750 units of USDG — and that is the point: the mechanism is proven at a size that
-matches a $48k market rather than asserted at a size that does not exist.
+matches our own notional rather than asserted at a size that does not exist.
 
 **The business model does not need custody.** Because capacity is thin, the AUM path died early
 (D6). That constraint forced a better model: an unfakeable track record, sold as access.
@@ -50,12 +50,28 @@ Ordered by severity.
 
 ### 1 — The market, today, barely exists 🔴
 
-The entire xStock universe on X Layer absorbs ~$48k at 0.5% impact. Fifteen basis points on that
-is roughly **$73** per full turnover. Not $73k. Seventy-three dollars.
+The entire xStock universe on X Layer absorbed $97,329 at 0.5% impact on 2026-08-15. Fifteen basis
+points on that is roughly **$146** per full turnover. Not $146k. A hundred and forty-six dollars.
 
-(That was ~$11k and $16 until 2026-08-11, when capacity was re-measured across all 30 assets
-rather than the eight the oracle prices. 4.4× more of nothing is still nothing — the paragraph
-below stands unchanged, which is the point worth noticing.)
+(That was ~$11k and $16 until 2026-08-11, then ~$48k and $73, then this. Each re-measurement has
+roughly doubled the number and changed nothing below it — which is the point worth noticing, and
+the reason the figure now carries its date. See D34, D49, D84.)
+
+**The one number that genuinely complicates this.** Depth is not volume, and until D84 only depth
+had ever been measured here. Those pools traded **$12,038,377 in 24h** on 2026-08-15. Fifteen bps
+on all of it would be $18,000 a day, which is a different business from the one described above.
+
+It stays red anyway, and the reason is in the distribution rather than the total: **81% of that
+volume is two tickers**, wAAPLx and wGOOGLx. That is arbitrage between OKX's custodial order book
+and these pools — the mechanism item 4 below describes — and arbitrageurs are latency-sensitive
+with their own infrastructure. They will never route through `Executor`. The addressable share of
+$12M is some unmeasured fraction, and treating the total as reachable would be the same error as
+quoting a capacity figure four days after it stopped being true.
+
+What the volume does establish is that the denominator exists and can be measured, which was not
+previously known. The honest position moved from *"there may be no market"* to *"there is real
+flow, and we have not shown that any of it is ours"* — a better place to be, and still not a
+business.
 
 This is not a detail, it is the existential question. The product is well built for a market that
 does not yet exist. The bet is *RWA liquidity will grow and we are early*. That bet may be
@@ -82,8 +98,10 @@ parent of NYSE — investing in OKX at $25B and forming a JV to put tokenised NY
 
 For a retail buyer, a market-maker order book with no gas is strictly better than a $200k AMM pool.
 Worse for the numbers in item 1: because X Layer deposits and withdrawals are open, arbitrage flows
-between the two, which over time deepens the pools and erodes the $48k capacity premise the sizing
-half of the product is built on. Separately, xStocks now ships **xChange**, an RFQ-based multi-chain
+between the two, which over time deepens the pools and erodes the capacity premise the sizing
+half of the product is built on. **This is no longer a prediction**: capacity doubled between
+11 and 15 August with no change on our side, and the volume that did it is 81% concentrated in the
+two tickers an arbitrageur would pick (D84). Separately, xStocks now ships **xChange**, an RFQ-based multi-chain
 execution layer on Ethereum and Solana — RFQ is not bounded by pool depth, so if it reaches X Layer
 the capacity argument weakens further.
 
@@ -190,8 +208,10 @@ of the submission.
 
 **As a startup today:** no. Not because the product is weak, but because the market is not there,
 the users are not there, and two large questions — data licensing and legal status — are
-unanswered. Shipping to mainnet did not move any of those. A fee of 750 units of USDG on a $48k
-market is proof the plumbing works, not proof anyone wants it.
+unanswered. Shipping to mainnet did not move any of those. A fee of 750 units of USDG — taken on
+about $5 of our own notional — is proof the plumbing works, not proof anyone wants it. The $12M
+that traded past us on 2026-08-15 without touching this router is the sharper version of the same
+sentence.
 
 **As a foundation for one:** well placed, provided the product is allowed to change shape.
 

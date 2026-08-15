@@ -249,9 +249,11 @@ limit, not the code.
 
 The page works end to end today; it is not yet something to record a video of. Priorities:
 
-- **The refusals are the product.** `REJECT NO_REFERENCE`, "Samsung → unmapped", "$248,382
-  refused" are the three moments that make the pitch land. They currently read as errors. They
-  are the thesis.
+- **The refusals are the product.** `REJECT NO_REFERENCE`, an unmapped beneficiary, and the
+  refused remainder — $243,373 of $250,000 on 2026-08-15 — are the three moments that make the
+  pitch land. They currently read as errors. They are the thesis. Render the refused amount from
+  the run rather than hard-coding it: it was $248,382 four days earlier, because capacity doubled
+  (D84).
 - **The ~2-minute run** needs to feel like work, not a hang. Six stages, each landing on its own.
 - **A withheld value must never be displayed as a number** (D28). If `report` marks a value
   unpublishable, render the withholding — not `0`, not `—` alone.

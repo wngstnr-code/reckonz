@@ -54,7 +54,8 @@ The system then does four things, and the fourth of them is the one nobody else 
 *whether at all*; it never takes deposits.
 
 This was decided after measuring capacity. A vault that gathers assets has no room to
-gather them into: the whole universe absorbs ~$48k at 0.5% impact. `PolicyGuard`,
+gather them into: the whole universe absorbed $97,329 at 0.5% impact on 2026-08-15,
+having doubled from ~$48k in four days without changing the answer (D84). `PolicyGuard`,
 `ReceiptRegistry` and `ThesisRegistry` are unaffected — only the question of whether
 funds sit in our contract changed, and they do not.
 
@@ -65,7 +66,7 @@ funds sit in our contract changed, and they do not.
 | **Execution fee** | 15 bps on notional routed | ✅ **Live on mainnet.** `FeeCollector` `0x3A1D6b9129E69fEF189E538996B18cebd56C3Dd0`, ceiling fixed in code at 50 bps. Took its first fee on the second real fill. |
 | **Thesis subscription** | Pay to follow a published thesis — per-call via x402, or a subscription | **Highest margin, needs no AUM.** This is the actual business. Depends entirely on the on-chain track record being unfakeable. |
 | **Oracle feed** | Other X Layer protocols pay for fair value + gap risk | **Most durable.** Slow to start, compounds as xStocks grow. |
-| Management / performance fee | bps on AUM | **Dead on arrival.** Capacity is ~$48k across all 30 assets. Do not build the story on it. |
+| Management / performance fee | bps on AUM | **Dead on arrival.** Capacity was $97,329 across all 30 assets on 2026-08-15; 2% of that is $1,946 a year. It has doubled once already and the verdict did not move. Do not build the story on it. |
 | Order flow / market making | — | No. Adds inventory risk, muddies the positioning. |
 
 Early revenue = execution fees. Business = subscriptions. Long game = the oracle.
@@ -74,8 +75,9 @@ unfalsifiable.**
 
 Both halves of that now exist on mainnet: two receipts in an append-only registry only
 `PolicyGuard` can write to, and a fee that landed in a contract whose maximum rate is a
-`constant` rather than an admin setting. The amounts are small on purpose — the market is
-$48k deep — but the mechanism is not a diagram.
+`constant` rather than an admin setting. The amounts are small because our own notional is
+small, not because the rate is: 15 bps is $1.50 per $1,000 routed, against pools that traded
+$12M in the 24h to 2026-08-15 (D84). The mechanism is not a diagram.
 
 OKX's previous hackathon had a "Revenue Rocket" category — monetisation is explicitly
 rewarded.

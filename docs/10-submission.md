@@ -38,8 +38,8 @@ written with that in mind, and the phrase appears in the first sentence on purpo
 >
 > **What it refuses is the product.** The oracle marks a value *unpublishable* rather than guessing
 > when the issuer will not quote. The planner reports what the chain **cannot** absorb: ask it for
-> $250,000 of a semiconductor thesis and it sizes $1,618, hands back $248,382, and shows that
-> forcing the rest would have cost $176,174 in slippage against $8 for the part that fits.
+> $250,000 of a semiconductor thesis and it sizes $6,627, hands back $243,373, and shows that
+> forcing the rest would have cost $55,148 in slippage against $33 for the part that fits.
 > `PolicyGuard` reverts inside the trade's own transaction when a bound breaks, rather than warning
 > afterwards. Almost every financial product sells *you can*. This one sells *you cannot, and here
 > is the number*.
@@ -71,10 +71,13 @@ written with that in mind, and the phrase appears in the first sentence on purpo
 > An agent can ask *"may I do this, and what will it cost me"* and get a verdict with reasons it
 > cannot override.
 >
-> **Honest about the market.** The entire xStock universe on X Layer absorbs about $48,000 at 0.5%
-> price impact today. We publish that number rather than hide it. It is the reason the product
-> refuses size, and the reason it was built non-custodially. As tokenised equities grow on X Layer,
-> the discipline layer above them is already deployed, tested and audited.
+> **Honest about the market.** The entire xStock universe on X Layer absorbed $97,329 at 0.5%
+> price impact on 15 August 2026 — and about $48,000 four days earlier. We publish the number with
+> its date rather than hide it, because it is a reading of the pools and not a property of them:
+> OKX's own order book settles these tickers on X Layer, and the arbitrage between the two is
+> deepening the market underneath us. The same pools traded $12.0M in 24 hours. It is the reason
+> the product refuses size, and the reason it was built non-custodially. The discipline layer is
+> already deployed, tested and audited; the liquidity is arriving on its own.
 
 **Word count ~430.** If the field turns out to be shorter, use the version below and put the long
 one on the site.
@@ -87,7 +90,7 @@ one on the site.
 > xStocks equity tokens on X Layer.** You write an investment thesis in plain language; the AI
 > compiles it into a falsifiable claim *and* into the exit rules that would prove it wrong, and
 > those rules are enforced on-chain by a contract that reverts inside the trade. It sizes against
-> real pool depth and hands back what the market cannot absorb: $250,000 asked, $1,618 executable,
+> real pool depth and hands back what the market cannot absorb: $250,000 asked, $6,627 executable,
 > the rest refused with the slippage it would have cost. The agent holds no key, because every fill
 > pulls against a Permit2 signature the owner just produced. Live on X Layer mainnet with 18
 > on-chain receipts, each carrying a re-derivable evidence hash, and a fee collector taking real
@@ -134,14 +137,22 @@ now distributes Nasdaq data. Bounded agent execution is commodity, and Giza has 
 under it. What survives is enforcement on **market conditions**, and that is the sentence the
 description makes.
 
-**The $48k is stated, not buried.** It is the weakest fact about this project, and putting it in
-their hands first is the same move the product makes. It also pre-empts the obvious objection and
-converts it into the growth argument: the layer is deployed *before* the liquidity arrives, on the
-chain whose parent company has just tied itself to tokenised equities with ICE alongside.
+**The capacity number is stated with its date, not buried and not rounded.** It is the weakest
+fact about this project, and putting it in their hands first is the same move the product makes.
+Since D84 it does more than that: the figure doubled in four days, so publishing it *with the
+date and the previous value* turns the weakest fact into a demonstration that the system measures
+rather than recites. Judges can re-run `pnpm capacity` and get a third number; that is the point
+being made, not a risk to the claim. It also pre-empts the obvious objection and converts it into
+the growth argument — the layer is deployed *before* the liquidity arrives, on the chain whose
+parent company has just tied itself to tokenised equities with ICE alongside, and whose own order
+book is visibly deepening these pools.
 
-**Numbers to re-check before pasting.** Every one of these is read from the chain and drifts:
-receipts (18), theses (3), tests (106 + 216), capacity (~$48k), and the $250,000 to $1,618 run.
-`pnpm capacity`, `pnpm check:tests` and a `count()` read settle all of them.
+**Numbers to re-check before pasting — and every one of these has already moved once.** Receipts
+(18), theses (3), tests (106 + 216), capacity ($97,329 at 0.5%, 2026-08-15), 24h pool volume
+($12.0M, same day), and the $250,000 → $6,627 run. `pnpm capacity`, `pnpm plan 250000 50`,
+`pnpm check:tests` and a `count()` read settle all of them. **Re-run them on the day you paste**:
+capacity and the plan figure both changed by more than 2x between 11 and 15 August with no code
+change, and a stale number in a submission is the one thing here a judge can falsify in a minute.
 
 **On the contract count, which is easy to state wrongly.** Fourteen are ours and verified, but
 that is **seven on mainnet plus seven on testnet**, not fourteen on mainnet. The eighth address in
@@ -167,7 +178,7 @@ which is a mock nobody trades.
 > You write the thesis. The AI compiles it into the exit rules that would prove you wrong, and
 > PolicyGuard enforces them inside the trade's own transaction.
 >
-> Ask it for $250k and it tells you $1,618 fits, then hands the rest back rather than force it into
+> Ask it for $250k and it tells you $6,627 fits, then hands the rest back rather than force it into
 > a market that cannot take it.
 >
 > 18 on-chain receipts, each with an evidence hash anyone can re-derive.

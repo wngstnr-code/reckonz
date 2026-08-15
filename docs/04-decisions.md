@@ -4336,3 +4336,69 @@ announced extensions and then WalletConnect, the QR renders and the wallet regis
 entries — with the earlier dummy id the same modal showed an empty box and `0`, so the difference
 is a fact rather than a reading. The owner then completed a real pairing from a phone. D35 is
 satisfied for this dependency; the phone path exists.
+
+---
+
+## D84 — Capacity doubled in four days, and eight documents did not notice
+
+D49 predicted this in as many words: *"arbitrage deepens the pools and erodes the $48k premise the
+product is built on."* It was right, and nothing was watching for it. Re-measured 2026-08-15,
+four days after the figure was last taken:
+
+| Impact limit | 2026-08-11 | 2026-08-15 |
+|---|---|---|
+| 0.5% | ~$48,000 | **$97,329** |
+| 5% | ~$515,000 | **$759,633** |
+
+Also 1% at $173,403 and 2% at $322,537, across the same 30 assets. The movement is not spread
+evenly — `wGOOGLx` alone now absorbs $29,653 at 0.5%, `wGLDx` $10,709, `wTSLAx` $7,379, where the
+tail is still in the $800–1,200 range. One asset is nearly a third of the universe's capacity.
+
+### The number we had never measured: volume
+
+Every capacity figure in this repo describes **depth** — how much a pool absorbs before the price
+runs away. Nothing here had ever asked how much actually trades through them, which is the
+denominator every revenue claim needs. From GeckoTerminal (`x-layer`, the only indexer that covers
+this chain), same day:
+
+| Pool | 24h volume | Liquidity |
+|---|---|---|
+| wAAPLx / USDG 0.05% | $6,066,647 | $297,652 |
+| wGOOGLx / USDG 0.05% | $3,654,479 | $308,563 |
+| wTSLAx / USDG 0.05% | $722,973 | $310,571 |
+| wNVDAx / USDG 0.05% | $276,775 | $206,301 |
+| wSNDKx / USDG 0.05% | $203,912 | $239,321 |
+| …21 more | | |
+| **26 pools** | **$12,038,377** | ~$200–500k each |
+
+**Read the concentration before the total.** wAAPLx and wGOOGLx are $9.72M of the $12.04M — **81%
+across two tickers**. That shape is arbitrage between OKX's own custodial order book and these
+pools, not diverse retail flow, and it is exactly the mechanism D49 named. Arbitrageurs will never
+route through `Executor`: they are latency-sensitive and have their own infrastructure. So the
+addressable fraction of $12M is much smaller than $12M, and quoting the total as a market we can
+serve would be the same error as quoting $48k after it stopped being true.
+
+### What this changes, and what it does not
+
+**Unchanged: AUM is still dead.** 2% of $97,329 is $1,946 a year. Doubling from nothing is still
+nothing, and `02-product.md`'s verdict stands on the new number as well as the old one.
+
+**Unchanged: honest capacity is still the product.** A tail asset absorbing $822 at 0.5% is the
+fact worth telling someone before they try to move $10,000 into it.
+
+**Changed: the execution fee has a visible denominator.** 15 bps is $1.50 per $1,000 routed. At
+current flow, capturing 0.18% of daily xStock volume is $1,000/month and 1.85% is $10,000/month.
+Neither is a forecast — both are arithmetic against a number that was $48k-shaped four days ago and
+will be something else next week. The point is that the denominator is now measured rather than
+assumed.
+
+**Changed: `$48k` was stated in eight documents, including the submission.** D60's lesson, exactly:
+a number repeated in five docs drifted in all five because nothing compared them. Here it was
+correct everywhere and then true nowhere, in four days, with no code change. Swept on 2026-08-15.
+
+### The rule this leaves behind
+
+**Every capacity figure in this repo is a measurement with a date, and must be written as one.**
+Not "the universe absorbs ~$48k" but "absorbed $97,329 on 2026-08-15". A number without its date
+reads as a property of the market rather than a reading of it, and that is what let this one sit
+unchallenged. `pnpm capacity` takes under a minute and settles it.

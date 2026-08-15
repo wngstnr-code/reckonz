@@ -250,10 +250,17 @@ resolving to pnpm's own package-publishing command instead.
 
 ### Results worth keeping
 
-**Capacity** — the whole xStock universe (all 30) absorbs **~$48k at 0.5% impact**, ~$515k at 5%.
-Full table in `01-xlayer-reality.md`. This is the fact that killed the AUM business and produced
-D6. The earlier ~$11k/~$112k covered the eight priced assets and, at 5%, included a search bound
-mistaken for a measurement — see D33 and D34.
+**Capacity** — the whole xStock universe (all 30) absorbed **$97,329 at 0.5% impact** on
+2026-08-15, $759,633 at 5%. Always quote it with the date: it was ~$48k/~$515k four days earlier
+and doubled with no change on our side (D84). Full table in `01-xlayer-reality.md`. This is the
+fact that killed the AUM business and produced D6, and it has survived every re-measurement — the
+earlier ~$11k/~$112k covered the eight priced assets and, at 5%, included a search bound mistaken
+for a measurement (D33, D34).
+
+**Volume** — the same pools traded **$12,038,377 in 24h** on 2026-08-15, 81% of it in wAAPLx and
+wGOOGLx alone. Depth is not volume, and this repo had only ever measured depth. Read the
+concentration before the total: that shape is order-book arbitrage, not flow a non-custodial
+router can serve. See D84.
 
 **Naive vs planned** — a five-leg semiconductor basket sized naively at $250k pays **~$71,000** in
 slippage (28% of the basket). Sized to capacity it pays $28, and reports the $244k it refused to
@@ -302,6 +309,13 @@ guard     wMUx   ALLOW  (fill 814 USDG, 0.50% impact, gap risk 0)
 ```
 
 That single run exercises every claim the product makes. It is the demo.
+
+**Those numbers are a transcript of 2026-08-11 and have moved since — do not paste them.** Re-run
+before any external use. On 2026-08-15 the same thesis (`LLM_PROVIDER=fixture pnpm thesis`, which
+now resolves five assets rather than two) sizes **$250,000 asked → $6,627 executable, $243,373
+refused**, naive slippage **$55,148 against $33** for the part that fits — legs at wMUx 2,675,
+wSKHYx 888, wSNDKx 980, wNVDAx 1,222, wINTCx 862. The shape of the demo is unchanged; every
+figure in it is a reading with a date (D84).
 
 ---
 
@@ -574,7 +588,18 @@ fine.
 
 ## Log
 
-**2026-08-14 (latest, twenty-first)** — **swept the remaining gaps; nothing built, three claims
+**2026-08-15 (latest, twenty-second)** — **capacity doubled in four days, and the volume was never
+measured at all** (D84). `pnpm capacity` re-run: **$97,329 at 0.5%**, $759,633 at 5%, up from ~$48k
+and ~$515k on 11 August with no change on our side. D49 predicted exactly this and nothing was
+watching for it. Alongside it, the number this repo had never taken: those pools traded
+**$12,038,377 in 24h**, with 81% in wAAPLx and wGOOGLx — order-book arbitrage rather than
+addressable flow. `$48k` was stated in eight documents including the submission; all swept.
+Conclusions unchanged (AUM still dead at $97k; honest capacity still the product), and the rule
+left behind is that **a capacity figure is a measurement with a date and must be written as one**.
+Also this day: a WAF rate limit in front of `/api/run`, verified (D78 amendment), and the evidence
+comments corrected to say that `evidence/` holds allowed plans rather than settled fills.
+
+**2026-08-14 (twenty-first)** — **swept the remaining gaps; nothing built, three claims
 corrected** (D74). The docs assert plenty that `pnpm check:tests` cannot guard — it checks test
 counts and nothing else — so this pass read them against the chain.
 

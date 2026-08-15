@@ -159,11 +159,18 @@ equity wrapper — and the index ETFs (wSPYx, wQQQx, wIWMx) sit between. Depth i
 uniform even though TVL nearly is, which is the whole argument for measuring absorbable
 size rather than reading TVL off a dashboard.
 
-**The entire tokenised-equity universe on X Layer absorbs ~$48k at 0.5% impact**, and
-~$515k at 5%. Re-measured 2026-08-11 across all 30 assets; the table above covers the
-eight the oracle prices, which is where the earlier ~$11k figure came from — a real number
-described as something it was not. The correction is 4.4×, and it changes nothing about
-the conclusion: an AUM product still has nowhere to put money. See `02-product.md` and D34.
+**The entire tokenised-equity universe on X Layer absorbed $97,329 at 0.5% impact on
+2026-08-15**, and $759,633 at 5%. Write it with the date: this is a reading of the pools on a
+given day, not a property of the market. It was ~$48k and ~$515k four days earlier, and ~$11k
+before 2026-08-11 — that last one a real number describing only the eight assets the oracle
+prices, reported as though it covered all thirty. See D84 for the current measurement, D34 for
+that earlier correction.
+
+None of the movement changes the conclusion: an AUM product still has nowhere to put money. See
+`02-product.md`.
+
+Depth is concentrated. `wGOOGLx` alone absorbs $29,653 at 0.5% — nearly a third of the universe —
+while the tail sits at $800–1,200. An average is the wrong summary of this table.
 
 ## Chain economics
 
@@ -202,15 +209,20 @@ Custodial, and US and EU users are excluded.
 
 Two consequences worth holding in mind:
 
-1. **The $48k is an AMM number, not a market number.** A retail buyer on X Layer has a
+1. **It is an AMM number, not a market number.** A retail buyer on X Layer has a
    deeper, cheaper, custodial route available. Our capacity figures remain exactly correct
    about what the *pools* absorb, which is what a non-custodial execution path must use. They
    are not a claim about total tradable size for these tickers.
-2. **The pools should deepen over time.** Because X Layer deposits and withdrawals are open,
-   arbitrage flows between order book and pool. That is good for users and erodes the premise
-   the sizing half of the product rests on. Uniswap V3 on this chain is already up from
-   $17.5M to $22.9M. **Re-run `pnpm capacity` before quoting the $48k anywhere**, and treat a
-   rising number as the expected case rather than an anomaly.
+2. **The pools deepen over time — this is now measured, not predicted.** Because X Layer
+   deposits and withdrawals are open, arbitrage flows between order book and pool. That is good
+   for users and erodes the premise the sizing half of the product rests on. Capacity doubled
+   between 2026-08-11 and 2026-08-15 with no change on our side (D84). **Re-run `pnpm capacity`
+   before quoting any capacity number anywhere**, and treat a rising one as the expected case
+   rather than an anomaly.
+3. **Depth is not volume, and only depth had ever been measured here.** The same pools traded
+   $12,038,377 in 24h on 2026-08-15 — but 81% of it in two tickers, wAAPLx and wGOOGLx, which is
+   the arbitrage of point 2 rather than flow a non-custodial router could serve. Quoting the
+   total as an addressable market would repeat the mistake this section exists to prevent.
 
 Separately, **xStocks now ships `xChange`**, their own *"multi-chain execution layer for
 tokenized equity trading"*: 70+ tokenised stocks, liquidity via **0x RFQ straight to market

@@ -244,8 +244,9 @@ it had been "verified" by checking a codesize and a selector.
 
 ## Known risks, to state rather than hide
 
-- **Capacity ceiling ~$48k** at 0.5% impact, across all 30 xStocks. Telling users this is the product; it also
-  means revenue cannot come from AUM.
+- **Capacity ceiling $97,329** at 0.5% impact on 2026-08-15, across all 30 xStocks — quote it with
+  the date, since it doubled in the four days before that (D84). Telling users this is the product;
+  it also means revenue cannot come from AUM at any of the numbers measured so far.
 - **Oracle credibility** — answered by confidence bands and the "guard, not truth" framing.
 - **The oracle prices 30 of 30 assets** (D62; 28 under D38's exchange reference). Both former
   refusals are closed: `wSKHYx` tracks a US depositary receipt rather than the Seoul share, and
