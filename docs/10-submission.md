@@ -52,9 +52,11 @@ written with that in mind, and the phrase appears in the first sentence on purpo
 > breaks, instead of warning afterwards. Almost every financial product sells *you can*. This one
 > sells *you cannot, and here is the number*.
 >
-> **The AI never holds a key that can move funds.** Every fill pulls against a Permit2 signature
-> you just produced: one token, a capped amount, twenty minutes. An agent with no fresh signature
-> moves nothing. `PolicyGuard` then bounds what it does with one, and unusually it bounds on **market
+> **The AI never holds a key that can move funds.** The server quotes, checks the guard and hands
+> back a plan that is **inert**: only your signature activates it, and nothing on our side holds a
+> key at any point. Every fill pulls against a Permit2 signature you just produced: one token, a
+> capped amount, twenty minutes. Without a fresh signature nothing moves at all.
+> `PolicyGuard` then bounds what it does with one, and unusually it bounds on **market
 > conditions**: whether the price can be defended and the depth is really there, not only
 > destination and size. A schema rather than a prompt bounds what the model may emit, so it can
 > only name quantities the chain can measure; a condition nothing can measure is surfaced to you as
@@ -69,12 +71,6 @@ written with that in mind, and the phrase appears in the first sentence on purpo
 > contract is verified on Sourcify (seven on mainnet, seven on testnet), and 106 Solidity plus 216
 > TypeScript tests run in CI on every push.
 >
-> **It serves agents as well as people.** `POST /api/fill` and `POST /api/exit` take a request,
-> quote it against live pool state, ask the on-chain guard, hash the evidence, and return a plan
-> that is **inert**. Only the owner's signature can activate it, and the server never holds a key.
-> An agent can ask *"may I do this, and what will it cost me"* and get a verdict with reasons it
-> cannot override.
->
 > **Honest about the market.** The entire xStock universe on X Layer absorbed $97,329 at 0.5%
 > price impact on 15 August 2026, and about $48,000 four days earlier. We publish that number with
 > its date rather than hide it, because it is a reading of the pools and not a property of them:
@@ -83,17 +79,17 @@ written with that in mind, and the phrase appears in the first sentence on purpo
 > product refuses size, and the reason it was built non-custodially. The discipline layer is
 > deployed, tested and audited now; the liquidity is arriving on its own.
 
-**Word count ~670**, up from ~430 when the "How it works" paragraph was added. That paragraph is
+**Word count ~630**, up from ~430 when the "How it works" paragraph was added. That paragraph is
 the one that cannot be cut: without it a reader finishes the description without ever learning what
-a user actually does. If the field is capped, cut from the **bottom**. "It serves agents as well
-as people" and "Honest about the market" survive best as a follow-up post or on the site. Use
-the short version below rather than trimming the flow out of the top.
+a user actually does. If the field is capped, cut from the **bottom**: "Honest about the market"
+survives best as a follow-up post or on the site. Use the short version below rather than trimming
+the flow out of the top.
 
 ---
 
 ## Short version, if the field is capped
 
-**~215 words.** Same order as the long one: what it is, what you do, what it refuses, why it is
+**~230 words.** Same order as the long one: what it is, what you do, what it refuses, why it is
 safe, proof, just with each step reduced to a sentence. It is not the long version with paragraphs
 deleted, which is what makes it still readable. **"Tokenised real-world assets" stays in the first
 sentence here too**, for the reason at the top of this file: it is the only thing putting this in
@@ -114,9 +110,10 @@ the AI-RWA track.
 > It bounds on market conditions, whether the price can be defended and the depth is really there,
 > not only on destination and size.
 >
-> It serves agents as well as people: `POST /api/fill` returns a plan that is inert until the owner
-> signs it, and the server never holds a key. Live on X Layer mainnet with 18 receipts, each
-> carrying an evidence hash anyone can re-derive.
+> The oracle marks a value *unpublishable* rather than guessing when the issuer will not quote, so
+> nothing executes against a price we cannot defend. Live on X Layer mainnet with 18 receipts, each
+> carrying an evidence hash that is published before anything is signed and that anyone can
+> re-derive. Every contract is verified on Sourcify.
 
 ### Shortest, if it is a one-line field
 
@@ -141,9 +138,25 @@ ours declines in four different places.
 **"Tokenised real-world assets" is in the first line** because that sentence is our only route into
 the AI-RWA track.
 
-**It says "and agents".** Both Genesis rounds rewarded serving other agents, PolyDesk explicitly
-and Clawby entirely. `okx.ai/agents` already sells a weaker version of our verdict endpoint at 0.15
-USDT per call. We built the thing and never described it that way.
+**~~It says "and agents".~~ Removed 2026-08-15, and the reasoning it rested on was already dead.**
+The argument was that both Genesis rounds rewarded serving other agents, PolyDesk explicitly and
+Clawby entirely, and that `okx.ai/agents` sells a weaker version of our verdict endpoint at 0.15
+USDT per call. But `00-hackathon.md` settled on 2026-08-14 that **Genesis was a different
+competition with different rules**, and inferring one event's criteria from another's results is
+the exact mistake D2 exists to prevent. Three reasons it is gone:
+
+1. **No agent uses it.** The API is real and returns an inert plan, but "serves agents" is a claim
+   about an audience that does not exist yet. This file does not get to assert what the rest of the
+   repo would refuse to.
+2. **It fought the track.** The note at the top of this file warns that reading as *"AI trading
+   agent"* drops the entry into the 30,000 pool against every trading agent in the event. A
+   paragraph headed "It serves agents as well as people" pulled in precisely that direction.
+3. **Nothing load-bearing was lost.** The AI requirement is answered by the thesis compiler, which
+   is real and used. The one fact worth keeping, that the server never holds a key, moved into the
+   non-custodial paragraph where it belongs.
+
+The endpoints stay built and public. When an agent actually calls one, that is a sentence worth
+writing.
 
 **It leads the AI section with the schema, not the model.** "We use an LLM" is worth nothing in a
 field of LLM projects. "The schema bounds what the model may emit, and unmeasurable conditions are
