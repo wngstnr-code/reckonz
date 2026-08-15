@@ -7,146 +7,163 @@ while the code passes every other one.
 
 Seven days, 15 to 21 August 2026. One post a day, and the last one is the required submission post.
 
-## The rule every draft below obeys
+## How these are written
 
-**Nothing goes out that a judge cannot re-run.** Every post carries a number, and every number has
-a command or an address behind it. That is the product's own discipline applied to its account, and
-it is also the only thing that makes a hackathon feed worth following: everyone else posts
-screenshots of a UI.
+**For a general reader, not for engineers.** Nobody scrolling X wants a contract address. The
+numbers stay because numbers are the most readable part of this project; the machinery behind them
+does not. No command names, no contract names, no jargon that needs a footnote. If a sentence needs
+the reader to know what an AMM is, rewrite it.
+
+The exception is the developer detail in Day 3, which is deliberately pushed to the repo rather
+than into the thread.
+
+**Nothing goes out that cannot be checked.** Every post carries a number that is real and current.
+That is the product's own discipline applied to its account.
 
 Three specifics:
 
-- **Dates on measurements.** Capacity moved 2x in four days (D84). A number without its date reads
-  as a property of the market and will be wrong within a week.
-- **No em-dashes**, same as `10-submission.md`. Plain punctuation is the house voice.
-- **Never post what we have not done.** No roadmap as though it shipped, no "agents can use this"
-  until one has. `06-assessment.md` is the standard.
+- **Dates on measurements.** Capacity moved 2x in four days. A number without its date reads as a
+  property of the market and will be wrong within a week.
+- **No em-dashes**, same as `10-submission.md`.
+- **Never post what we have not done.** No roadmap written as though it shipped.
 
 ## Day 1, 15 Aug: the market moved under us
 
-Lead with the finding rather than the product. It is genuinely news, it is favourable to X Layer,
-and it demonstrates measurement rather than claiming it.
+Opening with a finding rather than "introducing Reckonz". A new account that opens with an
+advertisement reads as one. This one is real news and happens to flatter X Layer.
 
-> Four days ago the entire tokenised equity market on X Layer absorbed about $48,000 at 0.5% price
-> impact.
+> Four days ago, the entire market for tokenised stocks on X Layer could absorb about $48,000
+> before the price started running away from you.
 >
-> We re-measured today. $97,329.
+> We measured again today. $97,000.
 >
-> We deployed nothing in between.
+> Nobody launched anything in between. It just got deeper.
 
-> OKX's own order book settles these tickers on X Layer, so arbitrage flows between book and pool
-> and keeps deepening it. The same 26 pools traded $12.0M in 24h.
+> The reason: OKX lets these stock tokens move freely between its own exchange and the chain.
+> Traders close the gap between the two, and that flow leaves the on-chain market deeper than it
+> was.
 >
-> This is the number our sizing engine refuses trades against, so we re-run it rather than quote it.
+> $12 million changed hands in those pools in 24 hours.
+
+> We re-measure this instead of quoting it, because the entire job is telling you what the market
+> can take today. Not what it could take last week.
+
+## Day 2, 16 Aug: what it actually does
+
+> Say you want to put $250,000 behind a view on memory chips.
 >
-> `pnpm capacity`
+> Most tools would just do it, and the cost of moving a market that small would come out of your
+> money without anyone showing you the number.
 
-## Day 2, 16 Aug: what the product actually does
-
-> Ask Reckonz for $250,000 of a semiconductor thesis.
+> Ours executes $6,627 and tells you the other $243,373 does not fit.
 >
-> It executes $6,627 and hands back $243,373.
+> Pushing the rest through would have cost $55,148 in price impact. The part that fits cost $33.
+
+> You write the idea in plain English. The AI turns it into a specific, checkable claim, works out
+> which stocks are actually tradable on X Layer, and sizes each one to what the market can really
+> absorb.
 >
-> Forcing the rest would have cost $55,148 in slippage. The part that fits cost $33.
+> Your money never leaves your wallet. reckonz.vercel.app
 
-> You write the thesis in plain language. The AI compiles it into a falsifiable claim, resolves the
-> companies to tokens that actually exist on X Layer, and sizes each leg against live pool depth
-> instead of against the number you asked for.
+## Day 3, 17 Aug: the week we lost
+
+The developer version of this cost us days and is documented in the repo. The thread tells the
+story instead, which travels further and sends the people who want the detail to the code.
+
+> We lost a week to a piece of code that looked perfect.
 >
-> Non-custodial the whole way. reckonz.vercel.app
-
-## Day 3, 17 Aug: the X Layer thread
-
-The one other builders will repost, and the one most likely to be seen by the people running the
-event. All of it is in `CLAUDE.md` already because it cost us days.
-
-> Four things about X Layer that cost us a week. Posting them so they cost you nothing.
-
-> 1. The Uniswap V3 factory is not at the canonical address. It is at
-> `0x4b2ab38dbf28d31d467aa8993f6c2585981d6804`.
+> Right address. Right functions. Nearly 40,000 bytes of deployed contract. Every tool we used
+> pointed at it.
 >
-> SDK defaults do not error. They resolve to an empty address and fail silently.
+> It could not do the one thing we needed.
 
-> 2. The Universal Router cannot swap here. It carries the canonical factory in its own bytecode,
-> so every V3 swap through it reverts with no data.
+> Buried inside it was an assumption copied from a different blockchain. On X Layer that assumption
+> points at an address where nothing lives.
 >
-> 39,001 bytes of deployed contract with the exact right selector, and it does not work. Derive the
-> pool yourself.
+> So our trades did not fail loudly. They failed silently, with no error message at all.
 
-> 3. The RPC load-balances, so a confirmed write is not immediately readable. A read straight after
-> a write can hit an unsynced node and return zeroes rather than an error.
+> The rule we took from it, and now apply to everything:
 >
-> Poll until the state is visible before sending anything that depends on it.
+> Something that exists and looks correct is not something that works. A dependency is unverified
+> until you have watched it do the actual job, once, for real.
 
-> 4. DexScreener does not index X Layer. GeckoTerminal does, as network `x-layer`.
+> If you are building on X Layer, the specific traps that cost us that week are written down in our
+> repo. Take them, they are free.
 >
-> A deployed address with the right selector proves nothing. An external dependency is unverified
-> until a call that does the actual work succeeds against it.
+> github.com/wngstnr-code/reckonz
 
-## Day 4, 18 Aug: evidence
+## Day 4, 18 Aug: how you know we are not lying
 
-> 18 fills on X Layer mainnet. Each one carries a hash of the exact quote, oracle reading and guard
-> verdict the decision was made on.
+> Every trade our system makes is recorded on the blockchain along with a fingerprint of exactly
+> what it was looking at when it decided. The price it saw. The checks it ran. The verdict it got.
 >
-> The hash goes on chain before anything is signed, not written up afterwards.
+> The fingerprint is recorded before the trade is signed, not written up afterwards.
 
-> The bundle is public, so anyone can fetch it and re-derive the hash the receipt already holds.
-> A bundle that no longer hashes to the recorded value has been edited, and saying so is more useful
-> than any amount of assurance that it has not.
+> Anyone can pull the file, recompute the fingerprint, and see whether it still matches.
 >
-> `pnpm evidence <hash>`
+> If somebody edited the reasoning after the fact, it stops matching, and everyone can see that it
+> stopped matching.
 
-## Day 5, 19 Aug: the AI part, led by the constraint
+> 18 real trades on mainnet so far. Every one of them auditable by a stranger, without asking us
+> for anything.
 
-"We use an LLM" is worth nothing in a field of LLM projects.
+## Day 5, 19 Aug: what the AI is for
 
-> Our AI does not choose trades. It writes rules.
+"We use AI" is worth nothing in a field of AI projects. The constraint is the interesting part.
+
+> Our AI does not pick trades.
 >
-> A schema, not a prompt, bounds what the model may emit. It can only name quantities the chain can
-> measure.
+> It reads your investment thesis and writes down the conditions that would tell you to get out.
 
-> A condition nothing on chain can measure is surfaced to you as a manual watch item, rather than
-> quietly becoming a rule that never fires. That silent failure is the one that would actually hurt
-> someone.
+> The failure mode with AI in finance is not a wrong answer. It is a confident rule nobody can
+> actually check.
 >
-> A red-team suite runs hostile and prompt-injected theses through that path on every commit.
+> "Exit if sentiment turns" sounds like a rule. Nothing can measure it, so it never fires, and you
+> find out on the worst day.
 
-## Day 6, 20 Aug: the refusal that costs us money
-
-The strongest post of the week, because it is against interest. We are paid 15 bps on what
-executes, so every refusal below earns us nothing.
-
-> Our oracle marks a value unpublishable rather than guessing when the issuer will not quote.
+> So ours is only allowed to write rules the blockchain can genuinely measure.
 >
-> Our guard reverts inside the trade's own transaction when a bound breaks.
+> Anything else is handed back to you as "you will have to watch this one yourself" instead of
+> quietly becoming a rule that never triggers.
 >
-> We earn 15 bps on what executes. Every one of those refusals pays us nothing.
+> We attack it with hostile inputs on every single code change.
 
-> There is a state where a sale cannot be measured at all: the oracle has gone stale, so the
-> shortfall computes as zero. Zero and "nothing measured it" are not the same fact and we refuse to
-> render them the same way.
+## Day 6, 20 Aug: the refusals cost us money
+
+The strongest post of the week, because it is against interest and cannot be faked by a project
+that has not built it.
+
+> We get paid when a trade goes through. 0.15% of it.
 >
-> Selling in that state takes an explicit acknowledgement.
+> Our system refuses trades constantly, and not one of those refusals pays us anything.
+
+> It refuses when we cannot defend the price. If the source we price against goes quiet, we mark
+> the value as "we do not know" rather than publishing a guess.
+>
+> Guessing would be easy, and profitable, and it is how people get hurt.
+
+> There is even a case where we cannot measure how badly a sale went.
+>
+> We will not show you a comforting zero. It says the measurement failed, and you have to
+> acknowledge that before anything continues.
 
 ## Day 7, 21 Aug: the submission post, required
 
-`@XLayerOfficial` must be mentioned. This is the one that satisfies the rule, so post it before the
-deadline rather than at it. The draft lives in `10-submission.md` and is repeated here so the
-account has one thread to schedule:
+`@XLayerOfficial` must be mentioned. Post it before the deadline rather than at it.
 
 > Reckonz is live on @XLayerOfficial mainnet.
 >
-> Non-custodial execution and risk tooling for tokenised real-world assets: the xStocks equity
-> tokens on X Layer.
+> It turns an investment thesis into real positions in tokenised stocks, sized to what the market
+> can actually absorb, and into the rules that close them.
 
-> You write the thesis, and the conditions you would exit on. The AI compiles those into rules
-> PolicyGuard enforces inside the trade's own transaction, not in a reminder afterwards.
+> You write the idea, and the conditions you would exit on. The AI turns those into rules a
+> contract enforces inside the trade itself, not a reminder that arrives afterwards.
 >
 > Ask it for $250k and it tells you $6,627 fits, then hands the rest back rather than force it into
 > a market that cannot take it.
 
-> 18 on-chain receipts, each with an evidence hash anyone can re-derive. Every contract verified on
-> Sourcify. 106 Solidity and 216 TypeScript tests in CI.
+> 18 trades on mainnet, each one auditable by anyone. Every contract published and verified. 322
+> tests on every change.
 >
 > reckonz.vercel.app
 >
@@ -162,7 +179,7 @@ All of these have moved at least once, and two of them moved 2x in four days:
 | the $250,000 to $6,627 run | `TARGET=mainnet LLM_PROVIDER=fixture pnpm thesis` |
 | 24h pool volume, $12.0M | GeckoTerminal, network `x-layer` |
 | receipts, 18 | `count()` on `ReceiptRegistry` at `0x9D04575894F570C3638Bc1f6ECaD6EF36D479Fa6` |
-| tests, 106 + 216 | `pnpm check:tests` |
+| tests, 106 + 216 = 322 | `pnpm check:tests` |
 
 Posting a stale number is the one failure here that a judge can catch in under a minute, and it
 would undo the exact thing these posts are claiming.
