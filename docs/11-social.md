@@ -192,210 +192,237 @@ that has not built it.
 
 ## Images, one per thread
 
-Each block below is **one complete prompt**. Copy it, generate, post. Nothing to assemble.
+### The house style, taken from @XLayerOfficial
 
-### The mark, in every image
+Read off their timeline on 2026-08-15. Their posts share a strict system: pure black ground, fully
+greyscale artwork, a header bar with their mark at the left and an uppercase letterspaced monospace
+label at the right, a signature dithered ASCII-like diagonal texture, an enormous ghosted display
+word sitting behind everything at very low contrast, and a tiny uppercase footnote at the base.
+
+**We take all of that furniture and keep mint green #6ee7b7 for the data element only.** Copying
+them completely would make the account look like an X Layer sub-brand with no identity of its own.
+Keeping the structure means the images read as native to that timeline, and reserving the single
+colour for the fact means the only thing in the frame with any colour in it is always the number.
+That is `09-design.md`'s own rule: ground, one accent, grey.
+
+### The mark
 
 `public/logo-reckonz.svg` is four evenly spaced vertical tally strokes where the fourth bends at
-its base into an upward diagonal, turning the count into a tick. Counting, then confirming, which
-is what the product does. It is pure geometry, which is the only kind of logo an image model can
-draw consistently, and every prompt below describes it in the same words so the feed reads as one
-account.
-
-If a render gets the mark wrong, paste the real SVG over that corner rather than regenerating the
-whole image. It is a five second fix and the mark is the one element that should never be
-approximate.
+its base into an upward diagonal, turning the count into a tick. Counting, then confirming. Every
+prompt describes it identically and places it in the same spot, which is what makes seven separate
+posts read as one account. If a render gets it wrong, paste the real SVG over that corner rather
+than regenerating.
 
 ### On text
 
-Only Day 1 and Day 2 carry numbers, because only those two are about a figure. The other five say
-what they mean through composition, which is also why they cannot render a number wrongly. On the
-two that do: read the digits in the result one by one against the table at the end of this file
-before posting, and regenerate rather than post a mismatch.
+These prompts carry more text than the last set, because the header label and the ghosted word are
+what make the style read. Keep every string short, and **check each one character by character
+before posting**. The ghosted word is the safe one: it is deliberately near-invisible, so a garbled
+letter reads as texture. The header label and the figures are not safe. Regenerate rather than post
+a mismatch.
 
 ### Day 1, the market doubled
 
 ```
-Editorial data visualisation in the Swiss International Style, flat 2D vector, extremely
-precise. Canvas 16:9, background a deep near-black #0b0d10 with a barely perceptible
-vertical shift to #10141a at the top edge, no visible banding.
+Editorial infographic poster, pure black #000000 background, entirely greyscale except
+for one accent colour. 16:9.
 
-Centre composition: two horizontal bars with square ends, stacked with wide vertical
-separation, both flat mint green #6ee7b7, no outline. The upper bar is short. The lower
-bar is exactly twice its length, left edges aligned to a shared invisible baseline. A
-hairline #232830 vertical rule marks that shared left edge, running the full height of
-the frame.
+Across the top edge: a slim header bar. At its far left, the Reckonz mark, four evenly
+spaced vertical bars of equal thickness in white where the fourth and rightmost bar bends
+at its base into an upward diagonal stroke forming a tick. A thin white hairline rule runs
+from beside the mark to the right edge. At the far right of that rule, the text "CAPACITY"
+in small uppercase monospace with wide letter spacing, white.
 
-To the right of the upper bar, set the text "$48,000" in a clean geometric monospace,
-muted grey #5d6675. To the right of the lower bar, set "$97,329" in the same monospace,
-noticeably larger, in mint green #6ee7b7. Reproduce both strings exactly, including the
-dollar sign and comma. No other text in the image.
+Filling the middle of the frame, an enormous ghosted display word "DEPTH" in heavy
+condensed sans-serif, rendered entirely as a fine dithered ASCII halftone texture in dark
+grey, barely emerging from the black, treated as texture rather than as a headline. Fine
+diagonal streaks of the same dithered pixel texture drift across the upper right of the
+frame like a degraded scan.
 
-Bottom left corner, small, occupying about seven percent of the frame height: the Reckonz
-mark, four evenly spaced vertical bars of equal thickness in mint green #6ee7b7 where the
-fourth and rightmost bar bends at its base into an upward diagonal stroke forming a tick.
-Flat, square ends, no outline, no container.
+In front of all that, the only colour in the image: two horizontal bars with square ends,
+flat mint green #6ee7b7, stacked with wide vertical separation, left edges aligned. The
+upper bar is short. The lower bar is exactly twice its length. Beside the upper bar the
+text "$48,000" in white monospace; beside the lower bar the text "$97,329" in mint green
+monospace, larger. Reproduce both strings exactly.
 
-Generous margins, calm, instrument-like. No drop shadows, no glow, no bloom, no lens
-flare, no gradient mesh, no 3D, no perspective, no texture overlay, no icons, no arrows,
-no candlestick charts, no people, no robots, no circuit boards.
+Along the bottom edge, very small uppercase monospace in dark grey: "MEASURED ON X LAYER
+MAINNET, 15 AUG 2026".
+
+No other text. No drop shadows, no glow, no lens flare, no 3D render, no perspective, no
+icons, no arrows, no candlestick charts, no people, no robots.
 ```
 
 ### Day 2, $250,000 asked and $6,627 executed
 
 ```
-Editorial data visualisation in the Swiss International Style, flat 2D vector, extremely
-precise. Canvas 16:9, background deep near-black #0b0d10.
+Editorial infographic poster, pure black #000000 background, entirely greyscale except for
+one accent colour. 16:9.
 
-One large rectangle occupies most of the frame, drawn as a thin unfilled outline in muted
-grey #5d6675, corners sharp. Along its top edge, set outside the outline, the text
-"$250,000" in clean geometric monospace, same muted grey.
+Across the top edge: a slim header bar. At its far left, the Reckonz mark, four evenly
+spaced vertical bars of equal thickness in white where the fourth and rightmost bar bends
+at its base into an upward diagonal stroke forming a tick. A thin white hairline rule runs
+to the right edge, and at the far right of it the text "SIZING" in small uppercase
+monospace with wide letter spacing, white.
 
-Inside that rectangle, anchored to its lower left corner, sits a small solid mint green
-#6ee7b7 rectangle covering roughly three percent of the large rectangle's area. It should
-look almost uncomfortably small. Immediately to its right, the text "$6,627" in the same
-monospace, mint green. Reproduce both strings exactly, including dollar signs and commas.
-No other text in the image.
+Behind everything, an enormous ghosted display word "FITS" in heavy condensed sans-serif,
+rendered as a fine dithered ASCII halftone texture in dark grey, barely emerging from the
+black. Diagonal dithered streaks drift across the lower left.
 
-The vast empty interior of the outlined rectangle is the subject and must stay empty.
+Foreground: one large rectangle occupying most of the frame, drawn as a thin unfilled white
+outline with sharp corners, and the text "$250,000" in white monospace along its top edge.
+Inside its lower left corner, a small solid mint green #6ee7b7 rectangle covering roughly
+three percent of the outlined area, almost uncomfortably small, with the text "$6,627" in
+mint green monospace immediately beside it. Reproduce both strings exactly. The vast empty
+interior of the outline is the subject and stays empty.
 
-Bottom left corner, small, about seven percent of the frame height: the Reckonz mark, four
-evenly spaced vertical bars of equal thickness in mint green #6ee7b7 where the fourth and
-rightmost bar bends at its base into an upward diagonal stroke forming a tick. Flat, square
-ends, no outline.
+Along the bottom edge, very small uppercase monospace in dark grey: "THE REST IS REFUSED,
+WITH THE NUMBER".
 
-No drop shadows, no glow, no gradient, no 3D, no perspective, no texture, no icons, no
-arrows, no charts, no people, no robots.
+No other text. No drop shadows, no glow, no 3D, no perspective, no icons, no arrows.
 ```
 
 ### Day 3, the week we lost
 
 ```
-Minimal technical schematic, flat 2D vector, Swiss International Style. Canvas 16:9,
-background deep near-black #0b0d10.
+Editorial infographic poster, pure black #000000 background, entirely greyscale except for
+one accent colour. 16:9.
 
-A dense, perfectly regular grid of small identical squares fills the central area, roughly
-fourteen columns by eight rows, evenly spaced with equal gutters. Every square is solid
-muted grey #5d6675. Exactly one square, positioned slightly right and above centre, is
-drawn instead as a hollow outline in amber #f0b429, identical in size and grid position to
-every other square so the difference reads only on a second look. No highlight, no ring,
-no arrow pointing at it, nothing else drawing attention to it.
+Across the top edge: a slim header bar. At its far left, the Reckonz mark, four evenly
+spaced vertical bars of equal thickness in white where the fourth and rightmost bar bends
+at its base into an upward diagonal stroke forming a tick. A thin white hairline rule runs
+to the right edge, with the text "FIELD NOTE" in small uppercase monospace with wide letter
+spacing at its far right, white.
 
-Wide even margin around the grid. Absolutely no text, letters or numbers anywhere.
+Behind everything, an enormous ghosted display word "SILENT" in heavy condensed sans-serif
+as a fine dithered ASCII halftone texture in dark grey, barely visible against the black.
 
-Bottom left corner, small, about seven percent of the frame height: the Reckonz mark, four
-evenly spaced vertical bars of equal thickness in mint green #6ee7b7 where the fourth and
-rightmost bar bends at its base into an upward diagonal stroke forming a tick. Flat, square
-ends.
+Foreground: a dense, perfectly regular grid of small identical squares, roughly fourteen
+columns by seven rows, evenly spaced with equal gutters, every square solid mid grey.
+Exactly one square, slightly right and above centre, is instead a hollow outline in mint
+green #6ee7b7, identical in size and grid position to all the others, so the difference
+reads only on a second look. Nothing points at it, no ring, no arrow, no highlight.
 
-No drop shadows, no glow, no bloom, no gradient, no 3D, no perspective, no texture, no
-icons, no people, no robots.
+Along the bottom edge, very small uppercase monospace in dark grey: "IT LOOKED CORRECT".
+
+No other text. No drop shadows, no glow, no 3D, no perspective, no icons, no people.
 ```
 
 ### Day 4, the fingerprint
 
 ```
-Minimal technical schematic, flat 2D vector, Swiss International Style. Canvas 16:9,
-background deep near-black #0b0d10, with two subtly raised panel areas in #12151a, each
-bounded by a hairline #232830 border, sitting side by side with a clear vertical gap
-between them.
+Editorial infographic poster, pure black #000000 background, entirely greyscale except for
+one accent colour. 16:9.
 
-Inside each panel, a vertical column of small abstract rectangular blocks of varying
-widths, stacked evenly, all muted grey #5d6675. The blocks are plain rectangles and must
-never resemble letters or characters. The two columns are exact mirrors of each other in
-rhythm and width, so the eye reads them as identical.
+Across the top edge: a slim header bar. At its far left, the Reckonz mark, four evenly
+spaced vertical bars of equal thickness in white where the fourth and rightmost bar bends
+at its base into an upward diagonal stroke forming a tick. A thin white hairline rule to
+the right edge, with "EVIDENCE" in small uppercase monospace with wide letter spacing at
+its far right, white.
 
-One single horizontal row, about two thirds of the way down, is mint green #6ee7b7 in both
-panels, and the two mint blocks align precisely across the gap. A thin mint green line
-spans the gap on that row only, connecting them.
+Behind everything, an enormous ghosted display word "PROOF" in heavy condensed sans-serif
+as a fine dithered ASCII halftone texture in dark grey, barely emerging from the black.
 
-Absolutely no text, letters or numbers anywhere.
+Foreground: two identical narrow vertical columns of small abstract rectangular blocks of
+varying widths, side by side with a clear vertical gap between them, all blocks mid grey,
+plain rectangles that never resemble letters. The two columns are exact mirrors of each
+other in rhythm. One single horizontal row, about two thirds down, is mint green #6ee7b7
+in both columns, aligning precisely across the gap, joined by a thin mint green line
+spanning it.
 
-Bottom left corner, small, about seven percent of the frame height: the Reckonz mark, four
-evenly spaced vertical bars of equal thickness in mint green #6ee7b7 where the fourth and
-rightmost bar bends at its base into an upward diagonal stroke forming a tick.
+Along the bottom edge, very small uppercase monospace in dark grey: "HASHED BEFORE
+SIGNING".
 
-No drop shadows, no glow, no gradient, no 3D, no perspective, no texture, no icons.
+No other text. No drop shadows, no glow, no 3D, no perspective, no icons.
 ```
 
 ### Day 5, rules that can be measured
 
 ```
-Minimal technical schematic, flat 2D vector, Swiss International Style. Canvas 16:9,
-background deep near-black #0b0d10.
+Editorial infographic poster, pure black #000000 background, entirely greyscale except for
+one accent colour. 16:9.
 
-Two vertical columns of short horizontal bars, evenly spaced, seven bars in each column,
-every bar the same length and thickness, the two columns aligned row for row. Every bar in
-the left column is solid flat mint green #6ee7b7. Every bar in the right column is an
-unfilled outline drawn with a dashed amber #f0b429 stroke, same dimensions exactly.
+Across the top edge: a slim header bar. At its far left, the Reckonz mark, four evenly
+spaced vertical bars of equal thickness in white where the fourth and rightmost bar bends
+at its base into an upward diagonal stroke forming a tick. A thin white hairline rule to
+the right edge, with "RULES" in small uppercase monospace with wide letter spacing at its
+far right, white.
 
-A single hairline vertical rule in #232830 runs between the two columns, full frame height.
+Behind everything, an enormous ghosted display word "MEASURE" in heavy condensed
+sans-serif as a fine dithered ASCII halftone texture in dark grey, barely visible.
 
-The symmetry is the point: same count, same rhythm, different treatment. Absolutely no
-text, letters or numbers anywhere.
+Foreground: two vertical columns of short horizontal bars, evenly spaced, seven bars in
+each column, every bar the same length and thickness, the columns aligned row for row.
+Every bar in the left column is solid flat mint green #6ee7b7. Every bar in the right
+column is an unfilled outline drawn with a dashed white stroke, identical dimensions. A
+single thin white hairline rule runs vertically between the two columns.
 
-Bottom left corner, small, about seven percent of the frame height: the Reckonz mark, four
-evenly spaced vertical bars of equal thickness in mint green #6ee7b7 where the fourth and
-rightmost bar bends at its base into an upward diagonal stroke forming a tick.
+Along the bottom edge, very small uppercase monospace in dark grey: "IF THE CHAIN CANNOT
+MEASURE IT, IT IS NOT A RULE".
 
-No drop shadows, no glow, no gradient, no 3D, no perspective, no texture, no icons, no
-arrows.
+No other text. No drop shadows, no glow, no 3D, no perspective, no icons, no arrows.
 ```
 
 ### Day 6, the refusals
 
 ```
-Minimal technical schematic, flat 2D vector, Swiss International Style. Canvas 16:9,
-background deep near-black #0b0d10.
+Editorial infographic poster, pure black #000000 background, entirely greyscale except for
+one accent colour. 16:9.
 
-A vertical stack of nine thin horizontal rows, like rows in a ledger, each spanning most of
-the frame width and separated by hairline #232830 rules. Rows are equal in height, tightly
-and evenly spaced.
+Across the top edge: a slim header bar. At its far left, the Reckonz mark, four evenly
+spaced vertical bars of equal thickness in white where the fourth and rightmost bar bends
+at its base into an upward diagonal stroke forming a tick. A thin white hairline rule to
+the right edge, with "REFUSALS" in small uppercase monospace with wide letter spacing at
+its far right, white.
 
-Eight of the nine rows are filled flat amber #f0b429. Exactly one row is filled mint green
-#6ee7b7, and it sits fourth from the top, neither at the top nor the bottom of the stack.
+Behind everything, an enormous ghosted display word "NO" in heavy condensed sans-serif as
+a fine dithered ASCII halftone texture in dark grey, barely emerging from the black,
+occupying most of the frame width.
 
-Wide even margins above and below the stack. Absolutely no text, letters or numbers
-anywhere.
+Foreground: a vertical stack of nine thin horizontal rows, like rows in a ledger, spanning
+most of the frame width, separated by white hairline rules, equal in height and evenly
+spaced. Eight of the rows are filled mid grey. Exactly one row, fourth from the top, is
+filled mint green #6ee7b7.
 
-Bottom left corner, small, about seven percent of the frame height: the Reckonz mark, four
-evenly spaced vertical bars of equal thickness in mint green #6ee7b7 where the fourth and
-rightmost bar bends at its base into an upward diagonal stroke forming a tick.
+Along the bottom edge, very small uppercase monospace in dark grey: "ONE EXECUTED. ONLY
+THAT ONE PAYS US".
 
-No drop shadows, no glow, no gradient, no 3D, no perspective, no texture, no icons, no red
-anywhere in the image.
+No other text. No red anywhere in the image. No drop shadows, no glow, no 3D, no
+perspective, no icons.
 ```
 
-Amber rather than red on purpose. `09-design.md` reserves red for a run that actually broke, and
-painting refusals with trading-UI semantics makes the most valuable thing the product does look
-like a failure.
+Grey rather than red for the refused rows. `09-design.md` reserves red for a run that actually
+broke, and painting refusals with trading-UI semantics makes the most valuable thing this product
+does look like a failure.
 
 ### Day 7, the submission
 
 ```
-Minimal technical composition, flat 2D vector, Swiss International Style. Canvas 16:9,
-background deep near-black #0b0d10 with a barely perceptible vertical shift to #10141a at
-the top edge.
+Editorial infographic poster, pure black #000000 background, entirely greyscale except for
+one accent colour. 16:9.
 
-Exactly eighteen small solid mint green #6ee7b7 squares, all identical in size, arranged in
-a precisely even grid of six columns and three rows, centred in the frame, with equal
-generous gutters between them and a wide empty margin all around. No highlight, no
-variation, no numbering, no connecting lines. The count must be exactly eighteen and each
-square must be clearly separated from its neighbours so they can be counted at a glance.
+Across the top edge: a slim header bar. At its far left, the Reckonz mark, four evenly
+spaced vertical bars of equal thickness in white where the fourth and rightmost bar bends
+at its base into an upward diagonal stroke forming a tick. A thin white hairline rule to
+the right edge, with "LIVE ON MAINNET" in small uppercase monospace with wide letter
+spacing at its far right, white.
 
-Absolutely no text, letters or numbers anywhere.
+Behind everything, an enormous ghosted display word "LIVE" in heavy condensed sans-serif
+as a fine dithered ASCII halftone texture in dark grey, barely visible against the black.
+Fine diagonal dithered streaks drift across the upper right.
 
-Bottom left corner, small, about seven percent of the frame height: the Reckonz mark, four
-evenly spaced vertical bars of equal thickness in mint green #6ee7b7 where the fourth and
-rightmost bar bends at its base into an upward diagonal stroke forming a tick.
+Foreground: exactly eighteen small solid mint green #6ee7b7 squares, all identical in
+size, arranged in a precisely even grid of six columns and three rows, centred, with equal
+generous gutters and a wide empty margin. No highlight, no variation, no connecting lines.
+Each square clearly separated so all eighteen can be counted at a glance.
 
-No drop shadows, no glow, no bloom, no gradient mesh, no 3D, no perspective, no texture, no
-icons, no people, no robots.
+Along the bottom edge, very small uppercase monospace in dark grey: "EIGHTEEN RECEIPTS.
+COUNT THEM".
+
+No other text. No drop shadows, no glow, no 3D, no perspective, no icons, no people.
 ```
 
-Eighteen marks for eighteen receipts, countable. **If the receipt count has moved by the 21st**,
-change the number of squares and the grid to match. That is the only edit any of these prompts
-should ever need.
+**If the receipt count has moved by the 21st**, change the number of squares, the grid and the
+footnote to match. That is the only edit any of these prompts should ever need.
 
 ## Numbers to re-check on the morning you post
 
