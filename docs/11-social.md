@@ -444,6 +444,53 @@ No other text. No drop shadows, no glow, no 3D, no perspective, no icons, no peo
 **If the receipt count has moved by the 21st**, change the number of squares, the grid and the
 footnote to match. That is the only edit any of these prompts should ever need.
 
+## The profile banner
+
+1500 x 500. Two things eat into it and both are unavoidable, so the composition has to be built
+around them: the **avatar covers the bottom left** and the **Follow button covers the bottom
+right**. Everything that must be read lives in the upper centre band. Mobile also crops the sides,
+so nothing important goes near the left or right edge.
+
+Same house style as the post images: X Layer's black-and-greyscale system, with mint green #6ee7b7
+reserved for one element only.
+
+```
+Wide banner image, 1500 x 500 pixels, 3:1 aspect ratio. Pure black #000000 background,
+entirely greyscale except for one accent colour.
+
+Composition is a wide horizontal band. The bottom left corner and the bottom right corner
+must be completely empty black, with nothing in them, because they will be covered.
+Everything of interest sits in the upper centre of the frame, away from the left and right
+edges.
+
+Filling the full width behind everything, an enormous ghosted display word "RECKONZ" in
+heavy condensed sans-serif, rendered entirely as a fine dithered ASCII halftone texture in
+very dark grey, barely emerging from the black, treated as texture rather than as a
+headline. Fine diagonal streaks of the same dithered pixel texture drift across the upper
+right of the frame like a degraded scan, fading out toward the centre.
+
+Centred in the upper middle of the frame, on one line, the text "YOU CANNOT, AND HERE IS
+THE NUMBER" in clean uppercase monospace with wide letter spacing, white, small relative
+to the frame. Reproduce that string exactly. Directly beneath it, a single thin horizontal
+mint green #6ee7b7 hairline rule, about a third of the frame width, centred. This rule is
+the only colour anywhere in the image.
+
+Along the very top edge, a full width white hairline rule, extremely thin.
+
+No other text. No logo, no mark, no wordmark rendered as solid letters. No drop shadows,
+no glow, no bloom, no lens flare, no gradient mesh, no 3D render, no perspective, no icons,
+no arrows, no charts, no people, no robots, no circuit boards.
+```
+
+**The line is the one thing worth swapping.** "YOU CANNOT, AND HERE IS THE NUMBER" is the product's
+own sentence from `10-submission.md` and it is the most distinctive thing the account can say. If it
+reads as too cryptic standing alone, "SIZED TO WHAT THE MARKET CAN ACTUALLY TAKE" is the plain
+version. Do not use both.
+
+**No mark in the banner.** The avatar already carries it and sits directly on top of the bottom
+left, so a second one competes with it at a distance of about forty pixels. Check the rendered text
+character by character before uploading; a banner is seen far more often than any single post.
+
 ## Numbers to re-check on the morning you post
 
 All of these have moved at least once, and two of them moved 2x in four days:
