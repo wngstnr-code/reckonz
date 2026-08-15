@@ -21,6 +21,7 @@ other already made.
 | `docs/00-hackathon.md` | Rules, prize strategy, how the judges actually score. |
 | `docs/06-assessment.md` | The honest read on whether this is a business. |
 | `docs/09-design.md` | Before touching `app/` visuals. Palette semantics, the four surfaces, references. |
+| `docs/11-social.md` | Before posting as `@reckonz_xyz`. An active account is a stated submission requirement; the daily drafts and the numbers to re-check first live here. |
 
 ## Two people, one repo
 
