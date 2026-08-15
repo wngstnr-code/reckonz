@@ -32,10 +32,10 @@ written with that in mind, and the phrase appears in the first sentence on purpo
 
 ## Description, the one to paste
 
-> **Reckonz turns an investment thesis into on-chain positions that are sized to what the market
-> can actually absorb, and into the exit rules that close them.** It works on xStocks, the
-> tokenised US equities (Apple, Nvidia, Tesla and 27 others) that trade as ERC-20s on X Layer.
-> Your funds never leave your wallet, at any point.
+> **Reckonz turns an investment thesis into on-chain positions in tokenised real-world assets,
+> sized to what the market can actually absorb, and into the exit rules that close them.** The
+> assets are xStocks: tokenised US equities (Apple, Nvidia, Tesla and 27 others) that trade as
+> ERC-20s on X Layer. Your funds never leave your wallet, at any point.
 >
 > **How it works.** You write a thesis in plain language: *"HBM memory supply stays tight for two
 > more quarters."* The AI compiles it into a falsifiable claim: a causal chain, the companies that
@@ -83,7 +83,7 @@ written with that in mind, and the phrase appears in the first sentence on purpo
 > product refuses size, and the reason it was built non-custodially. The discipline layer is
 > deployed, tested and audited now; the liquidity is arriving on its own.
 
-**Word count ~590**, up from ~430 when the "How it works" paragraph was added. That paragraph is
+**Word count ~670**, up from ~430 when the "How it works" paragraph was added. That paragraph is
 the one that cannot be cut: without it a reader finishes the description without ever learning what
 a user actually does. If the field is capped, cut from the **bottom**. "It serves agents as well
 as people" and "Honest about the market" survive best as a follow-up post or on the site. Use
@@ -93,13 +93,15 @@ the short version below rather than trimming the flow out of the top.
 
 ## Short version, if the field is capped
 
-**~160 words.** Same order as the long one: what it is, what you do, what it refuses, why it is
+**~215 words.** Same order as the long one: what it is, what you do, what it refuses, why it is
 safe, proof, just with each step reduced to a sentence. It is not the long version with paragraphs
-deleted, which is what makes it still readable.
+deleted, which is what makes it still readable. **"Tokenised real-world assets" stays in the first
+sentence here too**, for the reason at the top of this file: it is the only thing putting this in
+the AI-RWA track.
 
-> **Reckonz turns an investment thesis into on-chain positions sized to what the market can
-> actually absorb.** It works on xStocks: tokenised Apple, Nvidia, Tesla and 27 more, trading as
-> ERC-20s on X Layer. Your funds never leave your wallet.
+> **Reckonz turns an investment thesis into on-chain positions in tokenised real-world assets,
+> sized to what the market can actually absorb.** The assets are xStocks: tokenised Apple, Nvidia,
+> Tesla and 27 more, trading as ERC-20s on X Layer. Your funds never leave your wallet.
 >
 > You write a thesis in plain language. The AI compiles it into a falsifiable claim and into the
 > conditions you said would change your mind; those become exit triggers a contract enforces. It
@@ -109,13 +111,18 @@ deleted, which is what makes it still readable.
 >
 > The AI never holds a key that can move funds. Every fill pulls against a Permit2 signature you
 > just produced, and `PolicyGuard` reverts inside the trade's own transaction when a bound breaks.
-> Live on X Layer mainnet: 18 receipts, each carrying an evidence hash anyone can re-derive.
+> It bounds on market conditions, whether the price can be defended and the depth is really there,
+> not only on destination and size.
+>
+> It serves agents as well as people: `POST /api/fill` returns a plan that is inert until the owner
+> signs it, and the server never holds a key. Live on X Layer mainnet with 18 receipts, each
+> carrying an evidence hash anyone can re-derive.
 
 ### Shortest, if it is a one-line field
 
-> Write an investment thesis in plain language; Reckonz sizes it to what X Layer can actually
-> absorb, refuses the rest with the number, and enforces your own exit conditions on-chain, from a
-> wallet it never has the keys to.
+> Write an investment thesis in plain language; Reckonz turns it into positions in tokenised
+> real-world assets, sized to what X Layer can actually absorb, refuses the rest with the number,
+> and enforces your own exit conditions on-chain, from a wallet it never has the keys to.
 
 ---
 
