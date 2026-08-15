@@ -192,109 +192,123 @@ that has not built it.
 
 ## Images, one per thread
 
-### Two rules before generating anything
+Each block below is **one complete prompt**. Copy it, generate, post. Nothing to assemble and
+nothing to overlay afterwards.
 
-**No generated text, ever.** Image models cannot spell numbers reliably, and a post claiming
-$97,329 next to a picture reading $97,3Z9 destroys the one thing every thread here is asserting.
-Every prompt below produces a **textless** composition with deliberate empty space. Set the real
-numbers over it yourself afterwards, in a monospace face, using the palette below.
+Only Day 1 and Day 2 carry text, because only those two are about a specific figure. The other five
+compositions say what they mean without a single letter, which is also why they cannot render a
+number wrongly.
 
-**For Day 1 and Day 2, consider a screenshot instead.** `pnpm capacity` and `pnpm thesis` already
-print exactly the table the post is about, in the product's own voice. A real terminal readout beats
-any illustration for this account, and it is evidence rather than decoration. Generate an image for
-those two days only if the screenshot looks cramped at 16:9.
-
-### The style block, append to every prompt
-
-The palette is the product's, from `app/globals.css`, so the feed matches the app.
-
-```
-Flat 2D vector composition, dark technical instrument aesthetic. Background near-black
-#0b0d10. Panel surfaces #12151a separated by thin 1px borders #232830. No drop shadows,
-no glow, no bloom, no lens flare, no gradient mesh, no 3D render, no perspective.
-Single accent colour mint green #6ee7b7, used sparingly. Amber #f0b429 only where
-something is withheld or refused. Muted grey #5d6675 for anything inactive.
-Sparse composition with generous empty space in the upper left for text to be added
-later. No text, no letters, no numbers, no labels anywhere in the image.
-No people, no robots, no brains, no glowing orbs, no circuit-board motifs, no upward
-arrows, no candlestick charts. 16:9.
-```
+**On the two that do carry text:** image models still misspell digits. Read the number in the
+result before posting, character by character, against the table at the bottom of this file. If it
+is wrong, regenerate rather than post it. A picture reading $97,3Z9 under a post asserting $97,329
+undoes the one claim every thread here makes.
 
 ### Day 1, the market doubled
 
 ```
-Two horizontal bars stacked with wide spacing on the near-black ground. The lower bar
-is roughly twice the length of the upper one. Both are thin, flat, mint green #6ee7b7,
-square ends. Nothing else in the frame. The whole left third is empty.
+Flat 2D vector infographic on a near-black #0b0d10 background. Two thin horizontal
+bars with square ends, stacked with wide vertical spacing, both mint green #6ee7b7.
+The upper bar is short. The lower bar is exactly twice its length. To the right of
+the upper bar, the text "$48,000" in a clean monospace font, muted grey #5d6675.
+To the right of the lower bar, the text "$97,329" in the same monospace font, larger,
+in mint green #6ee7b7. Render both numbers exactly as written, with the dollar signs
+and commas. No other text anywhere. Generous empty space around everything.
+No drop shadows, no glow, no bloom, no gradient, no 3D, no perspective, no icons,
+no arrows, no charts, no people, no robots. Minimal technical instrument aesthetic.
+16:9.
 ```
-
-The image is the claim: same measurement, twice the length, four days apart.
 
 ### Day 2, $250,000 asked and $6,627 executed
 
 ```
-One large rectangle drawn as a thin muted grey #5d6675 outline, occupying most of the
-frame, unfilled. Inside its lower left corner sits a very small solid mint green
-#6ee7b7 rectangle covering roughly three percent of the outlined area. The contrast in
-area is the entire subject.
+Flat 2D vector infographic on a near-black #0b0d10 background. One large rectangle
+occupying most of the frame, drawn as a thin unfilled outline in muted grey #5d6675,
+with the text "$250,000" in clean monospace along its top edge in the same grey.
+Inside the lower left corner of that rectangle sits a small solid mint green #6ee7b7
+rectangle covering roughly three percent of the large rectangle's area, with the text
+"$6,627" in monospace immediately beside it in mint green. Render both numbers exactly
+as written, with dollar signs and commas. No other text anywhere. The contrast in area
+between the two shapes is the subject. No drop shadows, no glow, no gradient, no 3D,
+no icons, no arrows, no charts. Minimal technical instrument aesthetic. 16:9.
 ```
 
-The proportion is literally accurate, which is why it works. Do not let it drift to something
-that merely looks small.
+The three percent is the true ratio. Do not accept a result where the small rectangle merely looks
+small; it should be almost uncomfortably tiny.
 
 ### Day 3, the week we lost
 
 ```
-A dense evenly spaced grid of small identical squares filling the frame, all in muted
-grey #5d6675, all solid. Exactly one square, slightly off centre, is drawn as a hollow
-outline in amber #f0b429 instead of being filled. Everything else is identical to it in
-size and position, so the difference is only visible on a second look.
+Flat 2D vector composition on a near-black #0b0d10 background. A dense, evenly spaced
+grid of many small identical squares filling the frame, every square solid muted grey
+#5d6675. Exactly one square, positioned slightly off centre, is drawn instead as a
+hollow outline in amber #f0b429, identical in size and alignment to all the others so
+the difference is only noticeable on a second look. Absolutely no text, letters or
+numbers anywhere in the image. No drop shadows, no glow, no gradient, no 3D, no icons,
+no people, no robots. Minimal technical instrument aesthetic. 16:9.
 ```
 
-Something that looks right and is not. That is the whole thread in one frame.
+Something that looks correct and is not. The whole thread in one frame.
 
 ### Day 4, the fingerprint
 
 ```
-Two identical narrow vertical columns of small abstract glyph blocks, side by side with
-a gap between them, in muted grey #5d6675. The blocks are pure rectangles, not letters.
-A single horizontal row across both columns is mint green #6ee7b7, aligning exactly.
-Thin connecting line between the two columns on that row only.
+Flat 2D vector composition on a near-black #0b0d10 background. Two identical narrow
+vertical columns of small abstract rectangular blocks, side by side with a clear gap
+between them, all blocks muted grey #5d6675. The blocks are plain rectangles, never
+letters or characters. One single horizontal row across both columns is mint green
+#6ee7b7 instead, and the two mint blocks align exactly with each other, joined by a
+thin mint horizontal line spanning the gap. Absolutely no text, letters or numbers
+anywhere. No drop shadows, no glow, no gradient, no 3D, no icons. Minimal technical
+instrument aesthetic. 16:9.
 ```
 
-Two things being compared and found to match.
+Two things compared and found to match.
 
 ### Day 5, rules that can be measured
 
 ```
-Two columns of short horizontal bars, evenly spaced. The left column bars are solid
-mint green #6ee7b7. The right column bars are the same size but drawn as dashed amber
-#f0b429 outlines, unfilled. Equal count, equal spacing, different treatment.
+Flat 2D vector composition on a near-black #0b0d10 background. Two vertical columns of
+short horizontal bars, evenly spaced, equal number of bars in each column, all bars the
+same size. Every bar in the left column is solid mint green #6ee7b7. Every bar in the
+right column is an unfilled outline drawn with a dashed amber #f0b429 stroke. Thin
+#232830 vertical divider between the columns. Absolutely no text, letters or numbers
+anywhere. No drop shadows, no glow, no gradient, no 3D, no icons, no arrows. Minimal
+technical instrument aesthetic. 16:9.
 ```
 
-Measurable on the left, handed back to you on the right. Nothing is hidden and nothing is faked.
+Measurable on the left, handed back to you on the right. Nothing hidden, nothing faked.
 
 ### Day 6, the refusals
 
 ```
-A vertical stack of eight or nine thin horizontal rows, like rows in a ledger, on the
-near-black ground with thin #232830 separators. Seven or eight rows are amber #f0b429.
-Exactly one row is mint green #6ee7b7. The mint row is not at the top or bottom.
+Flat 2D vector composition on a near-black #0b0d10 background. A vertical stack of nine
+thin horizontal rows spanning most of the width, like rows in a ledger, each separated
+by a hairline #232830 rule. Eight of the rows are filled amber #f0b429. Exactly one row
+is filled mint green #6ee7b7, and it sits neither at the top nor at the bottom of the
+stack. Absolutely no text, letters or numbers anywhere. No drop shadows, no glow, no
+gradient, no 3D, no icons. Minimal technical instrument aesthetic. 16:9.
 ```
 
-One executed, the rest refused, and only the one pays us. Amber rather than red on purpose: a
-refusal is the product working, and `09-design.md` reserves red for a run that actually broke.
+One executed, eight refused, and only the one pays us. Amber rather than red on purpose:
+`09-design.md` reserves red for a run that actually broke, and painting refusals with trading-UI
+semantics makes the most valuable thing the product does look like a failure.
 
 ### Day 7, the submission
 
 ```
-Eighteen small solid mint green #6ee7b7 squares arranged in an even grid, generously
-spaced, on the near-black ground. All identical, all the same size, no highlight, no
-variation. Wide empty margin around the grid.
+Flat 2D vector composition on a near-black #0b0d10 background. Exactly eighteen small
+solid mint green #6ee7b7 squares, all identical in size, arranged in an evenly spaced
+grid of six columns and three rows, centred, with a wide empty margin all around. No
+highlight, no variation, no numbering. Absolutely no text, letters or numbers anywhere.
+No drop shadows, no glow, no gradient, no 3D, no icons. Minimal technical instrument
+aesthetic. 16:9.
 ```
 
-Eighteen marks for eighteen receipts. Count them and the number is true, which is the point of the
-account.
+Eighteen marks for eighteen receipts. Countable, and the count is true.
+
+**If the receipt count has moved by the 21st**, change the number of squares in the prompt to match
+and keep the grid even. That is the only edit any of these prompts should ever need.
 
 ## Numbers to re-check on the morning you post
 
