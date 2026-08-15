@@ -497,14 +497,16 @@ export async function prepareExit(req: ExitRequest): Promise<ExitPlan> {
     shortfall: measured ? undefined : { status, acknowledged: signable },
   };
 
-  // The hash is what binds; the file is only how someone checks it. Written
-  // only when the guard allows, for the same reason the entry path does it:
-  // `evidence/` is the record of trades that happened, and filling it with
-  // bundles for sales nobody made would make the directory worth less.
-  // …and only when we would actually hand it to a wallet. An unacknowledged
+  // The hash is what binds; the file is only how someone checks it. Written at
+  // plan time, before anything is signed, for the same reason the entry path
+  // does it: `evidence/` holds the plans that could be signed, not the sales
+  // that settled. A guard rejection is left out because its hash never reaches
+  // the chain, so no append-only receipt anchors it — see `src/fill.ts`.
+  //
+  // `signable` is the extra condition this path carries. An unacknowledged
   // unmeasured exit is a plan the caller is being shown, not one that can
-  // happen, and writing its bundle would put a file in `evidence/` for a sale
-  // that was refused on our side.
+  // happen: we refuse it on our side before the guard is ever the constraint,
+  // so its bundle would name a sale that had no route to the wallet at all.
   const hash = evidenceHash(bundle);
   const persistence: Persistence =
     allow && signable

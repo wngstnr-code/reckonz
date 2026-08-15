@@ -369,10 +369,18 @@ export async function prepareFill(req: FillRequest): Promise<FillPlan> {
   // failure reported rather than raised — the alternative is refusing to fill
   // because we could not save a copy of our own reasoning.
   //
-  // Only written when the guard allows. A rejected plan will never be signed,
-  // and `evidence/` is the record of fills that happened — filling it with
-  // bundles for trades nobody made would make the directory worth less, not
-  // more. The hash is returned either way.
+  // Only written when the guard allows — and note *when* that is. This runs at
+  // plan time, before the caller has signed anything, so `evidence/` holds the
+  // plans that passed the guard, not the fills that happened. Most become fills;
+  // one abandoned before the wallet is opened leaves its bundle behind. Counting
+  // the directory and expecting the number of receipts will not work.
+  //
+  // A rejection is excluded for a stronger reason than tidiness: its hash never
+  // reaches the chain. What makes a bundle evidence is `evidenceHash` sitting in
+  // an append-only receipt, so nobody can substitute a different file later.
+  // With no receipt to anchor it, a stored rejection is a note we wrote about
+  // ourselves and could rewrite at will — filing that beside the anchored ones
+  // blurs which is which. The hash is returned either way.
   const hash = evidenceHash(bundle);
   const persistence: Persistence = allow
     ? await persistBundle(bundle)
