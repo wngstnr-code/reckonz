@@ -32,39 +32,42 @@ written with that in mind, and the phrase appears in the first sentence on purpo
 
 ## Description, the one to paste
 
-> **Reckonz is non-custodial execution and risk tooling for tokenised real-world assets: the
-> xStocks equity tokens live on X Layer.** It is not a place to trade them. It is the layer that
-> decides whether a trade should happen at all, and refuses when the answer is no.
+> **Reckonz turns an investment thesis into on-chain positions that are sized to what the market
+> can actually absorb — and into the exit rules that close them.** It works on xStocks, the
+> tokenised US equities (Apple, Nvidia, Tesla and 27 others) that trade as ERC-20s on X Layer.
+> Your funds never leave your wallet, at any point.
 >
-> **What it refuses is the product.** The oracle marks a value *unpublishable* rather than guessing
-> when the issuer will not quote. The planner reports what the chain **cannot** absorb: ask it for
-> $250,000 of a semiconductor thesis and it sizes $6,627, hands back $243,373, and shows that
-> forcing the rest would have cost $55,148 in slippage against $33 for the part that fits.
-> `PolicyGuard` reverts inside the trade's own transaction when a bound breaks, rather than warning
-> afterwards. Almost every financial product sells *you can*. This one sells *you cannot, and here
-> is the number*.
+> **How it works.** You write a thesis in plain language: *"HBM memory supply stays tight for two
+> more quarters."* The AI compiles it into a falsifiable claim — a causal chain, the companies that
+> benefit, and the conditions you said would change your mind. It resolves those companies to
+> tokens that actually exist on X Layer, and tells you when one does not instead of substituting
+> something close. It sizes each leg against live Uniswap V3 depth rather than against the amount
+> you asked for. Your exit conditions become triggers a contract enforces: the decision made while
+> you are calm, and enforced when you are not. You sign once, and it executes.
 >
-> **The AI writes rules, not trades.** You state a thesis in plain language. The compiler turns it
-> into a falsifiable claim with a causal chain, named beneficiaries, and the part that matters:
-> **the conditions you said would change your mind**. Each becomes an exit trigger the on-chain
-> guard evaluates — the decision made while you are calm, and enforced when you are not. A schema,
-> not a prompt, bounds what the model may emit. It
-> can only name quantities the chain can measure, and a condition nothing can measure is surfaced
-> to you as a manual watch item instead of quietly becoming a rule that never fires. A red-team
-> suite runs hostile and prompt-injected theses through that path on every commit.
+> **What it refuses is the product.** Ask for $250,000 of that thesis and it sizes **$6,627**,
+> hands back $243,373, and shows that forcing the rest would have cost $55,148 in slippage against
+> $33 for the part that fits. The oracle marks a value *unpublishable* rather than guessing when
+> the issuer will not quote. `PolicyGuard` reverts inside the trade's own transaction when a bound
+> breaks, instead of warning afterwards. Almost every financial product sells *you can*. This one
+> sells *you cannot, and here is the number*.
 >
-> **The agent never holds a key that can move funds.** Every fill pulls against a Permit2 signature
-> the owner just produced: one token, a capped amount, twenty minutes. An agent with no fresh
-> signature moves nothing, and `PolicyGuard` bounds what it does with one. Unusually, it bounds on
-> **market conditions**, whether the price can be defended and the depth is actually there, rather
-> than only on destination and size.
+> **The AI never holds a key that can move funds.** Every fill pulls against a Permit2 signature
+> you just produced: one token, a capped amount, twenty minutes. An agent with no fresh signature
+> moves nothing. `PolicyGuard` then bounds what it does with one — unusually, on **market
+> conditions**: whether the price can be defended and the depth is really there, not only
+> destination and size. A schema rather than a prompt bounds what the model may emit, so it can
+> only name quantities the chain can measure; a condition nothing can measure is surfaced to you as
+> a manual watch item instead of quietly becoming a rule that never fires. A red-team suite runs
+> hostile and prompt-injected theses through that path on every commit.
 >
 > **It runs on X Layer mainnet, and the chain is the evidence.** 18 receipts in an append-only
 > registry, each carrying a hash of the exact quote, oracle reading and guard verdict the decision
-> was made on. That hash is published *before* signing, the bundle is archived publicly, and anyone
-> can re-derive it with `pnpm evidence`. A fee collector has taken real revenue into a 2-of-3 Safe.
-> Every contract in this system is verified on Sourcify, seven on mainnet and seven on testnet.
-> 106 Solidity and 216 TypeScript tests run in CI on every push.
+> was made on. That hash is published *before* anything is signed and the bundle is archived
+> publicly, so anyone can re-derive it and check that it matches. Fees have been collected on
+> mainnet; admin of the fee collector, the oracle and the receipt registry is a 2-of-3 Safe. Every
+> contract is verified on Sourcify — seven on mainnet, seven on testnet — and 106 Solidity plus 216
+> TypeScript tests run in CI on every push.
 >
 > **It serves agents as well as people.** `POST /api/fill` and `POST /api/exit` take a request,
 > quote it against live pool state, ask the on-chain guard, hash the evidence, and return a plan
@@ -73,15 +76,18 @@ written with that in mind, and the phrase appears in the first sentence on purpo
 > cannot override.
 >
 > **Honest about the market.** The entire xStock universe on X Layer absorbed $97,329 at 0.5%
-> price impact on 15 August 2026 — and about $48,000 four days earlier. We publish the number with
+> price impact on 15 August 2026 — and about $48,000 four days earlier. We publish that number with
 > its date rather than hide it, because it is a reading of the pools and not a property of them:
-> OKX's own order book settles these tickers on X Layer, and the arbitrage between the two is
-> deepening the market underneath us. The same pools traded $12.0M in 24 hours. It is the reason
-> the product refuses size, and the reason it was built non-custodially. The discipline layer is
-> already deployed, tested and audited; the liquidity is arriving on its own.
+> OKX's own order book settles these tickers on X Layer, and arbitrage between the two is deepening
+> the market underneath us. The same pools traded $12.0M in 24 hours. Thin depth is the reason this
+> product refuses size, and the reason it was built non-custodially. The discipline layer is
+> deployed, tested and audited now; the liquidity is arriving on its own.
 
-**Word count ~430.** If the field turns out to be shorter, use the version below and put the long
-one on the site.
+**Word count ~590**, up from ~430 when the "How it works" paragraph was added. That paragraph is
+the one that cannot be cut: without it a reader finishes the description without ever learning what
+a user actually does. If the field is capped, cut from the **bottom** — "It serves agents as well
+as people" and "Honest about the market" survive best as a follow-up post or on the site — and use
+the short version below rather than trimming the flow out of the top.
 
 ---
 
