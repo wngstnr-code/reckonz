@@ -89,14 +89,28 @@ figure as the caption.
 
 ## Day 2, 16 Aug: what it actually does
 
+**All four figures re-measured 2026-08-16 and all four had moved in a day.** They were $6,627,
+$243,373, $55,148 and $33 on the 15th. One leg did it: wNVDAx capacity went 1,222 to 14,928 USDG,
+about 12x, while the other four moved by single digits. Depth on one name, not a market-wide shift.
+
+**Take all four from one `pnpm plan 250000` run.** `pnpm thesis` reads a slightly different basket
+(28/28/16/18/10 against 25/25/20/20/10) and the pools move between runs, so it returned $18,941 for
+the same question minutes apart. Both are honest; mixing them is not.
+
 > Say you want to put $250,000 behind a view on memory chips.
 >
 > Most tools would just do it, and the cost of moving a market that small would come out of your
 > money without anyone showing you the number.
 
-> Ours executes $6,627 and tells you the other $243,373 does not fit.
+> Ours executes $20,361 and tells you the other $229,639 does not fit.
 >
-> Pushing the rest through would have cost $55,148 in price impact. The part that fits cost $33.
+> Doing the whole $250,000 in one shot would have cost $51,348 in price impact. The part that fits
+> cost $102.
+
+The second line says **the whole $250,000 in one shot**, not "pushing the rest through". The naive
+figure prices the entire basket at once; the remainder alone would cost more than that, since it is
+the part that runs furthest up the curve. The draft said "the rest" until 16 Aug. A post whose
+subject is being straight about a number cannot misread its own.
 
 > You write the idea in plain English. The AI turns it into a specific, checkable claim, works out
 > which stocks are actually tradable on X Layer, and sizes each one to what the market can really
@@ -199,8 +213,11 @@ that has not built it.
 > You write the idea, and the conditions you would exit on. The AI turns those into rules a
 > contract enforces inside the trade itself, not a reminder that arrives afterwards.
 
-> Ask it for $250k and it tells you $6,627 fits, then hands the rest back rather than force it into
-> a market that cannot take it.
+> Ask it for $250k and it tells you $20,361 fits, then hands the rest back rather than force it
+> into a market that cannot take it.
+
+**Re-measure this one on the 21st before posting.** It is the same figure as Day 2 and it changed
+by 3x between the 15th and the 16th. Five days out, treat the number above as a placeholder.
 
 > 18 trades on mainnet, each one auditable by anyone. Every contract published and verified. 322
 > tests on every change.
@@ -276,7 +293,7 @@ No other text. No drop shadows, no glow, no lens flare, no 3D render, no perspec
 icons, no arrows, no candlestick charts, no people, no robots.
 ```
 
-### Day 2, $250,000 asked and $6,627 executed
+### Day 2, $250,000 asked and $20,361 executed
 
 ```
 Editorial infographic poster, pure black #000000 background, entirely greyscale except for
@@ -297,9 +314,9 @@ black. Diagonal dithered streaks drift across the lower left.
 Foreground: one large rectangle occupying most of the frame, drawn as a thin unfilled white
 outline with sharp corners, and the text "$250,000" in white monospace along its top edge.
 Inside its lower left corner, a small solid mint green #6ee7b7 rectangle covering roughly
-three percent of the outlined area, almost uncomfortably small, with the text "$6,627" in
-mint green monospace immediately beside it. Reproduce both strings exactly. The vast empty
-interior of the outline is the subject and stays empty.
+eight percent of the outlined area, clearly a small minority of it, with the text "$20,361"
+in mint green monospace immediately beside it. Reproduce both strings exactly. The vast
+empty interior of the outline is the subject and stays empty.
 
 Along the bottom edge, very small uppercase monospace in dark grey: "THE REST IS REFUSED,
 WITH THE NUMBER".
@@ -505,12 +522,13 @@ character by character before uploading; a banner is seen far more often than an
 
 ## Numbers to re-check on the morning you post
 
-All of these have moved at least once, and two of them moved 2x in four days:
+All of these have moved at least once. Capacity moved 2x in four days, and the sizing run moved 3x
+in a single day. **Settle every one of them on the morning you post, not the night before:**
 
 | Number | How to settle it |
 |---|---|
 | capacity, $97,329 at 0.5% | `TARGET=mainnet pnpm capacity` |
-| the $250,000 to $6,627 run | `TARGET=mainnet LLM_PROVIDER=fixture pnpm thesis` |
+| the $250,000 run: $20,361 fits, $229,639 refused, $51,348 naive against $102 | `TARGET=mainnet pnpm plan 250000`, all four from this one run and not from `pnpm thesis` |
 | 24h pool volume, $12.0M | GeckoTerminal, network `x-layer` |
 | receipts, 18 | `count()` on `ReceiptRegistry` at `0x9D04575894F570C3638Bc1f6ECaD6EF36D479Fa6` |
 | tests, 106 + 216 = 322 | `pnpm check:tests` |

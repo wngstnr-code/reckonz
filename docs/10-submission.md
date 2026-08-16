@@ -45,9 +45,9 @@ written with that in mind, and the phrase appears in the first sentence on purpo
 > you asked for. Your exit conditions become triggers a contract enforces: the decision made while
 > you are calm, and enforced when you are not. You sign once, and it executes.
 >
-> **What it refuses is the product.** Ask for $250,000 of that thesis and it sizes **$6,627**,
-> hands back $243,373, and shows that forcing the rest would have cost $55,148 in slippage against
-> $33 for the part that fits. The oracle marks a value *unpublishable* rather than guessing when
+> **What it refuses is the product.** Ask for $250,000 of that thesis and it sizes **$20,361**,
+> hands back $229,639, and shows that executing the whole amount in one shot would have cost
+> $51,348 in slippage against $102 for the part that fits. The oracle marks a value *unpublishable* rather than guessing when
 > the issuer will not quote. `PolicyGuard` reverts inside the trade's own transaction when a bound
 > breaks, instead of warning afterwards. Almost every financial product sells *you can*. This one
 > sells *you cannot, and here is the number*.
@@ -102,8 +102,8 @@ the AI-RWA track.
 > You write a thesis in plain language. The AI compiles it into a falsifiable claim and into the
 > conditions you said would change your mind; those become exit triggers a contract enforces. It
 > sizes each leg against live pool depth rather than against the amount you asked for: request
-> $250,000 and it executes $6,627, hands back $243,373, and shows that forcing the rest would have
-> cost $55,148 in slippage against $33 for the part that fits.
+> $250,000 and it executes $20,361, hands back $229,639, and shows that executing the whole amount
+> in one shot would have cost $51,348 in slippage against $102 for the part that fits.
 >
 > The AI never holds a key that can move funds. Every fill pulls against a Permit2 signature you
 > just produced, and `PolicyGuard` reverts inside the trade's own transaction when a bound breaks.
@@ -190,10 +190,15 @@ book is visibly deepening these pools.
 
 **Numbers to re-check before pasting, and every one of these has already moved once.** Receipts
 (18), theses (3), tests (106 + 216), capacity ($97,329 at 0.5%, 2026-08-15), 24h pool volume
-($12.0M, same day), and the $250,000 → $6,627 run. `pnpm capacity`, `pnpm plan 250000 50`,
-`pnpm check:tests` and a `count()` read settle all of them. **Re-run them on the day you paste**:
-capacity and the plan figure both changed by more than 2x between 11 and 15 August with no code
-change, and a stale number in a submission is the one thing here a judge can falsify in a minute.
+($12.0M, same day), and the $250,000 → $20,361 run (2026-08-16). `pnpm capacity`,
+`pnpm plan 250000`, `pnpm check:tests` and a `count()` read settle all of them. **Re-run them on
+the day you paste**: capacity changed by more than 2x between 11 and 15 August, and the plan figure
+changed by 3x between 15 and 16 August, both with no code change. A stale number in a submission is
+the one thing here a judge can falsify in a minute.
+
+Take all four plan figures from a single `pnpm plan 250000` run. `pnpm thesis` sizes a slightly
+different basket and answered $18,941 to the same question minutes apart on 2026-08-16; both are
+honest, and a sentence that mixes them is not.
 
 **On the contract count, which is easy to state wrongly.** Fourteen are ours and verified, but
 that is **seven on mainnet plus seven on testnet**, not fourteen on mainnet. The eighth address in
@@ -219,8 +224,8 @@ which is a mock nobody trades.
 > You write the thesis, and the conditions you would exit on. The AI compiles those into rules
 > PolicyGuard enforces inside the trade's own transaction, not in a reminder afterwards.
 >
-> Ask it for $250k and it tells you $6,627 fits, then hands the rest back rather than force it into
-> a market that cannot take it.
+> Ask it for $250k and it tells you $20,361 fits, then hands the rest back rather than force it
+> into a market that cannot take it.
 >
 > 18 on-chain receipts, each with an evidence hash anyone can re-derive.
 >

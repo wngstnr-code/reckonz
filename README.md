@@ -43,8 +43,10 @@ than advised:
    conditions you said would change your mind. Ask for Samsung and it answers **"no matching
    asset"**, instead of substituting an adjacent ticker.
 2. **It sizes each leg against live Uniswap V3 depth**, not against the number you typed. Ask for
-   $250,000 and it executes **$6,627**, hands back $243,373, and shows that forcing the rest would
-   have cost **$55,148** in slippage against **$33** for the part that fits.
+   $250,000 and it executes **$20,361**, hands back $229,639, and shows that executing the whole
+   amount in one shot would have cost **$51,348** in slippage against **$102** for the part that
+   fits. Measured 2026-08-16; re-run `pnpm plan 250000` before quoting it, because it moved 3x in
+   the day before that with no change on our side.
 3. **The oracle refuses to publish** a value it cannot defend, rather than guessing. A cross-check
    sits between the engine and the chain, and it *withholds, never corrects*.
 4. **`PolicyGuard` reverts inside the trade's own transaction** when a bound breaks. There is no
@@ -292,7 +294,7 @@ The three moments that make the case, from one run of the web app:
 
 ```
 allocate  Samsung -> unmapped, "no matching asset"      <- it will not substitute an adjacent name
-capacity  $250,000 asked -> $6,627 executable           <- and it hands back the $243,373
+capacity  $250,000 asked -> $20,361 executable          <- and it hands back the $229,639
 guard     wSKHYx ALLOW                                  <- resolved: it tracks a US DR, not the Seoul share (D62)
 ```
 
