@@ -210,3 +210,176 @@ Not a component spec, and not permission to spend the remaining days on polish. 
 the deadline, **wallet connect beats every item above** — it changes the demo from *this system
 computes* to *this system executes, and you press the button*. A beautiful read-only page is still
 a read-only page.
+
+---
+
+# Addendum — the console rebuild
+
+Added 2026-08-16 by FE, which is the side this document was written *for*. Everything above still
+holds; nothing in it is revised. What follows are the decisions the brief deliberately left open —
+information architecture and table anatomy — now settled, so the argument does not get re-had per
+page.
+
+## The direction, in one line
+
+> **Product structure from Ondo. Table anatomy from Morpho. Palette and semantics stay Reckonz.**
+
+Both references were opened and read on 2026-08-16 rather than recalled, which matters: this
+document's own reference section warns that interfaces change, and Morpho had in fact already
+moved to a dark surface.
+
+## What the pages are
+
+`(console)` is a Next route group, so none of this appears in a URL. The marketing surface keeps
+`/`; the tool lives beside it and the old page stays reachable until the rebuild replaces it.
+
+| Route | Nav | Holds |
+|---|---|---|
+| `/assets` | Assets | The way in. Verdict ribbon over the thirty-asset board |
+| `/assets/<symbol>` | — | One asset: identity, reference, gap risk decomposed, depth, receipts |
+| `/idea` | Idea | The six-stage streamed run |
+| `/receipts` | Receipts | Track record joined from both registries |
+| `/trade` | Trade | Everything that needs a wallet |
+| `/preview` | — | Component states that cannot be summoned by waiting. `notFound()` outside `next dev` |
+
+Four nav entries, not five: `/assets` **is** the asset table, and a single asset opens from a row
+in it — which is also why the board owns that path rather than a separate `/verdict`, so a single
+asset is its child rather than a second address for the same subject. Trade sits last because the
+audience arrives without a wallet, and a nav that opens with it tells them they are in the wrong
+place.
+
+The words are one each, and everyday ones where they exist: `Receipts` rather than `Theses`,
+because everybody already knows what a receipt is and the page is literally a list of them.
+`Verdict` keeps its home as a column heading on the board, which is where it does real work.
+
+## Taken from Ondo — structure
+
+- **Named destinations instead of one long page.** The single most useful thing in that app, and
+  the direct fix for eleven stacked cards.
+- **A per-asset page that is a real destination**, with a stable URL. This document and
+  `03-architecture.md` have both asked for one — "a per-asset page showing which reference is used
+  and how well it has tracked" — and it has never had anywhere to live.
+- **The identity block.** Ondo prints `Shares Per Token: 1 NVDAon = 1.0009 NVDA` in plain text. We
+  compute exactly that multiplier and currently show it nowhere.
+- **A limits table, stated without embarrassment.** Ondo publishes a max trade size per session
+  ($1.2M–$3M). That is the same idea as `capacity`, and ours will read ~$2k per pool. The gap is
+  the argument, not a weakness: they can quote millions because they mint on demand, and on
+  X Layer nobody mints — there is only the pool, and we are the only ones measuring it.
+- **A protections panel.** Theirs is attestation PDFs on Dropbox. Ours is the same slot with
+  stronger contents: fourteen contracts verified on Sourcify, a 2-of-3 Safe, an append-only
+  registry, an evidence hash anyone can re-derive.
+
+## Taken from Morpho — table anatomy
+
+Read from `/vaults` on 2026-08-16:
+
+- **Page header = title, one sentence, one aggregate number.** Morpho leads with Total Deposits
+  at $12.4B.
+- **A control row above the table**: filters, a sort dropdown, free-text filter, a column chooser,
+  full-screen.
+- **Per-column sort affordances**, not a single global sort.
+- **Two-line cells** — the primary value with its context dimmed underneath (`587.27M USDC` over
+  `$586.96M`). This is the pattern that lets a dense table stay readable, and it is what our
+  `fair value` over `± band`, and `capacity` over `at 0.5% impact`, should use.
+- **A compact composition column.** Morpho renders collateral exposure as a row of avatars. Ours
+  is the four-part gap-risk micro-bar — the decomposition already in the CLI, which is what shows
+  the score is measured rather than asserted.
+- **The whole row is a link** to the detail page.
+- **A "How it works" button beside the heading.** We need one more than they do: gap risk and
+  capacity are ours to explain, and nobody arrives knowing them.
+
+## Where the references disagree with us — resolved, not copied
+
+Three places where following the reference would cost us the pitch.
+
+**1. The aggregate number is not a growth metric.** Morpho's headline is Total Deposits, because
+more deposits is their good outcome. Ours cannot be volume or TVL: `02-product.md` records that
+AUM is dead here at any capacity yet measured, and a headline promising scale would be arguing for
+a business this repo has already disproven. **The aggregate is the refused notional**, with total
+absorbable capacity beside it, both dated.
+
+**2. Ondo's home sorts by what is most appealing to buy** — Top Gainers, Trending, 24H green and
+red. Ours sorts by verdict, then by refused notional. Same slot, opposite question: theirs asks
+*which one do you want*, ours asks *which of these can be defended right now*. Carrying over
+trading-UI green/red would also break the palette rule at the top of this document, where red
+means the system is broken and a refusal is the product working.
+
+**3. No company logos in the table.** Both references lean on them, and for a shopping surface
+they are right — a logo is faster to scan than a word. Thirty rows of `wNVDAx` in mono is
+slower to scan and reads as an instrument rather than a storefront, which is the trade this
+project should take every time. Revisit only if the table proves genuinely hard to scan in use.
+
+## The ground moved to true black
+
+Changed 2026-08-17. This document opens by saying the tokens in `app/globals.css` are the de facto
+brand and warning against improving them into something generic, so a change to them owes a
+reason.
+
+The reason is that the app was the only Reckonz surface **not** on the brand's own background.
+`public/logo-reckonz-black.svg` is mint on `#000000`, every post image is mint on `#000000`, and
+`11-social.md` says "pure black" eight times and names `#6ee7b7` ten. The page sat on `#0b0d10`
+while everything published beside it sat on black.
+
+Nothing else moved. `#6ee7b7` was already exactly the brand mint and `#8b95a4` already exactly the
+brand grey, so **no colour was picked and none was replaced.** The surface ladder shifted down one
+step and every gap between steps is unchanged:
+
+```
+ground   #0b0d10 → #000000
+panel    #12151a → #0b0d10     (itself a brand colour, baked into logo-reckonz.png)
+raised   #171b21 → #12151a
+line     #232830 → unchanged   — reads a little stronger on black, which it needed
+edge     #2b323d → unchanged
+```
+
+Two things deliberately not done. `ink` stays `#e6e9ee` rather than going to `#ffffff`: pure white
+on pure black is harsh at body sizes, and the brand assets use white only for display type. And
+form fields now take `var(--color-ground)` instead of a hard-coded `#0c0f13`, so a field reads as a
+hole cut through the panel rather than as a fourth surface that drifts the next time the ladder
+moves.
+
+### Superseded the same day: light is the default, dark is a swap
+
+Later on 2026-08-17, the design owner's call. Both palettes now live in `globals.css` under the
+same eleven token names, so no component knows which theme it is in and none of them carries a
+`dark:` variant. Light is the default; `data-theme="dark"` on `<html>` restores every value in the
+block above, and a toggle is planned.
+
+The section above is left standing rather than deleted, because the reasoning in it is what makes
+dark mode *correct* rather than optional: the brand publishes mint on pure black, and that is the
+theme those assets belong to.
+
+What did not carry over is the part worth writing down. **The three semantic colours cannot be
+shared across themes.** `#6ee7b7` on white is roughly 1.6:1 and `#f0b429` about 1.9:1, so both are
+unreadable as text there. The hue is held and the value drops: `#0d9668`, `#9a6400`, `#c2352a`.
+`--color-faint` is the one that needed nothing — `#8b95a4` is the brand grey from
+`logo-reckonz-grey.svg` and sits legibly on both grounds.
+
+### One family, and what `font-mono` means now
+
+Also 2026-08-17. Monospace is gone; **Outfit** is the only face, self-hosted through `next/font`.
+
+The brief above asks for monospace on every number, and the reason it gives is the real one:
+columns of figures have to line up or they cannot be compared down the page, and the assets board
+is thirty rows of exactly that. The replacement is `font-variant-numeric: tabular-nums`, applied in
+the base layer to the `.font-mono` class — so every existing call site keeps working and the class
+now means *this is measured data* rather than *this is monospaced*.
+
+**Unverified, and it must be checked against the real table:** tabular figures are a font feature a
+face either ships or does not. If Outfit lacks them, the columns will shimmer and the answer is one
+monospaced family scoped to the table, not a return to mono everywhere.
+
+## Type scale
+
+The sizes are unchanged — 10.5 / 11 / 12.5 / 13.5 / 15 / 21, which this document records as a
+property worth keeping. They are now *named* in `app/globals.css` (`text-micro`, `text-meta`,
+`text-data`, `text-body`, `text-lead`, `text-title`) so a component reaches for a step instead of
+retyping `text-[11px]` and drifting half a pixel at a time. One addition, `text-display` at 34px,
+exists for exactly one job: the refused notional, which the brief above already puts at display
+size.
+
+## Note on ownership
+
+`docs/` is BE's by `07-team.md`. This addendum was written by FE because the document is
+explicitly addressed to FE — "the brief he can disagree with" — and a design decision recorded
+nowhere is a design decision that gets re-argued. Nothing above the addendum line was altered.

@@ -446,6 +446,36 @@ Two places to land it:
 Record one run end to end. The evidence block in `05-status.md § Results worth keeping` is the
 script — that single run exercises every claim the product makes.
 
+### 6. Files FE has edited outside `app/` — the console rebuild, from 2026-08-16
+
+Recorded rather than done quietly, for the same reason BE's crossings above are: the rule exists
+so nobody's branch silently loses, and a crossing that nobody wrote down is one the other side
+discovers as a conflict.
+
+The console rebuild lives in `app/(console)/` and `app/components/console/`, both FE's own. Three
+things sit outside it.
+
+- **`app/components/Wallet.tsx`** — BE's since the 2026-08-12 reassignment. **One line**: the
+  connect button's `className`, from mint-filled to chrome weight. It was the only accent-coloured
+  control in the header, which made the loudest thing on every page the one action a visitor
+  without a wallet cannot take — and the board, the run and the receipts are all readable without
+  one. No logic, no props, no behaviour touched. The comment above it says the same.
+- **`docs/09-design.md`** — `docs/` is BE's by the table above, but that file is explicitly
+  addressed to FE as "the brief he can disagree with". An addendum is appended below a marked line
+  recording the information architecture and table anatomy now settled: structure from Ondo,
+  table anatomy from Morpho, palette unchanged. **Nothing above that line was altered.**
+- **`app/api/**` — planned, not yet written.** `/assets` needs two routes that do not exist: one
+  serving the guard's answer across all thirty assets, one serving a stored run. The modules that
+  compute both are in `src/`; nothing has ever served them to a browser. The owner's call was that
+  FE writes them rather than waiting. When they land they are listed here with their shape, and
+  they compute nothing of their own — they read `src/` and serve it, per D28.
+
+Also worth knowing, because it changes what the routes above must do: `pnpm capacity` across all
+thirty assets takes **70 seconds** on the throttled public RPC, and that is capacity alone, before
+fair value, the issuer quote, the oracle read or the guard decision. No page can compute that in a
+request. The design is a measured snapshot with its timestamp on screen, refreshed in the
+background, which is the same shape `observations/registry.jsonl` already has.
+
 ---
 
 ## Shared, and jointly blocking
