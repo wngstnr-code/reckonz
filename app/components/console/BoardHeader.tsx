@@ -1,5 +1,6 @@
 import type { Board } from '@/src/board';
 import { REFUSAL, freshness, usd, verdictOf } from './board-format';
+import type { RefreshState } from './useBoardClock';
 
 /**
  * The numbers a reader should carry away, and the ones that stop them being
@@ -23,10 +24,16 @@ export function BoardHeader({
   board,
   sizeUsdg,
   from,
+  now,
+  refresh,
+  onRefresh,
 }: {
   board: Board;
   sizeUsdg: number;
   from: 'blob' | 'file';
+  now: number;
+  refresh: RefreshState;
+  onRefresh: () => void;
 }) {
   const limit = board.mandate.maxImpactBps;
   const total = board.totals.capacityUsdg[limit] ?? 0;
@@ -53,7 +60,7 @@ export function BoardHeader({
     .sort((a, b) => b[1] - a[1])
     .map(([code, n]) => `${n} ${REFUSAL[code] ?? code}`);
 
-  const age = freshness(board.measuredAt);
+  const age = freshness(board.measuredAt, now);
 
   return (
     <section className="mb-8">
@@ -96,9 +103,28 @@ export function BoardHeader({
         </p>
       </div>
 
-      <p className="mt-3 font-mono text-meta text-faint">
-        measured {age.label} · {new Date(board.measuredAt * 1000).toISOString().slice(0, 16).replace('T', ' ')}Z
-        {from === 'file' && ' · from the copy that shipped with this deployment'}
+      <p className="mt-3 flex flex-wrap items-center gap-x-2 font-mono text-meta text-faint">
+        <span>
+          measured {age.label} ·{' '}
+          {new Date(board.measuredAt * 1000).toISOString().slice(0, 16).replace('T', ' ')}Z
+          {from === 'file' && ' · from the copy that shipped with this deployment'}
+        </span>
+
+        <button
+          type="button"
+          onClick={onRefresh}
+          disabled={refresh === 'checking'}
+          className="text-dim underline underline-offset-3 transition-colors duration-200 hover:text-ink disabled:text-faint"
+        >
+          {refresh === 'checking' ? 'checking' : 'check for a newer one'}
+        </button>
+
+        {/* Each of these is a different fact and only one of them is a problem.
+            "Unchanged" is the answer fifty-nine minutes out of sixty, so it is
+            said in the same grey as the timestamp rather than as a warning. */}
+        {refresh === 'unchanged' && <span>this is the latest measurement</span>}
+        {refresh === 'updated' && <span className="text-signal">updated</span>}
+        {refresh === 'failed' && <span className="text-caution">could not reach the board</span>}
       </p>
 
       {age.warning && (

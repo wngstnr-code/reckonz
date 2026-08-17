@@ -50,7 +50,12 @@ export default async function AssetsPage() {
       </PageHeader>
 
       {found ? (
-        <Board board={found.board} from={found.from} defaultSizeUsdg={DEFAULT_SIZE_USDG} />
+        <Board
+          board={found.board}
+          from={found.from}
+          defaultSizeUsdg={DEFAULT_SIZE_USDG}
+          renderedAt={Date.now()}
+        />
       ) : (
         <NoBoard />
       )}
