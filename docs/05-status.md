@@ -16,7 +16,7 @@ colliding. `06-assessment.md` is the honest read on whether this is a business.
 ```bash
 cd /Users/mac/Desktop/okxai
 set -a && source .env && set +a     # PRIVATE_KEY, GEMINI_API_KEY, CASH
-pnpm typecheck && pnpm test         # expect: clean, 232 unit tests, then 106 passed
+pnpm typecheck && pnpm test         # expect: clean, 239 unit tests, then 106 passed
 git status --short                  # expect: clean; docs/ is tracked now, not ignored
 pnpm dev                            # the web app, port 3000 (falls back if taken)
 ```

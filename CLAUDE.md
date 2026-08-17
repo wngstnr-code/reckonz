@@ -62,11 +62,13 @@ pnpm measure [--multipliers]  # re-derive the recorded multipliers and gap σ fr
 pnpm evidence [hash]         # verify receipts against the bundles they claim (D57)
 pnpm blob:check              # can THIS environment write to the archive, and can the site read it
 pnpm index [--verify|--rebuild]  # keep observations/registry.jsonl current (D66)
+pnpm board                   # measure the assets board -> observations/board.json (what /assets reads)
+pnpm showcase ["thesis"] [usdg]  # record one REAL run -> observations/showcase.json; needs GEMINI_API_KEY
 pnpm dev                     # the web app — thesis in, guard verdict out
 pnpm build                   # next build (what Vercel runs); contracts are build:contracts
 pnpm typecheck               # covers src/ and app/
 pnpm test:sol                # 106 Foundry tests
-pnpm test:unit               # 232 unit tests over src/ — node:test, no runner dependency (D71)
+pnpm test:unit               # 239 unit tests over src/ — node:test, no runner dependency (D71)
 pnpm test                    # both suites
 pnpm check:tests             # both numbers, checked against every doc that states them (D60, D71)
 ```
