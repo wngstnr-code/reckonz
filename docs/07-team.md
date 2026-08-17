@@ -447,7 +447,7 @@ Neither of these belongs to one person; both have to be *someone's* on the day.
 
 | Item | Notes |
 |---|---|
-| **Repo visibility** | Private today. Rules do not demand public, but judges scoring "product completeness" will want to read it. Decide before submitting. |
+| ~~**Repo visibility**~~ | ✅ **Public 2026-08-17.** History scanned for secrets first — `.env` never tracked, no key in any of the 160 commits. Anything committed from here is world-readable the moment it is pushed. |
 | **`@XLayerOfficial` post** | Must go up from [@reckonz_xyz](https://x.com/reckonz_xyz) **at submission time**. The account already exists; the post does not. |
 | **Google Form** | Due 21 Aug 23:59 UTC. Link in `00-hackathon.md`. |
 
