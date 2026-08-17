@@ -74,6 +74,27 @@ export function verdictOf(asset: BoardAsset, sizeUsdg: number): Verdict {
 }
 
 /**
+ * How much of this board carries a price, and whether any of it does.
+ *
+ * These are two different failures wearing one face. A board always has depth:
+ * the walk is `eth_call` against pools that either hold liquidity or do not, and
+ * it succeeds even when nothing else does. A board only has *values* if the
+ * issuer answered, and on 2026-08-17 both issuer hosts returned 502 for an hour
+ * — `computeFairValue` correctly withheld all thirty, the walk still reported
+ * nineteen markets with real depth, and every one of them refused for
+ * `NO_REFERENCE`.
+ *
+ * Rendered without this distinction that board reads as nineteen broken
+ * markets. It is nineteen working markets and one broken feed, and the whole
+ * point of an oracle that withholds is undone if the page cannot say which.
+ */
+export function pricing(board: { assets: BoardAsset[] }) {
+  const total = board.assets.length;
+  const priced = board.assets.filter((a) => a.publishable && a.fairValue !== null).length;
+  return { total, priced, unpriced: total - priced, blind: total > 0 && priced === 0 };
+}
+
+/**
  * How old is too old, and what to say about it.
  *
  * A board is a transcript of one instant, and the instant it describes has been

@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import type { Board as BoardData } from '@/src/board';
 import { BoardHeader } from './BoardHeader';
 import { BoardView } from './BoardView';
+import { PricingNotice } from './PricingNotice';
 import { SizeControl } from './SizeControl';
 import { useNow, type RefreshState } from './useBoardClock';
 
@@ -78,6 +79,7 @@ export function Board({
 
   return (
     <>
+      <PricingNotice board={board} />
       <BoardHeader
         board={board}
         sizeUsdg={size}

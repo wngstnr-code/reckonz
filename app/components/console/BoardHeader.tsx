@@ -1,5 +1,5 @@
 import type { Board } from '@/src/board';
-import { REFUSAL, freshness, usd, verdictOf } from './board-format';
+import { REFUSAL, freshness, pricing, usd, verdictOf } from './board-format';
 import type { RefreshState } from './useBoardClock';
 
 /**
@@ -60,6 +60,12 @@ export function BoardHeader({
     .sort((a, b) => b[1] - a[1])
     .map(([code, n]) => `${n} ${REFUSAL[code] ?? code}`);
 
+  // With no price there is no verdict to summarise, only one cause repeated
+  // nineteen times. `PricingNotice` has already said it once, in the sentence
+  // that explains it; saying it again as a count would turn one broken feed
+  // back into a wall of broken markets.
+  const blind = pricing(board).blind;
+
   const age = freshness(board.measuredAt, now);
 
   return (
@@ -91,16 +97,22 @@ export function BoardHeader({
           {unreadable > 0 && <> · {unreadable} we could not read</>}
         </p>
 
-        <p className="text-body text-dim">
-          At {usd(sizeUsdg)}: <b className="font-semibold text-signal">{allowed} allowed</b>
-          {refused > 0 && (
-            <>
-              {' '}
-              · <span className="text-caution">{refused} refused</span>
-              {reasons.length > 0 && <span className="text-faint"> — {reasons.join(', ')}</span>}
-            </>
-          )}
-        </p>
+        {blind ? (
+          <p className="text-body text-caution">
+            No verdict is possible at any size until a price is published.
+          </p>
+        ) : (
+          <p className="text-body text-dim">
+            At {usd(sizeUsdg)}: <b className="font-semibold text-signal">{allowed} allowed</b>
+            {refused > 0 && (
+              <>
+                {' '}
+                · <span className="text-caution">{refused} refused</span>
+                {reasons.length > 0 && <span className="text-faint"> — {reasons.join(', ')}</span>}
+              </>
+            )}
+          </p>
+        )}
       </div>
 
       <p className="mt-3 flex flex-wrap items-center gap-x-2 font-mono text-meta text-faint">
