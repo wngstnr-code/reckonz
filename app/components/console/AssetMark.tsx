@@ -19,6 +19,14 @@ import { useState } from 'react';
  *
  * Both views use this. A logo in the grid and a bare ticker in the table would
  * read as two different products.
+ *
+ * **The frame is square and deliberately has no radius.** Every one of these
+ * files is a full-bleed 256x256 canvas that carries its own shape: `wAAPLx`
+ * clips itself to a notched X, the older ones fill the square and draw a disc
+ * on top. `rounded-full` was cutting the first kind back into the second and
+ * deleting the mark it was meant to show. Even a small radius would shave the
+ * points off that X, so the frame stays out of the artwork's way and lets each
+ * file decide what it is.
  */
 const SOURCES = ['svg', 'png'] as const;
 
@@ -28,7 +36,7 @@ export function AssetMark({ symbol, size = 36 }: { symbol: string; size?: number
   if (attempt >= SOURCES.length) {
     return (
       <span
-        className="flex shrink-0 items-center justify-center rounded-full border border-line bg-raised font-mono text-faint"
+        className="flex shrink-0 items-center justify-center border border-line bg-raised font-mono text-faint"
         style={{ height: size, width: size, fontSize: size * 0.35 }}
       >
         {symbol.replace(/^w/, '').slice(0, 2)}
@@ -46,7 +54,7 @@ export function AssetMark({ symbol, size = 36 }: { symbol: string; size?: number
       alt=""
       loading="lazy"
       onError={() => setAttempt((n) => n + 1)}
-      className="shrink-0 rounded-full bg-raised object-contain"
+      className="shrink-0 bg-raised object-contain"
       style={{ height: size, width: size }}
     />
   );
