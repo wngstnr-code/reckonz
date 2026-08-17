@@ -40,6 +40,8 @@ function asset(over: Partial<BoardAsset> = {}): BoardAsset {
     capacityUsdg: { 50: 5_000 },
     ladder: LADDER.map((sizeUsdg) => ({
       sizeUsdg,
+      impactBps: sizeUsdg / 100,
+      effectivePrice: 100 + sizeUsdg / 10_000,
       decision: { ok: sizeUsdg <= 1_000, reason: sizeUsdg <= 1_000 ? undefined : 'PRICE_IMPACT' },
     })) as BoardAsset['ladder'],
     ...over,
@@ -94,9 +96,21 @@ test('a measured rung is answered from that rung and no other', () => {
 });
 
 test('a refusal code with no sentence still reaches the reader as a refusal', () => {
+  // `Rejection` is a closed union, so the compiler says this cannot happen. The
+  // compiler is describing this build; the board arrives at runtime from a JSON
+  // file or a blob that a newer worker wrote, and a code added on that side
+  // reaches this one before the sentence for it does. The cast is the point of
+  // the test, not a way around it.
   const odd = asset({
-    ladder: [{ sizeUsdg: 250, decision: { ok: false, reason: 'SOMETHING_NEW' } }],
-  } as Partial<BoardAsset>);
+    ladder: [
+      {
+        sizeUsdg: 250,
+        impactBps: 7,
+        effectivePrice: 100.7,
+        decision: { ok: false, reason: 'SOMETHING_NEW' },
+      },
+    ] as unknown as BoardAsset['ladder'],
+  });
   const v = verdictOf(odd, 250);
   assert.equal(v.ok, false);
   assert.equal(v.code, 'SOMETHING_NEW');

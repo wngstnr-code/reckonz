@@ -1,4 +1,6 @@
 import type { BoardAsset } from '@/src/board';
+import type { Route } from 'next';
+import Link from 'next/link';
 import { AssetMark } from './AssetMark';
 import { TONE, pct, usd, verdictOf } from './board-format';
 
@@ -41,7 +43,15 @@ function Row({ asset, sizeUsdg }: { asset: BoardAsset; sizeUsdg: number }) {
         <div className="flex items-center gap-2.5">
           <AssetMark symbol={asset.symbol} size={26} />
           <div>
-            <div className="font-mono text-data text-ink">{asset.symbol}</div>
+            {/* The ticker rather than the whole row. A row carries four other
+                numbers a reader may want to select and compare, and making all
+                of it a link takes that away to save one click. */}
+            <Link
+              href={`/assets/${asset.symbol}` as Route}
+              className="font-mono text-data text-ink underline-offset-3 hover:underline"
+            >
+              {asset.symbol}
+            </Link>
             <div className="text-micro tracking-normal text-faint normal-case">
               {asset.name ?? '—'}
             </div>

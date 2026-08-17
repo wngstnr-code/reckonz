@@ -2,6 +2,8 @@
 
 import type { BoardAsset } from '@/src/board';
 import { DepthCurve } from './DepthCurve';
+import type { Route } from 'next';
+import Link from 'next/link';
 import { AssetMark } from './AssetMark';
 import { TONE, pct, usd, verdictOf } from './board-format';
 
@@ -29,7 +31,10 @@ export function AssetCard({ asset, sizeUsdg }: { asset: BoardAsset; sizeUsdg: nu
   const capacity = asset.capacityUsdg[50];
 
   return (
-    <article className="rounded-2xl border border-line bg-panel p-4">
+    <Link
+      href={`/assets/${asset.symbol}` as Route}
+      className="block rounded-2xl border border-line bg-panel p-4 transition-colors duration-200 hover:border-faint"
+    >
       <header className="flex items-center gap-3">
         <AssetMark symbol={asset.symbol} />
         <div className="min-w-0">
@@ -60,7 +65,7 @@ export function AssetCard({ asset, sizeUsdg }: { asset: BoardAsset; sizeUsdg: nu
           <span>gap {asset.gapRisk}</span>
         </div>
       </div>
-    </article>
+    </Link>
   );
 }
 

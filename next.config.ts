@@ -27,6 +27,11 @@ const config: NextConfig = {
     // straight through to "nothing measured" whenever the archive is unreachable,
     // while `/api/board` beside it still answered from the file.
     '/assets': ['./observations/board.json', './observations/showcase.json'],
+    // Same reason, one segment down: the detail page reads the store directly
+    // too, and a route left out of this list has no floor when the archive is
+    // unreachable — it would 404 every asset rather than serve the copy that
+    // shipped with the deployment.
+    '/assets/[symbol]': ['./observations/board.json'],
   },
 };
 
