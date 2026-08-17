@@ -1,0 +1,38 @@
+{
+  "recordedAt": 1786985517,
+  "thesis": "Stablecoin settlement volume keeps compounding onchain, so the issuers and the exchanges that clear it capture more of the payments margin than the incumbent card networks do.",
+  "claim": "Compounding onchain stablecoin settlement volume will cause issuers and clearing exchanges to capture payment margin from incumbent card networks.",
+  "horizonDays": 365,
+  "provider": "gemini-3.6-flash (live)",
+  "live": true,
+  "notionalUsdg": 250000,
+  "maxImpactBps": 50,
+  "lines": [
+    {
+      "symbol": "wCOINx",
+      "targetBps": 10000,
+      "plannedBps": 43,
+      "notional": 1086.339748,
+      "naiveImpactBps": 7140,
+      "plannedImpactBps": 50,
+      "slices": 1
+    }
+  ],
+  "verdicts": [
+    {
+      "symbol": "wCOINx",
+      "fillSizeUsdg": 1086,
+      "impactBps": 51,
+      "ok": false,
+      "reason": "PRICE_IMPACT"
+    }
+  ],
+  "invented": 0,
+  "totals": {
+    "askedUsdg": 250000,
+    "placedUsdg": 1086.339748,
+    "unallocatedUsdg": 248913.660252,
+    "naiveCostUsdg": 178500,
+    "plannedCostUsdg": 5.431698740000001
+  }
+}
