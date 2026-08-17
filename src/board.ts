@@ -187,11 +187,70 @@ async function depthOf(asset: Address): Promise<{
 
 const usdgWhole = (raw: bigint) => Number(formatUnits(raw, USDG.decimals));
 
-function median(values: number[]): number {
+/** Zero for an empty set, and the mean of the middle two when the count is even. */
+export function median(values: number[]): number {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
   return sorted.length % 2 === 0 ? ((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2 : (sorted[mid] ?? 0);
+}
+
+/**
+ * Turn the per-asset walk into the numbers a header can state.
+ *
+ * Split out from `measureBoard` because it is the half worth pinning: the walk
+ * is I/O and the arithmetic is where a judgement lives, and the judgement here
+ * is which assets count.
+ *
+ * **Only `unreadable` is excluded.** An asset whose pools are empty really does
+ * absorb nothing, so dropping it would flatter both the total and the median by
+ * describing a market that is thinner than the page implies. An asset we could
+ * not read contributes nothing but a guess, and folding it in as zero would be
+ * a failure presented as a thin market — which is the one thing this product
+ * exists not to do.
+ *
+ * The median sits beside the total rather than under it, for the reason D84
+ * left behind after volume turned out to be 81% two names: read the
+ * concentration before the total. On the first measurement one token was 30% of
+ * the whole board.
+ */
+export function summarise(
+  assets: BoardAsset[],
+  limits: readonly number[] = CAPACITY_LIMITS_BPS,
+  headline: number = DEFAULT_MANDATE.maxImpactBps,
+): Board['totals'] {
+  const priced = assets.filter((a) => a.depth !== 'unreadable');
+
+  const capacityUsdg: Record<number, number> = {};
+  const medianUsdg: Record<number, number> = {};
+  for (const limit of limits) {
+    const values = priced.map((a) => a.capacityUsdg[limit] ?? 0);
+    capacityUsdg[limit] = values.reduce((sum, v) => sum + v, 0);
+    medianUsdg[limit] = median(values);
+  }
+
+  const ranked = [...priced].sort(
+    (a, b) => (b.capacityUsdg[headline] ?? 0) - (a.capacityUsdg[headline] ?? 0),
+  );
+  const top = ranked[0];
+  const total = capacityUsdg[headline] ?? 0;
+
+  return {
+    capacityUsdg,
+    medianUsdg,
+    largest:
+      top && total > 0
+        ? {
+            symbol: top.symbol,
+            usdg: top.capacityUsdg[headline] ?? 0,
+            shareOfTotal: (top.capacityUsdg[headline] ?? 0) / total,
+          }
+        : null,
+    unmeasured: assets.filter((a) => a.depth === 'unreadable').map((a) => a.symbol),
+    dry: assets
+      .filter((a) => a.depth === 'no-liquidity' || a.depth === 'no-pool')
+      .map((a) => a.symbol),
+  };
 }
 
 /**
@@ -291,26 +350,6 @@ export async function measureBoard(chainId = 196): Promise<Board> {
     };
   });
 
-  // Only `unreadable` is excluded. An asset whose pools are empty really does
-  // absorb nothing, and dropping it would flatter the median; an asset we could
-  // not read contributes nothing but a guess, and folding it in as zero would
-  // be a failure presented as a thin market.
-  const priced = assets.filter((a) => a.depth !== 'unreadable');
-  const totalsByLimit: Record<number, number> = {};
-  const medianByLimit: Record<number, number> = {};
-  for (const limit of CAPACITY_LIMITS_BPS) {
-    const values = priced.map((a) => a.capacityUsdg[limit] ?? 0);
-    totalsByLimit[limit] = values.reduce((sum, v) => sum + v, 0);
-    medianByLimit[limit] = median(values);
-  }
-
-  const limit = DEFAULT_MANDATE.maxImpactBps;
-  const ranked = [...priced].sort(
-    (a, b) => (b.capacityUsdg[limit] ?? 0) - (a.capacityUsdg[limit] ?? 0),
-  );
-  const top = ranked[0];
-  const total = totalsByLimit[limit] ?? 0;
-
   return {
     measuredAt: now,
     chainId,
@@ -318,19 +357,6 @@ export async function measureBoard(chainId = 196): Promise<Board> {
     capacityLimitsBps: [...CAPACITY_LIMITS_BPS],
     ladderUsdg: [...LADDER_USDG],
     assets,
-    totals: {
-      capacityUsdg: totalsByLimit,
-      medianUsdg: medianByLimit,
-      largest:
-        top && total > 0
-          ? {
-              symbol: top.symbol,
-              usdg: top.capacityUsdg[limit] ?? 0,
-              shareOfTotal: (top.capacityUsdg[limit] ?? 0) / total,
-            }
-          : null,
-      unmeasured: assets.filter((a) => a.depth === 'unreadable').map((a) => a.symbol),
-      dry: assets.filter((a) => a.depth === 'no-liquidity' || a.depth === 'no-pool').map((a) => a.symbol),
-    },
+    totals: summarise(assets),
   };
 }

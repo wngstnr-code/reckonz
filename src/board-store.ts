@@ -69,7 +69,7 @@ export function writeBoard(board: Board, path = boardPath()): string {
 
 export function readBoard(): Board | null {
   try {
-    return validate(JSON.parse(readFileSync(boardPath(), 'utf8')));
+    return parseBoard(JSON.parse(readFileSync(boardPath(), 'utf8')));
   } catch {
     return null;
   }
@@ -83,7 +83,7 @@ export function readBoard(): Board | null {
  * blank where the timestamp should be. Silence is recoverable; an undated
  * number is not.
  */
-function validate(parsed: unknown): Board | null {
+export function parseBoard(parsed: unknown): Board | null {
   const board = parsed as Board;
   return typeof board?.measuredAt === 'number' && Array.isArray(board.assets) ? board : null;
 }
@@ -145,7 +145,7 @@ export async function fetchBoard(): Promise<{ board: Board; from: 'blob' | 'file
   try {
     const response = await fetch(`${BOARD_BLOB_BASE}/${BOARD_BLOB_KEY}`, { cache: 'no-store' });
     if (response.ok) {
-      const board = validate(await response.json());
+      const board = parseBoard(await response.json());
       if (board) return { board, from: 'blob' };
     }
   } catch {
