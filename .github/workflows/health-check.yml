@@ -1,0 +1,91 @@
+# Something that calls `GET /api/health`.
+#
+# The route has existed since D81 and nothing was calling it, which is the same
+# shape as the defect it was built for: the oracle sat 173,242 seconds stale
+# while every request was answered in milliseconds. A check nobody runs is a
+# comment.
+#
+# **Why here and not on Railway.** The failure this watches for is the publish
+# worker stopping — gas exhausted, six cycles failed, the host giving up, or
+# Railway itself being down. A monitor living on Railway shares every one of
+# those failure modes with the thing it monitors, and a monitor that dies emits
+# silence, which is indistinguishable from healthy. This runs on a third
+# provider: GitHub watches Vercel, which reads the chain the Railway worker
+# writes to. No two of them fail together.
+#
+# **Why it fails on `degraded`, which answers 200.** `healthHttpStatus` returns
+# 503 only for `down`, deliberately — an uptime service pages on non-2xx and
+# `degraded` still allows a fill. But `degraded` is also what "some assets have
+# crossed maxAge" looks like, and with a runway measured in days that is the
+# warning worth having early rather than the one that comes when everything has
+# already stopped. So the HTTP code is not the signal here; the body is.
+#
+# `schedule` is best-effort and drifts under load — fine for an alert, which is
+# why `publish-oracle.yml` refuses to rely on it for a cadence (D46).
+
+name: health
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: health
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: GET /api/health
+        run: |
+          set -uo pipefail
+          URL="https://reckonz.xyz/api/health"
+
+          # -m so a hung endpoint fails the step rather than the timeout-minutes
+          # above, which would read as an infrastructure problem instead of an
+          # outage. Write the code on its own line so a truncated body cannot be
+          # mistaken for it.
+          code=$(curl -sS -m 30 -o body.json -w '%{http_code}' "$URL") || {
+            echo "::error::$URL did not answer at all — DNS, TLS or Vercel is down"
+            exit 1
+          }
+
+          echo "HTTP $code"
+          jq . body.json || cat body.json
+
+          status=$(jq -r '.status // "unparseable"' body.json)
+
+          case "$status" in
+            ok)
+              if [ "$code" != "200" ]; then
+                echo "::error::status ok but HTTP $code — the route and its own rule disagree"
+                exit 1
+              fi
+              echo "ok — block $(jq -r '.chain.blockNumber' body.json)"
+              ;;
+            degraded)
+              echo "::error::DEGRADED — a fill can still happen, but something is wrong"
+              jq -r '.problems[] | "  · " + .' body.json
+              exit 1
+              ;;
+            down)
+              echo "::error::DOWN — nothing can execute right now"
+              jq -r '.problems[] | "  · " + .' body.json
+              exit 1
+              ;;
+            *)
+              echo "::error::unparseable health response (HTTP $code) — the deployment answered with something that is not a health report"
+              exit 1
+              ;;
+          esac
+
+      - name: Oracle age, for the log
+        if: always()
+        run: |
+          # Printed on every run, pass or fail. When an alert does fire, the
+          # previous runs are the history that says whether the age had been
+          # creeping up for hours or fell off a cliff.
+          jq -r '.assets[] | "  \(.symbol)  \(.ageSeconds)s / \(.maxAgeSeconds)s\(if .stale then "  STALE" else "" end)"' body.json 2>/dev/null || true
