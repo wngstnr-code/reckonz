@@ -6,6 +6,7 @@
     "watchPatterns": ["src/**", "package.json", "pnpm-lock.yaml", "railway.json"]
   },
   "deploy": {
+    "preDeployCommand": "cp -n observations/issuer-marks.jsonl /data/issuer-marks.jsonl 2>/dev/null || true",
     "startCommand": "pnpm publish:loop",
     "numReplicas": 1,
     "sleepApplication": false,
