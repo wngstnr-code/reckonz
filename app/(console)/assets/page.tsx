@@ -1,5 +1,6 @@
 import { fetchBoard } from '@/src/board-store';
 import { Board } from '@/app/components/console/Board';
+import { HowItWorks } from '@/app/components/console/HowItWorks';
 import { PageHeader } from '@/app/components/console/PageHeader';
 
 export const metadata = {
@@ -59,6 +60,8 @@ export default async function AssetsPage() {
       ) : (
         <NoBoard />
       )}
+
+      <HowItWorks />
     </>
   );
 }
