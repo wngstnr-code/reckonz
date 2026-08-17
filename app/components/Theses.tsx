@@ -1,11 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { formatUnits } from 'viem';
 import { shortfallMeasured } from '@/src/abi';
 import { MAINNET } from '@/src/deployments';
 import { Bar, Card, Legend, Note, Num, Pill } from './ui';
 import { FILLED_EVENT, FOLLOW_EVENT, type FollowRequest } from './follow';
+import { stashHandoff } from './handoff';
 
 /**
  * Simple mode, read half: every published thesis and what it actually did.
@@ -125,7 +127,7 @@ export function Theses() {
   const explorer = MAINNET?.explorer;
 
   return (
-    <Card step={9} title="Published theses">
+    <Card title="Published theses">
       <Note>
         A thesis is published on chain before it is executed, and every fill carries its hash. What
         follows is the join: the claim, then what the chain recorded against it. The basket is
@@ -197,6 +199,7 @@ export function Theses() {
 }
 
 function Thesis({ thesis: t, explorer }: { thesis: WireThesis; explorer?: string }) {
+  const router = useRouter();
   const follow: FollowRequest = {
     thesisId: t.id,
     contentHash: t.contentHash as `0x${string}`,
@@ -355,7 +358,13 @@ function Thesis({ thesis: t, explorer }: { thesis: WireThesis; explorer?: string
       {t.basket.length > 0 && (
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <button
-            onClick={() => window.dispatchEvent(new CustomEvent(FOLLOW_EVENT, { detail: follow }))}
+            onClick={() => {
+              // Both: the event for when the mandate form shares this page,
+              // the stash for when it does not. See `handoff.ts`.
+              window.dispatchEvent(new CustomEvent(FOLLOW_EVENT, { detail: follow }));
+              stashHandoff({ kind: 'follow', payload: follow });
+              router.push('/trade');
+            }}
             className="rounded-full border border-signal-deep bg-signal/6 px-3 py-0.5 font-mono text-[11px] text-signal hover:bg-signal/12"
           >
             follow — copy this basket into a mandate

@@ -226,7 +226,7 @@ export function MandateManage() {
   if (!address || !option) return null;
 
   return (
-    <Card step={8} title="Your mandates">
+    <Card title="Your mandates">
       <Note>
         What each mandate holds, what rules bound it, and the controls to change them. The position
         is what the guard recorded from settled fills — it can differ from your wallet balance when

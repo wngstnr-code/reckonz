@@ -1,4 +1,8 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
 import { INSTALL_TRIGGERS_EVENT, type TriggerInstallRequest } from './follow';
+import { stashHandoff } from './handoff';
 import type { RunState } from './useRun';
 import { Bar, Card, Legend, Note, Num, Pill, pct, usd } from './ui';
 
@@ -148,6 +152,7 @@ export function AllocationPanel({
 /* -------------------------------------------------- 3 · the exit triggers */
 
 export function MandatePanel({ mandate }: { mandate: NonNullable<RunState['mandate']> }) {
+  const router = useRouter();
   return (
     <Card step={3} title="Exit triggers, from the same compilation">
       <Note>
@@ -199,22 +204,26 @@ export function MandatePanel({ mandate }: { mandate: NonNullable<RunState['manda
       {mandate.exitTriggers.length > 0 && (
         <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-line pt-4">
           <button
-            onClick={() =>
+            onClick={() => {
+              const detail: TriggerInstallRequest = {
+                exitTriggers: mandate.exitTriggers,
+                manualWatch: mandate.manualWatch,
+              };
+              // Both: the event for when the mandate form shares this page,
+              // the stash for when it does not. See `handoff.ts`.
               window.dispatchEvent(
-                new CustomEvent<TriggerInstallRequest>(INSTALL_TRIGGERS_EVENT, {
-                  detail: {
-                    exitTriggers: mandate.exitTriggers,
-                    manualWatch: mandate.manualWatch,
-                  },
-                }),
-              )
-            }
+                new CustomEvent<TriggerInstallRequest>(INSTALL_TRIGGERS_EVENT, { detail }),
+              );
+              stashHandoff({ kind: 'triggers', payload: detail });
+              router.push('/trade');
+            }}
             className="rounded-full border border-signal-deep bg-signal/6 px-4 py-1 font-mono text-[12px] text-signal hover:bg-signal/12"
           >
             install these as a mandate&apos;s exit rules
           </button>
           <span className="text-[12px] text-faint">
-            Sends them to the mandate form below. Nothing is signed until you create the mandate.
+            Takes you to the mandate form with these filled in. Nothing is signed until you create
+            the mandate.
           </span>
         </div>
       )}

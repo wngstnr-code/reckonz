@@ -476,7 +476,7 @@ export function Exit() {
   }
 
   return (
-    <Card step={11} title="Exit a position">
+    <Card title="Exit a position">
       <Note>
         The reverse trade, and the same division of labour: the server simulates every fee tier and
         asks the guard, your wallet does the approving, the signing and the sending. The permit here

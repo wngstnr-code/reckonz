@@ -14,6 +14,7 @@ import {
   type FollowRequest,
   type TriggerInstallRequest,
 } from './follow';
+import { takeHandoff } from './handoff';
 import { Card, Legend, Note, Num } from './ui';
 import { useWallet } from './useWallet';
 
@@ -143,6 +144,26 @@ export function Mandate() {
     };
     window.addEventListener(INSTALL_TRIGGERS_EVENT, onTriggers);
     return () => window.removeEventListener(INSTALL_TRIGGERS_EVENT, onTriggers);
+  }, []);
+
+  /**
+   * The same two hand-offs, arriving from another page.
+   *
+   * Follow now lives on `/receipts` and the compiled exit rules on `/idea`,
+   * so the DOM events above only fire when sender and receiver happen to share
+   * a document. `handoff.ts` carries them across the navigation instead, and
+   * this drains it once on mount. See that file for why the events are kept
+   * rather than replaced.
+   */
+  useEffect(() => {
+    const handoff = takeHandoff();
+    if (!handoff) return;
+    if (handoff.kind === 'follow') {
+      setFollow(handoff.payload);
+    } else {
+      setCompiled(handoff.payload);
+      setInstallRules(true);
+    }
   }, []);
 
   // Matched against the universe rather than trusted: the picker renders from
@@ -364,7 +385,7 @@ export function Mandate() {
   const explorer = option?.deployment.explorer;
 
   return (
-    <Card ref={panel} step={7} title="Create a mandate">
+    <Card ref={panel} title="Create a mandate">
       <Note>
         The mandate is yours: you are <code className="font-mono text-dim">owner</code> because you
         send this transaction, your funds never leave your wallet, and the policy below is what

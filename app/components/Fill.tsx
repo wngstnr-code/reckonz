@@ -483,7 +483,7 @@ export function Fill() {
   }
 
   return (
-    <Card step={10} title="Execute a fill">
+    <Card title="Execute a fill">
       <Note>
         The quote, the oracle read and the guard&apos;s verdict come from the server; the approval,
         the signature and the transaction happen in your wallet. Nothing is signed on your behalf,
