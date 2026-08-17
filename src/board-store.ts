@@ -21,7 +21,22 @@ import { resolve } from 'node:path';
 import type { Board } from './board';
 import { hasBlobCredentials, type Persistence } from './evidence-store';
 
-export const BOARD_PATH = process.env.BOARD_PATH ?? 'observations/board.json';
+/**
+ * Statically scoped on purpose, and it has to stay that way.
+ *
+ * This was `process.env.BOARD_PATH ?? …` for about an hour, and the build said
+ * what that costs: a path the analyser cannot resolve makes Turbopack trace the
+ * **whole project** into the serverless bundle — every source file and the
+ * public folder — which slows deployments and eventually breaks them on size.
+ *
+ * So the two directory segments are literals. A caller that needs to write
+ * somewhere else, like the worker with a volume, passes the path to
+ * `writeBoard` rather than moving it into the environment where nothing can
+ * follow it.
+ */
+const BOARD_DIR = 'observations';
+const BOARD_FILE = 'board.json';
+export const BOARD_PATH = `${BOARD_DIR}/${BOARD_FILE}`;
 
 /**
  * The board is measured on one machine and read on another.
@@ -44,11 +59,10 @@ export const BOARD_BLOB_BASE =
 
 /** Absolute, so the answer does not depend on where the process was started. */
 export function boardPath(): string {
-  return resolve(process.cwd(), BOARD_PATH);
+  return resolve(process.cwd(), BOARD_DIR, BOARD_FILE);
 }
 
-export function writeBoard(board: Board): string {
-  const path = boardPath();
+export function writeBoard(board: Board, path = boardPath()): string {
   writeFileSync(path, `${JSON.stringify(board, null, 2)}\n`, 'utf8');
   return path;
 }
