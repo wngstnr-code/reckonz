@@ -146,7 +146,14 @@ check that ordering.
 Deliberately **no paid-following mechanism**: `06-assessment.md` argues that needs a legal answer
 first, and the record is useful without the market on top of it.
 
-### 6. Deploy the publish worker — scheduled 18–19 Aug 2026
+### 6. Deploy the publish worker ✅ done 2026-08-17
+
+**Live a day early.** All thirty assets publishing every 600s from Railway, verified against the
+chain and `/api/health`, not against the dashboard's green dot. The configuration that exists only
+in Railway — the five variables, why `PRIVATE_KEY` is not one of them, and the Node 24 build
+failure — is recorded in `05-status.md`. What is left is the calendar item: **top up or shut down**.
+
+The brief it was built from follows.
 
 The last BE item with a date on it. `pnpm publish:loop` and `railway.json` are built and
 deliberately idle until then; the reasoning, the funding and the runway are in

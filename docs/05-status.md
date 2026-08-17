@@ -585,11 +585,22 @@ item never started.
 - ~~**Repo visibility decision.**~~ **Public since 2026-08-17.** The remaining half is not a
   decision: paste `https://github.com/wngstnr-code/reckonz` into the form's `Github` field.
 
-**18–19 Aug — deploy the publish worker.** Fund the publisher with **$5–6** *first*, then bring up
-`pnpm publish:loop` on Railway with `TARGET=mainnet` and `PUBLISH_INTERVAL_SEC=600`, and **no
-`PUBLISH_SYMBOLS`** — all thirty (D85). Full reasoning and the runway arithmetic are under
-**Not done → Known gaps**. Confirm it is actually publishing before trusting it: `pnpm oracle`
-should show a fresh observation, not a stale one.
+~~**18–19 Aug — deploy the publish worker.**~~ **Live 2026-08-17, a day early.** Railway project
+`melodious-heart`, service `reckonz`, volume `reckonz-volume` at `/data`. Verified from the chain
+rather than from the dashboard: publisher nonce 19, balance down 0.000018027 OKB (one ~901k-gas
+publish), **all thirty assets 73 seconds old**, and `GET /api/health` answering `ok` with four
+allowlisted assets at age 99s against a 900s `maxAge`. Green in Railway proves the container runs;
+these numbers prove it publishes. That distinction is D81.
+
+**Two things that live only in the Railway dashboard, so they are written here.** The five
+variables are `TARGET=mainnet`, `PUBLISH_INTERVAL_SEC=600`,
+`OBSERVATIONS_PATH=/data/issuer-marks.jsonl`, `NIXPACKS_NODE_VERSION=22` and `PUBLISHER_KEY`.
+`PUBLISH_SYMBOLS` is absent, not empty (D85), and `PRIVATE_KEY` is deliberately **not** there:
+`publish.ts` reads `accountFrom('PUBLISHER_KEY', 'PRIVATE_KEY')` in order, so a deployer key on
+that host would buy nothing and would put a Safe owner on a machine that never needs one.
+`NIXPACKS_NODE_VERSION` was **24 first and the build failed** — `nix-env` cannot resolve a Node
+that is not in the nixpkgs snapshot Nixpacks pins. 22 builds. If it ever fails there again, the
+next move is `"builder": "RAILPACK"` in `railway.json`.
 
 **20 Aug — record the video against a live oracle**, with the worker up. Leave a day of slack;
 21 Aug is the deadline, not the plan.
