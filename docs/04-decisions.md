@@ -4576,3 +4576,43 @@ last status it was sent — a failure from 06:21 UTC that nothing has overwritte
 commit after it touched `watchPatterns`. `GET /api/health` was answering `ok` with observations 55
 seconds old the whole time, which is the honest signal (D81). A red badge is a claim about the
 last deploy event, not about whether the thing works now.
+
+---
+
+## D88 — A board that priced nothing overwrote a board that priced everything
+
+**2026-08-17.** Both issuer hosts went down together — `api.xstocks.fi` and `api.backed.fi`, 502
+and timeouts in the same minute, some requests answered and some hung. Everything downstream then
+behaved exactly as designed, which is why this took an hour to notice.
+
+`computeFairValue` withheld all thirty values, correctly: it will not publish a number it cannot
+defend. `/api/health` returned 503 and named the reason. The publisher failed, hit
+`MAX_CONSECUTIVE_FAILURES`, exited 1, and Railway restarted it — D46's mechanism, working. The
+oracle went stale, so every fill would have reverted `STALE` rather than executing against a price
+nobody could stand behind. No gas was burned: the publisher's balance was byte-identical across
+every failed cycle, because the run died at the issuer, long before a transaction.
+
+**What was wrong was one layer over.** The board walk does not need the issuer to *succeed* — it
+still reads pool depth, still returns thirty assets, still completes. So at 15:32 it produced a
+board with `publishable 0` and wrote it over the 14:34 board that had all thirty prices.
+`allowOverwrite: true` is deliberate and still right — a board is every market at one instant, and
+yesterday's is not evidence. But it stops being right when the instant contains no measurement at
+all: that replaces information with the absence of it, and `/assets` went from thirty prices to
+thirty blanks with nothing broken anywhere.
+
+**Two fixes, both about the same failure shape.**
+
+`persistBoard` now refuses a board that prices nothing when the archive holds one that priced
+something — reported as `withheld`, a fourth outcome that is a success rather than a failure, so
+the caller can say which happened. The older board is served unchanged with its own timestamp, and
+the page states its age regardless, which is D84's rule. If the archive holds nothing better the
+write goes ahead: a board with real depth and no values still beats a page that has never seen one.
+The decision is `shouldWithhold`, pure and tested, rather than a branch inside an I/O path.
+
+The log line said `19/30 tradable` throughout. That number counts pool depth and says nothing about
+whether any of those markets has a price, so the worker reported success over a board that priced
+nothing — the same silent-success shape as D80, one layer down. It now prints both: `19/30
+tradable, 0/30 priced`.
+
+**The rule.** When a measurement can fail *partially*, one number will always make it look fine.
+Print the one that would have caught it, and check what a write destroys before destroying it.

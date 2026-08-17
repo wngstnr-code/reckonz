@@ -88,15 +88,83 @@ export function parseBoard(parsed: unknown): Board | null {
   return typeof board?.measuredAt === 'number' && Array.isArray(board.assets) ? board : null;
 }
 
+/** How many of a board's assets carry a fair value it is willing to defend. */
+export function publishableCount(board: Board): number {
+  return board.assets.filter((a) => a.publishable).length;
+}
+
+/**
+ * The archive alone — no fallback to the committed file.
+ *
+ * `fetchBoard` deliberately blurs the two for readers, because a reader wants
+ * the freshest board available and does not care where it came from. A *writer*
+ * cares about exactly one thing: what it is about to overwrite. The committed
+ * file is not overwritable and must not enter that decision.
+ */
+async function readArchive(): Promise<Board | null> {
+  try {
+    const response = await fetch(`${BOARD_BLOB_BASE}/${BOARD_BLOB_KEY}`, { cache: 'no-store' });
+    if (!response.ok) return null;
+    return parseBoard(await response.json());
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * `withheld` is a fourth outcome, and it is a success rather than a failure:
+ * the write was refused on purpose and the archive still holds something better.
+ * Kept separate from `Persistence` because `persistBundle`'s callers must never
+ * have to handle a case that cannot happen to them.
+ */
+export type BoardPersistence =
+  | Persistence
+  | { kind: 'withheld'; reason: string; keptMeasuredAt: number };
+
 /**
  * Write the board where the website can reach it.
  *
- * Reports `blob`, `file` or `none` **with the reason** rather than a boolean,
- * for the same reason `persistBundle` does: `none` means nobody can read this,
- * and a caller that cannot tell that apart from success will announce a board
- * that is not there.
+ * Reports `blob`, `file`, `none` or `withheld` **with the reason** rather than a
+ * boolean, for the same reason `persistBundle` does: `none` means nobody can
+ * read this, and a caller that cannot tell that apart from success will announce
+ * a board that is not there.
+ *
+ * ## Why a board can be refused
+ *
+ * Every measurement replaces the last, because a board is every market at one
+ * instant and yesterday's is not evidence. That is right up until the instant
+ * being measured contains no measurement at all.
+ *
+ * When the issuer is down, `computeFairValue` withholds every value — correctly,
+ * it will not publish a number it cannot defend — and the walk still completes,
+ * still finds real pool depth, and still returns thirty assets. Overwriting an
+ * hour-old board that had thirty prices with one that has none replaces
+ * information with the absence of it. Measured on 2026-08-17: both issuer hosts
+ * answered 502, and the 15:32 board landed with `publishable 0` on top of a
+ * 14:34 board that had all thirty.
+ *
+ * So a board that prices nothing does not displace a board that priced
+ * something. It is not a correction and not an invention: the older board is
+ * served unchanged, with its own timestamp, and the page says how old it is —
+ * which it is required to do regardless. If the archive holds nothing better,
+ * this writes normally; an empty board is still better than no board.
  */
-export async function persistBoard(board: Board): Promise<Persistence> {
+export function shouldWithhold(next: Board, existing: Board | null): boolean {
+  return publishableCount(next) === 0 && existing !== null && publishableCount(existing) > 0;
+}
+
+export async function persistBoard(board: Board): Promise<BoardPersistence> {
+  if (publishableCount(board) === 0) {
+    const existing = await readArchive();
+    if (shouldWithhold(board, existing) && existing) {
+      return {
+        kind: 'withheld',
+        reason: `this board prices 0 of ${board.assets.length}; the archive prices ${publishableCount(existing)} of ${existing.assets.length}`,
+        keptMeasuredAt: existing.measuredAt,
+      };
+    }
+  }
+
   const body = `${JSON.stringify(board, null, 2)}\n`;
 
   if (hasBlobCredentials()) {
@@ -142,15 +210,10 @@ export async function persistBoard(board: Board): Promise<Persistence> {
  * Never both merged, never invented.
  */
 export async function fetchBoard(): Promise<{ board: Board; from: 'blob' | 'file' } | null> {
-  try {
-    const response = await fetch(`${BOARD_BLOB_BASE}/${BOARD_BLOB_KEY}`, { cache: 'no-store' });
-    if (response.ok) {
-      const board = parseBoard(await response.json());
-      if (board) return { board, from: 'blob' };
-    }
-  } catch {
-    // Offline, or no archive yet. The committed file is the floor.
-  }
+  // Offline, or no archive yet, both come back as null — the committed file is
+  // the floor either way.
+  const archived = await readArchive();
+  if (archived) return { board: archived, from: 'blob' };
 
   const local = readBoard();
   return local ? { board: local, from: 'file' } : null;

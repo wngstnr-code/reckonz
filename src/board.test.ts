@@ -13,8 +13,8 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { median, summarise, type BoardAsset } from './board';
-import { parseBoard } from './board-store';
+import { median, summarise, type Board, type BoardAsset } from './board';
+import { parseBoard, publishableCount, shouldWithhold } from './board-store';
 
 const LIMITS = [50, 500] as const;
 
@@ -130,4 +130,51 @@ test('a board with no timestamp is refused rather than rendered undated', () => 
 test('a board with a timestamp and assets is accepted', () => {
   const board = { measuredAt: 1_786_973_235, assets: [] };
   assert.equal(parseBoard(board), board);
+});
+
+/*
+ * A board that prices nothing must not displace one that priced something.
+ *
+ * Measured on 2026-08-17: both issuer hosts answered 502, `computeFairValue`
+ * correctly withheld all thirty values, and the resulting board overwrote an
+ * hour-old one that had all thirty. The walk still succeeded — real pool depth,
+ * thirty assets — so nothing downstream could tell the difference. What was
+ * lost was information, replaced by the absence of it.
+ */
+const board = (measuredAt: number, priced: number, total: number): Board => ({
+  measuredAt,
+  chainId: 196,
+  mandate: { maxGapRisk: 60, maxDeviationBps: 100, maxImpactBps: 50 },
+  capacityLimitsBps: [...LIMITS],
+  ladderUsdg: [250],
+  assets: Array.from({ length: total }, (_, i) => ({
+    ...tradable(`w${i}x`, 1000),
+    publishable: i < priced,
+    fairValue: i < priced ? 100 : null,
+  })),
+  totals: summarise([], LIMITS),
+});
+
+test('a board that prices nothing does not displace one that priced something', () => {
+  assert.equal(shouldWithhold(board(2, 0, 30), board(1, 30, 30)), true);
+});
+
+test('an empty archive is still worse than a board with no prices', () => {
+  // Nothing to protect, so the write goes ahead: a board with real depth and no
+  // values beats a page that has never seen a board at all.
+  assert.equal(shouldWithhold(board(2, 0, 30), null), false);
+});
+
+test('a board that prices nothing yields to nothing better than itself', () => {
+  assert.equal(shouldWithhold(board(2, 0, 30), board(1, 0, 30)), false);
+});
+
+test('a board carrying prices always writes, whatever the archive holds', () => {
+  assert.equal(shouldWithhold(board(2, 1, 30), board(1, 30, 30)), false);
+  assert.equal(shouldWithhold(board(2, 30, 30), board(1, 30, 30)), false);
+});
+
+test('publishableCount counts values, not assets', () => {
+  assert.equal(publishableCount(board(1, 7, 30)), 7);
+  assert.equal(publishableCount(board(1, 0, 30)), 0);
 });

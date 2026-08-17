@@ -37,7 +37,7 @@
  */
 import { spawn } from 'node:child_process';
 import { measureBoard } from './board';
-import { persistBoard } from './board-store';
+import { persistBoard, publishableCount } from './board-store';
 import { append, sampleOnce } from './observations';
 
 const INTERVAL_SEC = Number(process.env.PUBLISH_INTERVAL_SEC ?? 600);
@@ -65,7 +65,8 @@ if (!Number.isFinite(INTERVAL_SEC) || INTERVAL_SEC < 60) {
   throw new Error(`PUBLISH_INTERVAL_SEC=${process.env.PUBLISH_INTERVAL_SEC} — under a minute is a mistake, not a cadence`);
 }
 
-const stamp = () => new Date().toISOString().replace('T', ' ').slice(0, 19);
+/** Now by default; `at` (epoch ms) to stamp a moment the loop is reporting on. */
+const stamp = (at = Date.now()) => new Date(at).toISOString().replace('T', ' ').slice(0, 19);
 
 function runOnce(): Promise<number> {
   return new Promise((resolve) => {
@@ -163,9 +164,17 @@ while (!stopping) {
           ? where.url
           : where.kind === 'file'
             ? where.path
-            : `NOT STORED — ${where.reason}`;
+            : where.kind === 'withheld'
+              ? `archive kept from ${stamp(where.keptMeasuredAt * 1000)} — ${where.reason}`
+              : `NOT STORED — ${where.reason}`;
+      // `tradable` counts pool depth and says nothing about whether any of those
+      // markets has a price. With the issuer down, every value is withheld and a
+      // line reading "19/30 tradable" reads like success over a board that
+      // prices nothing — the silent-success shape this whole path exists to
+      // avoid. Both numbers, always.
       console.log(
-        `${stamp()}  board measured — ${tradable}/${board.assets.length} tradable, ${note}`,
+        `${stamp()}  board measured — ${tradable}/${board.assets.length} tradable, ` +
+          `${publishableCount(board)}/${board.assets.length} priced, ${note}`,
       );
     } catch (e) {
       console.error(`${stamp()}  board failed, publishing continues: ${(e as Error).message}`);

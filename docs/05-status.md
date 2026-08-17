@@ -16,7 +16,7 @@ colliding. `06-assessment.md` is the honest read on whether this is a business.
 ```bash
 cd /Users/mac/Desktop/okxai
 set -a && source .env && set +a     # PRIVATE_KEY, GEMINI_API_KEY, CASH
-pnpm typecheck && pnpm test         # expect: clean, 227 unit tests, then 106 passed
+pnpm typecheck && pnpm test         # expect: clean, 232 unit tests, then 106 passed
 git status --short                  # expect: clean; docs/ is tracked now, not ignored
 pnpm dev                            # the web app, port 3000 (falls back if taken)
 ```
@@ -338,7 +338,7 @@ figure in it is a reading with a date (D84).
 | **The submission post** | The account exists (see Project identity above); what is still required is a post from it mentioning `@XLayerOfficial` **at submission time**. Not done until that post is up. |
 | ~~Mainnet deployment~~ | ✅ **Done 2026-08-11.** Addresses in `src/deployments.ts`; oracle seeded, mandate #1 live, one real fill. |
 | **Google Form submission** — draft ready in `docs/10-submission.md` | Required by 21 Aug 23:59 UTC. Read 2026-08-14 — it is **eight fields**: name, description, project URL, optional GitHub, contacts, optional X post URL. **No track selector, no video field, no deck.** So AI-RWA is inferred from the description alone, and the description is the highest-leverage artifact in the submission. Form and analysis in `00-hackathon.md`. |
-| ~~**Repo visibility decision**~~ | ✅ **Public 2026-08-17**, at `github.com/wngstnr-code/reckonz`. Disclaimer §4 says the Organizer will consider **code quality**, so a blank `Github` field on the form forfeits a stated criterion — and code quality (106 Foundry + 227 unit tests including a red-team suite over the compiler, CI, 14 of 14 verified contracts, an append-only decision log) is one of the few places we beat a polished demo. Checked before flipping: `.env` was never tracked, and all six live secrets were matched against every one of the 160 commits — no hit. **Put the URL in the form.** |
+| ~~**Repo visibility decision**~~ | ✅ **Public 2026-08-17**, at `github.com/wngstnr-code/reckonz`. Disclaimer §4 says the Organizer will consider **code quality**, so a blank `Github` field on the form forfeits a stated criterion — and code quality (106 Foundry + 232 unit tests including a red-team suite over the compiler, CI, 14 of 14 verified contracts, an append-only decision log) is one of the few places we beat a polished demo. Checked before flipping: `.env` was never tracked, and all six live secrets were matched against every one of the 160 commits — no hit. **Put the URL in the form.** |
 
 ### Blocking for a credible demo
 
