@@ -4480,3 +4480,50 @@ hours**. A reminder measured in hours is not a reminder for a runway measured in
 re-opens exactly what this decision closed — twenty-six assets in the mandate picker that cannot
 be filled — and saves $0.21 a day. If the money runs out, the honest options are top up or stop
 publishing, and stopping is visible in `/api/health` where narrowing is not.
+
+---
+
+## D86 — A direction flag that could never be true
+
+Found 2026-08-17, funding the publisher. `src/swap.ts` decided which way to swap each hop with:
+
+```ts
+simulateExactInput(okbUsdt, amountIn, okbUsdt.token0.address === WOKB)
+simulateExactInput(usdtUsdg, hop1.amountOut, usdtUsdg.token0.address === USDT0.address)
+```
+
+`loadPool` returns **checksummed** addresses; `WOKB` in that file and `USDT0.address` in
+`src/chain.ts` are lower case. So both comparisons are `false` for every input, on every chain,
+forever. Not "usually false" — structurally false.
+
+**The swap was never wrong.** Selling WOKB, which is `token1` of the WOKB/USD₮0 pool, needs
+`zeroForOne: false`; selling USD₮0, which is `token1` of the USDG/USD₮0 pool, needs `false` too.
+Both hops wanted the value the bug produces, so `pnpm swap` has quoted correctly every time it has
+run, including the real mainnet swaps behind the deployer's USDG.
+
+That is exactly why it is worth a decision entry. A constant `false` that agrees with the right
+answer is invisible in every test you would think to write — the output is correct, the price
+impact is plausible, the fill lands. It only surfaces when someone reuses the pattern in a
+direction where the flag must be `true`.
+
+**Which is how it was found.** The deployer needed OKB and held USDG, and the repo has no reverse
+route — `swap.ts` is OKB → USDG only. Running the same pools backwards (USDG -0.01%→ USD₮0
+-0.05%→ WOKB) with the comparison copied verbatim quoted **0 WOKB out at -9999bp impact**: the
+simulator was asked to sell a token the pool would receive. A quote of zero is a loud failure and
+cost nothing. The same defect in a path that *writes* would have swapped the wrong direction with
+a `minAmountOut` computed from the wrong side of the pool.
+
+**The convention already existed and one file missed it.** `planner.ts:39`, `exit-plan.ts:315` and
+`verify.ts:30` all compare with `.toLowerCase()` on both sides. `swap.ts` was the only call site
+that did not, and it got away with it because of the coincidence above. Fixed there rather than by
+adding a helper: four call sites, three already correct, and a shared `eq()` would be a new import
+in files that do not need one.
+
+**The general rule, since this is the second time an address comparison has bitten:** a `===`
+between an address that came off the chain and an address written in this repo is a bug unless
+both sides are normalised. Chain reads are checksummed, our constants are lower case, and nothing
+in the type system distinguishes them — `Address` is `0x${string}` either way.
+
+Not fixed here, and deliberately: the reverse route is still not in the repo. It was needed once,
+for one top-up, and a second swap script that nothing exercises is a script that rots. If a second
+top-up needs it, that is the moment to add `pnpm swap --reverse` with a test, not before.

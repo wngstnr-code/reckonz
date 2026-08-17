@@ -163,8 +163,13 @@ if (gasLeft < GAS_RESERVE / 5n) {
 const okbUsdt = await loadPool('0xe3BE6A0137f1b0602Fc1a4841686f43B340a5082');
 const usdtUsdg = await loadPool('0x0cBe0dBE1400e57f371a38BD3b9bC80F7C3676dA');
 
-const hop1 = simulateExactInput(okbUsdt, amountIn, okbUsdt.token0.address === WOKB);
-const hop2 = simulateExactInput(usdtUsdg, hop1.amountOut, usdtUsdg.token0.address === USDT0.address);
+// `loadPool` returns checksummed addresses and every constant here is lower
+// case, so a bare `===` between them is *always* false. Both hops happen to
+// need false, which is why this swap has always quoted correctly — but a
+// direction flag that cannot be true is not a direction flag. Compare the way
+// `planner.ts`, `exit-plan.ts` and `verify.ts` already do. See D86.
+const hop1 = simulateExactInput(okbUsdt, amountIn, okbUsdt.token0.address.toLowerCase() === WOKB.toLowerCase());
+const hop2 = simulateExactInput(usdtUsdg, hop1.amountOut, usdtUsdg.token0.address.toLowerCase() === USDT0.address.toLowerCase());
 
 const expected = hop2.amountOut;
 const minOut = (expected * (10_000n - SLIPPAGE_BPS)) / 10_000n;

@@ -1,10 +1,14 @@
 {
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
-    "builder": "NIXPACKS"
+    "builder": "NIXPACKS",
+    "buildCommand": "echo 'worker: nothing to build — tsx runs src/ directly'",
+    "watchPatterns": ["src/**", "package.json", "pnpm-lock.yaml", "railway.json"]
   },
   "deploy": {
     "startCommand": "pnpm publish:loop",
+    "numReplicas": 1,
+    "sleepApplication": false,
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 100
   }

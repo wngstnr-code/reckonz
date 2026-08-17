@@ -38,14 +38,23 @@ hundreds of deploys' worth. Faucet: [web3.okx.com/faucet](https://web3.okx.com/f
 → Testnet; verify with `cast balance <addr> --rpc-url https://testrpc.xlayer.tech`, never the
 faucet UI.
 
-Mainnet gas is the scarce one and there is no faucet for it. Checked 2026-08-11:
+Mainnet gas is the scarce one and there is no faucet for it. Re-read 2026-08-17, after the
+top-up below:
 
 ```
-publisher  0x40101A4932dEb95f0A5951BB7fB0fFa7c17e3Ab8   0.002755 OKB   + 0 USDG
-deployer   0xD7360Dc3ED4fE01bEbB8477594A76CBFb5c79BA5   0.002152 OKB   + 2.649781 USDG
+publisher  0x40101A4932dEb95f0A5951BB7fB0fFa7c17e3Ab8   0.003754 OKB   + 0 USDG
+deployer   0xD7360Dc3ED4fE01bEbB8477594A76CBFb5c79BA5   0.005944 OKB   + 2.387367 USDG
 ```
 
-Re-read 2026-08-12 after the browser fill and two oracle publishes. That balance is **~89 runs at
+**2026-08-17 — the publisher was topped up from the deployer, not from OKX.** 0.5 USDG swapped
+back to 0.004822 OKB through the same two pools `pnpm swap` uses, run in reverse (the reverse
+route is not in the repo; see D86, which is the defect that surfaced doing it), then 0.001 OKB
+transferred to the publisher. Effective rate OKB $103.7 against a $107 spot — two hops of fee and
+5bp of impact. This is a **bridge to 26+ hours, not the funding**: the $5–6 from OKX still has to
+land. At 0.02 gwei the publisher now holds **195 runs**, of which 175 are usable before
+`publish.ts` aborts at its 20-run reserve — **29 hours** at a 600s interval.
+
+The earlier reading, 2026-08-12 after the browser fill and two oracle publishes, was **~89 runs at
 all thirty assets** — under 15 hours at a 600s interval, and the worker publishes all thirty (D85).
 It is ~1,532 runs at one symbol and ~766 at four, which is what `PUBLISH_SYMBOLS` (D63) buys for a
 hand publish and not what the worker will run on. **It needs $5–6 before 18 Aug** — 17.6 days at
