@@ -26,12 +26,38 @@
  * is orphaned when the publisher exits. One process, one lifecycle, one restart
  * policy. Sampling is one HTTP call and costs no gas, so it is free to carry.
  *
- *   TARGET=mainnet PUBLISH_INTERVAL_SEC=600 pnpm publish:loop
+ * And it **measures the assets board** on a slower clock, into the same archive
+ * the evidence bundles use. That store is what `/assets` reads: the page cannot
+ * compute it, because the walk takes about two minutes of throttled RPC, and a
+ * file written next to this process is a file Vercel cannot see (D80). It costs
+ * no gas — every call in it is a read — and its failure can never stop a
+ * publish.
+ *
+ *   TARGET=mainnet PUBLISH_INTERVAL_SEC=600 BOARD_INTERVAL_SEC=3600 pnpm publish:loop
  */
 import { spawn } from 'node:child_process';
+import { measureBoard } from './board';
+import { persistBoard } from './board-store';
 import { append, sampleOnce } from './observations';
 
 const INTERVAL_SEC = Number(process.env.PUBLISH_INTERVAL_SEC ?? 600);
+
+/**
+ * How often to measure the assets board, on its own slower clock.
+ *
+ * An hour rather than every cycle, and the reason is in the data: the set of
+ * pools with no liquidity changed over **hours** between two measurements, not
+ * minutes. Running it every ten minutes would buy freshness nobody could tell
+ * apart while spending six times the RPC reads.
+ *
+ * It costs no gas — the whole walk is `eth_call` and one HTTP request to the
+ * issuer, and nothing here signs anything. What it costs is about two minutes
+ * of mostly-idle waiting on the RPC, which is why it runs after the publish and
+ * inside the slack of the cycle rather than in front of it.
+ *
+ * `0` turns it off.
+ */
+const BOARD_INTERVAL_SEC = Number(process.env.BOARD_INTERVAL_SEC ?? 3600);
 /** Consecutive failures before the process gives up and lets the host restart it. */
 const MAX_CONSECUTIVE_FAILURES = Number(process.env.PUBLISH_MAX_FAILURES ?? 6);
 
@@ -54,6 +80,8 @@ function runOnce(): Promise<number> {
 
 let consecutiveFailures = 0;
 let stopping = false;
+/** Zero, so the first cycle measures one rather than waiting an hour for it. */
+let lastBoardAt = 0;
 
 // Railway and every other host send SIGTERM before replacing the container. A
 // cycle interrupted mid-publish is fine — publishing is idempotent, the next one
@@ -103,6 +131,46 @@ while (!stopping) {
   }
 
   if (stopping) break;
+
+  /*
+   * The assets board, after the publish and never in its way.
+   *
+   * Three things here are deliberate and none of them are style.
+   *
+   * **It runs after `runOnce`.** The oracle is the load-bearing job: stale and
+   * every fill reverts `STALE`, `/api/health` answers 503, the product stops.
+   * A stale board means one page shows numbers from an hour ago and says so.
+   * Two minutes of measurement must never sit in front of the first.
+   *
+   * **Its failure is caught and dropped.** It is deliberately *not* counted
+   * toward `MAX_CONSECUTIVE_FAILURES`, because that counter exists to hand a
+   * broken publisher to the host's restart policy — and a flaky board taking
+   * the oracle down with it would be the tail wagging the dog. Same shape as
+   * the sampler above, same reason.
+   *
+   * **`lastBoardAt` moves whether it worked or not.** Otherwise a board that
+   * fails persistently retries every cycle instead of every hour, turning one
+   * broken thing into six times the RPC load.
+   */
+  if (BOARD_INTERVAL_SEC > 0 && Date.now() - lastBoardAt >= BOARD_INTERVAL_SEC * 1000) {
+    lastBoardAt = Date.now();
+    try {
+      const board = await measureBoard();
+      const where = await persistBoard(board);
+      const tradable = board.assets.length - board.totals.dry.length - board.totals.unmeasured.length;
+      const note =
+        where.kind === 'blob'
+          ? where.url
+          : where.kind === 'file'
+            ? where.path
+            : `NOT STORED — ${where.reason}`;
+      console.log(
+        `${stamp()}  board measured — ${tradable}/${board.assets.length} tradable, ${note}`,
+      );
+    } catch (e) {
+      console.error(`${stamp()}  board failed, publishing continues: ${(e as Error).message}`);
+    }
+  }
 
   // Measure the wait from when the cycle *started*, so a slow publish does not
   // push the whole schedule later and later.
