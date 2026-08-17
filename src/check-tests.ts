@@ -22,6 +22,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 /** Files that state the current count. `docs/04-decisions.md` is not here on
  *  purpose: it is append-only and every count in it is a historical one. */
@@ -75,7 +76,13 @@ function unitCount(): number {
   // rather than crashing with a stack trace.
   let out: string;
   try {
-    out = execFileSync('node_modules/.bin/tsx', ['--test', ...files], {
+    // `node_modules/.bin/tsx` is a shell shim that only exists on POSIX; on
+    // Windows npm writes `tsx.CMD` and `tsx.ps1` instead, so the bare path is
+    // `ENOENT` and this check could not run there at all. Calling the package's
+    // own entry point with the Node that is already running works on both, and
+    // depends on nothing the package manager decided to generate.
+    const tsx = fileURLToPath(import.meta.resolve('tsx/cli'));
+    out = execFileSync(process.execPath, [tsx, '--test', ...files], {
       encoding: 'utf8',
       maxBuffer: 32 * 1024 * 1024,
     });

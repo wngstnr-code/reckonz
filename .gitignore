@@ -2,7 +2,14 @@ node_modules
 out
 cache
 broadcast
+
+# Foundry dependencies, and the two files a modern `forge install` leaves beside
+# them. `forge-std` is installed by hand and by CI at a pinned tag rather than
+# vendored or tracked as a submodule — see `05-status.md`. Committing either of
+# these would quietly turn it into one.
 lib
+.gitmodules
+foundry.lock
 
 # Secrets. The example is the one file in this family that belongs in the repo.
 .env
