@@ -13,9 +13,9 @@ import { useState } from 'react';
  *
  * The extensions are mixed, so the source walks `svg` then `png` then gives up
  * on the ticker. At most one 404 per PNG asset, cached by the browser after,
- * and no build step to keep a manifest honest. `wMETAx` has no file at all and
- * lands on the ticker, which is why the last step is a designed state rather
- * than an error path.
+ * and no build step to keep a manifest honest. All thirty have a file today —
+ * the ticker is there for the thirty-first, which will be listed before anyone
+ * draws it, and a missing logo must never look like a missing asset.
  *
  * Both views use this. A logo in the grid and a bare ticker in the table would
  * read as two different products.
