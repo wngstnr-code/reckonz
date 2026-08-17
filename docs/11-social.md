@@ -27,7 +27,7 @@ Two mechanics:
 - **Every post is under 280 characters** as drafted. Check again after editing, because the whole
   point of a thread is lost when the last line silently truncates.
 
-**Tagging `@XLayerOfficial`: three days, not seven.** Only the submission post is required to
+**Tagging `@XLayerOfficial`: two days, not seven.** Only the submission post is required to
 mention them, but the judges *are* X Layer and a mention is the only thing that actually notifies
 them. Hashtags are close to useless for reach now, so the mention is the mechanism and `#AISeason`
 stays on Day 7 alone.
@@ -35,9 +35,11 @@ stays on Day 7 alone.
 | Day | Tagged | Why |
 |---|---|---|
 | 1 | yes, in the opening post | the post is about the depth of their market and OKX's own order book deepening it |
-| 3 | yes, in the closing post | handing X Layer builders the traps that cost us a week is a contribution to their ecosystem |
 | 7 | yes, required | the submission post |
-| 2, 4, 5, 6 | no | these are about our product, not about X Layer, and tagging them anyway reads as farming |
+| 2, 3, 4, 5, 6 | no | these are about our product, not about X Layer, and tagging them anyway reads as farming |
+
+Day 3 carried a mention until 17 Aug, when its subject changed from a trap we were handing to other
+X Layer builders to how our own custody works. The rationale went with the subject.
 
 ## How these are written
 
@@ -46,8 +48,8 @@ numbers stay because numbers are the most readable part of this project; the mac
 does not. No command names, no contract names, no jargon that needs a footnote. If a sentence needs
 the reader to know what an AMM is, rewrite it.
 
-The exception is the developer detail in Day 3, which is deliberately pushed to the repo rather
-than into the thread.
+**No post depends on the repo.** Day 3 used to close by sending builders there for the detail it
+left out. Nothing does now: each thread carries everything it claims.
 
 **Nothing goes out that cannot be checked.** Every post carries a number that is real and current.
 That is the product's own discipline applied to its account.
@@ -118,32 +120,37 @@ subject is being straight about a number cannot misread its own.
 >
 > Your money never leaves your wallet. reckonz.xyz
 
-## Day 3, 17 Aug: the week we lost
+## Day 3, 17 Aug: the key we do not have
 
-The developer version of this cost us days and is documented in the repo. The thread tells the
-story instead, which travels further and sends the people who want the detail to the code.
+The obvious objection to an AI that trades for you, answered with a mechanism rather than a
+promise. **Nothing here points at the repo**, because the thread has to stand on its own.
 
-> We lost a week to a piece of code that looked perfect.
->
-> Right address. Right functions. Nearly 40,000 bytes of deployed contract. Every tool we used
-> pointed at it.
->
-> It could not do the one thing we needed.
+Two things to keep exact. The permission really is scoped to one token, capped in amount and
+expires in **20 minutes**, so do not round that to "a few minutes" or stretch it to an hour. And
+the function that would have let us move a position without the owner signing was **only ever in
+our own notes and never in the code**: the post says it was taken out of the notes, not out of the
+product.
 
-> Buried inside it was an assumption copied from a different blockchain. On X Layer that assumption
-> points at an address where nothing lives.
+> The question people should ask an AI that trades for them: what stops it taking your money?
 >
-> So our trades did not fail loudly. They failed silently, with no error message at all.
+> Ours cannot. Not because we promise it. Because it never holds anything it could take.
 
-> The rule we took from it, and now apply to everything:
+> Your money stays in your wallet. To move any of it, our system needs a permission you sign
+> yourself: one stock, a maximum amount, and it stops working 20 minutes later.
 >
-> Something that exists and looks correct is not something that works. A dependency is unverified
-> until you have watched it do the actual job, once, for real.
+> With no fresh signature from you, the AI moves nothing at all.
 
-> If you are building on @XLayerOfficial, the specific traps that cost us that week are written
-> down in our repo. Take them, they are free.
+> There is no button on our side that rebalances your position.
 >
-> github.com/wngstnr-code/reckonz
+> That function sat in our own design notes for weeks while we built. It was never written. We
+> deleted it from the notes rather than adding it to the product.
+
+> And the limits you set are enforced inside the trade itself. Too much price impact, or a price we
+> cannot defend, and the whole thing reverses in the same instant it was attempted.
+>
+> Not a warning afterwards. It simply does not happen.
+>
+> reckonz.xyz
 
 ## Day 4, 18 Aug: how you know we are not lying
 
@@ -324,7 +331,7 @@ WITH THE NUMBER".
 No other text. No drop shadows, no glow, no 3D, no perspective, no icons, no arrows.
 ```
 
-### Day 3, the week we lost
+### Day 3, the key we do not have
 
 ```
 Editorial infographic poster, pure black #000000 background, entirely greyscale except for
@@ -335,21 +342,23 @@ spaced vertical bars of equal thickness in white, all four ending flat on the sa
 baseline, with a diagonal stroke rising to the upper right from behind the fourth bar to
 form a tick. The bars are level at the bottom with no point or spike at the elbow. A thin
 white hairline rule runs
-to the right edge, with the text "FIELD NOTE" in small uppercase monospace with wide letter
+to the right edge, with the text "CUSTODY" in small uppercase monospace with wide letter
 spacing at its far right, white.
 
-Behind everything, an enormous ghosted display word "SILENT" in heavy condensed sans-serif
+Behind everything, an enormous ghosted display word "SIGNED" in heavy condensed sans-serif
 as a fine dithered ASCII halftone texture in dark grey, barely visible against the black.
 
-Foreground: a dense, perfectly regular grid of small identical squares, roughly fourteen
-columns by seven rows, evenly spaced with equal gutters, every square solid mid grey.
-Exactly one square, slightly right and above centre, is instead a hollow outline in mint
-green #6ee7b7, identical in size and grid position to all the others, so the difference
-reads only on a second look. Nothing points at it, no ring, no arrow, no highlight.
+Foreground: a single long horizontal rule running nearly the full width of the frame at
+mid height, drawn as a thin flat mid grey line with a small vertical tick at each end. One
+short segment of that line, roughly one twentieth of its length and set left of centre, is
+instead solid mint green #6ee7b7 and slightly thicker, with the text "20 MIN" in mint green
+monospace directly above it. The overwhelming length of grey line on either side is the
+subject and stays completely empty.
 
-Along the bottom edge, very small uppercase monospace in dark grey: "IT LOOKED CORRECT".
+Along the bottom edge, very small uppercase monospace in dark grey: "ONE STOCK, ONE AMOUNT,
+THEN IT IS GONE".
 
-No other text. No drop shadows, no glow, no 3D, no perspective, no icons, no people.
+No other text. No drop shadows, no glow, no 3D, no perspective, no icons, no keys, no locks.
 ```
 
 ### Day 4, the fingerprint
