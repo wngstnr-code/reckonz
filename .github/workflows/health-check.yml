@@ -29,6 +29,17 @@ on:
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch:
+    inputs:
+      url:
+        # Exists to prove the alert path, not to check other environments. A
+        # monitor whose failure branch has never run is an assumption: the run
+        # that passes exercises the healthy path and nothing else, and the
+        # notification only matters on the day it has to reach a human. Dispatch
+        # this once with a deliberately wrong URL, confirm the email lands, and
+        # leave it alone — the schedule always uses the default.
+        description: 'Endpoint to check. Point it somewhere broken to test that the alert email arrives.'
+        required: false
+        default: 'https://reckonz.xyz/api/health'
 
 concurrency:
   group: health
@@ -40,9 +51,16 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: GET /api/health
+        env:
+          INPUT_URL: ${{ inputs.url }}
         run: |
           set -uo pipefail
-          URL="https://reckonz.xyz/api/health"
+          # `inputs.url` is empty on a schedule run, so the fallback is what the
+          # cron actually uses. Reading it through an env var rather than
+          # interpolating it into the script keeps a dispatched value out of the
+          # shell it would otherwise be parsed by.
+          URL="${INPUT_URL:-https://reckonz.xyz/api/health}"
+          echo "checking $URL"
 
           # -m so a hung endpoint fails the step rather than the timeout-minutes
           # above, which would read as an infrastructure problem instead of an
