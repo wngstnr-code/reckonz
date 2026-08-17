@@ -1,3 +1,6 @@
+import { fetchBoard } from '@/src/board-store';
+import { BoardHeader } from '@/app/components/console/BoardHeader';
+import { BoardView } from '@/app/components/console/BoardView';
 import { PageHeader } from '@/app/components/console/PageHeader';
 
 export const metadata = {
@@ -7,57 +10,74 @@ export const metadata = {
 };
 
 /**
- * The one page still standing empty, and it says so.
+ * Rendered per request rather than baked at build.
  *
- * Every other route now renders something that works. This one cannot yet:
- * the modules that compute the board exist in `src/`, and nothing has ever
- * served them to a browser. Naming the two missing routes here is cheaper than
- * letting a visitor wonder whether the page is broken or unbuilt.
+ * The board is measured hourly, and a page prerendered once would show whatever
+ * was true when it was deployed, for as long as the deployment lived. There is
+ * no cheaper answer that stays honest: the numbers here have a date on them,
+ * and the date has to be able to move.
  */
-const SECTIONS = [
-  'What one real idea asked for, what the market could take, and what we handed back',
-  'How many assets we would allow today, and the refusals grouped by reason',
-  'The table: fair price, price here, overnight risk, what the market can take, verdict',
-  'Whether anything can trade right now, and when these numbers were measured',
-];
+export const dynamic = 'force-dynamic';
 
-export default function AssetsPage() {
+/**
+ * The size every verdict on this page is decided at.
+ *
+ * $1,000 rather than the smallest rung, because at $250 every tradable asset is
+ * allowed and the column says nothing. Here it is fifteen of twenty-one, which
+ * is the market telling you where its limit is. The slider that makes this a
+ * question rather than a constant is Step 7.
+ */
+const DEFAULT_SIZE_USDG = 1_000;
+
+/**
+ * The way into the console, and the argument the product makes.
+ *
+ * It reads `fetchBoard()` directly rather than calling our own route over HTTP.
+ * A server asking itself a question through the network is a round trip that
+ * buys nothing, and rendering on the server means the page arrives holding
+ * numbers rather than a spinner — which matters most for the visitor who gives
+ * it ninety seconds and has no wallet. `GET /api/board` still earns its place:
+ * it is the surface an agent can ask, and the one a refresh button will use.
+ */
+export default async function AssetsPage() {
+  const found = await fetchBoard();
+
   return (
-    <div className="grid gap-x-12 gap-y-10 lg:grid-cols-[minmax(0,1fr)_288px]">
-      <div>
-        <PageHeader title="Assets">
-          Before you buy, we check if the price holds up and how much this market can really take.
-          All 30 tokenised stocks on X Layer are here, with what we would refuse and why. You do
-          not need a wallet to read any of it.
-        </PageHeader>
+    <>
+      <PageHeader title="Assets">
+        Before you buy, we check if the price holds up and how much this market can really take.
+        All 30 tokenised stocks on X Layer are here, with what we would refuse and why. You do not
+        need a wallet to read any of it.
+      </PageHeader>
 
-        <div className="flex items-baseline justify-between border-b border-line pb-2.5">
-          <h2 className="font-mono text-micro text-faint uppercase">What goes here</h2>
-          <span className="font-mono text-micro text-faint tabular-nums">{SECTIONS.length}</span>
-        </div>
+      {found ? (
+        <>
+          <BoardHeader board={found.board} sizeUsdg={DEFAULT_SIZE_USDG} from={found.from} />
+          <BoardView board={found.board} sizeUsdg={DEFAULT_SIZE_USDG} />
+        </>
+      ) : (
+        <NoBoard />
+      )}
+    </>
+  );
+}
 
-        <ol>
-          {SECTIONS.map((section, i) => (
-            <li key={section} className="flex gap-5 border-b border-line/60 py-3 last:border-b-0">
-              <span className="shrink-0 pt-px font-mono text-micro text-faint tabular-nums">
-                {String(i + 1).padStart(2, '0')}
-              </span>
-              <span className="text-data text-dim">{section}</span>
-            </li>
-          ))}
-        </ol>
-      </div>
-
-      <aside className="lg:pt-[4.5rem]">
-        <div className="rounded-xl border border-line bg-panel p-4">
-          <h2 className="font-mono text-micro text-caution uppercase">Blocked on</h2>
-          <p className="mt-2.5 text-data leading-relaxed text-dim">
-            Two routes have to exist before this page can be honest. One serves the guard&apos;s
-            answer across all thirty assets, the other serves the stored run behind the ribbon.
-            Neither exists today. The code that works both out does.
-          </p>
-        </div>
-      </aside>
+/**
+ * Never an empty table.
+ *
+ * A board that has not been measured and a market with nothing in it look
+ * identical once they are both rendered as no rows, and only one of them should
+ * read as "there is nothing here".
+ */
+function NoBoard() {
+  return (
+    <div className="max-w-[62ch] rounded-xl border border-caution/40 bg-caution/6 p-4">
+      <h2 className="font-mono text-micro text-caution uppercase">Nothing measured yet</h2>
+      <p className="mt-2.5 text-data leading-relaxed text-dim">
+        No board has been measured on this deployment. That is not the same as an empty market:
+        nothing is being shown because nothing is known. Run <code>pnpm board</code> and commit the
+        result, or bring the publish worker up.
+      </p>
     </div>
   );
 }
