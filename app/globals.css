@@ -1,34 +1,202 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-ground: #0b0d10;
-  --color-panel: #12151a;
-  --color-raised: #171b21;
+  /* ------------------------------------------------------------------ colour
+   *
+   * Light is the default as of 2026-08-17, dark is a swap below. The tokens are
+   * the same eleven names in both, so no component knows which theme it is in
+   * and none of them needs a `dark:` variant.
+   *
+   * The three semantic colours could not simply carry over. `#6ee7b7` against
+   * white is roughly 1.6:1 and unreadable as text; `#f0b429` is about 1.9:1.
+   * They work in dark because a light colour on a dark ground is the easy
+   * direction, and light mode is the other one. So the *hue* is held and the
+   * *value* drops: the mint is still the brand mint, dark enough to be read.
+   *
+   * `--color-faint` is the exception that needed no change. `#8b95a4` is the
+   * brand grey out of `logo-reckonz-grey.svg`, and it happens to sit legibly on
+   * both grounds, which is worth knowing rather than rediscovering. */
+  --color-ground: #ffffff;
+  --color-panel: #f6f7f8;
+  --color-raised: #eceef1;
+  --color-line: #e2e6ea;
+  --color-ink: #0e1116;
+  --color-dim: #5a6472;
+  --color-faint: #8b95a4;
+
+  /* The lit top edge of a raised surface. On dark it is what makes a panel read
+     as a surface rather than as the same plane. On light there is nothing to
+     light, so it resolves to the panel's own colour and disappears rather than
+     leaving a stray line across the top of every card. */
+  --color-edge: #ffffff;
+
+  --color-signal: #0d9668;
+  --color-signal-deep: #a7e8cf;
+  --color-caution: #9a6400;
+  --color-refuse: #c2352a;
+
+  /* The four stops of the one gradient in the product, on the connect button.
+   *
+   * They exist because `signal` and `signal-deep` invert between themes:
+   * `signal-deep` is a light mint on white and a dark green on black, so a
+   * gradient built from that pair reads inside out depending on the theme, and
+   * the label loses contrast at one end of it in both.
+   *
+   * Spread wide, and spread **upward**. `cta-1` is the field the other three
+   * are painted onto, so the distance between it and them is the whole reason
+   * the drift is visible: stops within a few percent of each other blend into
+   * one tone and the movement stops registering.
+   *
+   * The label is white, and white on `cta-3` alone is roughly 1.4:1 — wherever
+   * the bright blob drifts under the text the text would simply be gone, for
+   * the few seconds that blob takes to pass. `.cta-label` below is the answer:
+   * a scrim carried by the type rather than a change to the range, so the
+   * gradient keeps the spread that makes its movement visible.
+   *
+   * Shared across both themes rather than swapped.
+   *
+   * Still one accent hue. The rule the brief sets is that a fourth *colour*
+   * would mean one of the three we have has lost its meaning, and green shading
+   * through green is not a fourth colour. */
+  --color-cta-1: #0a7f57;
+  --color-cta-2: #24bd8b;
+  --color-cta-3: #62e0b0;
+  --color-cta-4: #17a276;
+  --color-cta-ink: #ffffff;
+
+  /* The footer is its own surface rather than a shaded strip of the page.
+   *
+   * A neutral mid grey, and one value for both themes rather than two. Against
+   * white it reads as the slab the page ends on; against black it reads as a
+   * slab lifted off it. Either way the boundary is the point, and black type
+   * sits on it in both, so nothing inside the footer has to know which theme it
+   * is in.
+   *
+   * Black on this grey measures about 19:1 and `footer-dim` about 9:1, so the
+   * secondary text clears the threshold rather than sitting under it — the one
+   * place in this app where that came free.
+   *
+   * A grey this light means the top edge against a white page is a few percent
+   * of tone and no line at all. That is deliberate — see the note in
+   * `Footer.tsx` — so `footer-line` is used only for the rule above the bottom
+   * bar. */
+  --color-footer: #f0f0f0;
+  --color-footer-ink: #000000;
+  --color-footer-dim: #3f3f3f;
+  --color-footer-line: #d4d4d4;
+
+  /* -------------------------------------------------------------------- type
+   *
+   * One family everywhere. `--font-mono` deliberately points at the same face:
+   * every `font-mono` in this codebase means *this is measured data*, not *this
+   * is monospaced*, and the base layer below gives that class the thing it was
+   * actually there for, which is digits of equal width.
+   *
+   * That matters more than it sounds. The assets board is thirty rows of value,
+   * price, gap and capacity read down the column, and proportional figures make
+   * a column that shimmers and cannot be compared by eye. `tabular-nums` is the
+   * feature that fixes it, and it is a feature a font either has or does not —
+   * verify it against the real table before trusting it here. */
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  /* The wordmark, and only the wordmark.
+   *
+   * Its own variable so the face can be swapped in one line without touching a
+   * component. **Gellix** was the first choice and is a commercial typeface
+   * from Displaay: not on Google Fonts, and shipping it on a public site
+   * without a licence is not something this repo does — D63 deleted a working
+   * data source over exactly that question. If the licence and the `.woff2`
+   * files ever exist, they go in `app/fonts/`, load through `next/font/local`,
+   * and this line points at them. Poppins is the free geometric that stands
+   * closest to that specimen. */
+  --font-logo: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+
+  /* Type scale.
+   *
+   * Six steps and a display size. Dropped roughly 3px on 2026-08-17 and put
+   * back up by 4 the same afternoon once Outfit was on the page: it sets small
+   * for its size, so the numbers that read fine in the old face read cramped in
+   * this one.
+   *
+   * `data` is the step to watch. It is what the thirty-row assets board will
+   * use, and 15.5px with a second line under each value makes for tall rows on
+   * the one surface whose whole argument is density. Re-check it against the
+   * real table rather than against this page.
+   *
+   * `display` exists for one job: the refused notional, which the brief puts at
+   * the top of the page at display size because it is the most persuasive
+   * number the product produces. */
+  --text-micro: 13.5px;
+  --text-micro--line-height: 1.35;
+  --text-micro--letter-spacing: 0.09em;
+
+  --text-meta: 14px;
+  --text-meta--line-height: 1.45;
+
+  --text-data: 15.5px;
+  --text-data--line-height: 1.55;
+
+  --text-body: 16.5px;
+  --text-body--line-height: 1.65;
+
+  --text-lead: 17.5px;
+  --text-lead--line-height: 1.6;
+
+  --text-title: 23px;
+  --text-title--line-height: 1.25;
+  --text-title--letter-spacing: -0.01em;
+
+  --text-display: 36px;
+  --text-display--line-height: 1.05;
+  --text-display--letter-spacing: -0.022em;
+}
+
+/* Dark, kept whole and ready for the toggle. Set `data-theme="dark"` on <html>
+   and every token below swaps underneath the same components.
+   These are the values the app ran on until 2026-08-17: pure black and mint,
+   taken from the brand's own post images rather than picked. */
+[data-theme='dark'] {
+  --color-ground: #000000;
+  --color-panel: #0b0d10;
+  --color-raised: #12151a;
   --color-line: #232830;
   --color-ink: #e6e9ee;
   --color-dim: #8b95a4;
   --color-faint: #5d6675;
+  --color-edge: #2b323d;
+
   --color-signal: #6ee7b7;
   --color-signal-deep: #2f6f5b;
   --color-caution: #f0b429;
   --color-refuse: #f2705f;
 
-  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+  /* The `cta-*` set is deliberately not overridden here. See the note above:
+     white type needs a dark green in either theme, so swapping them would only
+     break the label. */
+
+  color-scheme: dark;
 }
 
 @layer base {
   html {
-    color-scheme: dark;
+    color-scheme: light;
   }
   body {
     background: var(--color-ground);
     color: var(--color-ink);
     -webkit-font-smoothing: antialiased;
   }
-  /* The numbers are the product; give them a typeface that lines up. */
+  /* A field is a hole cut through the panel to the page underneath, which is
+     why it takes the ground colour rather than a hex of its own. */
   input,
   textarea {
-    background: #0c0f13;
+    background: var(--color-ground);
+  }
+  /* What `font-mono` is for now that there is one family: figures of equal
+     width, so a column of numbers can be read down rather than across. */
+  .font-mono {
+    font-variant-numeric: tabular-nums;
   }
 }
 
@@ -40,3 +208,131 @@
 .animate-breathe {
   animation: breathe 1.1s ease-in-out infinite;
 }
+
+/* Anything that floats above the page: dropdowns, popovers, menus.
+ *
+ * Elevation is not one effect in two themes, it is two different effects. On
+ * black, a surface reads as lifted because its top edge catches light, which is
+ * what `--color-edge` was for and why the inset highlight belongs there. On
+ * white there is no light to catch: the only thing that reads as height is the
+ * shadow a panel casts on the page under it, and the inset trick resolves to a
+ * white line on a near-white panel and does precisely nothing.
+ *
+ * That was the actual state of both popovers after the theme swap — floating
+ * panels four percent off the page with an invisible highlight, which is the
+ * same flatness the whole surface ladder was rebuilt to fix, relocated.
+ *
+ * So each theme gets the treatment that is true for it, and the class hides the
+ * difference from every component that uses it. */
+.overlay {
+  background: var(--color-panel);
+  border: 1px solid var(--color-line);
+  box-shadow:
+    0 8px 24px rgb(0 0 0 / 0.1),
+    0 2px 6px rgb(0 0 0 / 0.06);
+}
+
+[data-theme='dark'] .overlay {
+  box-shadow:
+    inset 0 1px 0 var(--color-edge),
+    0 14px 34px rgb(0 0 0 / 0.55);
+}
+
+/* The connect button's surface.
+ *
+ * Four overlapping radial blobs rather than one linear sweep, which is what
+ * makes it read as a soft mesh instead of a stripe: no stop lines, and no
+ * single direction the eye can name. Each blob then drifts on its own path
+ * through the keyframes below, so the movement never resolves into everything
+ * sliding the same way at the same time.
+ *
+ * `background-size` is oversized on purpose. The blobs need room to travel
+ * outside the pill, otherwise their edges wander into view.
+ *
+ * Written here rather than as arbitrary utilities because four layered
+ * gradients and a four-track keyframe do not belong in a `className`. */
+.cta-mesh {
+  background-color: var(--color-cta-1);
+  background-image:
+    radial-gradient(at 20% 25%, var(--color-cta-2) 0px, transparent 46%),
+    radial-gradient(at 78% 22%, var(--color-cta-3) 0px, transparent 44%),
+    radial-gradient(at 62% 82%, var(--color-cta-4) 0px, transparent 46%),
+    radial-gradient(at 12% 88%, var(--color-cta-3) 0px, transparent 40%);
+  background-size: 190% 190%;
+  animation: cta-drift 7s ease-in-out infinite alternate;
+  transition: filter 0.2s ease-out;
+}
+
+/* White type that survives the light end of the mesh.
+ *
+ * Two shadows doing different jobs. The tight one gives every letter an edge
+ * so the shapes stay crisp; the wide, soft one darkens the patch immediately
+ * around the word, which is the half that actually rescues legibility when the
+ * bright blob drifts underneath. Both are weak enough to disappear over the
+ * darker stops, so the label does not look embossed the rest of the time.
+ *
+ * A scrim on the type rather than a change to the palette, deliberately: the
+ * spread between the four stops is what makes the drift visible, and narrowing
+ * it to fix contrast would have cost the effect it exists for. */
+.cta-label {
+  text-shadow:
+    0 1px 2px rgb(0 0 0 / 0.35),
+    0 0 7px rgb(0 0 0 / 0.25);
+}
+
+/* Hover does two things, neither of them a glow around the outside.
+ *
+ * The exposure goes **up and stays up** for as long as the cursor is there,
+ * rather than flashing and settling back. A plain filter with a transition
+ * rather than a keyframe, so it holds at the top and rides back down on its
+ * own when the pointer leaves.
+ *
+ * And the drift **pauses**, which is the part worth explaining: a surface that
+ * keeps moving under a cursor reads as ignoring it. Holding still is the
+ * button acknowledging the pointer, and it costs nothing — `paused` freezes the
+ * animation where it is, and resuming picks up from that same frame, so there
+ * is no jump on the way out. */
+.group:hover .cta-mesh {
+  animation-play-state: paused;
+  filter: brightness(1.1);
+}
+
+@keyframes cta-drift {
+  0% {
+    background-position:
+      0% 40%,
+      100% 0%,
+      45% 100%,
+      0% 10%;
+  }
+  33% {
+    background-position:
+      70% 10%,
+      15% 75%,
+      95% 35%,
+      60% 65%;
+  }
+  66% {
+    background-position:
+      25% 90%,
+      85% 45%,
+      10% 15%,
+      100% 100%;
+  }
+  100% {
+    background-position:
+      100% 55%,
+      0% 100%,
+      60% 5%,
+      35% 80%;
+  }
+}
+
+/* A control that never stops moving is exactly what this setting is for. */
+@media (prefers-reduced-motion: reduce) {
+  .cta-mesh,
+  .animate-breathe {
+    animation: none;
+  }
+}
+

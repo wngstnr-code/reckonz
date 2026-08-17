@@ -17,5 +17,10 @@ tsconfig.tsbuildinfo
 
 # Throwaway probes. Never a place for anything that must survive.
 .scratch
+.superpowers
+
+# Per-person tool settings. The shared half of `.claude/` is tracked; the local
+# file is one person's permissions and belongs on one person's machine.
+.claude/settings.local.json
 .vercel
 .env*.local
