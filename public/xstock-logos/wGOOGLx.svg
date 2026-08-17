@@ -1,4 +1,8 @@
 <svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+<clipPath id="xstockMark">
+<path d="M0 0H86.1929L128 41.8076L169.808 0H256V86.1924L214.193 128L256 169.809V256H169.808L128 214.192L86.1929 256H0V169.808L41.8081 128L0 86.1914V0Z"/>
+</clipPath>
+<g clip-path="url(#xstockMark)">
 <g clip-path="url(#clip0_338_31805)">
 <rect width="256" height="256" fill="#4285F4"/>
 <path d="M201.172 129.702C201.172 124.408 200.697 119.317 199.815 114.43H129.492V143.346H169.677C167.912 152.645 162.617 160.519 154.675 165.814V184.616H178.908C193.027 171.584 201.172 152.442 201.172 129.702Z" fill="white"/>
@@ -12,4 +16,5 @@
 <rect width="256" height="256" fill="white"/>
 </clipPath>
 </defs>
+</g>
 </svg>

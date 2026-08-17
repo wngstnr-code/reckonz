@@ -20,29 +20,60 @@ import { useState } from 'react';
  * Both views use this. A logo in the grid and a bare ticker in the table would
  * read as two different products.
  *
- * **The frame is square and deliberately has no radius.** Every one of these
- * files is a full-bleed 256x256 canvas that carries its own shape: `wAAPLx`
- * clips itself to a notched X, the older ones fill the square and draw a disc
- * on top. `rounded-full` was cutting the first kind back into the second and
- * deleting the mark it was meant to show. Even a small radius would shave the
- * points off that X, so the frame stays out of the artwork's way and lets each
- * file decide what it is.
+ * **The frame is square and deliberately has no radius.** Every file here is a
+ * full-bleed 256x256 canvas, and the twenty-five SVGs carry the xStock mark
+ * internally: a `clipPath` that notches the corners into an X. `rounded-full`
+ * was masking that back into a disc and deleting the shape it existed to show,
+ * and even a small radius would shave the points off it. So the frame stays out
+ * of the artwork's way.
+ *
+ * The five PNGs cannot carry a clip, so the frame supplies one for them and
+ * only them. `XSTOCK_MARK` is the same outline, derived from the SVG path
+ * rather than eyeballed, so a PNG and an SVG sitting next to each other are the
+ * same shape to four decimal places. Applying it to the SVGs as well would clip
+ * an already-clipped mark, which is harmless but puts the shape in two places
+ * at once — and then only one of them gets updated.
  */
-const SOURCES = ['svg', 'png'] as const;
+const XSTOCK_MARK =
+  'polygon(0% 0%, 33.6691% 0%, 50% 16.3311%, 66.3312% 0%, 100% 0%, 100% 33.6689%, ' +
+  '83.6691% 50%, 100% 66.3316%, 100% 100%, 66.3312% 100%, 50% 83.6688%, 33.6691% 100%, ' +
+  '0% 100%, 0% 66.3312%, 16.3313% 50%, 0% 33.6685%)';
+
+/**
+ * Which extension to try first, per asset. A hint, never a source of truth.
+ *
+ * Both are always tried, so a wrong guess costs one 404 and lands on the right
+ * file anyway — exactly the behaviour before this list existed. What it buys is
+ * five fewer 404s on every page load, because these five have no SVG and were
+ * each probing for one first.
+ *
+ * It therefore cannot rot in a way that shows: convert one of these to SVG and
+ * it still resolves, add a new PNG-only asset and it still resolves. Update it
+ * when convenient, not when something breaks.
+ */
+const PNG_FIRST = new Set(['wDELLx', 'wEWYx', 'wSKHYx', 'wSNDKx', 'wSPCXx']);
+
+const sourcesFor = (symbol: string) =>
+  PNG_FIRST.has(symbol) ? (['png', 'svg'] as const) : (['svg', 'png'] as const);
 
 export function AssetMark({ symbol, size = 36 }: { symbol: string; size?: number }) {
   const [attempt, setAttempt] = useState(0);
+  const sources = sourcesFor(symbol);
 
-  if (attempt >= SOURCES.length) {
+  if (attempt >= sources.length) {
+    // The ticker takes the mark's outline too, so a listing with no artwork is
+    // still recognisably one of these rather than a stray box in the grid.
     return (
       <span
-        className="flex shrink-0 items-center justify-center border border-line bg-raised font-mono text-faint"
-        style={{ height: size, width: size, fontSize: size * 0.35 }}
+        className="flex shrink-0 items-center justify-center bg-raised font-mono text-faint"
+        style={{ height: size, width: size, fontSize: size * 0.35, clipPath: XSTOCK_MARK }}
       >
         {symbol.replace(/^w/, '').slice(0, 2)}
       </span>
     );
   }
+
+  const format = sources[attempt];
 
   return (
     // Not `next/image`: these are already small, already local, and already the
@@ -50,12 +81,12 @@ export function AssetMark({ symbol, size = 36 }: { symbol: string; size?: number
     // eslint-disable-next-line @next/next/no-img-element
     <img
       key={attempt}
-      src={`/xstock-logos/${symbol}.${SOURCES[attempt]}`}
+      src={`/xstock-logos/${symbol}.${format}`}
       alt=""
       loading="lazy"
       onError={() => setAttempt((n) => n + 1)}
       className="shrink-0 bg-raised object-contain"
-      style={{ height: size, width: size }}
+      style={{ height: size, width: size, clipPath: format === 'png' ? XSTOCK_MARK : undefined }}
     />
   );
 }

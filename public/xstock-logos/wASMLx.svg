@@ -1,4 +1,8 @@
 <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+<clipPath id="xstockMark">
+<path d="M0 0H86.1929L128 41.8076L169.808 0H256V86.1924L214.193 128L256 169.809V256H169.808L128 214.192L86.1929 256H0V169.808L41.8081 128L0 86.1914V0Z"/>
+</clipPath>
+<g clip-path="url(#xstockMark)">
 <g clip-path="url(#clip0_2051_3719)">
 <rect width="32" height="32" fill="url(#paint0_linear_2051_3719)"/>
 <g clip-path="url(#clip1_2051_3719)">
@@ -19,4 +23,5 @@
 <rect width="32" height="32" fill="white"/>
 </clipPath>
 </defs>
+</g>
 </svg>
