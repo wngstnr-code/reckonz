@@ -1,0 +1,53 @@
+'use client';
+
+import { useState } from 'react';
+
+/**
+ * The company's logo, and the ticker when there is none.
+ *
+ * Served from `public/xstock-logos/`, named by our own symbol, rather than from
+ * the issuer's metadata CDN. That was the first implementation and the issuer
+ * answered 502 for an hour the same afternoon — a courtesy asset must not be
+ * able to have an outage. Local files also mean no third-party request per
+ * card, and a name that cannot drift.
+ *
+ * The extensions are mixed, so the source walks `svg` then `png` then gives up
+ * on the ticker. At most one 404 per PNG asset, cached by the browser after,
+ * and no build step to keep a manifest honest. `wMETAx` has no file at all and
+ * lands on the ticker, which is why the last step is a designed state rather
+ * than an error path.
+ *
+ * Both views use this. A logo in the grid and a bare ticker in the table would
+ * read as two different products.
+ */
+const SOURCES = ['svg', 'png'] as const;
+
+export function AssetMark({ symbol, size = 36 }: { symbol: string; size?: number }) {
+  const [attempt, setAttempt] = useState(0);
+
+  if (attempt >= SOURCES.length) {
+    return (
+      <span
+        className="flex shrink-0 items-center justify-center rounded-full border border-line bg-raised font-mono text-faint"
+        style={{ height: size, width: size, fontSize: size * 0.35 }}
+      >
+        {symbol.replace(/^w/, '').slice(0, 2)}
+      </span>
+    );
+  }
+
+  return (
+    // Not `next/image`: these are already small, already local, and already the
+    // right size on the page. An optimiser in front of them buys nothing.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      key={attempt}
+      src={`/xstock-logos/${symbol}.${SOURCES[attempt]}`}
+      alt=""
+      loading="lazy"
+      onError={() => setAttempt((n) => n + 1)}
+      className="shrink-0 rounded-full bg-raised object-contain"
+      style={{ height: size, width: size }}
+    />
+  );
+}
