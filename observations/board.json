@@ -1,0 +1,3353 @@
+{
+  "measuredAt": 1786973235,
+  "chainId": 196,
+  "mandate": {
+    "maxGapRisk": 60,
+    "maxDeviationBps": 100,
+    "maxImpactBps": 50
+  },
+  "capacityLimitsBps": [
+    50,
+    100,
+    200,
+    500
+  ],
+  "ladderUsdg": [
+    250,
+    500,
+    1000,
+    2500,
+    5000,
+    10000,
+    25000,
+    50000
+  ],
+  "assets": [
+    {
+      "symbol": "wAAPLx",
+      "name": "Wrapped Apple xStock",
+      "address": "0x943BF64D566c32A2Bcd41AC92FB63C111cC9De8f",
+      "fairValue": 307.8531929769,
+      "publishable": true,
+      "confidenceBps": 10,
+      "reference": "AAPL",
+      "state": "PRE",
+      "sharesPerToken": 1.003269,
+      "gapRisk": 7,
+      "gapRiskParts": {
+        "staleness": 0,
+        "displacement": 0.21254396248534585,
+        "uncertainty": 0.025,
+        "basis": 0.024089982430757217
+      },
+      "notes": [
+        "token holds 1.003269 shares — 32.7bp of reinvested dividends, measured 2026-08-12",
+        "band is the issuer's own 10bp spread for the extended session"
+      ],
+      "onchainPrice": 308.2240018774033,
+      "basisBps": 12.044991215378609,
+      "depth": "ok",
+      "poolCount": 1,
+      "venueCount": 1,
+      "capacityUsdg": {
+        "50": 2806.47816,
+        "100": 5887.506329,
+        "200": 12011.877399,
+        "500": 30280.10499
+      },
+      "ladder": [
+        {
+          "sizeUsdg": 250,
+          "impactBps": 9,
+          "effectivePrice": 308.5031110624755,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 500,
+          "impactBps": 13,
+          "effectivePrice": 308.62803115206134,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 1000,
+          "impactBps": 21,
+          "effectivePrice": 308.877871331233,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 2500,
+          "impactBps": 46,
+          "effectivePrice": 309.627391868748,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 5000,
+          "impactBps": 86,
+          "effectivePrice": 310.87688247203903,
+          "decision": {
+            "ok": false,
+            "reason": "PRICE_IMPACT",
+            "detail": "86bp impact > 50bp"
+          }
+        },
+        {
+          "sizeUsdg": 10000,
+          "impactBps": 168,
+          "effectivePrice": 313.38906365627486,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "180bp from fair value > 110bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 25000,
+          "impactBps": 414,
+          "effectivePrice": 320.9756537611123,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "426bp from fair value > 110bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 50000,
+          "impactBps": 825,
+          "effectivePrice": 333.6450050757083,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "838bp from fair value > 110bp tolerance"
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "wAMDx",
+      "name": "Wrapped AMD xStock",
+      "address": "0xEe7CcB0d37A12862e7f92F6C92a93d9c2d304266",
+      "fairValue": 512.250375,
+      "publishable": true,
+      "confidenceBps": 15,
+      "reference": "AMD",
+      "state": "PRE",
+      "sharesPerToken": 1,
+      "gapRisk": 18,
+      "gapRiskParts": {
+        "staleness": 0,
+        "displacement": 0.6833575615474795,
+        "uncertainty": 0.0375,
+        "basis": 0.006083708926909459
+      },
+      "notes": [
+        "band is the issuer's own 15bp spread for the extended session"
+      ],
+      "onchainPrice": 512.0945558910399,
+      "basisBps": -3.0418544634547295,
+      "depth": "ok",
+      "poolCount": 1,
+      "venueCount": 1,
+      "capacityUsdg": {
+        "50": 819.115615,
+        "100": 1719.292142,
+        "200": 3519.645387,
+        "500": 8920.704881
+      },
+      "ladder": [
+        {
+          "sizeUsdg": 250,
+          "impactBps": 19,
+          "effectivePrice": 513.0618341757115,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 500,
+          "impactBps": 33,
+          "effectivePrice": 513.7729370947546,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 1000,
+          "impactBps": 61,
+          "effectivePrice": 515.1951429328411,
+          "decision": {
+            "ok": false,
+            "reason": "PRICE_IMPACT",
+            "detail": "61bp impact > 50bp"
+          }
+        },
+        {
+          "sizeUsdg": 2500,
+          "impactBps": 144,
+          "effectivePrice": 519.4617604471005,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "141bp from fair value > 115bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 5000,
+          "impactBps": 283,
+          "effectivePrice": 526.5727896375324,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "280bp from fair value > 115bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 10000,
+          "impactBps": 560,
+          "effectivePrice": 540.7948480183967,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "557bp from fair value > 115bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 25000,
+          "impactBps": 1394,
+          "effectivePrice": 583.4610231903763,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "1390bp from fair value > 115bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 50000,
+          "impactBps": 2782,
+          "effectivePrice": 654.571315080047,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "2778bp from fair value > 115bp tolerance"
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "wAMZNx",
+      "name": "Wrapped Amazon.com xStock",
+      "address": "0x910cabdE3EBa7Fc1Ce64fD14bD680b9f60fA0F90",
+      "fairValue": 265.36521500000003,
+      "publishable": true,
+      "confidenceBps": 10,
+      "reference": "AMZN",
+      "state": "PRE",
+      "sharesPerToken": 1,
+      "gapRisk": 10,
+      "gapRiskParts": {
+        "staleness": 0,
+        "displacement": 0.39245955451348186,
+        "uncertainty": 0.025,
+        "basis": 0.002282695142485913
+      },
+      "notes": [
+        "band is the issuer's own 10bp spread for the extended session"
+      ],
+      "onchainPrice": 265.3955023943633,
+      "basisBps": 1.1413475712429566,
+      "depth": "ok",
+      "poolCount": 1,
+      "venueCount": 1,
+      "capacityUsdg": {
+        "50": 1057.431678,
+        "100": 2219.508383,
+        "200": 4543.661892,
+        "500": 11516.122476
+      },
+      "ladder": [
+        {
+          "sizeUsdg": 250,
+          "impactBps": 16,
+          "effectivePrice": 265.8137419720914,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 500,
+          "impactBps": 27,
+          "effectivePrice": 266.0992174165557,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 1000,
+          "impactBps": 48,
+          "effectivePrice": 266.67016830548425,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 2500,
+          "impactBps": 113,
+          "effectivePrice": 268.38302097226995,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "114bp from fair value > 110bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 5000,
+          "impactBps": 220,
+          "effectivePrice": 271.23777550205773,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "221bp from fair value > 110bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 10000,
+          "impactBps": 435,
+          "effectivePrice": 276.9472843487709,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "436bp from fair value > 110bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 25000,
+          "impactBps": 1081,
+          "effectivePrice": 294.0758109910842,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "1082bp from fair value > 110bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 50000,
+          "impactBps": 2156,
+          "effectivePrice": 322.6233554332794,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "2158bp from fair value > 110bp tolerance"
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "wASMLx",
+      "name": "Wrapped ASML xStock",
+      "address": "0x9147b03c16B18FC4F686f610f189f91Ddf4347b4",
+      "fairValue": 1876.239290502296,
+      "publishable": true,
+      "confidenceBps": 15,
+      "reference": "ASML",
+      "state": "PRE",
+      "sharesPerToken": 1.002866,
+      "gapRisk": 14,
+      "gapRiskParts": {
+        "staleness": 0,
+        "displacement": 0.523662368112544,
+        "uncertainty": 0.0375,
+        "basis": 0
+      },
+      "notes": [
+        "token holds 1.002866 shares — 28.7bp of reinvested dividends, measured 2026-08-12",
+        "band is the issuer's own 15bp spread for the extended session"
+      ],
+      "onchainPrice": null,
+      "basisBps": null,
+      "depth": "no-liquidity",
+      "poolCount": 1,
+      "venueCount": 0,
+      "capacityUsdg": {
+        "50": 0,
+        "100": 0,
+        "200": 0,
+        "500": 0
+      },
+      "ladder": [
+        {
+          "sizeUsdg": 250,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 500,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 1000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 2500,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 5000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 10000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 25000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 50000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "wAVGOx",
+      "name": "Wrapped Broadcom xStock",
+      "address": "0xE89572bfe500ac7E8Ecd8dc8119d274214e06F14",
+      "fairValue": 399.59262001758003,
+      "publishable": true,
+      "confidenceBps": 15,
+      "reference": "AVGO",
+      "state": "PRE",
+      "sharesPerToken": 1.004884,
+      "gapRisk": 14,
+      "gapRiskParts": {
+        "staleness": 0,
+        "displacement": 0.5328534583821805,
+        "uncertainty": 0.0375,
+        "basis": 0
+      },
+      "notes": [
+        "token holds 1.004884 shares — 48.8bp of reinvested dividends, measured 2026-08-12",
+        "band is the issuer's own 15bp spread for the extended session"
+      ],
+      "onchainPrice": null,
+      "basisBps": null,
+      "depth": "no-liquidity",
+      "poolCount": 1,
+      "venueCount": 0,
+      "capacityUsdg": {
+        "50": 0,
+        "100": 0,
+        "200": 0,
+        "500": 0
+      },
+      "ladder": [
+        {
+          "sizeUsdg": 250,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 500,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 1000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 2500,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 5000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 10000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 25000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 50000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "wCOINx",
+      "name": "Wrapped Coinbase xStock",
+      "address": "0x44C7eD7fFDF8465c9d27F60AEC845EEd3d49d56e",
+      "fairValue": 148.4562665,
+      "publishable": true,
+      "confidenceBps": 30,
+      "reference": "COIN",
+      "state": "PRE",
+      "sharesPerToken": 1,
+      "gapRisk": 16,
+      "gapRiskParts": {
+        "staleness": 0,
+        "displacement": 0.5335427901524034,
+        "uncertainty": 0.075,
+        "basis": 0.033403676646921454
+      },
+      "notes": [
+        "band is the issuer's own 30bp spread for the extended session"
+      ],
+      "onchainPrice": 148.70421575611874,
+      "basisBps": 16.701838323460727,
+      "depth": "ok",
+      "poolCount": 1,
+      "venueCount": 1,
+      "capacityUsdg": {
+        "50": 1078.51673,
+        "100": 2263.765367,
+        "200": 4634.262419,
+        "500": 11745.753636
+      },
+      "ladder": [
+        {
+          "sizeUsdg": 250,
+          "impactBps": 16,
+          "effectivePrice": 148.93543315417716,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 500,
+          "impactBps": 26,
+          "effectivePrice": 149.0922612497063,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 1000,
+          "impactBps": 47,
+          "effectivePrice": 149.40591744076454,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 2500,
+          "impactBps": 110,
+          "effectivePrice": 150.34688601393924,
+          "decision": {
+            "ok": false,
+            "reason": "PRICE_IMPACT",
+            "detail": "110bp impact > 50bp"
+          }
+        },
+        {
+          "sizeUsdg": 5000,
+          "impactBps": 216,
+          "effectivePrice": 151.9151669692304,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "233bp from fair value > 130bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 10000,
+          "impactBps": 427,
+          "effectivePrice": 155.05172887981274,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "444bp from fair value > 130bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 25000,
+          "impactBps": 1060,
+          "effectivePrice": 164.46141462273883,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "1078bp from fair value > 130bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 50000,
+          "impactBps": 2114,
+          "effectivePrice": 180.14422471137462,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "2134bp from fair value > 130bp tolerance"
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "wCRCLx",
+      "name": "Wrapped Circle xStock",
+      "address": "0xb11134F14d5B94DB60d4599DfdC3bF1bbA2150e8",
+      "fairValue": 71.68048,
+      "publishable": true,
+      "confidenceBps": 30,
+      "reference": "CRCL",
+      "state": "PRE",
+      "sharesPerToken": 1,
+      "gapRisk": 19,
+      "gapRiskParts": {
+        "staleness": 0,
+        "displacement": 0.6403892145369284,
+        "uncertainty": 0.075,
+        "basis": 0.03320185891716676
+      },
+      "notes": [
+        "band is the issuer's own 30bp spread for the extended session"
+      ],
+      "onchainPrice": 71.79947625920374,
+      "basisBps": 16.60092945858338,
+      "depth": "ok",
+      "poolCount": 1,
+      "venueCount": 1,
+      "capacityUsdg": {
+        "50": 832.757205,
+        "100": 1747.925479,
+        "200": 3578.261933,
+        "500": 9068.489607
+      },
+      "ladder": [
+        {
+          "sizeUsdg": 250,
+          "impactBps": 19,
+          "effectivePrice": 71.93346264340593,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 500,
+          "impactBps": 32,
+          "effectivePrice": 72.03153133063003,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 1000,
+          "impactBps": 60,
+          "effectivePrice": 72.2276687050782,
+          "decision": {
+            "ok": false,
+            "reason": "PRICE_IMPACT",
+            "detail": "60bp impact > 50bp"
+          }
+        },
+        {
+          "sizeUsdg": 2500,
+          "impactBps": 142,
+          "effectivePrice": 72.81608082842274,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "158bp from fair value > 130bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 5000,
+          "impactBps": 278,
+          "effectivePrice": 73.79676770066364,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "295bp from fair value > 130bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 10000,
+          "impactBps": 551,
+          "effectivePrice": 75.75897164111508,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "569bp from fair value > 130bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 25000,
+          "impactBps": 1374,
+          "effectivePrice": 81.66238201582905,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "1393bp from fair value > 130bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 50000,
+          "impactBps": 2745,
+          "effectivePrice": 91.50963884741586,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "2766bp from fair value > 130bp tolerance"
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "wDELLx",
+      "name": "Wrapped Dell Technologies Inc. xStock",
+      "address": "0x04DB4384013664BAa627c1a3fa4Ff0c50F37Cfd3",
+      "fairValue": 499.60471010099997,
+      "publishable": true,
+      "confidenceBps": 15,
+      "reference": "DELL",
+      "state": "PRE",
+      "sharesPerToken": 1.003317,
+      "gapRisk": 18,
+      "gapRiskParts": {
+        "staleness": 0,
+        "displacement": 0.676694021101993,
+        "uncertainty": 0.0375,
+        "basis": 0
+      },
+      "notes": [
+        "token holds 1.003317 shares — 33.2bp of reinvested dividends, measured 2026-08-12",
+        "band is the issuer's own 15bp spread for the extended session"
+      ],
+      "onchainPrice": null,
+      "basisBps": null,
+      "depth": "no-liquidity",
+      "poolCount": 1,
+      "venueCount": 0,
+      "capacityUsdg": {
+        "50": 0,
+        "100": 0,
+        "200": 0,
+        "500": 0
+      },
+      "ladder": [
+        {
+          "sizeUsdg": 250,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 500,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 1000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 2500,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 5000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 10000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 25000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 50000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "wEWYx",
+      "name": "Wrapped iShares MSCI South Korea xStock",
+      "address": "0x021b40617982074748C81a19d22046CC2548C3bE",
+      "fairValue": 183.9951575,
+      "publishable": true,
+      "confidenceBps": 15,
+      "reference": "EWY",
+      "state": "PRE",
+      "sharesPerToken": 1,
+      "gapRisk": 18,
+      "gapRiskParts": {
+        "staleness": 0,
+        "displacement": 0.646593200468933,
+        "uncertainty": 0.0375,
+        "basis": 0.017024190196230915
+      },
+      "notes": [
+        "band is the issuer's own 15bp spread for the extended session"
+      ],
+      "onchainPrice": 183.83853907217673,
+      "basisBps": -8.512095098115458,
+      "depth": "ok",
+      "poolCount": 1,
+      "venueCount": 1,
+      "capacityUsdg": {
+        "50": 2757.836804,
+        "100": 5788.59356,
+        "200": 11850.106849,
+        "500": 30034.646751
+      },
+      "ladder": [
+        {
+          "sizeUsdg": 250,
+          "impactBps": 9,
+          "effectivePrice": 184.00632637162158,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 500,
+          "impactBps": 13,
+          "effectivePrice": 184.08214841890432,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 1000,
+          "impactBps": 22,
+          "effectivePrice": 184.2337925134697,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 2500,
+          "impactBps": 46,
+          "effectivePrice": 184.68872479716592,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 5000,
+          "impactBps": 87,
+          "effectivePrice": 185.4469452699929,
+          "decision": {
+            "ok": false,
+            "reason": "PRICE_IMPACT",
+            "detail": "87bp impact > 50bp"
+          }
+        },
+        {
+          "sizeUsdg": 10000,
+          "impactBps": 170,
+          "effectivePrice": 186.96338621564695,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "161bp from fair value > 115bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 25000,
+          "impactBps": 417,
+          "effectivePrice": 191.512709052609,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "409bp from fair value > 115bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 50000,
+          "impactBps": 968,
+          "effectivePrice": 201.6358013535642,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "959bp from fair value > 115bp tolerance"
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "wGLDx",
+      "name": "Wrapped Gold xStock",
+      "address": "0x735f1509Bff25e27Cd442B9bFb231324648eAD9B",
+      "fairValue": 402.40003,
+      "publishable": true,
+      "confidenceBps": 10,
+      "reference": "GLD",
+      "state": "PRE",
+      "sharesPerToken": 1,
+      "gapRisk": 10,
+      "gapRiskParts": {
+        "staleness": 0,
+        "displacement": 0.32007971864009377,
+        "uncertainty": 0.025,
+        "basis": 0.05805653639857855
+      },
+      "notes": [
+        "band is the issuer's own 10bp spread for the extended session"
+      ],
+      "onchainPrice": 403.56812759942426,
+      "basisBps": 29.028268199289275,
+      "depth": "ok",
+      "poolCount": 1,
+      "venueCount": 1,
+      "capacityUsdg": {
+        "50": 10727.498279,
+        "100": 22516.606312,
+        "200": 46094.82222,
+        "500": 116829.46986
+      },
+      "ladder": [
+        {
+          "sizeUsdg": 250,
+          "impactBps": 6,
+          "effectivePrice": 403.81280296462296,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 500,
+          "impactBps": 7,
+          "effectivePrice": 403.8555933235188,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 1000,
+          "impactBps": 9,
+          "effectivePrice": 403.9411740413104,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 2500,
+          "impactBps": 16,
+          "effectivePrice": 404.19791619468526,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 5000,
+          "impactBps": 26,
+          "effectivePrice": 404.6258197836434,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 10000,
+          "impactBps": 47,
+          "effectivePrice": 405.4816269615597,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 25000,
+          "impactBps": 111,
+          "effectivePrice": 408.0490484953085,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "140bp from fair value > 110bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 50000,
+          "impactBps": 217,
+          "effectivePrice": 412.32808438488985,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "247bp from fair value > 110bp tolerance"
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "wGOOGLx",
+      "name": "Wrapped Alphabet xStock",
+      "address": "0xf8c5308F80E459bb53d9EbE689854d9cBb2Caa6f",
+      "fairValue": 347.08845357526354,
+      "publishable": true,
+      "confidenceBps": 10,
+      "reference": "GOOGL",
+      "state": "PRE",
+      "sharesPerToken": 1.001927,
+      "gapRisk": 10,
+      "gapRiskParts": {
+        "staleness": 0,
+        "displacement": 0.3338663540445487,
+        "uncertainty": 0.025,
+        "basis": 0.05162560108160186
+      },
+      "notes": [
+        "token holds 1.001927 shares — 19.3bp of reinvested dividends, measured 2026-08-12",
+        "band is the issuer's own 10bp spread for the extended session"
+      ],
+      "onchainPrice": 347.98438607747886,
+      "basisBps": 25.81280054080093,
+      "depth": "ok",
+      "poolCount": 1,
+      "venueCount": 1,
+      "capacityUsdg": {
+        "50": 1697.254988,
+        "100": 3562.473081,
+        "200": 7292.909138,
+        "500": 18484.217351
+      },
+      "ladder": [
+        {
+          "sizeUsdg": 250,
+          "impactBps": 12,
+          "effectivePrice": 348.3916715496174,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 500,
+          "impactBps": 18,
+          "effectivePrice": 348.62487778910094,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 1000,
+          "impactBps": 32,
+          "effectivePrice": 349.0912902680679,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 2500,
+          "impactBps": 72,
+          "effectivePrice": 350.490527704969,
+          "decision": {
+            "ok": false,
+            "reason": "PRICE_IMPACT",
+            "detail": "72bp impact > 50bp"
+          }
+        },
+        {
+          "sizeUsdg": 5000,
+          "impactBps": 139,
+          "effectivePrice": 352.8225902093726,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "165bp from fair value > 110bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 10000,
+          "impactBps": 273,
+          "effectivePrice": 357.4867149442586,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "300bp from fair value > 110bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 25000,
+          "impactBps": 675,
+          "effectivePrice": 371.48096398604287,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "703bp from fair value > 110bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 50000,
+          "impactBps": 1330,
+          "effectivePrice": 399.1017713344867,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "1499bp from fair value > 110bp tolerance"
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "wHOODx",
+      "name": "Wrapped Robinhood xStock",
+      "address": "0x59801175a9b2248F9bf4Ba7f82E17045C4672ec8",
+      "fairValue": 95.014314,
+      "publishable": true,
+      "confidenceBps": 10,
+      "reference": "HOOD",
+      "state": "PRE",
+      "sharesPerToken": 1,
+      "gapRisk": 15,
+      "gapRiskParts": {
+        "staleness": 0,
+        "displacement": 0.5615756154747948,
+        "uncertainty": 0.025,
+        "basis": 0
+      },
+      "notes": [
+        "band is the issuer's own 10bp spread for the extended session"
+      ],
+      "onchainPrice": null,
+      "basisBps": null,
+      "depth": "no-liquidity",
+      "poolCount": 1,
+      "venueCount": 0,
+      "capacityUsdg": {
+        "50": 0,
+        "100": 0,
+        "200": 0,
+        "500": 0
+      },
+      "ladder": [
+        {
+          "sizeUsdg": 250,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 500,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 1000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 2500,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 5000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 10000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 25000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 50000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "wIBMx",
+      "name": "Wrapped International Business Machines xStock",
+      "address": "0xbF69D85055642A9C6450BdFDe3C49Baac50F8286",
+      "fairValue": 237.8920590151925,
+      "publishable": true,
+      "confidenceBps": 15,
+      "reference": "IBM",
+      "state": "PRE",
+      "sharesPerToken": 1.020403,
+      "gapRisk": 16,
+      "gapRiskParts": {
+        "staleness": 0,
+        "displacement": 0.5356107854630715,
+        "uncertainty": 0.0375,
+        "basis": 0.0580369031107697
+      },
+      "notes": [
+        "token holds 1.020403 shares — 204.0bp of reinvested dividends, measured 2026-08-12",
+        "band is the issuer's own 15bp spread for the extended session"
+      ],
+      "onchainPrice": 238.58238493418682,
+      "basisBps": 29.01845155538485,
+      "depth": "ok",
+      "poolCount": 1,
+      "venueCount": 1,
+      "capacityUsdg": {
+        "50": 810.445607,
+        "100": 1701.09413,
+        "200": 3482.391367,
+        "500": 8826.282838
+      },
+      "ladder": [
+        {
+          "sizeUsdg": 250,
+          "impactBps": 19,
+          "effectivePrice": 239.03657940780283,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 500,
+          "impactBps": 33,
+          "effectivePrice": 239.3714230135178,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 1000,
+          "impactBps": 61,
+          "effectivePrice": 240.0411102249478,
+          "decision": {
+            "ok": false,
+            "reason": "PRICE_IMPACT",
+            "detail": "61bp impact > 50bp"
+          }
+        },
+        {
+          "sizeUsdg": 2500,
+          "impactBps": 145,
+          "effectivePrice": 242.05017185923774,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "175bp from fair value > 115bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 5000,
+          "impactBps": 286,
+          "effectivePrice": 245.3986079163876,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "316bp from fair value > 115bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 10000,
+          "impactBps": 566,
+          "effectivePrice": 252.09548003068733,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "597bp from fair value > 115bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 25000,
+          "impactBps": 1408,
+          "effectivePrice": 272.18609638519354,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "1442bp from fair value > 115bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 50000,
+          "impactBps": 2812,
+          "effectivePrice": 305.6704569543344,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "2849bp from fair value > 115bp tolerance"
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "wINTCx",
+      "name": "Wrapped Intel xStock",
+      "address": "0x33AA35B0271FFfE2048Cc093aB7fE60931786719",
+      "fairValue": 104.0475275,
+      "publishable": true,
+      "confidenceBps": 10,
+      "reference": "INTC",
+      "state": "PRE",
+      "sharesPerToken": 1,
+      "gapRisk": 21,
+      "gapRiskParts": {
+        "staleness": 0,
+        "displacement": 0.8223728018757328,
+        "uncertainty": 0.025,
+        "basis": 0
+      },
+      "notes": [
+        "band is the issuer's own 10bp spread for the extended session"
+      ],
+      "onchainPrice": null,
+      "basisBps": null,
+      "depth": "no-liquidity",
+      "poolCount": 1,
+      "venueCount": 0,
+      "capacityUsdg": {
+        "50": 0,
+        "100": 0,
+        "200": 0,
+        "500": 0
+      },
+      "ladder": [
+        {
+          "sizeUsdg": 250,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 500,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 1000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 2500,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 5000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 10000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 25000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 50000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "wIWMx",
+      "name": "Wrapped Russell 2000 xStock",
+      "address": "0x25d218F19B706C8680Aa26Fb64e676CF84B58f65",
+      "fairValue": 305.00147588482497,
+      "publishable": true,
+      "confidenceBps": 15,
+      "reference": "IWM",
+      "state": "PRE",
+      "sharesPerToken": 1.0029,
+      "gapRisk": 5,
+      "gapRiskParts": {
+        "staleness": 0,
+        "displacement": 0.16727784290738568,
+        "uncertainty": 0.0375,
+        "basis": 0
+      },
+      "notes": [
+        "token holds 1.002900 shares — 29.0bp of reinvested dividends, measured 2026-08-12",
+        "band is the issuer's own 15bp spread for the extended session"
+      ],
+      "onchainPrice": null,
+      "basisBps": null,
+      "depth": "no-liquidity",
+      "poolCount": 1,
+      "venueCount": 0,
+      "capacityUsdg": {
+        "50": 0,
+        "100": 0,
+        "200": 0,
+        "500": 0
+      },
+      "ladder": [
+        {
+          "sizeUsdg": 250,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 500,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 1000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 2500,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 5000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 10000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 25000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 50000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "wMETAx",
+      "name": "Wrapped Meta xStock",
+      "address": "0xe840946FfEBCd66B7C4E95095effaFaDfa0D0e56",
+      "fairValue": 591.073855030087,
+      "publishable": true,
+      "confidenceBps": 10,
+      "reference": "META",
+      "state": "PRE",
+      "sharesPerToken": 1.002298,
+      "gapRisk": 12,
+      "gapRiskParts": {
+        "staleness": 0,
+        "displacement": 0.4333599062133645,
+        "uncertainty": 0.025,
+        "basis": 0.011684695165969927
+      },
+      "notes": [
+        "token holds 1.002298 shares — 23.0bp of reinvested dividends, measured 2026-08-12",
+        "band is the issuer's own 10bp spread for the extended session"
+      ],
+      "onchainPrice": 590.7285291392569,
+      "basisBps": -5.842347582984964,
+      "depth": "ok",
+      "poolCount": 1,
+      "venueCount": 1,
+      "capacityUsdg": {
+        "50": 2753.127987,
+        "100": 5778.709901,
+        "200": 11829.873558,
+        "500": 29983.364513
+      },
+      "ladder": [
+        {
+          "sizeUsdg": 250,
+          "impactBps": 9,
+          "effectivePrice": 591.2680969164059,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 500,
+          "impactBps": 13,
+          "effectivePrice": 591.5121526729749,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 1000,
+          "impactBps": 22,
+          "effectivePrice": 592.0002649152407,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 2500,
+          "impactBps": 46,
+          "effectivePrice": 593.4645990171789,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 5000,
+          "impactBps": 88,
+          "effectivePrice": 595.9051564370444,
+          "decision": {
+            "ok": false,
+            "reason": "PRICE_IMPACT",
+            "detail": "88bp impact > 50bp"
+          }
+        },
+        {
+          "sizeUsdg": 10000,
+          "impactBps": 170,
+          "effectivePrice": 600.786271495514,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "164bp from fair value > 110bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 25000,
+          "impactBps": 418,
+          "effectivePrice": 615.429616845913,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "412bp from fair value > 110bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 50000,
+          "impactBps": 831,
+          "effectivePrice": 639.8351924882417,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "825bp from fair value > 110bp tolerance"
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "wMRVLx",
+      "name": "Wrapped Marvell xStock",
+      "address": "0xB4eE60B6B817ca7386422Ef1A0F45EaddEa13275",
+      "fairValue": 227.5635259620625,
+      "publishable": true,
+      "confidenceBps": 15,
+      "reference": "MRVL",
+      "state": "PRE",
+      "sharesPerToken": 1.001665,
+      "gapRisk": 21,
+      "gapRiskParts": {
+        "staleness": 0,
+        "displacement": 0.7794044548651816,
+        "uncertainty": 0.0375,
+        "basis": 0.02911908188317547
+      },
+      "notes": [
+        "token holds 1.001665 shares — 16.7bp of reinvested dividends, measured 2026-08-12",
+        "band is the issuer's own 15bp spread for the extended session"
+      ],
+      "onchainPrice": 227.23220391475684,
+      "basisBps": -14.559540941587734,
+      "depth": "ok",
+      "poolCount": 1,
+      "venueCount": 1,
+      "capacityUsdg": {
+        "50": 1780.862548,
+        "100": 3737.962187,
+        "200": 7652.161416,
+        "500": 19394.758864
+      },
+      "ladder": [
+        {
+          "sizeUsdg": 250,
+          "impactBps": 11,
+          "effectivePrice": 227.4910101201059,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 500,
+          "impactBps": 18,
+          "effectivePrice": 227.63614338702837,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 1000,
+          "impactBps": 31,
+          "effectivePrice": 227.9264099208733,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 2500,
+          "impactBps": 69,
+          "effectivePrice": 228.7972095224081,
+          "decision": {
+            "ok": false,
+            "reason": "PRICE_IMPACT",
+            "detail": "69bp impact > 50bp"
+          }
+        },
+        {
+          "sizeUsdg": 5000,
+          "impactBps": 133,
+          "effectivePrice": 230.24854219163277,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "118bp from fair value > 115bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 10000,
+          "impactBps": 260,
+          "effectivePrice": 233.1512075300821,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "246bp from fair value > 115bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 25000,
+          "impactBps": 644,
+          "effectivePrice": 241.85920354543003,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "628bp from fair value > 115bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 50000,
+          "impactBps": 726,
+          "effectivePrice": 431.8751680042858,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "8978bp from fair value > 115bp tolerance"
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "wMSFTx",
+      "name": "Wrapped Microsoft xStock",
+      "address": "0x166Fbe68274b6a47e025F4ba17388c539f1fa1d0",
+      "fairValue": 492.68227865111,
+      "publishable": true,
+      "confidenceBps": 10,
+      "reference": "MSFT",
+      "state": "PRE",
+      "sharesPerToken": 1.004582,
+      "gapRisk": 10,
+      "gapRiskParts": {
+        "staleness": 0,
+        "displacement": 0.3292708089097304,
+        "uncertainty": 0.025,
+        "basis": 0.03689846230071847
+      },
+      "notes": [
+        "token holds 1.004582 shares — 45.8bp of reinvested dividends, measured 2026-08-12",
+        "band is the issuer's own 10bp spread for the extended session"
+      ],
+      "onchainPrice": 493.59123957536195,
+      "basisBps": 18.449231150359235,
+      "depth": "ok",
+      "poolCount": 1,
+      "venueCount": 1,
+      "capacityUsdg": {
+        "50": 2747.366,
+        "100": 5766.615475,
+        "200": 11805.11446,
+        "500": 29920.611482
+      },
+      "ladder": [
+        {
+          "sizeUsdg": 250,
+          "impactBps": 9,
+          "effectivePrice": 494.0425104480286,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 500,
+          "impactBps": 13,
+          "effectivePrice": 494.24686224136786,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 1000,
+          "impactBps": 22,
+          "effectivePrice": 494.6555658280464,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 2500,
+          "impactBps": 46,
+          "effectivePrice": 495.881676588082,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 5000,
+          "impactBps": 88,
+          "effectivePrice": 497.9251945214745,
+          "decision": {
+            "ok": false,
+            "reason": "PRICE_IMPACT",
+            "detail": "88bp impact > 50bp"
+          }
+        },
+        {
+          "sizeUsdg": 10000,
+          "impactBps": 171,
+          "effectivePrice": 502.01223038825964,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "189bp from fair value > 110bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 25000,
+          "impactBps": 419,
+          "effectivePrice": 514.273337988615,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "438bp from fair value > 110bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 50000,
+          "impactBps": 833,
+          "effectivePrice": 534.7085173225407,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "853bp from fair value > 110bp tolerance"
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "wMSTRx",
+      "name": "Wrapped MicroStrategy xStock",
+      "address": "0x30987adF0B11dc698438a99BA04ec3a1AB2c7EaB",
+      "fairValue": 93.1750375,
+      "publishable": true,
+      "confidenceBps": 25,
+      "reference": "MSTR",
+      "state": "PRE",
+      "sharesPerToken": 1,
+      "gapRisk": 18,
+      "gapRiskParts": {
+        "staleness": 0,
+        "displacement": 0.5785791324736226,
+        "uncertainty": 0.0625,
+        "basis": 0.06323382648306453
+      },
+      "notes": [
+        "band is the issuer's own 25bp spread for the extended session"
+      ],
+      "onchainPrice": 93.4696282076914,
+      "basisBps": 31.616913241532263,
+      "depth": "ok",
+      "poolCount": 1,
+      "venueCount": 1,
+      "capacityUsdg": {
+        "50": 2463.036024,
+        "100": 5169.818177,
+        "200": 10583.382292,
+        "500": 26824.074496
+      },
+      "ladder": [
+        {
+          "sizeUsdg": 250,
+          "impactBps": 10,
+          "effectivePrice": 93.55955095344812,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 500,
+          "impactBps": 14,
+          "effectivePrice": 93.6027155060044,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 1000,
+          "impactBps": 23,
+          "effectivePrice": 93.68904461111697,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 2500,
+          "impactBps": 51,
+          "effectivePrice": 93.94803192645468,
+          "decision": {
+            "ok": false,
+            "reason": "PRICE_IMPACT",
+            "detail": "51bp impact > 50bp"
+          }
+        },
+        {
+          "sizeUsdg": 5000,
+          "impactBps": 97,
+          "effectivePrice": 94.3796774520175,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "129bp from fair value > 125bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 10000,
+          "impactBps": 190,
+          "effectivePrice": 95.24296850314319,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "222bp from fair value > 125bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 25000,
+          "impactBps": 467,
+          "effectivePrice": 97.83284166296022,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "500bp from fair value > 125bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 50000,
+          "impactBps": 929,
+          "effectivePrice": 102.14929691536861,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "963bp from fair value > 125bp tolerance"
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "wMUx",
+      "name": "Wrapped Micron Technology xStock",
+      "address": "0xe2047ee3bdDb5C99ae428AB83df63f8730698e30",
+      "fairValue": 999.9275218364251,
+      "publishable": true,
+      "confidenceBps": 15,
+      "reference": "MU",
+      "state": "PRE",
+      "sharesPerToken": 1.000402,
+      "gapRisk": 21,
+      "gapRiskParts": {
+        "staleness": 0,
+        "displacement": 0.7902039859320046,
+        "uncertainty": 0.0375,
+        "basis": 0.0309449994243427
+      },
+      "notes": [
+        "token holds 1.000402 shares — 4.0bp of reinvested dividends, measured 2026-08-12",
+        "band is the issuer's own 15bp spread for the extended session"
+      ],
+      "onchainPrice": 998.3803840070444,
+      "basisBps": -15.47249971217135,
+      "depth": "ok",
+      "poolCount": 1,
+      "venueCount": 1,
+      "capacityUsdg": {
+        "50": 2680.529418,
+        "100": 5626.328115,
+        "200": 11517.925668,
+        "500": 27768.849247
+      },
+      "ladder": [
+        {
+          "sizeUsdg": 250,
+          "impactBps": 9,
+          "effectivePrice": 999.3034697935854,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 500,
+          "impactBps": 13,
+          "effectivePrice": 999.727115668167,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 1000,
+          "impactBps": 22,
+          "effectivePrice": 1000.57440741733,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 2500,
+          "impactBps": 47,
+          "effectivePrice": 1003.1162826648192,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 5000,
+          "impactBps": 90,
+          "effectivePrice": 1007.3527414106342,
+          "decision": {
+            "ok": false,
+            "reason": "PRICE_IMPACT",
+            "detail": "90bp impact > 50bp"
+          }
+        },
+        {
+          "sizeUsdg": 10000,
+          "impactBps": 175,
+          "effectivePrice": 1015.8256589022645,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "159bp from fair value > 115bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 25000,
+          "impactBps": 433,
+          "effectivePrice": 1041.6014876907038,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "417bp from fair value > 115bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 50000,
+          "impactBps": 1340,
+          "effectivePrice": 1132.1218418438987,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "1322bp from fair value > 115bp tolerance"
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "wNVDAx",
+      "name": "Wrapped NVIDIA xStock",
+      "address": "0xa8ddb5Cd96b5222AFe198316E9A57CAA642850D5",
+      "fairValue": 225.79713165671998,
+      "publishable": true,
+      "confidenceBps": 10,
+      "reference": "NVDA",
+      "state": "PRE",
+      "sharesPerToken": 1.000918,
+      "gapRisk": 9,
+      "gapRiskParts": {
+        "staleness": 0,
+        "displacement": 0.3049144196951934,
+        "uncertainty": 0.025,
+        "basis": 0.012341666034658694
+      },
+      "notes": [
+        "token holds 1.000918 shares — 9.2bp of reinvested dividends, measured 2026-08-12",
+        "band is the issuer's own 10bp spread for the extended session"
+      ],
+      "onchainPrice": 225.93646729624453,
+      "basisBps": 6.170833017329347,
+      "depth": "ok",
+      "poolCount": 1,
+      "venueCount": 1,
+      "capacityUsdg": {
+        "50": 5405.415662,
+        "100": 9356.281626,
+        "200": 13166.204117,
+        "500": 21876.269427
+      },
+      "ladder": [
+        {
+          "sizeUsdg": 250,
+          "impactBps": 7,
+          "effectivePrice": 226.0964067841576,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 500,
+          "impactBps": 9,
+          "effectivePrice": 226.14332152604962,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 1000,
+          "impactBps": 13,
+          "effectivePrice": 226.23715100983358,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 2500,
+          "impactBps": 26,
+          "effectivePrice": 226.5187194681528,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 5000,
+          "impactBps": 47,
+          "effectivePrice": 226.99862081024108,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 10000,
+          "impactBps": 114,
+          "effectivePrice": 228.522927901765,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "121bp from fair value > 110bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 25000,
+          "impactBps": 617,
+          "effectivePrice": 239.87805129662718,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "624bp from fair value > 110bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 50000,
+          "impactBps": 1596,
+          "effectivePrice": 261.99910394845733,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "1603bp from fair value > 110bp tolerance"
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "wORCLx",
+      "name": "Wrapped Oracle xStock",
+      "address": "0x1349456830Ddc3D8599E4d6A63698883Eca67ADa",
+      "fairValue": 150.11130892016254,
+      "publishable": true,
+      "confidenceBps": 15,
+      "reference": "ORCL",
+      "state": "PRE",
+      "sharesPerToken": 1.009319,
+      "gapRisk": 19,
+      "gapRiskParts": {
+        "staleness": 0,
+        "displacement": 0.7233388042203986,
+        "uncertainty": 0.0375,
+        "basis": 0
+      },
+      "notes": [
+        "token holds 1.009319 shares — 93.2bp of reinvested dividends, measured 2026-08-12",
+        "band is the issuer's own 15bp spread for the extended session"
+      ],
+      "onchainPrice": null,
+      "basisBps": null,
+      "depth": "no-liquidity",
+      "poolCount": 1,
+      "venueCount": 0,
+      "capacityUsdg": {
+        "50": 0,
+        "100": 0,
+        "200": 0,
+        "500": 0
+      },
+      "ladder": [
+        {
+          "sizeUsdg": 250,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 500,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 1000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 2500,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 5000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 10000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 25000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 50000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "wPLTRx",
+      "name": "Wrapped Palantir xStock",
+      "address": "0x4A2df09536F62341C9f946427D16414C04e21342",
+      "fairValue": 174.03031499999997,
+      "publishable": true,
+      "confidenceBps": 15,
+      "reference": "PLTR",
+      "state": "PRE",
+      "sharesPerToken": 1,
+      "gapRisk": 13,
+      "gapRiskParts": {
+        "staleness": 0,
+        "displacement": 0.4662180539273153,
+        "uncertainty": 0.0375,
+        "basis": 0.009783196236146097
+      },
+      "notes": [
+        "band is the issuer's own 15bp spread for the extended session"
+      ],
+      "onchainPrice": 173.94518636386582,
+      "basisBps": -4.891598118073048,
+      "depth": "ok",
+      "poolCount": 1,
+      "venueCount": 1,
+      "capacityUsdg": {
+        "50": 1709.634235,
+        "100": 3588.456804,
+        "200": 7346.101735,
+        "500": 18619.03635
+      },
+      "ladder": [
+        {
+          "sizeUsdg": 250,
+          "impactBps": 12,
+          "effectivePrice": 174.14792999667404,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 500,
+          "impactBps": 18,
+          "effectivePrice": 174.26365752824972,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 1000,
+          "impactBps": 32,
+          "effectivePrice": 174.49511259140104,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 2500,
+          "impactBps": 72,
+          "effectivePrice": 175.18947778085504,
+          "decision": {
+            "ok": false,
+            "reason": "PRICE_IMPACT",
+            "detail": "72bp impact > 50bp"
+          }
+        },
+        {
+          "sizeUsdg": 5000,
+          "impactBps": 138,
+          "effectivePrice": 176.34675309661174,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "133bp from fair value > 115bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 10000,
+          "impactBps": 271,
+          "effectivePrice": 178.6613037281251,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "266bp from fair value > 115bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 25000,
+          "impactBps": 670,
+          "effectivePrice": 185.60495562266516,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "665bp from fair value > 115bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 50000,
+          "impactBps": 1159,
+          "effectivePrice": 223.74476242065163,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "2857bp from fair value > 115bp tolerance"
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "wQQQx",
+      "name": "Wrapped Nasdaq xStock",
+      "address": "0x4C1AE29c159838fC1b224636E28E086EB69101f7",
+      "fairValue": 735.0099966646876,
+      "publishable": true,
+      "confidenceBps": 10,
+      "reference": "QQQ",
+      "state": "PRE",
+      "sharesPerToken": 1.002725,
+      "gapRisk": 5,
+      "gapRiskParts": {
+        "staleness": 0,
+        "displacement": 0.18060492379835874,
+        "uncertainty": 0.025,
+        "basis": 0
+      },
+      "notes": [
+        "token holds 1.002725 shares — 27.3bp of reinvested dividends, measured 2026-08-12",
+        "band is the issuer's own 10bp spread for the extended session"
+      ],
+      "onchainPrice": null,
+      "basisBps": null,
+      "depth": "no-liquidity",
+      "poolCount": 1,
+      "venueCount": 0,
+      "capacityUsdg": {
+        "50": 0,
+        "100": 0,
+        "200": 0,
+        "500": 0
+      },
+      "ladder": [
+        {
+          "sizeUsdg": 250,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 500,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 1000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 2500,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 5000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 10000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 25000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 50000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "wSKHYx",
+      "name": "Wrapped SK hynix xStock",
+      "address": "0x6215a58ed045d71F2561AaAbe54f4C885C522998",
+      "fairValue": 172.63674525,
+      "publishable": true,
+      "confidenceBps": 15,
+      "reference": "SKHY",
+      "state": "PRE",
+      "sharesPerToken": 1,
+      "gapRisk": 26,
+      "gapRiskParts": {
+        "staleness": 0,
+        "displacement": 0.990569753810082,
+        "uncertainty": 0.0375,
+        "basis": 0.01364449306826332
+      },
+      "notes": [
+        "band is the issuer's own 15bp spread for the extended session"
+      ],
+      "onchainPrice": 172.51896820630543,
+      "basisBps": -6.82224653413166,
+      "depth": "ok",
+      "poolCount": 1,
+      "venueCount": 1,
+      "capacityUsdg": {
+        "50": 835.508794,
+        "100": 1753.701029,
+        "200": 3590.08537,
+        "500": 9099.238287
+      },
+      "ladder": [
+        {
+          "sizeUsdg": 250,
+          "impactBps": 19,
+          "effectivePrice": 172.84013313010152,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 500,
+          "impactBps": 32,
+          "effectivePrice": 173.07499541847673,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 1000,
+          "impactBps": 59,
+          "effectivePrice": 173.54471999522713,
+          "decision": {
+            "ok": false,
+            "reason": "PRICE_IMPACT",
+            "detail": "59bp impact > 50bp"
+          }
+        },
+        {
+          "sizeUsdg": 2500,
+          "impactBps": 141,
+          "effectivePrice": 174.95389372547828,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "134bp from fair value > 115bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 5000,
+          "impactBps": 277,
+          "effectivePrice": 177.30251660923022,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "270bp from fair value > 115bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 10000,
+          "impactBps": 550,
+          "effectivePrice": 181.99976237673414,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "542bp from fair value > 115bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 25000,
+          "impactBps": 1366,
+          "effectivePrice": 196.0914996876671,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "1359bp from fair value > 115bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 50000,
+          "impactBps": 2728,
+          "effectivePrice": 219.5777285236449,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "2719bp from fair value > 115bp tolerance"
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "wSNDKx",
+      "name": "Wrapped Sandisk Corporation xStock",
+      "address": "0x75e82E2884Ea10f72FCA777449B73377f4646219",
+      "fairValue": 1708.9764475000002,
+      "publishable": true,
+      "confidenceBps": 15,
+      "reference": "SNDK",
+      "state": "PRE",
+      "sharesPerToken": 1,
+      "gapRisk": 26,
+      "gapRiskParts": {
+        "staleness": 0,
+        "displacement": 1,
+        "uncertainty": 0.0375,
+        "basis": 0.006792282521506099
+      },
+      "notes": [
+        "band is the issuer's own 15bp spread for the extended session"
+      ],
+      "onchainPrice": 1708.3960549572992,
+      "basisBps": -3.3961412607530495,
+      "depth": "ok",
+      "poolCount": 1,
+      "venueCount": 1,
+      "capacityUsdg": {
+        "50": 875.48619,
+        "100": 1837.612137,
+        "200": 3761.863925,
+        "500": 9534.618993
+      },
+      "ladder": [
+        {
+          "sizeUsdg": 250,
+          "impactBps": 18,
+          "effectivePrice": 1711.4702392849642,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 500,
+          "impactBps": 31,
+          "effectivePrice": 1713.6897982724804,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 1000,
+          "impactBps": 57,
+          "effectivePrice": 1718.1289162475134,
+          "decision": {
+            "ok": false,
+            "reason": "PRICE_IMPACT",
+            "detail": "57bp impact > 50bp"
+          }
+        },
+        {
+          "sizeUsdg": 2500,
+          "impactBps": 135,
+          "effectivePrice": 1731.446270172612,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "131bp from fair value > 115bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 5000,
+          "impactBps": 265,
+          "effectivePrice": 1753.6418600477762,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "261bp from fair value > 115bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 10000,
+          "impactBps": 525,
+          "effectivePrice": 1798.0330397981047,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "521bp from fair value > 115bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 25000,
+          "impactBps": 1304,
+          "effectivePrice": 1931.20657916781,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "1300bp from fair value > 115bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 50000,
+          "impactBps": 2603,
+          "effectivePrice": 2153.1624778600926,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "2599bp from fair value > 115bp tolerance"
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "wSPCXx",
+      "name": "Wrapped SpaceX xStock",
+      "address": "0x8e2eeD8b8B5E13Ea7BF38e50d7821d2C57309072",
+      "fairValue": 140.05003,
+      "publishable": true,
+      "confidenceBps": 10,
+      "reference": "SPCX",
+      "state": "PRE",
+      "sharesPerToken": 1,
+      "gapRisk": 26,
+      "gapRiskParts": {
+        "staleness": 0,
+        "displacement": 1,
+        "uncertainty": 0.025,
+        "basis": 0.005955194629234661
+      },
+      "notes": [
+        "no recorded open-gap statistics for this asset — the jump it carries to the open is unmeasured, and scored as if it were the worst in the universe",
+        "band is the issuer's own 10bp spread for the extended session"
+      ],
+      "onchainPrice": 140.091731259324,
+      "basisBps": 2.9775973146173307,
+      "depth": "ok",
+      "poolCount": 1,
+      "venueCount": 1,
+      "capacityUsdg": {
+        "50": 837.631748,
+        "100": 1758.15686,
+        "200": 3599.210808,
+        "500": 9096.908255
+      },
+      "ladder": [
+        {
+          "sizeUsdg": 250,
+          "impactBps": 19,
+          "effectivePrice": 140.3520456172233,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 500,
+          "impactBps": 32,
+          "effectivePrice": 140.54227906903986,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 1000,
+          "impactBps": 59,
+          "effectivePrice": 140.92274597267306,
+          "decision": {
+            "ok": false,
+            "reason": "PRICE_IMPACT",
+            "detail": "59bp impact > 50bp"
+          }
+        },
+        {
+          "sizeUsdg": 2500,
+          "impactBps": 141,
+          "effectivePrice": 142.064145684206,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "144bp from fair value > 110bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 5000,
+          "impactBps": 277,
+          "effectivePrice": 143.96695285824592,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "280bp from fair value > 110bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 10000,
+          "impactBps": 550,
+          "effectivePrice": 147.79630020971177,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "553bp from fair value > 110bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 25000,
+          "impactBps": 1373,
+          "effectivePrice": 159.3266997849488,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "1376bp from fair value > 110bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 50000,
+          "impactBps": 2746,
+          "effectivePrice": 178.56294066732494,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "2750bp from fair value > 110bp tolerance"
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "wSPYx",
+      "name": "Wrapped SP500 xStock",
+      "address": "0xE7E553Cd128F0011777323A0b44a7b96EA1CB540",
+      "fairValue": 780.6787585732375,
+      "publishable": true,
+      "confidenceBps": 10,
+      "reference": "SPY",
+      "state": "PRE",
+      "sharesPerToken": 1.005715,
+      "gapRisk": 4,
+      "gapRiskParts": {
+        "staleness": 0,
+        "displacement": 0.11488862837045721,
+        "uncertainty": 0.025,
+        "basis": 0.002480027719020672
+      },
+      "notes": [
+        "token holds 1.005715 shares — 57.1bp of reinvested dividends, measured 2026-08-12",
+        "band is the issuer's own 10bp spread for the extended session"
+      ],
+      "onchainPrice": 780.5819533251919,
+      "basisBps": -1.240013859510336,
+      "depth": "ok",
+      "poolCount": 1,
+      "venueCount": 1,
+      "capacityUsdg": {
+        "50": 3879.832,
+        "100": 8143.618089,
+        "200": 16671.190384,
+        "500": 42253.907126
+      },
+      "ladder": [
+        {
+          "sizeUsdg": 250,
+          "impactBps": 8,
+          "effectivePrice": 781.201280160936,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 500,
+          "impactBps": 11,
+          "effectivePrice": 781.4301207769076,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 1000,
+          "impactBps": 17,
+          "effectivePrice": 781.8878020088513,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 2500,
+          "impactBps": 34,
+          "effectivePrice": 783.260845704682,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 5000,
+          "impactBps": 64,
+          "effectivePrice": 785.5492518643998,
+          "decision": {
+            "ok": false,
+            "reason": "PRICE_IMPACT",
+            "detail": "64bp impact > 50bp"
+          }
+        },
+        {
+          "sizeUsdg": 10000,
+          "impactBps": 122,
+          "effectivePrice": 790.1260641838354,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "121bp from fair value > 110bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 25000,
+          "impactBps": 298,
+          "effectivePrice": 803.8565011421423,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "297bp from fair value > 110bp tolerance"
+          }
+        },
+        {
+          "sizeUsdg": 50000,
+          "impactBps": 591,
+          "effectivePrice": 826.7405627393205,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "590bp from fair value > 110bp tolerance"
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "wTSLAx",
+      "name": "Wrapped Tesla xStock",
+      "address": "0xc3FdBe3A68EE5dE461D30415a8165cf9Aefe1171",
+      "fairValue": 340.4357045,
+      "publishable": true,
+      "confidenceBps": 10,
+      "reference": "TSLA",
+      "state": "PRE",
+      "sharesPerToken": 1,
+      "gapRisk": 10,
+      "gapRiskParts": {
+        "staleness": 0,
+        "displacement": 0.3317983587338804,
+        "uncertainty": 0.025,
+        "basis": 0.054419676624641866
+      },
+      "notes": [
+        "band is the issuer's own 10bp spread for the extended session"
+      ],
+      "onchainPrice": 341.3620245475186,
+      "basisBps": 27.209838312320933,
+      "depth": "ok",
+      "poolCount": 1,
+      "venueCount": 1,
+      "capacityUsdg": {
+        "50": 20911.560712,
+        "100": 30458.183342,
+        "200": 45119.431034,
+        "500": 69571.455131
+      },
+      "ladder": [
+        {
+          "sizeUsdg": 250,
+          "impactBps": 6,
+          "effectivePrice": 341.5524883888674,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 500,
+          "impactBps": 6,
+          "effectivePrice": 341.5721858347447,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 1000,
+          "impactBps": 7,
+          "effectivePrice": 341.61158072649926,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 2500,
+          "impactBps": 11,
+          "effectivePrice": 341.72976540176313,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 5000,
+          "impactBps": 17,
+          "effectivePrice": 341.92618432766517,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 10000,
+          "impactBps": 26,
+          "effectivePrice": 342.2339941348619,
+          "decision": {
+            "ok": true
+          }
+        },
+        {
+          "sizeUsdg": 25000,
+          "impactBps": 70,
+          "effectivePrice": 343.73796606886066,
+          "decision": {
+            "ok": false,
+            "reason": "PRICE_IMPACT",
+            "detail": "70bp impact > 50bp"
+          }
+        },
+        {
+          "sizeUsdg": 50000,
+          "impactBps": 240,
+          "effectivePrice": 349.5697146168155,
+          "decision": {
+            "ok": false,
+            "reason": "OFF_FAIR_VALUE",
+            "detail": "268bp from fair value > 110bp tolerance"
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "wTSMx",
+      "name": "Wrapped TSMC xStock",
+      "address": "0x27D62249488fc66ECBb92C8da3F56f700B8e8501",
+      "fairValue": 431.34191364448753,
+      "publishable": true,
+      "confidenceBps": 15,
+      "reference": "TSM",
+      "state": "PRE",
+      "sharesPerToken": 1.004065,
+      "gapRisk": 12,
+      "gapRiskParts": {
+        "staleness": 0,
+        "displacement": 0.4340492379835873,
+        "uncertainty": 0.0375,
+        "basis": 0
+      },
+      "notes": [
+        "token holds 1.004065 shares — 40.6bp of reinvested dividends, measured 2026-08-12",
+        "band is the issuer's own 15bp spread for the extended session"
+      ],
+      "onchainPrice": null,
+      "basisBps": null,
+      "depth": "no-liquidity",
+      "poolCount": 1,
+      "venueCount": 0,
+      "capacityUsdg": {
+        "50": 0,
+        "100": 0,
+        "200": 0,
+        "500": 0
+      },
+      "ladder": [
+        {
+          "sizeUsdg": 250,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 500,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 1000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 2500,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 5000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 10000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 25000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        },
+        {
+          "sizeUsdg": 50000,
+          "impactBps": null,
+          "effectivePrice": null,
+          "decision": {
+            "ok": false,
+            "reason": "NO_DATA",
+            "detail": "the pools exist but hold no liquidity at the current price"
+          }
+        }
+      ]
+    }
+  ],
+  "totals": {
+    "capacityUsdg": {
+      "50": 69467.326384,
+      "100": 130382.20852500001,
+      "200": 243650.48337100004,
+      "500": 559648.8845609999
+    },
+    "medianUsdg": {
+      "50": 966.458934,
+      "100": 2028.56026,
+      "200": 4152.7629085,
+      "500": 10525.3707345
+    },
+    "largest": {
+      "symbol": "wTSLAx",
+      "usdg": 20911.560712,
+      "shareOfTotal": 0.3010272857833267
+    },
+    "unmeasured": [],
+    "dry": [
+      "wASMLx",
+      "wAVGOx",
+      "wDELLx",
+      "wHOODx",
+      "wINTCx",
+      "wIWMx",
+      "wORCLx",
+      "wQQQx",
+      "wTSMx"
+    ]
+  }
+}
