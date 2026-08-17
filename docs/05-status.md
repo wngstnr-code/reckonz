@@ -602,6 +602,19 @@ that host would buy nothing and would put a Safe owner on a machine that never n
 that is not in the nixpkgs snapshot Nixpacks pins. 22 builds. If it ever fails there again, the
 next move is `"builder": "RAILPACK"` in `railway.json`.
 
+**The red deploy badge on GitHub is those failed builds, and it is stale.** The last status Railway
+sent was a `failure` at 06:21 UTC on 17 Aug, during the `NIXPACKS_NODE_VERSION` attempts above; the
+build that succeeded at 06:10 is the one still running, and no commit since has touched
+`watchPatterns`, so nothing has overwritten the badge. It will go green on the next deploy that
+does.
+
+**Fixed 2026-08-17 (D87): the publisher crashed after a successful publish**, about one cycle in
+three. `getBlock` on the block our own write landed in was the only read in `publish.ts` with no
+retry around it, and an unsynced node answers it with a `null` that no transport-level retry
+treats as a failure. The write always landed — what died with the process was the read-back and the
+withhold report. Wrapped in `waitUntil`, catching `BlockNotFoundError` only. Worth checking in the
+Railway logs after the next deploy: `publish exited 1` should stop appearing.
+
 **20 Aug — record the video against a live oracle**, with the worker up. Leave a day of slack;
 21 Aug is the deadline, not the plan.
 

@@ -4527,3 +4527,52 @@ in the type system distinguishes them — `Address` is `0x${string}` either way.
 Not fixed here, and deliberately: the reverse route is still not in the repo. It was needed once,
 for one top-up, and a second swap script that nothing exercises is a script that rots. If a second
 top-up needs it, that is the moment to add `pnpm swap --reverse` with a test, not before.
+
+## D87 — The read that fetched the bound was not defended by the bound
+
+2026-08-17. `src/publish.ts` crashed after a **successful** publish, roughly one worker cycle in
+three, and the deploy badge on the repo went red while the oracle stayed green.
+
+```
+08:32:58  publishing 30 observations…
+08:33:00  tx 0xf4530d09…  block 68186544  gas 914001  status success
+08:33:00  BlockNotFoundError: Block at number "68186544" could not be found.
+              at async src/publish.ts:267
+08:33:00  publish exited 1 (1/6 consecutive)
+```
+
+**This is D18 one layer down, in the code written to handle D18.** The comment above that line is
+correct about the trap and the fix: the RPC load-balances, a confirmed write is not immediately
+readable, and the right bound for "has this node caught up to *our* write" is the timestamp of the
+block it landed in. `peekFresh` polls for exactly that. But the call that *fetches* the bound was
+a read against the same load-balanced RPC with nothing wrapped around it.
+
+**Why the existing retry budget did not cover it.** `rpcTransport` gives every host `retryCount: 2`
+and puts three hosts behind a `fallback` (D82). None of it fires here. A node that has not synced
+the block answers `eth_getBlockByNumber` with a well-formed `null`, and a `null` result is a
+*successful* JSON-RPC response: nothing failed, so nothing retries and nothing fails over. viem
+raises `BlockNotFoundError` at the action, above all of that. A retry budget defends against hosts
+that break, not against hosts that answer honestly from behind.
+
+**What it cost, and what it did not.** Not the publication: the transaction was mined and reported
+`status success` before the throw. What died with the process was everything below the line — the
+per-asset `checkExecution` read-back, and the withhold report at `publish.ts:314`. That one is not
+cosmetic, and its own comment says so: a publisher that cannot tell "the oracle refused my value"
+from "I published a withhold" keeps resending and never learns it has to confirm the jump. A third
+of cycles were blind to it for two days.
+
+**The fix** wraps the call in `waitUntil` (20 attempts, 500ms — the same budget `peekFresh` uses)
+and catches **only** `BlockNotFoundError`. A dead RPC or a bad key still surfaces on the first
+attempt rather than ten seconds later; the one condition worth waiting out is the one that
+resolves by waiting.
+
+**The general rule:** a poll that waits for a lagging node is only as good as the reads that
+compute what it is waiting *for*. Check the setup, not just the loop.
+
+**Why the badge was red and the app was green, since both were true.** `publish-loop.ts` tolerates
+six consecutive failures and then exits, handing the decision to the host's restart policy
+(D46 amended). Railway reports each restart to GitHub, and GitHub's environment badge shows the
+last status it was sent — a failure from 06:21 UTC that nothing has overwritten since, because no
+commit after it touched `watchPatterns`. `GET /api/health` was answering `ok` with observations 55
+seconds old the whole time, which is the honest signal (D81). A red badge is a claim about the
+last deploy event, not about whether the thing works now.

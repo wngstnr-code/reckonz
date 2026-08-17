@@ -7,7 +7,7 @@
  * to testnet — the oracle is an address-keyed registry, and reusing the real
  * identifiers keeps testnet observations comparable to mainnet ones.
  */
-import { formatEther, formatGwei, type Address } from 'viem';
+import { BlockNotFoundError, formatEther, formatGwei, type Address } from 'viem';
 import { FAIR_VALUE_ORACLE_ABI } from './abi';
 import { crossCheck, describeCrossCheck } from './crosscheck';
 import { ASSETS, computeFairValue, issuerSymbolFor, MEASURED, toOraclePayload } from './fairvalue';
@@ -264,7 +264,31 @@ console.log(`  block ${receipt.blockNumber}  gas ${receipt.gasUsed}  status ${re
 //
 // The right question is whether the node has caught up to *our* write, so the
 // bound is the timestamp of the block it landed in.
-const publishedAt = (await client.getBlock({ blockNumber: receipt.blockNumber })).timestamp;
+//
+// Fetching that bound is itself a read against a node that may be behind, and
+// it was the one read here with nothing defending it. An unsynced node answers
+// `eth_getBlockByNumber` with a well-formed `null`, which is a *successful*
+// JSON-RPC response: `retryCount` in `rpcTransport` never fires and `fallback`
+// never moves to another host, because nothing failed. viem turns that null
+// into `BlockNotFoundError` and it propagates.
+//
+// The write has already landed by this point, so the cost was never a missing
+// publication. It was everything below: the per-asset read-back, and the
+// withhold report that tells us the oracle refused a value we sent. On the
+// worker that killed roughly one cycle in three (2026-08-17), and six in a row
+// exits the loop and restarts the container.
+//
+// Only `BlockNotFoundError` is worth waiting out. A dead RPC or a bad key
+// should still surface on the first attempt rather than ten seconds later.
+const publishedAt = (await waitUntil(
+  () =>
+    client.getBlock({ blockNumber: receipt.blockNumber }).catch((e) => {
+      if (e instanceof BlockNotFoundError) return null;
+      throw e;
+    }),
+  (block) => block !== null,
+  { attempts: 20, delayMs: 500, what: `block ${receipt.blockNumber}` },
+))!.timestamp;
 
 const peekFresh = (asset: Address) =>
   waitUntil(
