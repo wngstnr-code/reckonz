@@ -214,7 +214,7 @@ pnpm oracle [usdg]           # fair value, gap risk, and the guard's decision pe
 pnpm thesis "free text"      # thesis -> assets -> sizing -> mandate
 pnpm track-record            # every published thesis and what it actually did
 pnpm evidence <hash>         # re-derive a receipt's evidence bundle and compare
-pnpm test                    # 216 TypeScript unit tests plus 106 Foundry tests
+pnpm test                    # 227 TypeScript unit tests plus 106 Foundry tests
 ```
 
 Anything that writes on chain takes its chain from `TARGET` (`testnet` by default), so nothing can
@@ -343,7 +343,7 @@ true reason rather than the false claim that the asset does not exist.
 - **On-chain data.** 18 receipts in an append-only registry on mainnet, five carrying evidence
   hashes anyone can re-derive; fees actually collected; a 2-of-3 Safe as admin; every deployed
   address verified on Sourcify.
-- **Code quality.** 106 Foundry plus 216 TypeScript tests in CI on every push, arithmetic mirrors
+- **Code quality.** 106 Foundry plus 227 TypeScript tests in CI on every push, arithmetic mirrors
   pinned against **real mainnet receipts** rather than invented vectors, one source per kind of fact,
   and an append-only decision log that records the mistakes instead of hiding them.
 - **Innovation.** Bounded agent execution is commodity by now. Bounding on **market conditions**,
@@ -361,7 +361,7 @@ true reason rather than the false claim that the asset does not exist.
 Shipped: mainnet stack with a publish-time bound, exits (contract, CLI and browser), evidence
 bundles archived publicly, the oracle cross-check, `/api/health` with a 503 that means it, RPC
 failover across three endpoints, WalletConnect for phones, rate limiting on every public route, and
-216 unit tests including the red-team suite. Next:
+227 unit tests including the red-team suite. Next:
 
 - **Something that calls `/api/health`.** An endpoint is not a monitor; one uptime check on a
   one-minute timer closes the gap that caused a two-day silent outage.

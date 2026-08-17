@@ -68,7 +68,7 @@ written with that in mind, and the phrase appears in the first sentence on purpo
 > was made on. That hash is published *before* anything is signed and the bundle is archived
 > publicly, so anyone can re-derive it and check that it matches. Fees have been collected on
 > mainnet; admin of the fee collector, the oracle and the receipt registry is a 2-of-3 Safe. Every
-> contract is verified on Sourcify (seven on mainnet, seven on testnet), and 106 Solidity plus 216
+> contract is verified on Sourcify (seven on mainnet, seven on testnet), and 106 Solidity plus 227
 > TypeScript tests run in CI on every push.
 >
 > **Honest about the market.** The entire xStock universe on X Layer absorbed $97,329 at 0.5%
@@ -189,7 +189,7 @@ parent company has just tied itself to tokenised equities with ICE alongside, an
 book is visibly deepening these pools.
 
 **Numbers to re-check before pasting, and every one of these has already moved once.** Receipts
-(18), theses (3), tests (106 + 216), capacity ($97,329 at 0.5%, 2026-08-15), 24h pool volume
+(18), theses (3), tests (106 + 227), capacity ($97,329 at 0.5%, 2026-08-15), 24h pool volume
 ($12.0M, same day), and the $250,000 → $20,361 run (2026-08-16). `pnpm capacity`,
 `pnpm plan 250000`, `pnpm check:tests` and a `count()` read settle all of them. **Re-run them on
 the day you paste**: capacity changed by more than 2x between 11 and 15 August, and the plan figure

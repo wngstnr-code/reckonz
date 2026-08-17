@@ -540,7 +540,7 @@ in a single day. **Settle every one of them on the morning you post, not the nig
 | the $250,000 run: $20,361 fits, $229,639 refused, $51,348 naive against $102 | `TARGET=mainnet pnpm plan 250000`, all four from this one run and not from `pnpm thesis` |
 | 24h pool volume, $12.0M | GeckoTerminal, network `x-layer` |
 | receipts, 18 | `count()` on `ReceiptRegistry` at `0x9D04575894F570C3638Bc1f6ECaD6EF36D479Fa6` |
-| tests, 106 + 216 = 322 | `pnpm check:tests` |
+| tests, 106 + 227 = 333 | `pnpm check:tests` |
 
 Posting a stale number is the one failure here that a judge can catch in under a minute, and it
 would undo the exact thing these posts are claiming.
