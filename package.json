@@ -9,6 +9,7 @@
     "plan": "tsx src/demo.ts",
     "capacity": "tsx src/capacity.ts",
     "board": "tsx src/board-demo.ts",
+    "blob:check": "tsx src/blob-check.ts",
     "typecheck": "tsc --noEmit",
     "oracle": "tsx src/oracle-demo.ts",
     "reconcile": "tsx src/reconcile-demo.ts",

@@ -532,6 +532,13 @@ There is a trap worth knowing about while doing it: **`hasBlobCredentials()` ans
 `/api/health` can report the archive as configured while every write fails. `persistBoard` logs
 that case loudly rather than returning quietly, which is the only reason it would be noticed.
 
+`pnpm blob:check` settles it the way the diagnosis above was reached — by attempting a real upload
+to a throwaway key and printing the SDK's own words, then reading it back from `BOARD_BLOB_BASE`,
+because writing to a store and serving from the base the page fetches are two facts and the second
+is not derivable from the first (D5). Run it locally with the token exported, and `railway run pnpm
+blob:check` against the worker's own environment. It is the check `hasBlobCredentials` cannot be
+made to perform without repeating the mistake that file records twice.
+
 Until the token exists nothing breaks: the committed `observations/board.json` is the floor the
 deployment ships with, and `fetchBoard()` prefers the archive and falls back to it. What is lost is
 freshness, and the page is required to say how old its numbers are regardless.

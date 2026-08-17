@@ -60,6 +60,7 @@ pnpm sample [--loop]         # write the issuer's marks to observations/ — our
 pnpm sample --merge <path>   # fold a store collected on the worker's volume back in (D67)
 pnpm measure [--multipliers]  # re-derive the recorded multipliers and gap σ from that store
 pnpm evidence [hash]         # verify receipts against the bundles they claim (D57)
+pnpm blob:check              # can THIS environment write to the archive, and can the site read it
 pnpm index [--verify|--rebuild]  # keep observations/registry.jsonl current (D66)
 pnpm dev                     # the web app — thesis in, guard verdict out
 pnpm build                   # next build (what Vercel runs); contracts are build:contracts
