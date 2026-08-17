@@ -8,6 +8,7 @@
     "verify:abi": "forge build && tsx src/verify-abi.ts",
     "plan": "tsx src/demo.ts",
     "capacity": "tsx src/capacity.ts",
+    "board": "tsx src/board-demo.ts",
     "typecheck": "tsc --noEmit",
     "oracle": "tsx src/oracle-demo.ts",
     "reconcile": "tsx src/reconcile-demo.ts",

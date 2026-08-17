@@ -13,8 +13,14 @@ const config: NextConfig = {
   // (the chain still decides what exists) and silently cost every request the
   // enumeration it was built to avoid, which is the worst kind of regression:
   // one that only shows up as latency.
+  //
+  // `src/board-store.ts` has the same shape and a harder failure: the assets
+  // board cannot be recomputed on request at all — it takes a minute or two of
+  // throttled RPC — so without the file the route has nothing to fall back to
+  // and the page is empty rather than merely slow.
   outputFileTracingIncludes: {
     '/api/theses': ['./observations/registry.jsonl'],
+    '/api/board': ['./observations/board.json'],
   },
 };
 

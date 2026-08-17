@@ -110,7 +110,7 @@ function oracleMaxAge(oracle: Address): Promise<bigint> {
  * a demo must not break because an RPC node was slow — but a run that could not
  * check says so in the notes rather than staying silent.
  */
-async function applyOnchainWithholding(
+export async function applyOnchainWithholding(
   asset: Address,
   report: FairValueReport,
   now: number,
