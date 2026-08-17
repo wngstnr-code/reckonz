@@ -464,11 +464,77 @@ things sit outside it.
   addressed to FE as "the brief he can disagree with". An addendum is appended below a marked line
   recording the information architecture and table anatomy now settled: structure from Ondo,
   table anatomy from Morpho, palette unchanged. **Nothing above that line was altered.**
-- **`app/api/**` — planned, not yet written.** `/assets` needs two routes that do not exist: one
-  serving the guard's answer across all thirty assets, one serving a stored run. The modules that
-  compute both are in `src/`; nothing has ever served them to a browser. The owner's call was that
-  FE writes them rather than waiting. When they land they are listed here with their shape, and
-  they compute nothing of their own — they read `src/` and serve it, per D28.
+- **`src/board.ts`, `src/board-store.ts`, `src/board-demo.ts`, `pnpm board`** — new, and the
+  largest crossing so far. `src/**` is BE's; the owner's call was that FE writes what `/assets`
+  needs rather than waiting. **It computes nothing of its own.** Every number comes from modules
+  that already existed — `loadVenues`, `capacity` and `bestQuote` from the planner,
+  `computeFairValue` from the engine, `checkExecution` from the guard — and the file is a walk that
+  records their answers once. If a figure here disagrees with the CLI, this is wrong.
+
+  Three things worth knowing before touching it. It measures **serially** through `serial()`,
+  because a board that trips the RPC rate limiter reports its own noise as a thin market. It asks
+  the deployed oracle through `applyOnchainWithholding`, which is now exported from `pipeline.ts`
+  rather than copied, so the board cannot answer ALLOW where the chain answers NO_REFERENCE. And
+  it records a **ladder of sizes** rather than one verdict, because since D62 almost nothing is
+  refused for want of a reference and what refuses assets now is `PRICE_IMPACT` — which is a
+  function of size, so "22 refused" is not a fact about the market but the answer to "refused at
+  what size".
+
+  `observations/board.json` is a single JSON document rather than the append-only NDJSON beside it:
+  a board is every market at one instant, and yesterday's is not evidence of anything. It is added
+  to `outputFileTracingIncludes` for the same reason `registry.jsonl` is, but with a harder
+  failure — the board cannot be recomputed on request at all, so without the file the page is empty
+  rather than merely slow.
+
+- **`app/api/board` — next.** It reads that file and serves it. `readBoard()` returns `null` for a
+  missing or undated file rather than throwing, because a board that has never been measured is a
+  page that says so, not a page that errors.
+
+- **`app/api/showcase` — planned, not yet written.** The stored run behind the verdict ribbon.
+
+- **`src/publish-loop.ts`** — the worker now measures the board too, hourly, on its own clock. The
+  owner's call, with Wangsit's agreement, rather than a ticket. **It costs no gas**: every call in
+  the walk is a read and nothing in it signs. Three properties are load-bearing and were verified
+  in the file rather than assumed — it runs *after* `runOnce`, its failure is caught and
+  deliberately **not** counted toward `MAX_CONSECUTIVE_FAILURES`, and `lastBoardAt` moves whether
+  it succeeded or not so a persistently broken board retries hourly rather than every cycle. A
+  flaky board must never take the oracle down with it: stale board is one page showing an hour-old
+  number and saying so, stale oracle is every fill reverting `STALE`.
+
+### ⚠️ One thing only Wangsit can do — `BLOB_READ_WRITE_TOKEN` on Railway
+
+The worker writes the board to the same Vercel Blob store the evidence bundles use, because a file
+written next to the worker is a file Vercel cannot read (D80, one store over). Without this, the
+worker will measure diligently every hour, write to Railway's own disk, and **the website will
+never see any of it** — while the log reads like success.
+
+Measured rather than assumed, by attempting a real upload:
+
+```
+credentials present: true
+→ Vercel Blob: No blob credentials found…
+  token exp   2026-08-15T00:11:42Z
+  expired     true
+```
+
+The cause is structural, not a stale local file. `evidence-store.ts` already records the two
+credential shapes: `BLOB_STORE_ID` pairs with `VERCEL_OIDC_TOKEN`, which is **short-lived and
+injected by Vercel's own runtime**. A Railway container cannot obtain it and cannot refresh it. So
+the worker needs the *other* shape — a static read-write token.
+
+1. Vercel → Storage → `reckonz-evidence` → create a **Read-Write Token**.
+2. Set it on the Railway service as `BLOB_READ_WRITE_TOKEN`.
+3. Optionally set `BOARD_INTERVAL_SEC`; it defaults to `3600`. `0` turns the board off entirely
+   and the publisher carries on unchanged.
+
+There is a trap worth knowing about while doing it: **`hasBlobCredentials()` answers `true` for
+`BLOB_STORE_ID` alone.** Inside Vercel that is correct. On Railway it is a false positive, so
+`/api/health` can report the archive as configured while every write fails. `persistBoard` logs
+that case loudly rather than returning quietly, which is the only reason it would be noticed.
+
+Until the token exists nothing breaks: the committed `observations/board.json` is the floor the
+deployment ships with, and `fetchBoard()` prefers the archive and falls back to it. What is lost is
+freshness, and the page is required to say how old its numbers are regardless.
 
 Also worth knowing, because it changes what the routes above must do: `pnpm capacity` across all
 thirty assets takes **70 seconds** on the throttled public RPC, and that is capacity alone, before
