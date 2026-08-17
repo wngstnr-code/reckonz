@@ -1,6 +1,8 @@
 import { fetchBoard } from '@/src/board-store';
+import { readShowcase } from '@/src/showcase';
 import { Board } from '@/app/components/console/Board';
 import { HowItWorks } from '@/app/components/console/HowItWorks';
+import { VerdictRibbon } from '@/app/components/console/VerdictRibbon';
 import { PageHeader } from '@/app/components/console/PageHeader';
 
 export const metadata = {
@@ -41,6 +43,8 @@ const DEFAULT_SIZE_USDG = 1_000;
  */
 export default async function AssetsPage() {
   const found = await fetchBoard();
+  const showcase = readShowcase();
+  const renderedAt = Date.now();
 
   return (
     <>
@@ -55,11 +59,13 @@ export default async function AssetsPage() {
           board={found.board}
           from={found.from}
           defaultSizeUsdg={DEFAULT_SIZE_USDG}
-          renderedAt={Date.now()}
+          renderedAt={renderedAt}
         />
       ) : (
         <NoBoard />
       )}
+
+      {showcase && <VerdictRibbon showcase={showcase} now={renderedAt} />}
 
       <HowItWorks />
     </>

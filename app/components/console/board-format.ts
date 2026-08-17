@@ -11,6 +11,17 @@ import type { BoardAsset } from '@/src/board';
 
 export const usd = (n: number) => `$${n.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 
+/**
+ * Cents, but only where they carry the meaning.
+ *
+ * `$178,500 at once, $5 planned` loses the argument it is making: five dollars
+ * and change against a hundred and seventy-eight thousand is the whole point,
+ * and rounding the small side to a bare `$5` reads like a rounding error rather
+ * than a measurement. Above a hundred the cents are noise and are dropped.
+ */
+export const usdExact = (n: number) =>
+  `$${n.toLocaleString('en-US', { maximumFractionDigits: n < 100 ? 2 : 0 })}`;
+
 export const pct = (bps: number | null | undefined) =>
   bps == null || !Number.isFinite(bps) ? '—' : `${(bps / 100).toFixed(2)}%`;
 

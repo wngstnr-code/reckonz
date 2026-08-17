@@ -21,6 +21,12 @@ const config: NextConfig = {
   outputFileTracingIncludes: {
     '/api/theses': ['./observations/registry.jsonl'],
     '/api/board': ['./observations/board.json'],
+    // `/assets` reads the store directly rather than asking our own route over
+    // HTTP, so it needs the file traced under its own path. Without this the
+    // committed board is not the floor it is described as: the page would fall
+    // straight through to "nothing measured" whenever the archive is unreachable,
+    // while `/api/board` beside it still answered from the file.
+    '/assets': ['./observations/board.json', './observations/showcase.json'],
   },
 };
 
