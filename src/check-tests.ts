@@ -64,7 +64,13 @@ function unitCount(): number {
   // logic worth pinning — a promise that never settles left the connect button
   // spinning forever (D83) — and a suite that cannot see the file where that
   // lives is a suite that guarantees the bug class stays untested.
-  const files = ['src', 'app/components'].flatMap((dir) =>
+  //
+  // `app/components/console` since 2026-08-18, for the same reason one level
+  // down. `board-format.ts` decides what every card and every row on /assets
+  // says, including two refusals that were bugs first, and neither this list
+  // nor the runner glob was recursive — so tests written for it would have been
+  // collected by nothing and passed by default.
+  const files = ['src', 'app/components', 'app/components/console'].flatMap((dir) =>
     readdirSync(dir)
       .filter((f) => f.endsWith('.test.ts'))
       .map((f) => `${dir}/${f}`),
