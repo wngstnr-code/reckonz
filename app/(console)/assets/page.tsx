@@ -1,6 +1,5 @@
 import { fetchBoard } from '@/src/board-store';
-import { BoardHeader } from '@/app/components/console/BoardHeader';
-import { BoardView } from '@/app/components/console/BoardView';
+import { Board } from '@/app/components/console/Board';
 import { PageHeader } from '@/app/components/console/PageHeader';
 
 export const metadata = {
@@ -22,10 +21,10 @@ export const dynamic = 'force-dynamic';
 /**
  * The size every verdict on this page is decided at.
  *
- * $1,000 rather than the smallest rung, because at $250 every tradable asset is
- * allowed and the column says nothing. Here it is fifteen of twenty-one, which
- * is the market telling you where its limit is. The slider that makes this a
- * question rather than a constant is Step 7.
+ * $1,000 rather than the smallest rung, because at $250 every tradable asset
+ * is allowed and the column says nothing, and a page that opens on a question
+ * with only one answer has wasted the reader's first look. The slider moves it
+ * from here; this is only where it starts.
  */
 const DEFAULT_SIZE_USDG = 1_000;
 
@@ -51,10 +50,7 @@ export default async function AssetsPage() {
       </PageHeader>
 
       {found ? (
-        <>
-          <BoardHeader board={found.board} sizeUsdg={DEFAULT_SIZE_USDG} from={found.from} />
-          <BoardView board={found.board} sizeUsdg={DEFAULT_SIZE_USDG} />
-        </>
+        <Board board={found.board} from={found.from} defaultSizeUsdg={DEFAULT_SIZE_USDG} />
       ) : (
         <NoBoard />
       )}

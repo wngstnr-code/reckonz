@@ -56,7 +56,11 @@ export function verdictOf(asset: BoardAsset, sizeUsdg: number): Verdict {
     return { ok: false, kind: 'dry', text: 'no depth right now' };
   }
 
-  const rung = asset.ladder.find((r) => r.sizeUsdg === sizeUsdg) ?? asset.ladder[0];
+  // Exact rung or nothing. Falling back to the smallest measured size would
+  // answer a question about $50,000 with a decision made about $250, and the
+  // answer would read "allowed" — the one direction a wrong verdict must never
+  // fail in. Every size the page can ask for is a rung the board measured.
+  const rung = asset.ladder.find((r) => r.sizeUsdg === sizeUsdg);
   if (!rung) return { ok: false, kind: 'refused', text: 'not measured at this size' };
   if (rung.decision.ok) return { ok: true, kind: 'allowed', text: 'allowed' };
 
