@@ -4735,3 +4735,76 @@ is a separate process on its own slow clock (`DRIFT_INTERVAL_SEC`, 30 minutes) a
 job, and nothing that measures may sit in front of the thing that publishes.
 
 Unit suite 257 → **269**.
+
+---
+
+## D91 — Three things that depended on somebody remembering
+
+Owner's call, 2026-08-18, after an audit of what in this system is automatic and what is not. The
+answer split cleanly in three: automatic, manual **by design**, and manual because nobody had got
+round to it. Only the third group is a defect, and it had three members.
+
+**Manual by design, and staying that way.** `pnpm reconcile` admits an asset — automating it is the
+exact assertion this oracle refuses to make (D38). `pnpm showcase` spends an LLM quota and, worse,
+re-recording on a timer would turn a measurement into a selection: run it enough times and you
+publish the flattering one. `pnpm fees withdraw`, `safe:admin`, `execute` and `exit` move money and
+need a human. Pushing the workers' stores into the repo needs a worker holding a repo token, and the
+publisher already holds a hot key (D67).
+
+### 1. The registry index ran when someone remembered
+
+`.github/workflows/index-registry.yml`, every six hours. `pnpm index` then `pnpm index --verify`,
+and it commits only if the store moved. The verify pass is not ceremony: the job commits unattended,
+so nothing else stands between a store that drifted and a deploy that serves it — a mismatch exits
+non-zero and the last good file stays.
+
+It needs **no secret**. Indexing is `eth_call` against public append-only registries, and the only
+credential is the token GitHub hands the job to push its own commit. It pushes to `main` rather than
+opening a PR because the file is the output of a measurement, not a proposal — and because
+`next.config.ts` traces it into the bundle, so a commit nobody deploys is a store production cannot
+read. Forgetting was never a correctness bug (the chain still decides how many receipts exist); it
+made `/api/theses` enumerate what it was missing on every request.
+
+### 2. The one outage with a date on it was watched by nobody
+
+`GET /api/health` measured **staleness**, which means it could only report the publisher's death
+after it happened. Gas exhaustion is the outage in this project with a *known date* — D85 put it at
+~6 Sep and left a calendar reminder for 3 Sep — and nothing checked the balance. `publish.ts` warns,
+at 20 runs left, which at thirty assets is **3.3 hours**: a warning measured in hours for a runway
+measured in weeks.
+
+The route now reads the publisher's balance and the gas price, and `classifyHealth` turns them into
+a runway. Under **seven days** it answers `degraded`, which the health workflow already alerts on,
+and the workflow prints the runway on every run so the trend is visible before the alert fires.
+Seven days is a *lead time* — buying OKB and moving it is a weekday errand and a week spans a
+weekend — not a risk threshold.
+
+Three shapes are deliberately kept apart, because collapsing them is how a monitor lies:
+
+| state | means |
+|---|---|
+| a short runway | still publishing; a date is approaching. `degraded`, never `down` |
+| a balance that could not be read | *unknown*, not zero — and silent when the RPC is already the reported fault |
+| a gas price of zero | an unreadable price, never free gas: runway 0, not infinity |
+
+The gas arithmetic moved into `health.ts` and `publish.ts` now imports it. Two copies of the same
+projection is the shape D60 found in five documents at once.
+
+### 3. Pulling the stores back needed a keypair
+
+The first pull of the publisher's volume was done with `railway ssh cat`, which needed a keypair
+generated, registered with Railway and a host key accepted — four steps and a new credential, for a
+**read**. `railway volume files download` reads the volume directly. `pnpm pull:stores` fetches both
+workers' stores, merges each (idempotent, dedupes on `symbol` + `observedAt`), writes only what
+changed and then names the next two commands: `pnpm measure`, `pnpm drift --report`.
+
+One thing it will not do is push, and that is D67 unchanged. This makes the manual step cheap; it
+does not make it automatic, because the reason it is manual is about credentials on a host that
+already holds a hot key.
+
+**A path detail worth writing down, because the two commands appear to disagree.** `railway volume
+files list /` prints `issuer-marks.jsonl` at the root, while `download /issuer-marks.jsonl` resolves
+against the volume's **mount path** and fetches `/data/issuer-marks.jsonl`. Getting it wrong reads
+as a missing file rather than a wrong path.
+
+Unit suite 269 → **276**.

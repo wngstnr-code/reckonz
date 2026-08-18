@@ -100,6 +100,15 @@ jobs:
               ;;
           esac
 
+      - name: Publisher runway, for the log
+        if: always()
+        run: |
+          # The one outage here with a date on it. Printed every run so the
+          # trend is visible in the run history before the alert ever fires —
+          # `classifyHealth` turns it into a problem at seven days, which is a
+          # lead time for buying and moving OKB rather than a risk threshold.
+          jq -r 'if .runway == null then "  runway: unreadable" else "  runway: \(.runway.days | .*10 | round / 10) days, \(.runway.runsLeft) publishes left at \(.runway.gasPriceWei) wei" end' body.json 2>/dev/null || true
+
       - name: Oracle age, for the log
         if: always()
         run: |

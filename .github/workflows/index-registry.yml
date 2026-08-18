@@ -1,0 +1,95 @@
+# Keep `observations/registry.jsonl` current without anyone remembering to.
+#
+# `CLAUDE.md` says: after a fill or a thesis publish, run `pnpm index` and commit
+# the store. That instruction has been correct and manual since D66, and a step
+# that depends on a person remembering is a step that is skipped the week it
+# matters. Forgetting costs latency, never correctness — the chain still decides
+# how many receipts exist, so a stale store just makes `/api/theses` enumerate
+# what it is missing on every request. Which is exactly the kind of slow, silent
+# cost worth spending a cron on rather than attention.
+#
+# **It needs no secret.** Indexing is `eth_call` against a public RPC and the
+# registries are append-only public contracts. Nothing here can sign; the only
+# credential in play is the token GitHub hands the job to push its own commit.
+#
+# **Why it pushes to `main` rather than opening a pull request.** The file is the
+# output of a measurement, not a proposal — there is nothing to review, and the
+# `--verify` step below is a stronger check than a human skim. The push does
+# trigger a Vercel deploy, which is the point: `next.config.ts` traces this file
+# into the bundle (`outputFileTracingIncludes`), so a commit nobody deploys is a
+# store production cannot read.
+#
+# Six-hourly rather than on a webhook: receipts arrive in ones, hours apart, and
+# nothing breaks while the store is behind. `schedule` on GitHub is best-effort
+# and drifts (D46) — fine here, for the same reason it is not fine for the
+# publisher.
+name: index registry
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: index-registry
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  index:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # Appends whatever the chain has that the store does not. Mainnet
+      # explicitly: `TARGET` defaults to testnet, and a job that quietly indexed
+      # the wrong chain would write a plausible file full of the wrong receipts.
+      - name: index
+        env:
+          TARGET: mainnet
+        run: pnpm index
+
+      # Re-read every stored record from the chain, field by field, and fail if
+      # any disagrees. The reason this is worth the second pass: the job commits
+      # unattended, so nothing else stands between a store that drifted and a
+      # deploy that serves it. `--verify` exits non-zero on a mismatch, which
+      # stops the commit below and leaves the last good file in place.
+      - name: verify against the chain
+        env:
+          TARGET: mainnet
+        run: pnpm index --verify
+
+      - name: commit if it moved
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- observations/registry.jsonl; then
+            echo "registry unchanged — nothing to commit"
+            exit 0
+          fi
+
+          added=$(git diff --numstat -- observations/registry.jsonl | cut -f1)
+          echo "registry grew by $added record(s)"
+
+          git config user.name  'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add observations/registry.jsonl
+          # The subject says what the chain had, not what the job did — the
+          # interesting fact in the history is the receipt, not the cron.
+          git commit -m "index: $added new record(s) from the chain"
+          # Rebase rather than force: a person pushing while this runs is the
+          # normal case, and this file is append-only so a rebase cannot lose
+          # either side.
+          git pull --rebase origin main
+          git push origin HEAD:main

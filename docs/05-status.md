@@ -16,7 +16,7 @@ colliding. `06-assessment.md` is the honest read on whether this is a business.
 ```bash
 cd /Users/mac/Desktop/okxai
 set -a && source .env && set +a     # PRIVATE_KEY, GEMINI_API_KEY, CASH
-pnpm typecheck && pnpm test         # expect: clean, 269 unit tests, then 106 passed
+pnpm typecheck && pnpm test         # expect: clean, 276 unit tests, then 106 passed
 git status --short                  # expect: clean; docs/ is tracked now, not ignored
 pnpm dev                            # the web app, port 3000 (falls back if taken)
 ```
@@ -411,9 +411,11 @@ figure in it is a reading with a date (D84).
   today, because all thirty resolve on the first try. It matters the moment a file is missing, which
   is exactly the case the fallback exists for. FE's file, and worth a test that mounts the component
   against a 404.
-- **`/api/health` exists and nothing calls it.** An endpoint is not a monitor. One free uptime
-  check against `https://reckonz.xyz/api/health` alerting on non-2xx closes it, and until
-  then the two-day outage in D81 could happen again in exactly the same way.
+- ~~**`/api/health` exists and nothing calls it.**~~ **Closed 2026-08-17** by
+  `.github/workflows/health-check.yml`, every five minutes, on GitHub so the monitor does not share
+  a failure domain with the worker it watches. **And since 2026-08-18 it watches the gas too**
+  (D91): the route reads the publisher's balance and reports a runway, `degraded` under seven days,
+  so the 3 Sep top-up reminder is a thing the system says rather than a thing to remember.
 - **The evidence store fills up with allowed plans, not just executed fills.** A bundle is archived
   when the guard allows, which is before anything is signed. True of `evidence/` on disk since D57;
   a public store only makes it visible. The receipt remains the proof a fill happened.
@@ -628,6 +630,13 @@ rather than from the dashboard: publisher nonce 19, balance down 0.000018027 OKB
 publish), **all thirty assets 73 seconds old**, and `GET /api/health` answering `ok` with four
 allowlisted assets at age 99s against a 900s `maxAge`. Green in Railway proves the container runs;
 these numbers prove it publishes. That distinction is D81.
+
+**The drift service is created and deliberately stopped until its config path is set.** Its
+volume is attached and its variables are in place, but with no config path it inherits
+`railway.json` and tries to be a second publisher — which is what it did on its first deploy,
+crash-looping on the missing key and measuring the board for nobody. `railway down` took it off
+until the field is set. **One dashboard step remains: set the `drift` service's config file path to
+`railway.drift.json`, then redeploy.**
 
 **The drift sampler is a second Railway service, from 2026-08-18 (D90).** Same project, its own
 volume at `/data`, its own config file `railway.drift.json` — Railway reads `railway.json` for every
