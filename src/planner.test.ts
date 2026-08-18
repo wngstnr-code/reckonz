@@ -16,7 +16,15 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { PoolSnapshot } from './pool';
 import { getSqrtRatioAtTick, computeSwapStep, getAmount0Delta } from './v3math';
-import { quote, bestQuote, capacity, schedule, type Venue } from './planner';
+import {
+  quote,
+  bestQuote,
+  capacity,
+  schedule,
+  planningLimitBps,
+  PLAN_HEADROOM,
+  type Venue,
+} from './planner';
 
 const USDG_DECIMALS = 6; // matches USDG.decimals in chain.ts
 const unit = 10n ** BigInt(USDG_DECIMALS);
@@ -170,6 +178,46 @@ test('capacity search is not capped at the old fixed 1,000,000 USDG guess (D34 r
 
   const beyondCap = quote(venue, cap + cap / 10n);
   assert.ok(beyondCap.impactBps > maxBps, 'a size clearly past capacity must breach the impact limit');
+});
+
+// ------------------------------------------------------------ plan headroom
+
+test('sizing straight to the guard limit lands on the boundary (the D86 defect)', () => {
+  // Not a fix, a demonstration: this is what the planner used to hand the
+  // guard. `capacity()` is correct here — it is asked for the largest size
+  // inside 50bp and returns exactly that — but a size whose measured impact IS
+  // the limit has no room left for the pool to move between being sized and
+  // being judged, and the guard rejects on `>`.
+  const venue = makeVenue(10n ** 15n, 30, 3000);
+  const guardBps = 50;
+
+  const atGuardLimit = quote(venue, capacity([venue], guardBps));
+  assert.equal(atGuardLimit.impactBps, guardBps);
+});
+
+test('planningLimitBps leaves the sized order real room under the guard', () => {
+  const venue = makeVenue(10n ** 15n, 30, 3000);
+  const guardBps = 50;
+  const planBps = planningLimitBps(guardBps);
+
+  assert.equal(planBps, guardBps * PLAN_HEADROOM);
+  assert.ok(planBps < guardBps);
+
+  const planned = capacity([venue], planBps);
+  const atPlanLimit = quote(venue, planned);
+
+  // Inside the limit it was sized to...
+  assert.ok(
+    atPlanLimit.impactBps <= planBps,
+    `sized order measured ${atPlanLimit.impactBps}bp against a ${planBps}bp planning limit`,
+  );
+  // ...and therefore strictly inside the one the guard enforces, by a margin
+  // the pool has to move through before the verdict flips.
+  assert.ok(guardBps - atPlanLimit.impactBps >= 5);
+
+  // The headroom costs size rather than being free, which is the trade this
+  // makes explicit: a capacity-limited leg is deliberately smaller now.
+  assert.ok(planned < capacity([venue], guardBps));
 });
 
 // ----------------------------------------------------------------- schedule

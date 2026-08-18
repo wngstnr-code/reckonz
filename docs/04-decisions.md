@@ -4616,3 +4616,55 @@ tradable, 0/30 priced`.
 
 **The rule.** When a measurement can fail *partially*, one number will always make it look fine.
 Print the one that would have caught it, and check what a write destroys before destroying it.
+
+## D89 — A plan sized to pass its own guard by a coin flip
+
+**2026-08-18.** Two runs of the same thesis, minutes apart. One allowed both legs. The other was
+rejected at 51bp against a 50bp limit. Nothing had been edited in between, and the difference was
+not an off-by-one — the pool moved between two stages that measure the same thing at different
+moments.
+
+`capacity()` is a bisection for the largest size whose impact is still inside the limit it is
+given, so it returns a size that sits *on* that boundary: asked for 50bp, it hands back an order
+measured at 50bp. That is the correct answer to the question it was asked, and it was the wrong
+question to size a trade with. The planner then handed that number to stage 6, which calls
+`loadVenues` again — a fresh RPC read, several seconds and a dozen calls later — re-quotes, and
+rejects on `impactBps > maxImpactBps`. A boundary-sized leg passes or fails on whichever way the
+pool drifted in the gap. `Math.floor(line.notional)` was already there and did not help; it defends
+against float conversion, not against a market.
+
+**The fix is headroom, stated as a choice.** `PLAN_HEADROOM = 0.9` in `src/planner.ts`, applied
+inside `planBasket` rather than at the call site so no caller can forget it, and deliberately *not*
+folded into `capacity()` — that function answers "what can this pool absorb", which `pnpm
+capacity`, `src/board.ts` and `src/publish.ts` all report as a measurement. Spending part of a
+limit is sizing policy and belongs to whoever proposes a trade. A capacity-limited leg is now
+smaller on purpose, and `PlanLine.capacityUsdg` is the reduced number, because it is the one that
+actually bounded the allocation.
+
+0.9 is not measured. The comment says so. The honest version derives it from the impact volatility
+already sitting in `observations/`, and that is a separate change rather than a number invented
+here and dressed up as evidence.
+
+**The second defect was worse and was found on the way.** `planBasket` sized against the caller's
+`maxImpactBps`; `checkExecution` judged against `DEFAULT_MANDATE.maxImpactBps`, hardcoded at 50.
+`/api/run` accepts an impact limit up to 10,000. So `?maxImpactBps=100` sized every leg to 100bp
+and the guard rejected **all** of them — not a race, a certainty, invisible only because both
+defaults happen to be 50. The run now computes `guardMaxBps = min(request, mandate)` once, plans
+against it, and judges against a mandate carrying the same number. Two limits that must agree are
+now one value.
+
+The `plan` event carries `planImpactBps` alongside `maxImpactBps` — additive, per 08-parallel.md.
+The guard's limit and the limit the sizing actually spent are different numbers now, and a page
+that shows only one of them cannot say which.
+
+**Measured on mainnet, 2026-08-18.** `pnpm plan` over the HBM basket: all four tradable legs now
+plan at **0.45%** against a 0.50% guard, one slice each, where they used to come back at 0.50%
+exactly. `src/demo.ts` prints both numbers now — a header stating only the guard's limit would show
+0.45% under a promise of 0.50% and leave the headroom indistinguishable from a defect.
+
+Two runs of that command a minute apart also priced `wMUx`'s naive leg at 22.33% and then 22.28%.
+Nobody touched anything in between. That five-basis-point wobble on an unrelated line is the drift
+this decision is about, sitting in the output the whole time.
+
+**The rule.** A search that solves for a bound returns the bound. If anything re-measures afterwards
+— another stage, another block, the chain itself — the boundary is not a place to stand.

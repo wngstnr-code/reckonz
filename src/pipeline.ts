@@ -19,6 +19,7 @@ import {
   bestQuote,
   loadVenues,
   planBasket,
+  planningLimitBps,
   type BasketPlan,
   type BasketTarget,
 } from './planner';
@@ -74,7 +75,18 @@ export type RunEvent =
       label: string;
       data: CompiledMandate & { described: { text: string; unresolved: string[] }[] };
     }
-  | { stage: 'plan'; status: 'done'; label: string; data: BasketPlan & { maxImpactBps: number } }
+  | {
+      stage: 'plan';
+      status: 'done';
+      label: string;
+      /**
+       * `maxImpactBps` is the limit the guard enforces on this run — the
+       * caller's request or the mandate's ceiling, whichever is tighter.
+       * `planImpactBps` is the tighter limit the sizing actually spent, so
+       * `capacityUsdg` and `notional` on each line read against that one.
+       */
+      data: BasketPlan & { maxImpactBps: number; planImpactBps: number };
+    }
   | {
       stage: 'oracle';
       status: 'done';
@@ -240,19 +252,32 @@ export async function* runPipeline(
     .filter((l) => bySymbol.has(l.symbol))
     .map((l) => ({ asset: bySymbol.get(l.symbol)!, weightBps: l.weightBps }));
 
+  // The planner and the guard have to be bounded by the same number. This used
+  // to size against the caller's `maxImpactBps` while the verdict below judged
+  // against the mandate's, so any request above the mandate sized every leg to
+  // a limit the guard then rejected — not some legs, all of them. It only
+  // stayed invisible because both defaults are 50. The limit in force is the
+  // tighter of the two, and it is what the run reports. See D89.
+  const guardMaxBps = Math.min(maxImpactBps, DEFAULT_MANDATE.maxImpactBps);
+  const guardMandate = { ...DEFAULT_MANDATE, maxImpactBps: guardMaxBps };
+
   yield {
     stage: 'plan',
     status: 'start',
     label: `sizing ${notional.toLocaleString('en-US')} USDG against live depth`,
   };
   const plan: BasketPlan = targets.length
-    ? await planBasket(targets, notional, maxImpactBps)
+    ? await planBasket(targets, notional, guardMaxBps)
     : { lines: [], totalUsdg: notional, naiveCost: 0, plannedCost: 0, unallocated: notional };
   yield {
     stage: 'plan',
     status: 'done',
     label: plan.unallocated > 0 ? 'capacity-limited' : 'fits',
-    data: { ...plan, maxImpactBps },
+    data: {
+      ...plan,
+      maxImpactBps: guardMaxBps,
+      planImpactBps: planningLimitBps(guardMaxBps),
+    },
   };
 
   // 6 — fair value and the guard's verdict, per leg
@@ -292,7 +317,7 @@ export async function* runPipeline(
 
     const q = venues.length ? bestQuote(venues, amountIn) : null;
     const decision: Decision = q
-      ? checkExecution(report, q.effectivePrice, q.impactBps, DEFAULT_MANDATE, now)
+      ? checkExecution(report, q.effectivePrice, q.impactBps, guardMandate, now)
       : { ok: false, reason: 'NO_DATA', detail: 'no venue on X Layer' };
 
     return {

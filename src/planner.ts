@@ -208,6 +208,12 @@ export interface PlanLine {
   targetBps: number;
   plannedBps: number;
   notional: number;
+  /**
+   * What this leg's pools absorb within the planner's limit — the guard's limit
+   * less `PLAN_HEADROOM`, not the guard's limit itself. It is the number that
+   * bounded `notional` above, so the two stay readable against each other.
+   * `pnpm capacity` reports the unreduced measurement.
+   */
   capacityUsdg: number;
   naiveImpactBps: number;
   plannedImpactBps: number;
@@ -228,16 +234,53 @@ export interface BasketPlan {
 }
 
 /**
+ * How much of the guard's impact limit the planner is allowed to spend.
+ *
+ * `capacity()` solves for the largest size whose impact is still inside the
+ * limit, so it lands *on* that boundary by construction: a capacity-limited leg
+ * came back sized at ~49.99bp against a 50bp guard. Nothing holds the pool
+ * still afterwards. The guard's verdict re-reads pool state a few seconds and
+ * many RPC calls later, and the fill is later still, so a leg sized on the
+ * boundary passed or failed its own guard on which way the pool drifted in
+ * between — two runs of the same thesis, minutes apart, one allowing both legs
+ * and one rejecting at 51bp. See D89.
+ *
+ * 0.9 is a choice, not a measurement, and is commented as one on purpose. It is
+ * wide enough that ordinary drift across a run cannot cross it, and narrow
+ * enough that the size we report stays worth reporting. Deriving it from the
+ * impact volatility already recorded in `observations/` is the honest version
+ * and is not this change.
+ */
+export const PLAN_HEADROOM = 0.9;
+
+/**
+ * The impact limit the planner sizes to, given the limit the guard enforces.
+ *
+ * Deliberately not folded into `capacity()`: that function answers "what can
+ * this pool absorb", which is a measurement `pnpm capacity`, `src/board.ts` and
+ * `src/publish.ts` all report as-is. Spending headroom is a sizing policy and
+ * belongs to whoever is proposing a trade.
+ */
+export function planningLimitBps(guardMaxBps: number): number {
+  return guardMaxBps * PLAN_HEADROOM;
+}
+
+/**
  * Caps every leg at what its pool can absorb, then hands the freed capital to
  * legs that still have headroom (never exceeding 2x their original weight, so
  * the thesis is not silently rewritten). Anything that still does not fit is
  * reported as unallocated rather than forced into the market.
+ *
+ * `guardMaxBps` is the limit the *guard* enforces, not the one this function
+ * sizes to — `PLAN_HEADROOM` is applied here rather than at the call site so a
+ * caller cannot forget it and hand back a plan that fails its own guard.
  */
 export async function planBasket(
   targets: BasketTarget[],
   totalUsdg: number,
-  maxImpactBps: number,
+  guardMaxBps: number,
 ): Promise<BasketPlan> {
+  const maxImpactBps = planningLimitBps(guardMaxBps);
   const unit = 10n ** BigInt(USDG.decimals);
   const total = parseUnits(String(totalUsdg), USDG.decimals);
 
