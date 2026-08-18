@@ -397,6 +397,15 @@ figure in it is a reading with a date (D84).
   the page is a defect that no longer exists. Re-running `pnpm showcase` is FE's call, and it is
   a legitimate re-record rather than the selection the note above rules out — the code under it
   changed.
+- **`AssetMark`'s fallback to the next extension does not reliably fire.** Found 2026-08-18 while
+  fixing the broken logos below. With five `.png` sources 404ing, the network shows only *one* of
+  the five retried its `.svg`; the other four never requested it and rendered the browser's broken
+  image glyph rather than the ticker the component promises. The retry sets state and remounts via
+  `key={attempt}`, and the replacement `<img>` carries `loading="lazy"` — the most likely reading is
+  that the deferred load never starts for a mark that was offscreen when the error fired. Invisible
+  today, because all thirty resolve on the first try. It matters the moment a file is missing, which
+  is exactly the case the fallback exists for. FE's file, and worth a test that mounts the component
+  against a 404.
 - **`/api/health` exists and nothing calls it.** An endpoint is not a monitor. One free uptime
   check against `https://reckonz.xyz/api/health` alerting on non-2xx closes it, and until
   then the two-day outage in D81 could happen again in exactly the same way.
