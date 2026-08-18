@@ -60,7 +60,24 @@ import { addressBySymbol } from './pool';
  */
 export const MAX_IDENTITY_BASIS_BPS = 2_000;
 
-export type ReconcileVerdict = 'ADMIT' | 'REJECT';
+/**
+ * Three outcomes, not two, since 2026-08-18 (D92).
+ *
+ * `REJECT` is a **refutation**: the chain and the issuer disagree about what
+ * this token is. `SKIPPED` is a test that could not run — the pool is dry, the
+ * issuer is silent, the ticker is halted. Both used to be `REJECT`, and the
+ * cost of collapsing them was that eleven assets whose *pools* had gone dry
+ * were reported as eleven mappings that had broken, under the sentence "the
+ * oracle is publishing a fair value it can no longer defend".
+ *
+ * It is the same rule `crosscheck.ts` already follows in the other direction —
+ * a check that cannot run reports `skipped`, never `ok` (D79) — and the same
+ * distinction D77 drew on the exit path between a measured zero and no
+ * measurement at all. An unrunnable check reported as a failure is quieter than
+ * a false pass and no more honest: it is how a check that matters becomes noise
+ * somebody learns to skip.
+ */
+export type ReconcileVerdict = 'ADMIT' | 'REJECT' | 'SKIPPED';
 
 export type ReconcileReason =
   /** the issuer has no token at this address */
@@ -73,6 +90,24 @@ export type ReconcileReason =
   | 'NO_VENUE'
   /** the chain and the issuer disagree by too much to be the same security */
   | 'BASIS';
+
+/**
+ * Which reasons refute the mapping, and which merely prevent the test running.
+ *
+ * `BASIS` is the refutation this test exists for: the chain says one thing, the
+ * issuer says another, and they cannot both be a claim on the same security.
+ * `NOT_CARRIED` is the other one — the mapping is an address the issuer carries,
+ * and an address it does not carry is not a mapping that stopped being checkable,
+ * it is a mapping that is gone.
+ *
+ * The rest are conditions of the world on the day the test ran. A dry pool, a
+ * halted ticker and a silent issuer all make the comparison impossible and say
+ * nothing whatever about identity. Note that the oracle **withholds** in the
+ * last two cases anyway, so nothing indefensible is published while they hold.
+ */
+export function refutes(reason: ReconcileReason): boolean {
+  return reason === 'BASIS' || reason === 'NOT_CARRIED';
+}
 
 export interface SignalFit {
   symbol: string;
@@ -185,7 +220,7 @@ export async function reconcile(
   if (!quote || !(quote.mid > 0)) {
     return {
       ...withIssuer,
-      verdict: 'REJECT',
+      verdict: 'SKIPPED',
       reason: 'NO_QUOTE',
       detail: `${asset.symbol} is carried but the issuer publishes no price for it`,
     };
@@ -194,7 +229,7 @@ export async function reconcile(
     return {
       ...withIssuer,
       referencePrice: quote.mid,
-      verdict: 'REJECT',
+      verdict: 'SKIPPED',
       reason: 'HALTED',
       detail: `the issuer has halted trading in ${asset.symbol}`,
     };
@@ -212,7 +247,7 @@ export async function reconcile(
   if (!onchainPrice || !(onchainPrice > 0)) {
     return {
       ...withPrice,
-      verdict: 'REJECT',
+      verdict: 'SKIPPED',
       reason: 'NO_VENUE',
       detail: 'no USDG pool with a readable spot price',
     };

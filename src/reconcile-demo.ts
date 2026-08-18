@@ -7,6 +7,16 @@
  * reconciling with the listing it claims to track, that is exactly the event the
  * oracle must not sleep through, so the script exits non-zero when an admitted
  * asset now fails. Same contract as `pnpm verify`.
+ *
+ * **What counts as "fails" narrowed on 2026-08-18 (D92).** Only a *refutation*
+ * exits non-zero — the chain disagreeing with the issuer about what a token is,
+ * or the issuer no longer carrying the address at all. A test that could not run
+ * is reported separately and loudly, and does not fail the script: on the day
+ * this changed, eleven pools had gone dry and the run was reporting eleven
+ * broken mappings under the sentence "the oracle is publishing a fair value it
+ * can no longer defend". None of them had moved. The eleven were exactly the set
+ * `/api/board` calls `dry`, and a market with no liquidity says nothing about
+ * identity.
  */
 import { ASSETS, MEASURED, MEASURED_ON, MULTIPLIERS_MEASURED_ON } from './fairvalue';
 import { quoteScaleCheck } from './issuer';
@@ -32,13 +42,21 @@ for (const r of results) {
       `${num(r.onchainPrice).padStart(10)} ` +
       `${(r.basisBps == null ? '—' : `${(r.basisBps / 100).toFixed(2)}%`).padStart(9)} ` +
       `${(r.issuer?.period ?? '—').padEnd(12)} ` +
-      `${r.verdict === 'ADMIT' ? 'ADMIT' : `REJECT ${r.reason}`}`,
+      `${r.verdict === 'ADMIT' ? 'ADMIT' : `${r.verdict} ${r.reason}`}`,
   );
 }
 console.log('  ' + '─'.repeat(88));
 
 const admitted = results.filter((r) => r.verdict === 'ADMIT');
-console.log(`\n  ${admitted.length} of ${results.length} admitted\n`);
+const skipped = results.filter((r) => r.verdict === 'SKIPPED');
+console.log(
+  `\n  ${admitted.length} of ${results.length} admitted` +
+    // Never printed as a bare fraction. "19 of 30 admitted" over a run where
+    // eleven could not be tested reads as eleven refusals, which is the reading
+    // this whole distinction exists to stop.
+    (skipped.length ? `, ${skipped.length} could not be tested at all` : '') +
+    '\n',
+);
 
 // Converted prices must never be silently indistinguishable from native ones.
 const converted = results.filter((r) => r.fxRate != null);
@@ -153,7 +171,7 @@ if (observed.length) {
   // The two assets ASSETS withholds are the interesting ones: the issuer quotes
   // a price for a security we refuse to price, which is a claim worth naming.
   const withheld = observed.filter(
-    (r) => r.verdict === 'REJECT' && r.issuer!.mid != null,
+    (r) => r.verdict !== 'ADMIT' && r.issuer!.mid != null,
   );
   if (withheld.length) {
     console.log(
@@ -170,7 +188,7 @@ if (observed.length) {
   console.log('');
 }
 
-console.log('  Why each rejection stands\n');
+console.log('  Why each asset is not admitted\n');
 for (const r of results) {
   if (r.verdict === 'ADMIT') continue;
   console.log(`  ${r.symbol.padEnd(9)} ${r.reason?.padEnd(13)} ${r.detail}`);
@@ -203,6 +221,12 @@ const recorded = new Map(ASSETS.filter((a) => a.admittedOn).map((a) => [a.symbol
 const regressions = results.filter(
   (r) => recorded.has(r.symbol) && r.verdict === 'REJECT',
 );
+/**
+ * Admitted assets the test could not reach today. Reported, never fatal — see
+ * the header. They are worth naming every run because the reason they are
+ * unreachable is itself news: eleven dry pools is a market fact worth seeing.
+ */
+const untested = results.filter((r) => recorded.has(r.symbol) && r.verdict === 'SKIPPED');
 const newlyAdmitted = admitted.filter((r) => !recorded.has(r.symbol));
 
 if (newlyAdmitted.length) {
@@ -252,6 +276,18 @@ if (multiplierDrift.length) {
   );
 }
 
+if (untested.length) {
+  console.log(
+    `\n  ⚠ ${untested.length} admitted asset(s) could not be tested today:\n` +
+      untested.map((r) => `      ${r.symbol}  ${r.reason}  ${r.detail}`).join('\n') +
+      '\n\n  This is not a failure and not a pass. The mapping is unchanged; the\n' +
+      '  conditions to re-check it were absent — a dry pool, a halted ticker, a\n' +
+      '  silent issuer. The oracle prices these from the issuer\'s mark, which needs\n' +
+      '  no pool, and the guard refuses a fill against a market with no depth\n' +
+      '  whatever this test says.\n',
+  );
+}
+
 if (regressions.length) {
   console.log(
     `\n  ✗ ${regressions.length} admitted asset(s) no longer reconcile:\n` +
@@ -261,4 +297,7 @@ if (regressions.length) {
   process.exit(1);
 }
 
-console.log(`\n  ✓ all ${recorded.size} admitted assets still reconcile\n`);
+console.log(
+  `\n  ✓ ${recorded.size - untested.length} of ${recorded.size} admitted assets re-checked` +
+    `${untested.length ? `, ${untested.length} untestable today` : ''} — none contradicted\n`,
+);

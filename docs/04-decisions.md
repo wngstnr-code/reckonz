@@ -4808,3 +4808,83 @@ against the volume's **mount path** and fetches `/data/issuer-marks.jsonl`. Gett
 as a missing file rather than a wrong path.
 
 Unit suite 269 → **276**.
+
+---
+
+## D92 — A test that could not run was reporting that it had failed
+
+Found 2026-08-18, running `pnpm reconcile` on the owner's instruction. It exited 1 with:
+
+```
+✗ 11 admitted asset(s) no longer reconcile:
+    wAMZNx  NO_VENUE  no USDG pool with a readable spot price
+    …
+The oracle is publishing a fair value it can no longer defend. Fix before shipping.
+```
+
+**Nothing had moved.** Those eleven are exactly the set `/api/board` calls `dry` — pools that exist
+and hold no in-range liquidity, measured 09:45 UTC the same morning. The admission test compares the
+chain's spot price against the issuer's mark; with no liquidity there is no spot price, so there is
+nothing to compare. That is a test that could not run, and it was being reported as a test that
+found something.
+
+**This repo already has the rule and applies it in the other direction.** `crosscheck.ts` reports
+`skipped` rather than `ok` for a check that cannot run (D79); `prepareExit` returns
+`shortfallBps: null` rather than `0` when nothing measured the sale (D77). Both exist because an
+absence rendered as a measurement is a lie in the reassuring direction. This was the same defect
+rendered as a *refusal* — quieter, no more honest, and worse in one specific way: a check that fails
+for reasons unrelated to what it checks is a check people learn to skip. `CLAUDE.md` tells the
+reader to run this before trusting `ASSETS`.
+
+**The fix is a third verdict, not a softer threshold.** `ReconcileVerdict` is now
+`ADMIT | REJECT | SKIPPED`, and `refutes(reason)` decides which:
+
+| reason | verdict | why |
+|---|---|---|
+| `BASIS` | REJECT | the chain and the issuer cannot both describe the same security |
+| `NOT_CARRIED` | REJECT | the mapping *is* an address the issuer carries |
+| `NO_VENUE` | SKIPPED | a dry pool is a market fact and says nothing about identity |
+| `NO_QUOTE` | SKIPPED | the issuer is silent — and the oracle withholds anyway |
+| `HALTED` | SKIPPED | the ticker is halted — likewise |
+
+Only a refutation exits non-zero. The untested are printed with their reasons, every run, under a
+sentence that says what the state is rather than implying a verdict: *"This is not a failure and not
+a pass."* The summary line cannot be read as a pass either — `19 of 30 admitted, 11 could not be
+tested at all` rather than a bare fraction, because `19 of 30` over a run where eleven were
+unreachable reads as eleven refusals.
+
+**What is actually true about those eleven, stated so nobody has to reconstruct it.** The oracle
+prices them from the issuer's mark times shares per token (D62), which needs no pool, and publishes
+capacity `0` alongside. The guard refuses a fill against a market with no depth regardless of what
+this test says. So the exposure the old sentence claimed — "publishing a fair value it can no longer
+defend" — was not the situation: nothing can trade them, and the board says so on the page.
+
+Unit suite 276 → **279**.
+
+---
+
+## D93 — The showcase re-recorded, because the thing it recorded was fixed
+
+`observations/showcase.json`, re-run 2026-08-18 on the owner's instruction. The previous recording
+was taken before D89 and ended in the guard refusing a leg at 51bp against a 50bp limit — a defect
+that no longer exists, left on the page as if it did.
+
+The new run, same thesis, live Gemini:
+
+```
+asked        $250,000
+placed       $1,702      wCRCLx $742, wCOINx $960 — both sized to 45bp
+refused      $248,298
+naive cost   $152,963
+planned cost $7.66
+guard        2/2 would execute
+```
+
+`PLAN_HEADROOM` is visible in the output: both legs are planned at 45bp against a 50bp guard, and
+both pass. That is D89 working, and it is a better demonstration than the refusal it replaces —
+the refused $248,298 was always the point, and it survives.
+
+**The rule about re-recording is unchanged and is worth restating, because this run is the exception
+that proves it.** A recording may be re-taken when the *code under it* has changed. It may never be
+re-taken because the numbers came out unflattering; running until the output reads well makes it a
+selection rather than a measurement, which is why `pnpm showcase` is not on a timer (D91).
