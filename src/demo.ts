@@ -5,7 +5,7 @@
  * Thesis: "HBM memory supply stays tight for two more quarters, and the
  * beneficiaries are wider than NVIDIA alone."
  */
-import { planBasket, type BasketTarget } from './planner';
+import { planBasket, planningLimitBps, type BasketTarget } from './planner';
 
 const TOTAL_USDG = Number(process.argv[2] ?? 250_000);
 const MAX_IMPACT_BPS = Number(process.argv[3] ?? 50); // 0.50% per leg
@@ -22,7 +22,14 @@ const usd = (n: number) =>
   n.toLocaleString('en-US', { maximumFractionDigits: 0 });
 const pct = (bps: number) => `${(bps / 100).toFixed(2)}%`;
 
+// Both limits, because the table shows both. Every planned leg lands on the
+// second one, and a header that stated only the guard's would leave the reader
+// reading 0.45% under a heading that promised 0.50% with no way to tell the
+// headroom from a defect. See D89.
 console.log(`\n  Thesis basket — ${usd(TOTAL_USDG)} USDG, impact limit ${pct(MAX_IMPACT_BPS)}/leg`);
+console.log(
+  `  sized to ${pct(planningLimitBps(MAX_IMPACT_BPS))}, leaving the guard room to still allow the fill`,
+);
 console.log(`  X Layer mainnet, live pool state\n`);
 
 const plan = await planBasket(thesis, TOTAL_USDG, MAX_IMPACT_BPS);

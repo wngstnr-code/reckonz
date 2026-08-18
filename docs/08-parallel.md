@@ -132,6 +132,23 @@ filtered out silently and its share of the notional came back as `BasketPlan.una
 the page labels as capacity the market refused — so the one thing not to do with this field is drop
 it.
 
+**2026-08-18 — the `plan` event carries `planImpactBps`** (D89):
+
+```
+data: BasketPlan & { maxImpactBps: number; planImpactBps: number }
+```
+
+Two limits that used to be one number. `maxImpactBps` is what the **guard** enforces on this run —
+the caller's request or the mandate's ceiling, whichever is tighter, so it is no longer just the
+query parameter echoed back. `planImpactBps` is the tighter limit the **sizing** actually spent
+(`maxImpactBps` × `PLAN_HEADROOM`), because a leg sized exactly to the guard's limit passed or
+failed its own guard on which way the pool drifted.
+
+Nothing FE renders today breaks: `panels.tsx` already reads `plan.maxImpactBps` and it still means
+"the limit in force". What changed underneath is `PlanLine.capacityUsdg` — it is now measured at
+`planImpactBps`, not at `maxImpactBps`, since that is the number that bounded `notional`. If the
+page states a limit next to a capacity, the honest one to state there is `planImpactBps`.
+
 ### Announced breaking changes
 
 **2026-08-12 — `FairValueReport.signals` removed, and two `gapRiskParts` fields changed meaning.**
