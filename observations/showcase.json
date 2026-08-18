@@ -1,7 +1,7 @@
 {
-  "recordedAt": 1787014568,
+  "recordedAt": 1787049346,
   "thesis": "Stablecoin settlement volume keeps compounding onchain, so the issuers and the exchanges that clear it capture more of the payments margin than the incumbent card networks do.",
-  "claim": "Continued compounding of onchain stablecoin settlement volume will allow stablecoin issuers and clearing exchanges to capture payment margin share from traditional card networks.",
+  "claim": "Compounding on-chain stablecoin settlement volume will reallocate payments margin from traditional card networks to stablecoin issuers and clearing exchanges.",
   "horizonDays": 365,
   "provider": "gemini-3.6-flash (live)",
   "live": true,
@@ -9,34 +9,34 @@
   "maxImpactBps": 50,
   "lines": [
     {
-      "symbol": "wCOINx",
-      "targetBps": 6000,
-      "plannedBps": 39,
-      "notional": 967.01022,
-      "naiveImpactBps": 6287,
+      "symbol": "wCRCLx",
+      "targetBps": 5185,
+      "plannedBps": 30,
+      "notional": 741.808069,
+      "naiveImpactBps": 7082,
       "plannedImpactBps": 45,
       "slices": 1
     },
     {
-      "symbol": "wCRCLx",
-      "targetBps": 4000,
-      "plannedBps": 30,
-      "notional": 754.315297,
-      "naiveImpactBps": 5374,
+      "symbol": "wCOINx",
+      "targetBps": 4815,
+      "plannedBps": 38,
+      "notional": 960.368117,
+      "naiveImpactBps": 5081,
       "plannedImpactBps": 45,
       "slices": 1
     }
   ],
   "verdicts": [
     {
-      "symbol": "wCOINx",
-      "fillSizeUsdg": 967,
+      "symbol": "wCRCLx",
+      "fillSizeUsdg": 741,
       "impactBps": 45,
       "ok": true
     },
     {
-      "symbol": "wCRCLx",
-      "fillSizeUsdg": 754,
+      "symbol": "wCOINx",
+      "fillSizeUsdg": 960,
       "impactBps": 45,
       "ok": true
     }
@@ -44,9 +44,9 @@
   "invented": 0,
   "totals": {
     "askedUsdg": 250000,
-    "placedUsdg": 1721.325517,
-    "unallocatedUsdg": 248278.674483,
-    "naiveCostUsdg": 148045,
-    "plannedCostUsdg": 7.7459648265
+    "placedUsdg": 1702.1761860000001,
+    "unallocatedUsdg": 248297.823814,
+    "naiveCostUsdg": 152962.9625,
+    "plannedCostUsdg": 7.659792837
   }
 }
