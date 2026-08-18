@@ -16,7 +16,7 @@ colliding. `06-assessment.md` is the honest read on whether this is a business.
 ```bash
 cd /Users/mac/Desktop/okxai
 set -a && source .env && set +a     # PRIVATE_KEY, GEMINI_API_KEY, CASH
-pnpm typecheck && pnpm test         # expect: clean, 279 unit tests, then 106 passed
+pnpm typecheck && pnpm test         # expect: clean, 281 unit tests, then 106 passed
 git status --short                  # expect: clean; docs/ is tracked now, not ignored
 pnpm dev                            # the web app, port 3000 (falls back if taken)
 ```
@@ -397,7 +397,15 @@ figure in it is a reading with a date (D84).
   2026-08-18 (D93)**: same thesis, live Gemini, both legs planned at 45bp against a 50bp guard and
   **2/2 would execute**. $250,000 asked, $1,702 placed, $248,298 refused, $152,963 of impact
   avoided. The refusal on the page was a defect that no longer exists.
-- **The drift store holds two samples and needs thirty.** `pnpm drift --report` withholds a
+- ~~**The drift store holds two samples and needs thirty.**~~ **Crossed 2026-08-18: 40 samples**,
+  and the answer was *leave 0.9 alone* — the adverse tail says 0.98 and the absolute tail says 0.78,
+  and a store whose two readings differ by that much cannot justify loosening anything. See the D90
+  amendment. What would settle it is a store spanning several sessions rather than two hours of one.
+- **The gap σ needs about six weeks, not more sampling.** 5,250 marks and still 1/30 boundaries: σ
+  counts close-to-open jumps, so it advances once a trading day however densely the worker samples.
+  Nothing to do but leave the worker up — and it is the reason the 3 Sep top-up decision is not
+  only about the oracle.
+- ~~**The drift store holds two samples and needs thirty.**~~ `pnpm drift --report` withholds a
   suggested `PLAN_HEADROOM` until then, and 0.9 stays in force meanwhile (D90). Closing it is
   `DRIFT_INTERVAL_SEC=1800 pnpm drift --loop` left running somewhere for a day — about 48 passes —
   and then `pnpm drift --merge` if it ran anywhere but here. Nothing depends on it: the planner

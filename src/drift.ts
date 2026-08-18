@@ -129,9 +129,26 @@ function report(): void {
   if (cov.length > 10) console.log(`      …and ${cov.length - 10} more`);
 
   console.log(
-    `\n  p${(s.p * 100).toFixed(0)} drift  ${bps(s.driftBps)} against a ${s.limitBps}bp limit\n` +
-      `  suggested PLAN_HEADROOM  ${s.headroom.toFixed(3)}   (in force: ${PLAN_HEADROOM})\n`,
+    `\n  p${(s.p * 100).toFixed(0)} drift against us   ${bps(s.driftBps).padStart(9)}  ` +
+      `→ PLAN_HEADROOM ${s.headroom.toFixed(3)}\n` +
+      `  p${(s.p * 100).toFixed(0)} drift either way   ${bps(s.absDriftBps).padStart(9)}  ` +
+      `→ ${s.symmetricHeadroom.toFixed(3)} had the sign gone the other way\n` +
+      `  worst single move   ${bps(s.worstAbsBps).padStart(9)}\n` +
+      `  in force            ${PLAN_HEADROOM}\n`,
   );
+
+  // The line that stops this being read backwards. A store whose adverse tail
+  // is thin only says nothing has moved against us *yet* — the pool does not
+  // know which way we need it to go, so the absolute tail is the honest measure
+  // of what it can do. Loosening on the adverse number alone is the mistake this
+  // whole tool was built to prevent someone making with confidence.
+  if (s.symmetricHeadroom < s.headroom - 0.01) {
+    console.log(
+      `  ⚠ The two disagree. Nothing has moved against us by more than ${bps(s.driftBps)},\n` +
+        `    but something moved ${bps(s.worstAbsBps)} — and the sign is not ours to choose.\n` +
+        `    Read the second number as the tail and the first as today's luck.\n`,
+    );
+  }
 
   if (s.withheld) {
     // The same refusal the gap σ makes, for the same reason: a number derived
@@ -147,7 +164,10 @@ function report(): void {
   console.log(
     s.headroom < PLAN_HEADROOM
       ? '  The measurement asks for a tighter headroom than the one in force.\n'
-      : '  The headroom in force covers the measured drift.\n',
+      : s.symmetricHeadroom < PLAN_HEADROOM
+        ? '  The headroom in force covers what moved against us, and not the widest\n' +
+          '  move in the store. That is a reason to leave it alone, not to loosen it.\n'
+        : '  The headroom in force covers the measured drift.\n',
   );
 }
 
