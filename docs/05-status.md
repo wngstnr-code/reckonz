@@ -638,6 +638,8 @@ crash-looping on the missing key and measuring the board for nobody. `railway do
 until the field is set. **One dashboard step remains: set the `drift` service's config file path to
 `railway.drift.json`, then redeploy.**
 
+Two things about that field, both found the hard way on 2026-08-18. **A leading space in the value is invisible and fatal** — Railway reported `service config at ' railway.drift.json' not found`, which reads as a missing file and is a wrong path; type it rather than paste it. And **the restart-retry count is the tell**: the dashboard defaults to 10, `railway.drift.json` says 100, so a service still showing 10 has not read its config whatever the field displays. There is also no redeploy button for a removed deployment and `railway service redeploy` refuses one — a push to `main` is what restarts it.
+
 **The drift sampler is a second Railway service, from 2026-08-18 (D90).** Same project, its own
 volume at `/data`, its own config file `railway.drift.json` — Railway reads `railway.json` for every
 service built from a repo and config-as-code beats the dashboard, so a second service sharing it
