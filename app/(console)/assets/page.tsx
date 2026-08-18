@@ -53,8 +53,8 @@ export default async function AssetsPage() {
         title="Tokenised stocks, and what each market can take"
         aside={found ? <BoardFigures board={found.board} /> : null}
       >
-        A price we can defend, the overnight gap risk, and the size we would refuse. All thirty on
-        X Layer, measured against real pools. No wallet needed.
+        A price we can defend, the overnight gap risk, and the size we would refuse. Measured
+        against real pools, not estimated.
       </Hero>
 
       {found ? (

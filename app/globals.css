@@ -64,6 +64,19 @@
   --color-cta-4: #17a276;
   --color-cta-ink: #ffffff;
 
+  /* The frame the assets page opens on, one step deeper than `cta-1`.
+   *
+   * Not `cta-1` itself, because that is the field the connect button's mesh is
+   * built on and it is tuned for a control the eye lands on for a second. This
+   * one sits behind copy that gets read, and the difference is measurable
+   * rather than a matter of taste: `cta-3` on `cta-1` is 3.06:1, which passes
+   * only as large text and the subtitle is not large text. On this it is
+   * 4.90:1 and white is 8.04:1, both clear of AA for body copy.
+   *
+   * Same hue, walked down in lightness until the subtitle cleared, so it is
+   * still the one accent green rather than a fourth colour. */
+  --color-frame: #075c3f;
+
   /* The footer is its own surface rather than a shaded strip of the page.
    *
    * A neutral mid grey, and one value for both themes rather than two. Against

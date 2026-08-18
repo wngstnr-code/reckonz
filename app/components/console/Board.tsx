@@ -80,15 +80,23 @@ export function Board({
   return (
     <>
       <PricingNotice board={board} />
-      <BoardHeader
-        board={board}
-        sizeUsdg={size}
-        from={source}
-        now={now}
-        refresh={refresh}
-        onRefresh={check}
-      />
-      <SizeControl board={board} value={size} onChange={setSizeUsdg} />
+
+      {/* The counts, the stamp and the slider are one thing: what the board
+          says at the size you picked, and how you change that size. Held
+          together by proximity and separated from the frame above and the grid
+          below by air, rather than by a box drawn around them. */}
+      <section className="mt-12 mb-14">
+        <BoardHeader
+          board={board}
+          sizeUsdg={size}
+          from={source}
+          now={now}
+          refresh={refresh}
+          onRefresh={check}
+        />
+        <SizeControl board={board} value={size} onChange={setSizeUsdg} />
+      </section>
+
       <BoardView board={board} sizeUsdg={size} />
     </>
   );

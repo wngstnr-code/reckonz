@@ -26,7 +26,7 @@ export function PricingNotice({ board }: { board: Board }) {
   const withDepth = board.assets.filter((a) => a.depth === 'ok').length;
 
   return (
-    <div className="mb-6 max-w-[74ch] rounded-xl border border-caution/40 bg-caution/6 p-4">
+    <div className="mt-10 max-w-[74ch] rounded-xl border border-caution/40 bg-caution/6 p-4">
       <h2 className="font-mono text-micro text-caution uppercase">
         {blind ? 'No prices on this measurement' : `${unpriced} without a price we can defend`}
       </h2>

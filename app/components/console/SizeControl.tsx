@@ -41,36 +41,41 @@ export function SizeControl({
   const index = Math.max(0, rungs.indexOf(value));
 
   return (
-    <section className="mb-8">
+    <section>
       <label htmlFor="size" className="sr-only">
         How much you would put in
       </label>
 
-      <input
-        id="size"
+      {/* Inset rather than flush. A rail that runs into the gutter reads as
+          something that overflowed the page rather than something sized to it,
+          and the thumb at either end needs room to sit inside its own track. */}
+      <div className="px-3">
+        <input
+          id="size"
         type="range"
-        min={0}
-        max={rungs.length - 1}
-        step={1}
-        value={index}
-        onChange={(e) => onChange(rungs[Number(e.target.value)])}
-        aria-valuetext={`${usd(value)} USDG`}
-        className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-raised accent-signal outline-none"
-      />
+          min={0}
+          max={rungs.length - 1}
+          step={1}
+          value={index}
+          onChange={(e) => onChange(rungs[Number(e.target.value)])}
+          aria-valuetext={`${usd(value)} USDG`}
+          className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-raised accent-signal outline-none"
+        />
 
-      <div className="mt-2.5 flex justify-between font-mono text-micro text-faint">
-        {rungs.map((rung) => (
-          <button
-            key={rung}
-            type="button"
-            onClick={() => onChange(rung)}
-            className={`transition-colors duration-200 ${
-              rung === value ? 'font-semibold text-ink' : 'hover:text-dim'
-            }`}
-          >
-            {rung >= 1000 ? `${rung / 1000}k` : rung}
-          </button>
-        ))}
+        <div className="mt-2.5 flex justify-between font-mono text-micro text-faint">
+          {rungs.map((rung) => (
+            <button
+              key={rung}
+              type="button"
+              onClick={() => onChange(rung)}
+              className={`transition-colors duration-200 ${
+                rung === value ? 'font-semibold text-ink' : 'hover:text-dim'
+              }`}
+            >
+              {rung >= 1000 ? `${rung / 1000}k` : rung}
+            </button>
+          ))}
+        </div>
       </div>
     </section>
   );

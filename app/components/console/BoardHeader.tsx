@@ -60,7 +60,7 @@ export function BoardHeader({
   const age = freshness(board.measuredAt, now);
 
   return (
-    <section className="mb-9">
+    <section className="mb-7">
       {/* Separated by space rather than by an interpunct. A dot between two
           facts reads as one sentence with a stutter in it; a gap reads as two
           facts, which is what these are. */}
@@ -78,7 +78,7 @@ export function BoardHeader({
           </p>
         ) : (
           <div className="flex flex-wrap items-baseline gap-x-7 gap-y-1.5 text-meta text-dim">
-            <span>At {usd(sizeUsdg)},</span>
+            <span>If you put in {usd(sizeUsdg)},</span>
             <span className="font-semibold text-signal">{allowed} allowed</span>
             {refused > 0 && <span className="text-caution">{refused} refused</span>}
             {/* Each reason is its own item on the same gap as the counts above

@@ -27,7 +27,7 @@ export function BoardFigures({ board }: { board: Board }) {
   const tradable = board.assets.length - board.totals.dry.length - unreadable;
 
   return (
-    <div className="flex flex-wrap gap-x-10 gap-y-6 sm:flex-nowrap">
+    <div className="flex flex-wrap gap-x-11 gap-y-6 sm:flex-nowrap">
       <Figure label={`Absorbable at ${(limit / 100).toFixed(2)}%`} value={usd(total)}>
         across the {tradable} with depth
       </Figure>
@@ -63,11 +63,11 @@ function Figure({
 }) {
   return (
     <div className="min-w-0">
-      <div className="font-mono text-[11px] tracking-wide text-cta-3 uppercase">{label}</div>
-      <div className="mt-1.5 font-mono text-[30px] leading-none font-semibold text-cta-ink">
+      <div className="font-mono text-[10.5px] tracking-wide text-cta-3 uppercase">{label}</div>
+      <div className="mt-1.5 font-mono text-[27px] leading-none font-semibold text-cta-ink">
         {value}
       </div>
-      <div className="mt-1.5 text-micro whitespace-nowrap text-cta-3">{children}</div>
+      <div className="mt-1.5 text-[12.5px] whitespace-nowrap text-cta-3">{children}</div>
     </div>
   );
 }
