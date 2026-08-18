@@ -1,7 +1,7 @@
 {
-  "recordedAt": 1786985517,
+  "recordedAt": 1787014568,
   "thesis": "Stablecoin settlement volume keeps compounding onchain, so the issuers and the exchanges that clear it capture more of the payments margin than the incumbent card networks do.",
-  "claim": "Compounding onchain stablecoin settlement volume will cause issuers and clearing exchanges to capture payment margin from incumbent card networks.",
+  "claim": "Continued compounding of onchain stablecoin settlement volume will allow stablecoin issuers and clearing exchanges to capture payment margin share from traditional card networks.",
   "horizonDays": 365,
   "provider": "gemini-3.6-flash (live)",
   "live": true,
@@ -10,29 +10,43 @@
   "lines": [
     {
       "symbol": "wCOINx",
-      "targetBps": 10000,
-      "plannedBps": 43,
-      "notional": 1086.339748,
-      "naiveImpactBps": 7140,
-      "plannedImpactBps": 50,
+      "targetBps": 6000,
+      "plannedBps": 39,
+      "notional": 967.01022,
+      "naiveImpactBps": 6287,
+      "plannedImpactBps": 45,
+      "slices": 1
+    },
+    {
+      "symbol": "wCRCLx",
+      "targetBps": 4000,
+      "plannedBps": 30,
+      "notional": 754.315297,
+      "naiveImpactBps": 5374,
+      "plannedImpactBps": 45,
       "slices": 1
     }
   ],
   "verdicts": [
     {
       "symbol": "wCOINx",
-      "fillSizeUsdg": 1086,
-      "impactBps": 51,
-      "ok": false,
-      "reason": "PRICE_IMPACT"
+      "fillSizeUsdg": 967,
+      "impactBps": 45,
+      "ok": true
+    },
+    {
+      "symbol": "wCRCLx",
+      "fillSizeUsdg": 754,
+      "impactBps": 45,
+      "ok": true
     }
   ],
   "invented": 0,
   "totals": {
     "askedUsdg": 250000,
-    "placedUsdg": 1086.339748,
-    "unallocatedUsdg": 248913.660252,
-    "naiveCostUsdg": 178500,
-    "plannedCostUsdg": 5.431698740000001
+    "placedUsdg": 1721.325517,
+    "unallocatedUsdg": 248278.674483,
+    "naiveCostUsdg": 148045,
+    "plannedCostUsdg": 7.7459648265
   }
 }

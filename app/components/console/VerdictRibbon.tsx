@@ -15,11 +15,15 @@ import { REFUSAL, freshness, usd, usdExact } from './board-format';
  * last produced, kept as it came out, and both outcomes are rendered as found.
  * Re-running until the numbers read well would turn a measurement into a
  * selection, which is the same failure as quoting a capacity figure without its
- * date. The first recording made here refused its only leg — the plan sized to
- * exactly the mandate's limit, the pool moved between the sizing and the check,
- * and the guard rejected it one basis point over. That is the least comfortable
- * result available and the best evidence on the page: the guard does not care
- * that we already did the work.
+ * date.
+ *
+ * It is re-recorded when the *system* changes, which is a different thing. The
+ * first recording refused its only leg: `capacity()` solved for the largest
+ * size still inside the guard's limit, so it landed on the boundary, and the
+ * pool drifted between the sizing and the check. That was a finding, not a
+ * result — `PLAN_HEADROOM` now keeps the plan at 90% of the limit (D89) — and
+ * leaving the old recording up would have had this page explain a cause that
+ * no longer exists.
  *
  * **The unplaced amount is stated, never buried.** It is usually most of the
  * notional, it is the market's answer rather than a shortfall, and a recording
@@ -85,8 +89,9 @@ export function VerdictRibbon({ showcase, now }: { showcase: Showcase; now: numb
                   {REFUSAL[v.reason ?? ''] ?? v.reason}.{' '}
                 </span>
               ))}
-            The plan sizes to the limit, so the market moving at all between the sizing and the
-            check is enough to tip it over. Nothing off chain gets to overrule that.
+            The plan already sizes under the limit rather than up to it, so a refusal here means
+            this market moved further than that headroom between the sizing and the check. Nothing
+            off chain gets to overrule the guard.
           </p>
         )}
       </div>
