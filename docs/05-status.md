@@ -16,7 +16,7 @@ colliding. `06-assessment.md` is the honest read on whether this is a business.
 ```bash
 cd /Users/mac/Desktop/okxai
 set -a && source .env && set +a     # PRIVATE_KEY, GEMINI_API_KEY, CASH
-pnpm typecheck && pnpm test         # expect: clean, 276 unit tests, then 106 passed
+pnpm typecheck && pnpm test         # expect: clean, 279 unit tests, then 106 passed
 git status --short                  # expect: clean; docs/ is tracked now, not ignored
 pnpm dev                            # the web app, port 3000 (falls back if taken)
 ```
@@ -393,10 +393,10 @@ figure in it is a reading with a date (D84).
   ruled out an off-by-one and left the pool moving between the two walks. `PLAN_HEADROOM = 0.9`
   took the first of the two suggested routes — size to a fraction of the limit — because the
   second only narrows the window and the fill happens later still. **One thing this leaves:**
-  `observations/showcase.json` is now a recording of the old behaviour, and the `0/1` refusal on
-  the page is a defect that no longer exists. Re-running `pnpm showcase` is FE's call, and it is
-  a legitimate re-record rather than the selection the note above rules out — the code under it
-  changed.
+  ~~`observations/showcase.json` is now a recording of the old behaviour~~ — **re-recorded
+  2026-08-18 (D93)**: same thesis, live Gemini, both legs planned at 45bp against a 50bp guard and
+  **2/2 would execute**. $250,000 asked, $1,702 placed, $248,298 refused, $152,963 of impact
+  avoided. The refusal on the page was a defect that no longer exists.
 - **The drift store holds two samples and needs thirty.** `pnpm drift --report` withholds a
   suggested `PLAN_HEADROOM` until then, and 0.9 stays in force meanwhile (D90). Closing it is
   `DRIFT_INTERVAL_SEC=1800 pnpm drift --loop` left running somewhere for a day — about 48 passes —
