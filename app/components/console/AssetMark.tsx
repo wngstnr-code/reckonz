@@ -27,12 +27,18 @@ import { useState } from 'react';
  * and even a small radius would shave the points off it. So the frame stays out
  * of the artwork's way.
  *
- * The five PNGs cannot carry a clip, so the frame supplies one for them and
- * only them. `XSTOCK_MARK` is the same outline, derived from the SVG path
- * rather than eyeballed, so a PNG and an SVG sitting next to each other are the
- * same shape to four decimal places. Applying it to the SVGs as well would clip
- * an already-clipped mark, which is harmless but puts the shape in two places
- * at once — and then only one of them gets updated.
+ * The five PNGs carry it in their own alpha channel instead, masked into the
+ * raster with the same sixteen points. Supplying it from CSS for them was the
+ * first attempt and it did not land; more to the point it put the outline in
+ * two places, and then only one of them gets updated. Now every one of the
+ * thirty files carries its own shape and nothing in a stylesheet decides it.
+ *
+ * **Nothing paints a background behind the mark.** `bg-raised` was there as a
+ * placeholder while an image loads, and it is the reason these read as square
+ * tiles: the notches are transparent by design, so a fill behind them shows
+ * straight through and puts back the square the mark exists to cut away. The
+ * ticker fallback keeps a fill, because there it *is* the mark, and takes the
+ * outline from CSS since it has no file to carry one.
  */
 const XSTOCK_MARK =
   'polygon(0% 0%, 33.6691% 0%, 50% 16.3311%, 66.3312% 0%, 100% 0%, 100% 33.6689%, ' +
@@ -85,8 +91,8 @@ export function AssetMark({ symbol, size = 36 }: { symbol: string; size?: number
       alt=""
       loading="lazy"
       onError={() => setAttempt((n) => n + 1)}
-      className="shrink-0 bg-raised object-contain"
-      style={{ height: size, width: size, clipPath: format === 'png' ? XSTOCK_MARK : undefined }}
+      className="shrink-0 object-contain"
+      style={{ height: size, width: size }}
     />
   );
 }
