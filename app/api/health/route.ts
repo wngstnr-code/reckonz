@@ -1,9 +1,9 @@
 import type { Address } from 'viem';
 import { FAIR_VALUE_ORACLE_ABI, POLICY_GUARD_ABI } from '@/src/abi';
 import { client, serial } from '@/src/chain';
-import { MAINNET } from '@/src/deployments';
+import { MAINNET, PUBLISHER } from '@/src/deployments';
 import { hasBlobCredentials } from '@/src/evidence-store';
-import { classifyHealth, healthHttpStatus, type AssetHealth } from '@/src/health';
+import { classifyHealth, healthHttpStatus, type AssetHealth, type PublisherGas } from '@/src/health';
 import { loadToken } from '@/src/pool';
 import { clientKey, createGate, tooMany } from '@/src/ratelimit';
 
@@ -65,6 +65,7 @@ export async function GET(request: Request) {
     let blockNumber: bigint | null = null;
     let rpcLatencyMs: number | null = null;
     const assets: AssetHealth[] = [];
+    let publisher: PublisherGas | null = null;
 
     const startedAt = Date.now();
     try {
@@ -124,6 +125,23 @@ export async function GET(request: Request) {
       }
     }
 
+    if (blockNumber !== null) {
+      try {
+        // Two reads, and neither is about a contract: what the publisher can
+        // still afford is a fact about the *operation*, and it is the one
+        // outage here with a date on it (D85). Failing softly to null keeps a
+        // throttled RPC from turning a gas check into an outage report.
+        const [balanceWei, gasPriceWei] = await Promise.all([
+          client.getBalance({ address: PUBLISHER as Address }),
+          client.getGasPrice(),
+        ]);
+        publisher = { address: PUBLISHER, balanceWei, gasPriceWei };
+      } catch {
+        // Left null. `classifyHealth` says the runway is unknown, which is a
+        // different sentence from "the runway is short" and reads as one.
+      }
+    }
+
     const report = classifyHealth({
       blockNumber,
       rpcLatencyMs,
@@ -131,6 +149,7 @@ export async function GET(request: Request) {
       assets,
       archiveConfigured: hasBlobCredentials(),
       compilerConfigured: Boolean(process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY),
+      publisher,
     });
 
     const body = JSON.stringify(

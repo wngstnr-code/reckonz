@@ -26,6 +26,80 @@
 
 export type HealthStatus = 'ok' | 'degraded' | 'down';
 
+/**
+ * Gas for one publish of the whole universe, in units.
+ *
+ * **Measured, not estimated**: 919,563 for thirty assets against 142,872 for
+ * four (D85). Rounded up to 900,000 for the thirty slots plus 60,000 for the
+ * transaction itself, which is the shape `publish.ts` has always used and now
+ * imports from here rather than keeping its own copy — the copy is what drifts
+ * (D60, and the one-source rule in `CLAUDE.md`).
+ *
+ * The saving from publishing fewer is under-linear because the first write in a
+ * transaction pays for the transaction, not because a slot is free.
+ */
+const GAS_PER_THIRTY_SLOTS = 900_000n;
+const GAS_PER_TRANSACTION = 60_000n;
+
+/** The worker's cadence, and what a runway in *days* is measured against. */
+export const PUBLISH_INTERVAL_SEC = 600;
+
+/**
+ * Days of publishing left, at the current gas price and cadence.
+ *
+ * The point of computing this at all: gas exhaustion is the one outage in this
+ * project with a **known date**. D85 put it at ~6 Sep and left a calendar
+ * reminder for 3 Sep, which is a plan that depends on a person remembering.
+ * `publish.ts` does warn, but at 20 runs left — 3.3 hours at thirty assets — and
+ * a warning measured in hours is not a warning for a runway measured in weeks.
+ * A monitor that already runs every five minutes can see it coming for a week.
+ *
+ * The gas price is read now and assumed to hold. It has been flat at 0.02 gwei
+ * across every sample taken here, and a runway is a projection either way: what
+ * makes it useful is that it moves *early*, not that it is exact.
+ */
+export function publishRunway(
+  gas: PublisherGas,
+  slots = 30,
+  intervalSec = PUBLISH_INTERVAL_SEC,
+): Runway {
+  const perRunWei =
+    ((GAS_PER_THIRTY_SLOTS * BigInt(slots)) / 30n + GAS_PER_TRANSACTION) * gas.gasPriceWei;
+  // A zero gas price is not a free publisher, it is an unreadable one. Reporting
+  // an infinite runway from it would be the reassuring direction to be wrong in.
+  const runsLeft = perRunWei > 0n ? Number(gas.balanceWei / perRunWei) : 0;
+  return {
+    address: gas.address,
+    balanceWei: gas.balanceWei.toString(),
+    gasPriceWei: gas.gasPriceWei.toString(),
+    runsLeft,
+    days: (runsLeft * intervalSec) / 86_400,
+    measurable: perRunWei > 0n,
+  };
+}
+
+export interface Runway {
+  address: string;
+  /** Strings, because this is serialised to JSON and a bigint is not. */
+  balanceWei: string;
+  gasPriceWei: string;
+  runsLeft: number;
+  days: number;
+  /** False when the gas price read as zero, which is a failed read, not free gas. */
+  measurable: boolean;
+}
+
+/**
+ * How little runway is worth an alert.
+ *
+ * A week, and the number is a lead time rather than a risk threshold: topping up
+ * means buying OKB somewhere and moving it, which is a thing a person does on a
+ * weekday, and seven days spans a weekend with room to spare. Tighter and the
+ * alert arrives when the answer is already "shut it down"; looser and it fires
+ * for a fortnight and gets filtered, which is how a monitor dies.
+ */
+export const RUNWAY_WARN_DAYS = 7;
+
 export interface AssetHealth {
   symbol: string;
   /** Seconds since the oracle last published this asset; null when never. */
@@ -48,6 +122,14 @@ export interface HealthInput {
   archiveConfigured: boolean;
   /** Whether the thesis compiler has a key. Config, not a live call. */
   compilerConfigured: boolean;
+  /** Null when the publisher's balance could not be read at all. */
+  publisher: PublisherGas | null;
+}
+
+export interface PublisherGas {
+  address: string;
+  balanceWei: bigint;
+  gasPriceWei: bigint;
 }
 
 export interface HealthReport {
@@ -60,6 +142,8 @@ export interface HealthReport {
   assets: AssetHealth[];
   archiveConfigured: boolean;
   compilerConfigured: boolean;
+  /** Null when the balance could not be read; see `publishRunway`. */
+  runway: Runway | null;
 }
 
 /**
@@ -125,6 +209,31 @@ export function classifyHealth(input: HealthInput, now = Math.floor(Date.now() /
     if (status === 'ok') status = 'degraded';
   }
 
+  const runway = input.publisher === null ? null : publishRunway(input.publisher);
+
+  if (runway === null) {
+    // The RPC being down already says this louder, so it is only worth a
+    // sentence when the chain answered and this one read did not.
+    if (input.blockNumber !== null) {
+      problems.push("the publisher's gas balance could not be read — its runway is unknown");
+      if (status === 'ok') status = 'degraded';
+    }
+  } else if (!runway.measurable) {
+    problems.push('the gas price read as zero, so the publisher runway cannot be computed');
+    if (status === 'ok') status = 'degraded';
+  } else if (runway.days < RUNWAY_WARN_DAYS) {
+    // Deliberately never `down`. The publisher is still publishing and every
+    // fill still works; what is true is that a date is approaching on which
+    // none of that will be true, and the two states are not the same fact. When
+    // the gas does run out, the staleness rule above calls it down on its own.
+    problems.push(
+      `the publisher has ${runway.days.toFixed(1)} days of gas left ` +
+        `(${runway.runsLeft} publishes at the current price). Top up ${runway.address} or shut ` +
+        'the worker down deliberately — a publisher that runs dry takes every fill with it.',
+    );
+    if (status === 'ok') status = 'degraded';
+  }
+
   if (!input.compilerConfigured) {
     problems.push('the thesis compiler has no key — /api/run will fail at the first stage');
     if (status === 'ok') status = 'degraded';
@@ -142,6 +251,7 @@ export function classifyHealth(input: HealthInput, now = Math.floor(Date.now() /
     assets: input.assets,
     archiveConfigured: input.archiveConfigured,
     compilerConfigured: input.compilerConfigured,
+    runway,
   };
 }
 

@@ -124,3 +124,19 @@ export const MAINNET: Deployment | null = {
     PoolSwapper: '0x1f3b67d8209060eC68d0eDCD6E60Ba53A8e9ac28',
   },
 };
+
+/**
+ * The publisher's hot key — the address `FairValueOracle.setPublisher` authorised,
+ * and the one to top up when the oracle is about to go stale for want of gas.
+ *
+ * Here rather than in a script because it is a fact about the deployment and this
+ * file is where those live. It is not a contract, so it is deliberately not in
+ * `contracts`: nothing may `readContract` against it. It has been public in
+ * `docs/` since it was funded — an address is not a secret, the key behind it is,
+ * and that one has never been in this repo.
+ *
+ * `GET /api/health` reads its balance so the outage everyone can see coming — gas
+ * exhaustion on a known date (D85) — is watched by the same monitor that watches
+ * staleness, rather than by somebody remembering.
+ */
+export const PUBLISHER = '0x40101A4932dEb95f0A5951BB7fB0fFa7c17e3Ab8';

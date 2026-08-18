@@ -17,6 +17,7 @@
     "drift": "tsx src/drift.ts",
     "measure": "tsx src/measure.ts",
     "sample": "tsx src/sample.ts",
+    "pull:stores": "tsx src/pull-stores.ts",
     "build": "next build",
     "build:contracts": "forge build",
     "test:sol": "forge test",

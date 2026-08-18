@@ -8,7 +8,25 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { classifyHealth, healthHttpStatus, type AssetHealth, type HealthInput } from './health';
+import {
+  classifyHealth,
+  healthHttpStatus,
+  publishRunway,
+  RUNWAY_WARN_DAYS,
+  type AssetHealth,
+  type HealthInput,
+} from './health';
+
+/**
+ * A publisher with plenty of gas: 0.05 OKB at 0.02 gwei, which is what the key
+ * actually held on 2026-08-18 and is a little over eighteen days of publishing
+ * all thirty assets every ten minutes.
+ */
+const FUNDED = {
+  address: '0x40101A4932dEb95f0A5951BB7fB0fFa7c17e3Ab8',
+  balanceWei: 49_632_383_905_447_705n,
+  gasPriceWei: 20_000_001n,
+};
 
 const FRESH: AssetHealth = {
   symbol: 'wSPYx',
@@ -34,6 +52,7 @@ function input(over: Partial<HealthInput> = {}): HealthInput {
     assets: [FRESH, { ...FRESH, symbol: 'wNVDAx' }],
     archiveConfigured: true,
     compilerConfigured: true,
+    publisher: FUNDED,
     ...over,
   };
 }
@@ -129,4 +148,77 @@ test('the report carries the numbers, not just a verdict', () => {
   assert.equal(r.mandateId, 1);
   assert.equal(r.assets.length, 2);
   assert.equal(r.assets[1]!.ageSeconds, 173_242);
+});
+
+// ------------------------------------------------- the outage with a date on it
+
+test('a funded publisher is not worth a sentence', () => {
+  const r = classifyHealth(input());
+  assert.equal(r.status, 'ok');
+  assert.equal(r.runway?.runsLeft, 2585);
+  // Eighteen days, which is the number measured against the live chain the day
+  // this was written. If this fails, the gas arithmetic moved — check D85's
+  // measured 919,563 before changing the expectation.
+  assert.ok(r.runway!.days > 17.5 && r.runway!.days < 18.5, `days=${r.runway!.days}`);
+});
+
+test('a week of gas left is degraded, and says what to do about it', () => {
+  // Half the funded balance is nine days; a fifth of it is under four.
+  const r = classifyHealth(
+    input({ publisher: { ...FUNDED, balanceWei: FUNDED.balanceWei / 5n } }),
+  );
+  assert.equal(r.status, 'degraded');
+  assert.match(r.problems.join(' '), /days of gas left/);
+  assert.match(r.problems.join(' '), /Top up 0x40101A49/);
+  // Never down: the publisher is still publishing and every fill still works.
+  assert.equal(healthHttpStatus(r.status), 200);
+});
+
+test('an empty publisher is degraded, not down — staleness is what makes it down', () => {
+  const r = classifyHealth(input({ publisher: { ...FUNDED, balanceWei: 0n } }));
+  assert.equal(r.status, 'degraded');
+  assert.equal(r.runway?.runsLeft, 0);
+});
+
+test('a runway that could not be read is not a runway of zero', () => {
+  const r = classifyHealth(input({ publisher: null }));
+  assert.equal(r.status, 'degraded');
+  assert.equal(r.runway, null);
+  assert.match(r.problems.join(' '), /could not be read/);
+  // The same absence, once the RPC is the reason for it, is already covered by
+  // the sentence about the RPC — saying it twice would read as two faults.
+  const noRpc = classifyHealth(input({ publisher: null, blockNumber: null }));
+  assert.equal(noRpc.status, 'down');
+  assert.equal(noRpc.problems.filter((p) => /gas balance/.test(p)).length, 0);
+});
+
+test('a zero gas price is an unreadable price, never free gas', () => {
+  const r = classifyHealth(input({ publisher: { ...FUNDED, gasPriceWei: 0n } }));
+  assert.equal(r.status, 'degraded');
+  assert.equal(r.runway?.measurable, false);
+  assert.equal(r.runway?.runsLeft, 0);
+  assert.match(r.problems.join(' '), /gas price read as zero/);
+});
+
+test('publishing fewer assets buys proportionally more runs', () => {
+  const thirty = publishRunway(FUNDED, 30);
+  const four = publishRunway(FUNDED, 4);
+  // Under-linear on purpose: the first write in a transaction pays for the
+  // transaction, so four slots is not a fifteenth of the cost of thirty (D85).
+  assert.ok(four.runsLeft > thirty.runsLeft * 5, `${four.runsLeft} vs ${thirty.runsLeft}`);
+  assert.ok(four.runsLeft < thirty.runsLeft * 8, `${four.runsLeft} vs ${thirty.runsLeft}`);
+});
+
+test('the warning threshold is a lead time, and the boundary is not the alert', () => {
+  // A day either side of the threshold, built from the constant rather than a
+  // literal so the test follows the policy instead of pinning a coincidence.
+  const perDay = FUNDED.balanceWei / BigInt(Math.round(publishRunway(FUNDED).days));
+  const inside = classifyHealth(
+    input({ publisher: { ...FUNDED, balanceWei: perDay * BigInt(RUNWAY_WARN_DAYS + 2) } }),
+  );
+  const outside = classifyHealth(
+    input({ publisher: { ...FUNDED, balanceWei: perDay * BigInt(RUNWAY_WARN_DAYS - 2) } }),
+  );
+  assert.equal(inside.status, 'ok');
+  assert.equal(outside.status, 'degraded');
 });

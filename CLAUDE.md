@@ -60,6 +60,7 @@ pnpm sample [--loop]         # write the issuer's marks to observations/ — our
 pnpm sample --merge <path>   # fold a store collected on the worker's volume back in (D67)
 pnpm measure [--multipliers]  # re-derive the recorded multipliers and gap σ from that store
 pnpm drift [--loop|--report]  # how far a boundary-sized leg drifts before the guard sees it (D90)
+pnpm pull:stores [--dry-run] # fetch both workers' volumes and fold them in (D91)
 pnpm evidence [hash]         # verify receipts against the bundles they claim (D57)
 pnpm blob:check              # can THIS environment write to the archive, and can the site read it
 pnpm index [--verify|--rebuild]  # keep observations/registry.jsonl current (D66)
@@ -69,7 +70,7 @@ pnpm dev                     # the web app — thesis in, guard verdict out
 pnpm build                   # next build (what Vercel runs); contracts are build:contracts
 pnpm typecheck               # covers src/ and app/
 pnpm test:sol                # 106 Foundry tests
-pnpm test:unit               # 269 unit tests over src/ — node:test, no runner dependency (D71)
+pnpm test:unit               # 276 unit tests over src/ — node:test, no runner dependency (D71)
 pnpm test                    # both suites
 pnpm check:tests             # both numbers, checked against every doc that states them (D60, D71)
 ```
@@ -202,6 +203,9 @@ TARGET=mainnet pnpm fees [withdraw]    # what the fee earned, and sweep it to th
   what makes a fair value publishable.
   Adding a line because the ticker is obvious is the exact assertion this oracle refuses to make.
   See D38.
+- **`.github/workflows/index-registry.yml` runs `pnpm index` every six hours and commits it** (D91),
+  so the rule below is now a backstop rather than a duty. Run it by hand when a fill has just landed
+  and you want the store current before the cron gets there.
 - **After a fill or a thesis publish, run `pnpm index` and commit the store.** It is what makes
   `/api/theses` cheap in production, and the file tracer cannot follow the runtime path — see
   `outputFileTracingIncludes` in `next.config.ts`. Forgetting costs latency, never correctness:

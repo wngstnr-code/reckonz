@@ -11,6 +11,7 @@ import { BlockNotFoundError, formatEther, formatGwei, type Address } from 'viem'
 import { FAIR_VALUE_ORACLE_ABI } from './abi';
 import { crossCheck, describeCrossCheck } from './crosscheck';
 import { ASSETS, computeFairValue, issuerSymbolFor, MEASURED, toOraclePayload } from './fairvalue';
+import { publishRunway } from './health';
 import { issuerBook } from './issuer';
 import { readAll } from './observations';
 import { capacity, loadVenues } from './planner';
@@ -54,16 +55,19 @@ console.log(`  publisher       ${account.address}`);
 const REFUEL_AT_RUNS = 20;
 const balance = await client.getBalance({ address: account.address });
 const gasPrice = await client.getGasPrice();
-// ~884k gas for 30 warm slots, rounded up, and scaled by how many are actually
-// being published — a runway printed for thirty while publishing four is a
-// number that is wrong in the reassuring direction.
-const slots = BigInt((process.env.PUBLISH_SYMBOLS ?? '').split(',').filter((s) => s.trim()).length || 30);
-const perRun = ((900_000n * slots) / 30n + 60_000n) * gasPrice;
-const runsLeft = perRun > 0n ? balance / perRun : 0n;
+// Scaled by how many slots are actually being published — a runway printed for
+// thirty while publishing four is a number that is wrong in the reassuring
+// direction. The gas arithmetic itself now lives in `health.ts`, because
+// `GET /api/health` needs the same projection and two copies of it would drift
+// the way five test counts once did (D60).
+const slots = (process.env.PUBLISH_SYMBOLS ?? '').split(',').filter((s) => s.trim()).length || 30;
+const runway = publishRunway({ address: account.address, balanceWei: balance, gasPriceWei: gasPrice }, slots);
+const runsLeft = runway.runsLeft;
 console.log(
-  `  gas balance     ${formatEther(balance)} OKB — about ${runsLeft} runs at ${formatGwei(gasPrice)} gwei\n`,
+  `  gas balance     ${formatEther(balance)} OKB — about ${runsLeft} runs ` +
+    `(${runway.days.toFixed(1)} days) at ${formatGwei(gasPrice)} gwei\n`,
 );
-if (runsLeft < BigInt(REFUEL_AT_RUNS)) {
+if (runsLeft < REFUEL_AT_RUNS) {
   console.error(
     `  ✗ under ${REFUEL_AT_RUNS} runs of gas left. Top up ${account.address}.\n` +
       '    Topping up is a plain transfer and needs no Safe signatures.\n',
