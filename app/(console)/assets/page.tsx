@@ -3,7 +3,7 @@ import { readShowcase } from '@/src/showcase';
 import { Board } from '@/app/components/console/Board';
 import { HowItWorks } from '@/app/components/console/HowItWorks';
 import { VerdictRibbon } from '@/app/components/console/VerdictRibbon';
-import { PageHeader } from '@/app/components/console/PageHeader';
+import { Hero } from '@/app/components/console/Hero';
 
 export const metadata = {
   title: 'Assets · Reckonz',
@@ -48,11 +48,10 @@ export default async function AssetsPage() {
 
   return (
     <>
-      <PageHeader title="Assets">
-        Before you buy, we check if the price holds up and how much this market can really take.
-        All 30 tokenised stocks on X Layer are here, with what we would refuse and why. You do not
-        need a wallet to read any of it.
-      </PageHeader>
+      <Hero title="Know what this market can take, before you buy">
+        All 30 tokenised stocks on X Layer, each with a price we can defend, how risky the
+        overnight gap is, and the size we would refuse. You do not need a wallet to read any of it.
+      </Hero>
 
       {found ? (
         <Board

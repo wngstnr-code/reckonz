@@ -70,7 +70,16 @@ export function BoardHeader({
 
   return (
     <section className="mb-8">
-      <div className="flex flex-wrap gap-x-16 gap-y-6">
+      {/* A grid rather than a row of floats, so the three sit on even thirds of
+          the page and stay centred in them whatever the numbers are worth.
+          Two figures share halves; a board with no tradable asset has no
+          largest, and a lone figure stranded at the left would read as a
+          layout that broke rather than a fact that is missing. */}
+      <div
+        className={`grid gap-x-10 gap-y-8 text-center ${
+          largest ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
+        }`}
+      >
         <Figure label={`Absorbable at ${(limit / 100).toFixed(2)}%`} value={usd(total)}>
           across the {tradable} with depth
         </Figure>
@@ -80,47 +89,50 @@ export function BoardHeader({
         </Figure>
 
         {largest && (
-          <Figure
-            label="Concentration"
-            value={`${Math.round(largest.shareOfTotal * 100)}%`}
-          >
+          <Figure label="Concentration" value={`${Math.round(largest.shareOfTotal * 100)}%`}>
             {largest.symbol} alone, {usd(largest.usdg)}
           </Figure>
         )}
       </div>
 
-      <div className="mt-6 flex flex-wrap items-baseline gap-x-6 gap-y-2 border-t border-line pt-4">
-        <p className="text-body text-dim">
-          <b className="font-semibold text-ink">{board.assets.length} assets</b> · {tradable}{' '}
-          tradable
-          {dry > 0 && <> · {dry} with no depth right now</>}
-          {unreadable > 0 && <> · {unreadable} we could not read</>}
-        </p>
+      {/* Separated by space rather than by an interpunct. A dot between two
+          facts reads as one sentence with a stutter in it; a gap reads as two
+          facts, which is what these are. */}
+      <div className="mt-9 flex flex-wrap items-baseline justify-between gap-x-12 gap-y-3 border-t border-line pt-5">
+        <div className="flex flex-wrap items-baseline gap-x-7 gap-y-1.5 text-body text-dim">
+          <span className="font-semibold text-ink">{board.assets.length} assets</span>
+          <span>{tradable} tradable</span>
+          {dry > 0 && <span>{dry} with no depth right now</span>}
+          {unreadable > 0 && <span>{unreadable} we could not read</span>}
+        </div>
 
         {blind ? (
           <p className="text-body text-caution">
             No verdict is possible at any size until a price is published.
           </p>
         ) : (
-          <p className="text-body text-dim">
-            At {usd(sizeUsdg)}: <b className="font-semibold text-signal">{allowed} allowed</b>
-            {refused > 0 && (
-              <>
-                {' '}
-                · <span className="text-caution">{refused} refused</span>
-                {reasons.length > 0 && <span className="text-faint"> — {reasons.join(', ')}</span>}
-              </>
-            )}
-          </p>
+          <div className="flex flex-wrap items-baseline gap-x-7 gap-y-1.5 text-body text-dim">
+            <span>At {usd(sizeUsdg)},</span>
+            <span className="font-semibold text-signal">{allowed} allowed</span>
+            {refused > 0 && <span className="text-caution">{refused} refused</span>}
+            {/* Each reason is its own item on the same gap as the counts above
+                it, so a refusal and the reason for it are visibly one series
+                rather than a clause hanging off a dash. */}
+            {reasons.map((reason) => (
+              <span key={reason} className="text-faint">
+                {reason}
+              </span>
+            ))}
+          </div>
         )}
       </div>
 
-      <p className="mt-3 flex flex-wrap items-center gap-x-2 font-mono text-meta text-faint">
+      <div className="mt-4 flex flex-wrap items-center justify-end gap-x-5 gap-y-1.5 font-mono text-[12px] text-faint">
+        <span>measured {age.label}</span>
         <span>
-          measured {age.label} ·{' '}
           {new Date(board.measuredAt * 1000).toISOString().slice(0, 16).replace('T', ' ')}Z
-          {from === 'file' && ' · from the copy that shipped with this deployment'}
         </span>
+        {from === 'file' && <span>from the copy that shipped with this deployment</span>}
 
         <button
           type="button"
@@ -137,7 +149,7 @@ export function BoardHeader({
         {refresh === 'unchanged' && <span>this is the latest measurement</span>}
         {refresh === 'updated' && <span className="text-signal">updated</span>}
         {refresh === 'failed' && <span className="text-caution">could not reach the board</span>}
-      </p>
+      </div>
 
       {age.warning && (
         <p className="mt-2 max-w-[62ch] text-data text-caution">{age.warning}</p>
@@ -164,9 +176,12 @@ function Figure({
 }) {
   return (
     <div>
-      <div className="font-mono text-micro text-faint uppercase">{label}</div>
-      <div className="mt-1 font-mono text-display font-semibold text-ink">{value}</div>
-      <div className="mt-0.5 text-data text-dim">{children}</div>
+      {/* Smaller than the line under the number, not equal to it. The label
+          names the measurement and the number is the measurement; sizing them
+          alike made the page read as three headings rather than three facts. */}
+      <div className="font-mono text-[12px] tracking-wide text-faint uppercase">{label}</div>
+      <div className="mt-1.5 font-mono text-display font-semibold text-ink">{value}</div>
+      <div className="mt-1 text-data text-dim">{children}</div>
     </div>
   );
 }
