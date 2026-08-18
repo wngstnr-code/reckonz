@@ -16,7 +16,7 @@ colliding. `06-assessment.md` is the honest read on whether this is a business.
 ```bash
 cd /Users/mac/Desktop/okxai
 set -a && source .env && set +a     # PRIVATE_KEY, GEMINI_API_KEY, CASH
-pnpm typecheck && pnpm test         # expect: clean, 257 unit tests, then 106 passed
+pnpm typecheck && pnpm test         # expect: clean, 269 unit tests, then 106 passed
 git status --short                  # expect: clean; docs/ is tracked now, not ignored
 pnpm dev                            # the web app, port 3000 (falls back if taken)
 ```
@@ -367,7 +367,7 @@ figure in it is a reading with a date (D84).
 
 | ~~**The oracle had one source and no second opinion**~~ — **cross-checked 2026-08-14 (D79)** | `src/crosscheck.ts`, between the engine and `publishMany`: the quote against itself, the spread against plausibility (2,000bp), the mid against our own `observations/` store (`max(8σ, 20%)`), and the value against the pool (50%). Every threshold derived from a number already measured here — see D79 for each derivation. It **withholds, never corrects**, publishing the shape an unpriceable asset already takes, and a check that cannot run reports `skipped` rather than `ok`. Run against live quotes for all 30 assets: **30 publishable, 0 withheld**. |
 
-| ~~**A plan sized to pass its own guard by a coin flip**~~ — **fixed 2026-08-18 (D89)** | `capacity()` bisects for the largest size still inside the impact limit, so it returns a size sitting *on* it — asked for 50bp it handed back an order measured at 50bp. Stage 6 then re-reads the pool through `loadVenues`, seconds and a dozen RPC calls later, and rejects on `>`. Two runs of one thesis minutes apart: 2/2 allowed, then rejected at 51bp, with nothing edited in between. `PLAN_HEADROOM = 0.9` in `src/planner.ts` now sizes to 45bp against a 50bp guard, applied inside `planBasket` so no caller can forget it and **not** inside `capacity()`, which `pnpm capacity`, `src/board.ts` and `src/publish.ts` report as a measurement. 0.9 is a stated choice, not a number derived from anything — deriving it from the impact volatility in `observations/` is the honest version and is still open. **A worse defect was found on the way:** `planBasket` sized against the caller's `maxImpactBps` while `checkExecution` judged against `DEFAULT_MANDATE`'s hardcoded 50, and `/api/run` accepts up to 10,000 — so `?maxImpactBps=100` sized every leg to a limit the guard then rejected, all of them, deterministically. The run computes `guardMaxBps = min(request, mandate)` once and both stages use it. The `plan` event carries `planImpactBps` alongside `maxImpactBps`, additive. Unit suite 255 → **257**. |
+| ~~**A plan sized to pass its own guard by a coin flip**~~ — **fixed 2026-08-18 (D89)** | `capacity()` bisects for the largest size still inside the impact limit, so it returns a size sitting *on* it — asked for 50bp it handed back an order measured at 50bp. Stage 6 then re-reads the pool through `loadVenues`, seconds and a dozen RPC calls later, and rejects on `>`. Two runs of one thesis minutes apart: 2/2 allowed, then rejected at 51bp, with nothing edited in between. `PLAN_HEADROOM = 0.9` in `src/planner.ts` now sizes to 45bp against a 50bp guard, applied inside `planBasket` so no caller can forget it and **not** inside `capacity()`, which `pnpm capacity`, `src/board.ts` and `src/publish.ts` report as a measurement. 0.9 is a stated choice, not a number derived from anything. ~~Deriving it from the impact volatility in `observations/`~~ — **that data never existed; `pnpm drift` now measures it, 2026-08-18 (D90).** **A worse defect was found on the way:** `planBasket` sized against the caller's `maxImpactBps` while `checkExecution` judged against `DEFAULT_MANDATE`'s hardcoded 50, and `/api/run` accepts up to 10,000 — so `?maxImpactBps=100` sized every leg to a limit the guard then rejected, all of them, deterministically. The run computes `guardMaxBps = min(request, mandate)` once and both stages use it. The `plan` event carries `planImpactBps` alongside `maxImpactBps`, additive. Unit suite 255 → **257**. |
 
 | ~~**Evidence bundles were never stored in production**~~ — **fixed 2026-08-14 (D80), pending one account step** | Measured against the live app: `evidence.stored false`. Vercel's filesystem is read-only, so every fill placed through the website put a hash on chain whose bundle existed nowhere — the audit trail worked only on the machine it was written on. `src/evidence-store.ts` archives to Vercel Blob, falls back to disk, and otherwise reports `none` **with the reason**; `readEvidence` reads the archive as well as the disk, so `pnpm evidence` can verify a production fill from a fresh clone; and both panels offer the bundle as a download. Store `reckonz-evidence` (`store_kqJdljzlkaaN4S05`) is created, connected and **proven**: a bundle uploaded, the local copy absent, every credential unset, `readEvidence` fetched it from the archive and the hash re-derived. `EVIDENCE_BLOB_BASE` is pinned to the host the upload actually returned. **Proven in production 2026-08-14**: a fill quote came back `persistence: {"kind":"blob",…}`, and the bundle was then fetched from the archive with no local copy and no credentials, hash re-deriving. |
 
@@ -397,6 +397,11 @@ figure in it is a reading with a date (D84).
   the page is a defect that no longer exists. Re-running `pnpm showcase` is FE's call, and it is
   a legitimate re-record rather than the selection the note above rules out — the code under it
   changed.
+- **The drift store holds two samples and needs thirty.** `pnpm drift --report` withholds a
+  suggested `PLAN_HEADROOM` until then, and 0.9 stays in force meanwhile (D90). Closing it is
+  `DRIFT_INTERVAL_SEC=1800 pnpm drift --loop` left running somewhere for a day — about 48 passes —
+  and then `pnpm drift --merge` if it ran anywhere but here. Nothing depends on it: the planner
+  already has a number, and this only decides whether that number is the right one.
 - **`AssetMark`'s fallback to the next extension does not reliably fire.** Found 2026-08-18 while
   fixing the broken logos below. With five `.png` sources 404ing, the network shows only *one* of
   the five retried its `.svg`; the other four never requested it and rendered the browser's broken
@@ -665,7 +670,24 @@ reminder.
 
 ## Log
 
-**2026-08-15 (latest, twenty-third)** — **the publish worker will publish all thirty assets, not
+**2026-08-18 (latest, twenty-fourth)** — **the worker's price history is in the repo, and the
+measurement `PLAN_HEADROOM` was promised now exists** (D90). `/data/issuer-marks.jsonl` pulled off
+the Railway volume and folded in with `pnpm sample --merge`: **60 marks -> 4,290**, 30 assets,
+24.5 hours, 0 duplicates. `pnpm measure` before and after says the same thing both times —
+multipliers unchanged, gap sigma unchanged at **1/30 jumps** — so the merge is purely additive and
+no recorded number moved. That is the expected result and not a disappointment: sigma needs thirty
+close-to-open boundaries and one day of sampling buys one.
+
+Then the loose end D89 left. Its comment said the honest version of `PLAN_HEADROOM` was to derive
+it from *"the impact volatility already recorded in `observations/`"* — **and no such recording
+existed anywhere in the repo.** `pnpm drift` (`src/impact-drift.ts`, `src/drift.ts`) measures it as
+a paired walk: size a leg with `capacity(venues, 50)`, wait, re-walk the pools and quote the same
+size against the new state. `--report` derives `1 - p99(drift)/limit` and **withholds until thirty
+samples**. First two real samples, 32s apart: wSPYx +0bp, **wTSLAx -11bp on a $41,865 leg** — which
+argues 0.9 may be thin rather than generous, on two samples that decide nothing. No gas, no key,
+`eth_call` only, and deliberately a separate process from `publish-loop`. Unit suite 257 -> **269**.
+
+**2026-08-15 (twenty-third)** — **the publish worker will publish all thirty assets, not
 the mandate's four** (D85). Owner's call. D63's premise for narrowing — *"the other twenty-six are
 being published so that nothing reads them"* — stopped being true when the mandate form shipped its
 allowlist picker over `GET /api/universe`: anyone who opens the app can allow any of the thirty, and

@@ -59,6 +59,7 @@ pnpm reconcile               # admission test vs the issuer's mark — run befor
 pnpm sample [--loop]         # write the issuer's marks to observations/ — our own price history
 pnpm sample --merge <path>   # fold a store collected on the worker's volume back in (D67)
 pnpm measure [--multipliers]  # re-derive the recorded multipliers and gap σ from that store
+pnpm drift [--loop|--report]  # how far a boundary-sized leg drifts before the guard sees it (D90)
 pnpm evidence [hash]         # verify receipts against the bundles they claim (D57)
 pnpm blob:check              # can THIS environment write to the archive, and can the site read it
 pnpm index [--verify|--rebuild]  # keep observations/registry.jsonl current (D66)
@@ -68,7 +69,7 @@ pnpm dev                     # the web app — thesis in, guard verdict out
 pnpm build                   # next build (what Vercel runs); contracts are build:contracts
 pnpm typecheck               # covers src/ and app/
 pnpm test:sol                # 106 Foundry tests
-pnpm test:unit               # 257 unit tests over src/ — node:test, no runner dependency (D71)
+pnpm test:unit               # 269 unit tests over src/ — node:test, no runner dependency (D71)
 pnpm test                    # both suites
 pnpm check:tests             # both numbers, checked against every doc that states them (D60, D71)
 ```
