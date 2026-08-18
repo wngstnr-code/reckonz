@@ -3,20 +3,16 @@ import { REFUSAL, freshness, pricing, usd, verdictOf } from './board-format';
 import type { RefreshState } from './useBoardClock';
 
 /**
- * The numbers a reader should carry away, and the ones that stop them being
- * misread.
+ * What the board says *at the size the reader picked*, and when it was measured.
  *
- * **The total is never alone.** On this board one token is roughly a third of
- * the whole absorbable size, so the sum describes a market almost nobody can
- * reach while the median describes the one most assets are actually in. D84
- * wrote that rule after volume turned out to be 81% two names; depth has the
- * same shape, and printing the total by itself would be the same mistake in a
- * different column.
+ * The three headline figures moved into the green frame, where they belong:
+ * none of them moves with the slider. Everything left here does, which is what
+ * keeps it in the client component that owns the size.
  *
- * **Refusals are counted and grouped, never left as a wall.** The brief is
- * explicit about why: nine rows of "no depth" reads as a broken app, while
- * "6 refused, all of them too big for this market" reads as an accounting, and
- * only one of those is what a reader should remember.
+ * **Refusals are counted and grouped, never left as a wall.** Nineteen rows of
+ * "no depth" reads as a broken app, while "19 refused, 18 of them priced too
+ * far from fair" reads as an accounting, and only one of those is what a reader
+ * should remember.
  *
  * **The date is a judgement, not a timestamp.** See `freshness`.
  */
@@ -35,11 +31,6 @@ export function BoardHeader({
   refresh: RefreshState;
   onRefresh: () => void;
 }) {
-  const limit = board.mandate.maxImpactBps;
-  const total = board.totals.capacityUsdg[limit] ?? 0;
-  const median = board.totals.medianUsdg[limit] ?? 0;
-  const largest = board.totals.largest;
-
   const dry = board.totals.dry.length;
   const unreadable = board.totals.unmeasured.length;
   const tradable = board.assets.length - dry - unreadable;
@@ -69,37 +60,12 @@ export function BoardHeader({
   const age = freshness(board.measuredAt, now);
 
   return (
-    <section className="mb-8">
-      {/* A grid rather than a row of floats, so the three sit on even thirds of
-          the page and stay centred in them whatever the numbers are worth.
-          Two figures share halves; a board with no tradable asset has no
-          largest, and a lone figure stranded at the left would read as a
-          layout that broke rather than a fact that is missing. */}
-      <div
-        className={`grid gap-x-10 gap-y-8 text-center ${
-          largest ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
-        }`}
-      >
-        <Figure label={`Absorbable at ${(limit / 100).toFixed(2)}%`} value={usd(total)}>
-          across the {tradable} with depth
-        </Figure>
-
-        <Figure label="Median asset" value={usd(median)}>
-          the middle of {board.assets.length - unreadable}
-        </Figure>
-
-        {largest && (
-          <Figure label="Concentration" value={`${Math.round(largest.shareOfTotal * 100)}%`}>
-            {largest.symbol} alone, {usd(largest.usdg)}
-          </Figure>
-        )}
-      </div>
-
+    <section className="mb-9">
       {/* Separated by space rather than by an interpunct. A dot between two
           facts reads as one sentence with a stutter in it; a gap reads as two
           facts, which is what these are. */}
-      <div className="mt-9 flex flex-wrap items-baseline justify-between gap-x-12 gap-y-3 border-t border-line pt-5">
-        <div className="flex flex-wrap items-baseline gap-x-7 gap-y-1.5 text-body text-dim">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-12 gap-y-2.5">
+        <div className="flex flex-wrap items-baseline gap-x-7 gap-y-1.5 text-meta text-dim">
           <span className="font-semibold text-ink">{board.assets.length} assets</span>
           <span>{tradable} tradable</span>
           {dry > 0 && <span>{dry} with no depth right now</span>}
@@ -107,11 +73,11 @@ export function BoardHeader({
         </div>
 
         {blind ? (
-          <p className="text-body text-caution">
+          <p className="text-meta text-caution">
             No verdict is possible at any size until a price is published.
           </p>
         ) : (
-          <div className="flex flex-wrap items-baseline gap-x-7 gap-y-1.5 text-body text-dim">
+          <div className="flex flex-wrap items-baseline gap-x-7 gap-y-1.5 text-meta text-dim">
             <span>At {usd(sizeUsdg)},</span>
             <span className="font-semibold text-signal">{allowed} allowed</span>
             {refused > 0 && <span className="text-caution">{refused} refused</span>}
@@ -155,33 +121,5 @@ export function BoardHeader({
         <p className="mt-2 max-w-[62ch] text-data text-caution">{age.warning}</p>
       )}
     </section>
-  );
-}
-
-/**
- * One number, big, with the thing that stops it being read alone underneath.
- *
- * The label sits above rather than below, so a reader knows what they are
- * looking at before they read it — which matters when three of these sit in a
- * row and only one of them is a dollar amount.
- */
-function Figure({
-  label,
-  value,
-  children,
-}: {
-  label: string;
-  value: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      {/* Smaller than the line under the number, not equal to it. The label
-          names the measurement and the number is the measurement; sizing them
-          alike made the page read as three headings rather than three facts. */}
-      <div className="font-mono text-[12px] tracking-wide text-faint uppercase">{label}</div>
-      <div className="mt-1.5 font-mono text-display font-semibold text-ink">{value}</div>
-      <div className="mt-1 text-data text-dim">{children}</div>
-    </div>
   );
 }

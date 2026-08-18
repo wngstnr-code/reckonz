@@ -20,6 +20,13 @@ import { usd } from './board-format';
  *
  * It costs nothing to move: the whole ladder already shipped with the page, so
  * every verdict re-decides in the browser with no request and no recompute.
+ *
+ * **It carries no label and no readout of its own.** Both were here and both
+ * were saying a third time what "At $50,000, 13 allowed" already says two lines
+ * above, in the sentence that actually uses the number. A control that repeats
+ * its own consequence is not clearer, it is louder. The value stays reachable
+ * to a screen reader through `aria-valuetext`, and the current stop is the one
+ * marked in the scale.
  */
 export function SizeControl({
   board,
@@ -34,48 +41,36 @@ export function SizeControl({
   const index = Math.max(0, rungs.indexOf(value));
 
   return (
-    <section className="mb-6 border-b border-line pb-6">
-      <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
-        <div>
-          <label htmlFor="size" className="font-mono text-micro text-faint uppercase">
-            If you put in
-          </label>
-          <div className="mt-1 font-mono text-title font-semibold text-ink">{usd(value)}</div>
-        </div>
+    <section className="mb-8">
+      <label htmlFor="size" className="sr-only">
+        How much you would put in
+      </label>
 
-        <p className="max-w-[46ch] text-data leading-relaxed text-dim">
-          Every stop here was quoted against the real pools. Move it and the whole board
-          re-decides, because what a market can take depends on how much you bring.
-        </p>
-      </div>
+      <input
+        id="size"
+        type="range"
+        min={0}
+        max={rungs.length - 1}
+        step={1}
+        value={index}
+        onChange={(e) => onChange(rungs[Number(e.target.value)])}
+        aria-valuetext={`${usd(value)} USDG`}
+        className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-raised accent-signal outline-none"
+      />
 
-      <div className="mt-4 max-w-[42rem]">
-        <input
-          id="size"
-          type="range"
-          min={0}
-          max={rungs.length - 1}
-          step={1}
-          value={index}
-          onChange={(e) => onChange(rungs[Number(e.target.value)])}
-          aria-valuetext={`${usd(value)} USDG`}
-          className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-raised accent-signal outline-none"
-        />
-
-        <div className="mt-2 flex justify-between font-mono text-micro text-faint">
-          {rungs.map((rung) => (
-            <button
-              key={rung}
-              type="button"
-              onClick={() => onChange(rung)}
-              className={`transition-colors duration-200 ${
-                rung === value ? 'font-semibold text-ink' : 'hover:text-dim'
-              }`}
-            >
-              {rung >= 1000 ? `${rung / 1000}k` : rung}
-            </button>
-          ))}
-        </div>
+      <div className="mt-2.5 flex justify-between font-mono text-micro text-faint">
+        {rungs.map((rung) => (
+          <button
+            key={rung}
+            type="button"
+            onClick={() => onChange(rung)}
+            className={`transition-colors duration-200 ${
+              rung === value ? 'font-semibold text-ink' : 'hover:text-dim'
+            }`}
+          >
+            {rung >= 1000 ? `${rung / 1000}k` : rung}
+          </button>
+        ))}
       </div>
     </section>
   );

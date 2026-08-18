@@ -3,6 +3,7 @@ import { readShowcase } from '@/src/showcase';
 import { Board } from '@/app/components/console/Board';
 import { HowItWorks } from '@/app/components/console/HowItWorks';
 import { VerdictRibbon } from '@/app/components/console/VerdictRibbon';
+import { BoardFigures } from '@/app/components/console/BoardFigures';
 import { Hero } from '@/app/components/console/Hero';
 
 export const metadata = {
@@ -48,9 +49,12 @@ export default async function AssetsPage() {
 
   return (
     <>
-      <Hero title="Know what this market can take, before you buy">
-        All 30 tokenised stocks on X Layer, each with a price we can defend, how risky the
-        overnight gap is, and the size we would refuse. You do not need a wallet to read any of it.
+      <Hero
+        title="Tokenised stocks, and what each market can take"
+        aside={found ? <BoardFigures board={found.board} /> : null}
+      >
+        A price we can defend, the overnight gap risk, and the size we would refuse. All thirty on
+        X Layer, measured against real pools. No wallet needed.
       </Hero>
 
       {found ? (
