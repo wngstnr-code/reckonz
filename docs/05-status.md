@@ -629,6 +629,16 @@ publish), **all thirty assets 73 seconds old**, and `GET /api/health` answering 
 allowlisted assets at age 99s against a 900s `maxAge`. Green in Railway proves the container runs;
 these numbers prove it publishes. That distinction is D81.
 
+**The drift sampler is a second Railway service, from 2026-08-18 (D90).** Same project, its own
+volume at `/data`, its own config file `railway.drift.json` — Railway reads `railway.json` for every
+service built from a repo and config-as-code beats the dashboard, so a second service sharing it
+would have inherited `pnpm publish:loop` and tried to be a second publisher. The one setting that
+lives only in the dashboard is that service's **config file path**, which must read
+`railway.drift.json`. Its variables are `TARGET=mainnet`, `DRIFT_INTERVAL_SEC=3600`,
+`IMPACT_DRIFT_PATH=/data/impact-drift.jsonl` and `NIXPACKS_NODE_VERSION=22`. **No key of any
+kind** — the process cannot sign, and an hour rather than the default half hour because a pass is
+two full pool walks per asset over the same throttled RPC the publisher depends on.
+
 **Two things that live only in the Railway dashboard, so they are written here.** The five
 variables are `TARGET=mainnet`, `PUBLISH_INTERVAL_SEC=600`,
 `OBSERVATIONS_PATH=/data/issuer-marks.jsonl`, `NIXPACKS_NODE_VERSION=22` and `PUBLISHER_KEY`.

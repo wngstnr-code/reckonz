@@ -16,6 +16,23 @@
  * the same reason the issuer's marks are: a fraction derived from a file nobody
  * else has is a magic number with a footnote. See `src/impact-drift.ts` for what
  * a sample is and why it is shaped as a paired walk rather than a time series.
+ *
+ * **Deployed as its own Railway service, and `railway.drift.json` is why there
+ * are two config files in this repo.** Railway reads `railway.json` for every
+ * service built from the repo, and config-as-code wins over anything set in the
+ * dashboard — so a second service sharing that file would inherit
+ * `pnpm publish:loop` and try to be a second publisher. The alternative was to
+ * make the *publisher's* start command dispatch on an environment variable,
+ * which edits the one job that must not break. A second config file touches
+ * nothing that publishes. The service points at it, holds its own volume at
+ * `/data`, and needs **no key of any kind** — this process cannot sign, so
+ * there is nothing on that host worth stealing.
+ *
+ * `DRIFT_INTERVAL_SEC` is an hour there rather than the default half hour. A
+ * pass is two full pool walks per asset and the public RPC is the constraint
+ * this whole repo is written around (`serial`, D82's failover). The publisher
+ * shares those endpoints and is the load-bearing job; buying twice the samples
+ * at the cost of crowding it would be the tail wagging the dog again.
  */
 import { writeFileSync } from 'node:fs';
 import { serial } from './chain';
