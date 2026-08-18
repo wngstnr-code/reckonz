@@ -16,7 +16,7 @@ colliding. `06-assessment.md` is the honest read on whether this is a business.
 ```bash
 cd /Users/mac/Desktop/okxai
 set -a && source .env && set +a     # PRIVATE_KEY, GEMINI_API_KEY, CASH
-pnpm typecheck && pnpm test         # expect: clean, 255 unit tests, then 106 passed
+pnpm typecheck && pnpm test         # expect: clean, 257 unit tests, then 106 passed
 git status --short                  # expect: clean; docs/ is tracked now, not ignored
 pnpm dev                            # the web app, port 3000 (falls back if taken)
 ```
@@ -338,7 +338,7 @@ figure in it is a reading with a date (D84).
 | **The submission post** | The account exists (see Project identity above); what is still required is a post from it mentioning `@XLayerOfficial` **at submission time**. Not done until that post is up. |
 | ~~Mainnet deployment~~ | ✅ **Done 2026-08-11.** Addresses in `src/deployments.ts`; oracle seeded, mandate #1 live, one real fill. |
 | **Google Form submission** — draft ready in `docs/10-submission.md` | Required by 21 Aug 23:59 UTC. Read 2026-08-14 — it is **eight fields**: name, description, project URL, optional GitHub, contacts, optional X post URL. **No track selector, no video field, no deck.** So AI-RWA is inferred from the description alone, and the description is the highest-leverage artifact in the submission. Form and analysis in `00-hackathon.md`. |
-| ~~**Repo visibility decision**~~ | ✅ **Public 2026-08-17**, at `github.com/wngstnr-code/reckonz`. Disclaimer §4 says the Organizer will consider **code quality**, so a blank `Github` field on the form forfeits a stated criterion — and code quality (106 Foundry + 234 unit tests including a red-team suite over the compiler, CI, 14 of 14 verified contracts, an append-only decision log) is one of the few places we beat a polished demo. Checked before flipping: `.env` was never tracked, and all six live secrets were matched against every one of the 160 commits — no hit. **Put the URL in the form.** |
+| ~~**Repo visibility decision**~~ | ✅ **Public 2026-08-17**, at `github.com/wngstnr-code/reckonz`. Disclaimer §4 says the Organizer will consider **code quality**, so a blank `Github` field on the form forfeits a stated criterion — and code quality (106 Foundry + 257 unit tests including a red-team suite over the compiler, CI, 14 of 14 verified contracts, an append-only decision log) is one of the few places we beat a polished demo. Checked before flipping: `.env` was never tracked, and all six live secrets were matched against every one of the 160 commits — no hit. **Put the URL in the form.** |
 
 ### Blocking for a credible demo
 
@@ -367,7 +367,7 @@ figure in it is a reading with a date (D84).
 
 | ~~**The oracle had one source and no second opinion**~~ — **cross-checked 2026-08-14 (D79)** | `src/crosscheck.ts`, between the engine and `publishMany`: the quote against itself, the spread against plausibility (2,000bp), the mid against our own `observations/` store (`max(8σ, 20%)`), and the value against the pool (50%). Every threshold derived from a number already measured here — see D79 for each derivation. It **withholds, never corrects**, publishing the shape an unpriceable asset already takes, and a check that cannot run reports `skipped` rather than `ok`. Run against live quotes for all 30 assets: **30 publishable, 0 withheld**. |
 
-| ~~**A plan sized to pass its own guard by a coin flip**~~ — **fixed 2026-08-18 (D89)** | `capacity()` bisects for the largest size still inside the impact limit, so it returns a size sitting *on* it — asked for 50bp it handed back an order measured at 50bp. Stage 6 then re-reads the pool through `loadVenues`, seconds and a dozen RPC calls later, and rejects on `>`. Two runs of one thesis minutes apart: 2/2 allowed, then rejected at 51bp, with nothing edited in between. `PLAN_HEADROOM = 0.9` in `src/planner.ts` now sizes to 45bp against a 50bp guard, applied inside `planBasket` so no caller can forget it and **not** inside `capacity()`, which `pnpm capacity`, `src/board.ts` and `src/publish.ts` report as a measurement. 0.9 is a stated choice, not a number derived from anything — deriving it from the impact volatility in `observations/` is the honest version and is still open. **A worse defect was found on the way:** `planBasket` sized against the caller's `maxImpactBps` while `checkExecution` judged against `DEFAULT_MANDATE`'s hardcoded 50, and `/api/run` accepts up to 10,000 — so `?maxImpactBps=100` sized every leg to a limit the guard then rejected, all of them, deterministically. The run computes `guardMaxBps = min(request, mandate)` once and both stages use it. The `plan` event carries `planImpactBps` alongside `maxImpactBps`, additive. Unit suite 232 → **234**. |
+| ~~**A plan sized to pass its own guard by a coin flip**~~ — **fixed 2026-08-18 (D89)** | `capacity()` bisects for the largest size still inside the impact limit, so it returns a size sitting *on* it — asked for 50bp it handed back an order measured at 50bp. Stage 6 then re-reads the pool through `loadVenues`, seconds and a dozen RPC calls later, and rejects on `>`. Two runs of one thesis minutes apart: 2/2 allowed, then rejected at 51bp, with nothing edited in between. `PLAN_HEADROOM = 0.9` in `src/planner.ts` now sizes to 45bp against a 50bp guard, applied inside `planBasket` so no caller can forget it and **not** inside `capacity()`, which `pnpm capacity`, `src/board.ts` and `src/publish.ts` report as a measurement. 0.9 is a stated choice, not a number derived from anything — deriving it from the impact volatility in `observations/` is the honest version and is still open. **A worse defect was found on the way:** `planBasket` sized against the caller's `maxImpactBps` while `checkExecution` judged against `DEFAULT_MANDATE`'s hardcoded 50, and `/api/run` accepts up to 10,000 — so `?maxImpactBps=100` sized every leg to a limit the guard then rejected, all of them, deterministically. The run computes `guardMaxBps = min(request, mandate)` once and both stages use it. The `plan` event carries `planImpactBps` alongside `maxImpactBps`, additive. Unit suite 255 → **257**. |
 
 | ~~**Evidence bundles were never stored in production**~~ — **fixed 2026-08-14 (D80), pending one account step** | Measured against the live app: `evidence.stored false`. Vercel's filesystem is read-only, so every fill placed through the website put a hash on chain whose bundle existed nowhere — the audit trail worked only on the machine it was written on. `src/evidence-store.ts` archives to Vercel Blob, falls back to disk, and otherwise reports `none` **with the reason**; `readEvidence` reads the archive as well as the disk, so `pnpm evidence` can verify a production fill from a fresh clone; and both panels offer the bundle as a download. Store `reckonz-evidence` (`store_kqJdljzlkaaN4S05`) is created, connected and **proven**: a bundle uploaded, the local copy absent, every credential unset, `readEvidence` fetched it from the archive and the hash re-derived. `EVIDENCE_BLOB_BASE` is pinned to the host the upload actually returned. **Proven in production 2026-08-14**: a fill quote came back `persistence: {"kind":"blob",…}`, and the bundle was then fetched from the archive with no local copy and no credentials, hash re-deriving. |
 
@@ -384,18 +384,19 @@ figure in it is a reading with a date (D84).
   `check-tests.ts` listed directories flat — so a test file in `app/components/console` was
   collected by nobody and would have passed by never running. Both now include it; sixteen tests
   added, two of them pinning rules that were bugs first.
-- **The planner sizes to exactly the guard's limit, so a plan is refused by its own guard on any
-  drift.** Found 2026-08-17 while recording `pnpm showcase`. Two runs of the *same* thesis minutes
-  apart: the first sized wCRCLx and wCOINx to `plannedImpactBps: 50` and the guard measured 50 on
-  both, `2/2 would execute`; the second sized wCOINx to 50 and the guard measured **51** against a
-  50bp limit and refused it, `0/1`. The fill the guard was asked about was *smaller* than the leg
-  (1086 vs 1086.34), so this is not an off-by-one between `planner.ts` and `guard.ts` — it is the
-  pool moving between the sizing walk and the oracle walk, seconds apart, on a pool thin enough
-  that $1k moves it 50bp. Targeting the limit exactly leaves zero margin, so whether a plan
-  survives its own check is close to a coin flip. **BE call:** either size to a fraction of the
-  limit (say 90%) or re-check at the planned size and re-size once. The FE renders whichever
-  answer comes back and needs no change. Recorded rather than fixed because `src/planner.ts` is
-  not the FE's to touch.
+- ~~**The planner sizes to exactly the guard's limit, so a plan is refused by its own guard on any
+  drift.**~~ **Fixed 2026-08-18 (D89).** Found by FE while recording `pnpm showcase`, and the
+  measurement that found it is the one worth keeping: two runs of the *same* thesis minutes apart,
+  the first sizing wCRCLx and wCOINx to `plannedImpactBps: 50` with the guard measuring 50 on both
+  (`2/2 would execute`), the second sizing wCOINx to 50 and the guard measuring **51** (`0/1`).
+  The fill the guard was asked about was *smaller* than the leg (1086 vs 1086.34), which is what
+  ruled out an off-by-one and left the pool moving between the two walks. `PLAN_HEADROOM = 0.9`
+  took the first of the two suggested routes — size to a fraction of the limit — because the
+  second only narrows the window and the fill happens later still. **One thing this leaves:**
+  `observations/showcase.json` is now a recording of the old behaviour, and the `0/1` refusal on
+  the page is a defect that no longer exists. Re-running `pnpm showcase` is FE's call, and it is
+  a legitimate re-record rather than the selection the note above rules out — the code under it
+  changed.
 - **`/api/health` exists and nothing calls it.** An endpoint is not a monitor. One free uptime
   check against `https://reckonz.xyz/api/health` alerting on non-2xx closes it, and until
   then the two-day outage in D81 could happen again in exactly the same way.

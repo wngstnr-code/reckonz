@@ -4620,9 +4620,13 @@ Print the one that would have caught it, and check what a write destroys before 
 ## D89 — A plan sized to pass its own guard by a coin flip
 
 **2026-08-18.** Two runs of the same thesis, minutes apart. One allowed both legs. The other was
-rejected at 51bp against a 50bp limit. Nothing had been edited in between, and the difference was
-not an off-by-one — the pool moved between two stages that measure the same thing at different
-moments.
+rejected at 51bp against a 50bp limit. FE hit it first, on 2026-08-17, while recording
+`pnpm showcase`: the first run sized wCRCLx and wCOINx to `plannedImpactBps: 50` and the guard
+measured 50 on both — `2/2 would execute`; the second sized wCOINx to 50 and the guard measured
+**51**, `0/1`. The detail that ruled out an off-by-one between `planner.ts` and `guard.ts` is
+that the fill the guard was asked about was *smaller* than the leg — 1086 against 1086.34.
+Nothing had been edited in between: the pool moved between two stages that measure the same thing
+at different moments.
 
 `capacity()` is a bisection for the largest size whose impact is still inside the limit it is
 given, so it returns a size that sits *on* that boundary: asked for 50bp, it hands back an order
