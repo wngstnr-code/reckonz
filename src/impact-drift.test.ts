@@ -127,3 +127,24 @@ test('coverage ranks by the worst drift, not the sample count', () => {
   assert.equal(rows[0]!.worstBps, 9);
   assert.equal(rows[1]!.samples, 3);
 });
+
+test('the absolute tail is reported even when nothing has moved against us', () => {
+  // The shape of the first forty real samples: a thin adverse tail and one
+  // large favourable move. Reporting only the first invites loosening the
+  // headroom on the strength of a sign nobody controls.
+  const s = suggestHeadroom(store([...new Array(39).fill(1), -11]), 50);
+  assert.equal(s.driftBps, 1);
+  assert.equal(s.headroom, 0.98);
+  assert.equal(s.worstAbsBps, 11);
+  assert.equal(s.symmetricHeadroom, 0.78);
+  // The adverse reading is the looser of the two, which is exactly why both
+  // are printed.
+  assert.ok(s.symmetricHeadroom < s.headroom);
+});
+
+test('a symmetric store makes both readings agree', () => {
+  const s = suggestHeadroom(store([...new Array(20).fill(2), ...new Array(20).fill(-2)]), 50);
+  assert.equal(s.driftBps, 2);
+  assert.equal(s.absDriftBps, 2);
+  assert.equal(s.headroom, s.symmetricHeadroom);
+});

@@ -4888,3 +4888,40 @@ the refused $248,298 was always the point, and it survives.
 that proves it.** A recording may be re-taken when the *code under it* has changed. It may never be
 re-taken because the numbers came out unflattering; running until the output reads well makes it a
 selection rather than a measurement, which is why `pnpm showcase` is not on a timer (D91).
+
+### D90, amended 2026-08-18 — the first forty samples, and why they do not loosen anything
+
+The drift sampler ran two passes on Railway and the store crossed its threshold the same evening.
+Forty samples at a 50bp limit, ~32s between the paired walks:
+
+```
+p99 drift against us     +1.00bp   → PLAN_HEADROOM 0.980
+p99 drift either way    +11.00bp   → 0.780 had the sign gone the other way
+worst single move       +11.00bp   wTSLAx, on a $41,865 leg
+adverse samples              5/40
+```
+
+**Read naively this says 0.9 is too tight and 0.98 would do. That reading is wrong, and the tool
+now says so out loud rather than leaving it to whoever runs it.** Only five of forty samples moved
+against us at all, and the largest of those was one basis point — but the largest move in the store
+was **eleven**, twenty-two percent of the whole limit, in thirty-two seconds. It happened to go our
+way. The pool does not know which way we need it to go, and the planner cannot know the sign in
+advance; a thin adverse tail over forty samples from two hours of one session is today's luck, not
+a property of the market.
+
+So `suggestHeadroom` now returns `absDriftBps`, `worstAbsBps` and `symmetricHeadroom` alongside the
+adverse figure, and `pnpm drift --report` prints both with a warning when they disagree. Nothing
+derives from the absolute number — the headroom must still cover *adverse* drift — but a store
+whose two readings differ by 0.2 is a store that cannot yet justify loosening anything.
+
+**Decision: `PLAN_HEADROOM` stays at 0.9.** It sits between the two readings, which is the only
+defensible place to be while they disagree. What would change it is a store spanning several
+sessions — an open, a close, a quiet overnight — with an adverse tail that has actually been
+observed rather than merely not yet encountered. The sampler is running; the question can be asked
+again with better evidence, and asking it early with worse evidence is how a measured constant
+becomes a guess wearing a measurement's clothes.
+
+**The gap σ has not moved and will not for weeks.** 5,250 marks now, 175 per asset, and still
+**1/30 boundaries** — σ counts close-to-open jumps, so it advances once a trading day no matter how
+densely the sampler runs. Thirty boundaries is roughly six weeks of the worker being up. The
+recorded σ from 2026-08-12 stays in force, which `pnpm measure` says on every run.

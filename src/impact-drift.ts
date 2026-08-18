@@ -103,6 +103,23 @@ export interface HeadroomSuggestion {
   p: number;
   /** Drift at that quantile, in bps of impact. Never negative — see below. */
   driftBps: number;
+  /**
+   * The same quantile over the **absolute** drift, favourable moves included.
+   *
+   * Not used to derive anything, and it is the number that stops this tool
+   * being read backwards. The headroom must cover drift *against* us, so
+   * `driftBps` counts only that — but a store where nothing has yet moved
+   * against us is not a store showing a pool that cannot. The first forty
+   * samples had a worst adverse drift of 1bp and a worst absolute drift of
+   * **11bp**, on a $41,865 leg that happened to move our way. Reporting only
+   * the first would invite loosening the headroom on the strength of a sign
+   * nobody controls.
+   */
+  absDriftBps: number;
+  /** Largest single absolute drift in the sample, which no quantile can hide. */
+  worstAbsBps: number;
+  /** What the headroom would have to be if every absolute move went against us. */
+  symmetricHeadroom: number;
   /** The limit the drift was measured against; a fraction is meaningless without it. */
   limitBps: number;
   /** `1 - driftBps / limitBps`, clamped. What `PLAN_HEADROOM` should be. */
@@ -147,6 +164,9 @@ export function suggestHeadroom(
   const drifts = atLimit.map((s) => s.deltaBps);
   const raw = quantile(drifts, p);
   const driftBps = raw === null ? 0 : Math.max(0, raw);
+  const absRaw = quantile(drifts.map(Math.abs), p);
+  const absDriftBps = absRaw === null ? 0 : absRaw;
+  const worstAbsBps = drifts.length ? Math.max(...drifts.map(Math.abs)) : 0;
   // Bounded below at 0.5 because a headroom that halves every reported size is
   // a different product decision, not a parameter — if the measurement ever
   // asks for one, that is a conversation, not a constant.
@@ -155,6 +175,9 @@ export function suggestHeadroom(
     samples: atLimit.length,
     p,
     driftBps,
+    absDriftBps,
+    worstAbsBps,
+    symmetricHeadroom: Math.min(1, Math.max(0.5, 1 - absDriftBps / limitBps)),
     limitBps,
     headroom,
     withheld:
