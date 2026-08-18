@@ -4672,3 +4672,66 @@ this decision is about, sitting in the output the whole time.
 
 **The rule.** A search that solves for a bound returns the bound. If anything re-measures afterwards
 — another stage, another block, the chain itself — the boundary is not a place to stand.
+
+---
+
+## D90 — The measurement D89 pointed at did not exist
+
+Found 2026-08-18, going back to close D89's loose end. `PLAN_HEADROOM = 0.9` was documented as a
+choice, with the honest version named in its own comment: derive it from *"the impact volatility
+already recorded in `observations/`"*.
+
+**There is no such recording.** `observations/issuer-marks.jsonl` holds the issuer's marks — mid,
+spread, session, halted — and says nothing about pools. `src/board.ts` does measure the depth
+ladder for all thirty assets, but `board-store.ts` writes one key, `board/latest.json`, and
+overwrites it every hour. Nothing in this repo has ever recorded how far a pool moves between two
+walks. The comment described a derivation from data that was never collected, which is a worse
+state than an undefended constant: the next person to try would go looking, find issuer marks, and
+either give up or derive a headroom from a distribution that answers a different question.
+
+**What is now measured, and why it is a paired walk rather than a time series.** Sampling impact at
+a fixed size on a timer would characterise the pool in general and then need a model to become a
+headroom. `src/impact-drift.ts` reproduces the failure instead:
+
+1. walk the pools, size a leg with `capacity(venues, 50)` — the same call, at the limit the guard
+   enforces, that produced the leg D89 caught
+2. wait, the way a run waits between its stages
+3. walk again and quote **that same size** against the new state
+
+The second impact is the number the guard would have measured; `deltaBps` is how far past the limit
+it landed. Favourable drift is kept in the store — dropping it would turn a distribution into an
+argument — and floored at zero when the headroom is derived, because a pool that moved our way does
+not license sizing past a limit the guard still enforces with `>`.
+
+The derivation is `headroom = 1 - p99(delta) / limit`: the planner sizes to `limit × headroom`, the
+pool drifts by `delta`, the guard measures about the sum, and requiring that to stay inside `limit`
+gives the fraction. A quantile rather than the maximum, because the maximum of a growing series
+only ever falls and would ratchet the headroom tighter forever on the worst minute ever sampled.
+Nearest-rank rather than interpolated, because an interpolated quantile is a value nobody observed
+(D5).
+
+**It withholds.** Under thirty samples at a given limit, `pnpm drift --report` states the coverage
+and says `0.9 stays in force` — the same refusal `pnpm measure` makes about the gap σ, for the same
+reason: a number derived from a short series looks better justified than the choice it replaces and
+is worse.
+
+**The first two real samples already argue with 0.9.** Run against mainnet, 32 seconds apart:
+
+```
+wSPYx    $3,864 at 50bp → 50bp    +0bp
+wTSLAx  $41,865 at 50bp → 39bp   -11bp
+```
+
+Eleven basis points of movement in half a minute, on the deepest pool in the universe. It went our
+way this time, and the sign is not something the planner gets to know in advance — so the honest
+reading is that 0.9, which buys 5bp of room against a 50bp limit, may well be too thin rather than
+too generous. **Two samples decide nothing**, which is precisely why the suggestion is withheld
+until thirty. But it is now a question with a store behind it instead of a comment.
+
+**Cost, so nobody has to wonder before running it.** Every call is `eth_call`; there is no key, no
+gas and no write. What it spends is RPC — two full pool walks per asset per pass — which is why it
+is a separate process on its own slow clock (`DRIFT_INTERVAL_SEC`, 30 minutes) and deliberately
+**not** folded into `publish-loop`. That loop's own comments say why: the oracle is the load-bearing
+job, and nothing that measures may sit in front of the thing that publishes.
+
+Unit suite 257 → **269**.

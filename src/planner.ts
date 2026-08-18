@@ -247,9 +247,16 @@ export interface BasketPlan {
  *
  * 0.9 is a choice, not a measurement, and is commented as one on purpose. It is
  * wide enough that ordinary drift across a run cannot cross it, and narrow
- * enough that the size we report stays worth reporting. Deriving it from the
- * impact volatility already recorded in `observations/` is the honest version
- * and is not this change.
+ * enough that the size we report stays worth reporting.
+ *
+ * **It said the honest version was to derive this from "the impact volatility
+ * already recorded in `observations/`", and that data did not exist.** The
+ * store holds the issuer's marks and nothing about pools; the board measures a
+ * depth ladder but overwrites one key hourly. Nothing in this repo had ever
+ * recorded how far a pool moves between two walks. `pnpm drift` now measures
+ * exactly that — see `src/impact-drift.ts`, D90 — and `pnpm drift --report`
+ * derives the fraction, withholding one until it has thirty samples to derive
+ * it from. Until it does, this number is still a choice and still says so.
  */
 export const PLAN_HEADROOM = 0.9;
 
