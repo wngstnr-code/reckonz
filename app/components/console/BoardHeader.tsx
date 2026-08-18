@@ -78,7 +78,7 @@ export function BoardHeader({
           </p>
         ) : (
           <div className="flex flex-wrap items-baseline gap-x-7 gap-y-1.5 text-meta text-dim">
-            <span>If you put in {usd(sizeUsdg)},</span>
+            <span>At {usd(sizeUsdg)},</span>
             <span className="font-semibold text-signal">{allowed} allowed</span>
             {refused > 0 && <span className="text-caution">{refused} refused</span>}
             {/* Each reason is its own item on the same gap as the counts above

@@ -349,3 +349,47 @@
   }
 }
 
+
+/*
+ * The size slider, drawn rather than accented.
+ *
+ * `accent-color` gets a native track and a native thumb, and a native track is
+ * opaque — which leaves nowhere to put the stop markers. The eight rungs are
+ * the whole point of this control: they are the only sizes the board actually
+ * quoted, and a rail with no marks on it invites the reader to believe the
+ * positions between them mean something. So the track is made transparent, the
+ * rail and its dots are drawn behind it as ordinary elements, and the input is
+ * left owning only the thumb and the keyboard behaviour.
+ *
+ * Both vendor prefixes, because `::-webkit-slider-runnable-track` and
+ * `::-moz-range-track` cannot be written as one rule: a selector either engine
+ * does not recognise invalidates the whole declaration for both.
+ */
+.size-range::-webkit-slider-runnable-track {
+  height: 6px;
+  background: transparent;
+}
+
+.size-range::-moz-range-track {
+  height: 6px;
+  background: transparent;
+}
+
+.size-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: var(--color-signal);
+  /* Centres the thumb on a 6px track: (6 - 16) / 2. */
+  margin-top: -5px;
+}
+
+.size-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: 0;
+  border-radius: 9999px;
+  background: var(--color-signal);
+}
