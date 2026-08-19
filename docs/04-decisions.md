@@ -5668,10 +5668,15 @@ the page claims and the grid is what backs it up, so it goes first — a reader 
 receipts before anything explains what they were for has to hold them in mind until it does. Both
 blocks are named sections now, since the grid stopped being the page's opening content.
 
-Pagination was considered for the theses and rejected. Receipts are evidence that gets browsed;
-theses are narrative that gets read, and cutting reading into numbered chunks to be navigated serves
-neither. They also grow far more slowly — every fill makes a receipt, only a published idea makes a
-thesis, and the ratio is already 20:3 and widening. What the move *did* create is a real problem at
-scale: an unbounded list above the grid pushes the page's main content off the screen. So five rows,
-newest first, and a disclosure for the rest. One click, no route, and the cap hides the oldest rather
-than the latest thinking.
+**And then paginated after all, above a threshold.** The first answer here was five rows and a
+"show the rest" disclosure, argued from receipts being evidence to be browsed while theses are
+narrative to be read. That argument has a ceiling and does not survive it. At two hundred theses the
+disclosure dumps a hundred and ninety-five rows in one click, which is worse than pages rather than
+better — the comparison was against the collapsed state and never against the expanded one. And
+"read them all" stops being something anyone does at that size, so the distinction that justified
+the disclosure dissolves at exactly the scale that made the question worth asking.
+
+So: the same bar the grid uses, `PAGE_SIZE = 10`, and **nothing rendered at all below it**. A page
+bar reading "1-3 of 3" is a control that does nothing, under a heading that already said three.
+Verified at 27 by inflating the list temporarily rather than reasoning about it — the third such
+claim about scale in this page's history, and the first one actually looked at.
