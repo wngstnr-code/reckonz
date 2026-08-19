@@ -125,6 +125,36 @@ Twenty-one receipts on mainnet. Still small in number and large in meaning, so g
 
 ---
 
+## The disconnected visitor
+
+Decided 2026-08-19, after finding three different treatments of one state across four pages: a real
+button in two places, prose with a link in one, and bare prose that led nowhere in three more.
+
+**A page never waits for a wallet.**
+
+- **Anything readable without one is rendered in full, and does not mention the wallet at all.**
+  `/assets` and `/receipts` already work this way and should stay that way. So does the whole of a
+  compile-and-size run on `/idea` — nothing about mapping a thesis onto real pools needs an account.
+- **Anything that genuinely needs one keeps the shape of the action, with a real Connect button
+  standing in for its primary**, in the place the action lives. Never a sentence telling the reader
+  to go and connect somewhere else.
+
+The second half is the part that was being got wrong. *"Connect a wallet to create one"* replaced
+the entire mandate form — the five caps and the thirty assets, which are exactly what a visitor is
+deciding whether they want — with a sentence pointing at a control in the far corner of the header.
+It is the same mistake as *"the form is at the foot of this page"* in D97: prose describing where
+something is, in place of a link to it.
+
+What this yields concretely: the create form renders and can be filled in and toggled without a
+wallet, because a wallet is needed to *send* it and not to read it. Only the button is gated, and
+it says `Connect wallet to create it` rather than `Create mandate`.
+
+**A control that only navigates is not a wallet action.** `Follow this basket` on a receipt and
+`install these as a mandate's exit rules` on `/idea` both work disconnected, because they carry a
+hand-off to another page rather than signing anything. Gating them would be gating the wrong verb.
+
+---
+
 ## Density, resolved
 
 The skill's default is "comfortable, never force compact on first-time users" — and our first-time

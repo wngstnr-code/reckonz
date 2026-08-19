@@ -699,7 +699,13 @@ reminder.
 
 ## Log
 
-**2026-08-19 (latest, thirty-third)** — **mandate #2 created from the browser, with its exit rules**
+**2026-08-19 (latest, thirty-fourth)** — **a rule for the disconnected visitor** (D102), which had
+never been decided: four pages had three different treatments of the same state, one of which
+replaced the entire mandate form with a sentence pointing at the header. `docs/09-design.md` now
+carries it, and `/trade` disconnected measures zero bare "connect a wallet" sentences against three
+real 48px Connect buttons.
+
+**2026-08-19 (thirty-third)** — **mandate #2 created from the browser, with its exit rules**
 (block 68365724 and 68365728, both success). Three assets allowed, two triggers installed and scoped
 to wMUx and wSKHYx exactly as the run compiled them. The panel announcing it is also what surfaced
 D101: `Num` forced `text-ink`, so every number on a green panel sat at 2.35:1. It inherits now,

@@ -12,6 +12,7 @@ import {
   publishFollow,
   INSTALL_TRIGGERS_EVENT,
   MANDATES_CHANGED_EVENT,
+  OPEN_WALLET_EVENT,
   type FollowRequest,
   type TriggerInstallRequest,
 } from './follow';
@@ -514,9 +515,14 @@ export function Mandate() {
         </div>
       )}
 
-      {!address ? (
-        <p className="text-meta text-dim">Connect a wallet to create one.</p>
-      ) : !option ? (
+      {/* The form renders without a wallet.
+      
+          It used to be replaced entirely by the sentence "Connect a wallet to
+          create one", which hid the five caps and the thirty assets -- exactly
+          the things a visitor is deciding whether they want. A wallet is needed
+          to *send* this, not to read it or fill it in, so only the button is
+          gated. See the disconnected-state rule in `docs/09-design.md`. */}
+      {address && !option ? (
         <p className="text-meta text-caution">
           This wallet is on a chain with no deployment. Switch to X&nbsp;Layer using the control in
           the header.
@@ -603,6 +609,13 @@ export function Mandate() {
           )}
 
           <div className="mt-7">
+            {/* The action's own place carries the control that unblocks it,
+                rather than a sentence pointing at the header. */}
+            {!address ? (
+              <Primary onClick={() => window.dispatchEvent(new Event(OPEN_WALLET_EVENT))} full>
+                Connect wallet to create it
+              </Primary>
+            ) : (
             <Primary onClick={create} disabled={busy || picked.length === 0 || tooMany} full>
             {phase.kind === 'signing'
               ? 'confirm in your wallet…'
@@ -616,6 +629,7 @@ export function Mandate() {
                       ? `Too many assets, the limit is ${MAX_ASSETS_FALLBACK}`
                       : 'Create mandate'}
             </Primary>
+            )}
           </div>
 
           {phase.kind === 'confirming' && (

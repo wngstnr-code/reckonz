@@ -8,7 +8,7 @@ import { USDG } from '@/src/chain';
 import type { UniverseEntry } from '@/src/pipeline';
 import { describeOnchainTrigger, scaleThreshold, type OnchainTrigger } from '@/src/triggers';
 import { awaitReceipt } from './awaitReceipt';
-import { FILLED_EVENT, MANDATES_CHANGED_EVENT } from './follow';
+import { FILLED_EVENT, MANDATES_CHANGED_EVENT, OPEN_WALLET_EVENT } from './follow';
 import { Legend, Pill, tokenAmount } from './ui';
 import { Fact, Facts, Section } from './console/trade/Section';
 import {
@@ -268,12 +268,17 @@ export function MandateManage() {
       <Section title="Mandate">
         <p className="max-w-[68ch] text-meta leading-relaxed text-dim">
           The rule set the chain enforces inside the trade itself: what it may spend, how far off
-          fair value it may pay, which assets it may hold. Connect a wallet to read yours, or{' '}
-          <a href="#create-mandate" className="underline decoration-dotted hover:text-ink">
-            see what one is made of
-          </a>
-          .
+          fair value it may pay, which assets it may hold. Reading yours needs a wallet; the form
+          below shows what one is made of either way.
         </p>
+        {/* The control that unblocks this, where the blocked thing is. */}
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new Event(OPEN_WALLET_EVENT))}
+          className="mt-4 rounded-xl bg-ink px-5 py-3 text-data font-semibold whitespace-nowrap text-ground transition-opacity duration-200 hover:opacity-90"
+        >
+          Connect wallet
+        </button>
       </Section>
     );
   }

@@ -557,6 +557,10 @@ export function Fill({ active = true }: { active?: boolean } = {}) {
   return (
     <>
       {!address ? (
+        // Only reachable from the prototype surface at `/`. In the console
+        // `TradeCard` renders its own `Disconnected` instead of mounting this,
+        // so the wallet gate lives there with a real button. See the
+        // disconnected-state rule in `docs/09-design.md`.
         <p className="text-meta text-dim">Connect a wallet to place one.</p>
       ) : !option ? (
         <p className="text-meta text-caution">

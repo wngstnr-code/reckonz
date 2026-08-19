@@ -5867,3 +5867,32 @@ component that caused all three. The rule is in `CLAUDE.md` rather than in one m
 `/idea`, computing the WCAG ratio of each text node against its panel: 33 nodes, zero below 4.5.
 The transient panels — Filled, Exited, mandate created — cannot be summoned on demand, so the
 markup of the mandate one was reproduced in the page and measured directly.
+
+## D102 — The disconnected visitor had no rule, so each page invented one
+
+Four pages, one state, three treatments. A real `Connect wallet` button in the trade card and under
+`Publish it`; prose with a link to somewhere else in `MandateManage`; and bare prose that led
+nowhere in the create form, `Fill` and `Exit`.
+
+The rule is now in `docs/09-design.md`: **a page never waits for a wallet.** Everything readable
+without one renders in full and does not mention wallets; everything that genuinely needs one keeps
+the shape of the action with a real Connect button in place of its primary, where the action is.
+
+The create form was the bad case. *"Connect a wallet to create one"* replaced the **whole form** —
+five caps and thirty asset chips, the things a visitor is deciding whether they want — with a
+sentence pointing at the header. A wallet is needed to send that transaction, not to read the form
+or fill it in, so the gate moved to the button alone. Measured after: the fields render, the picker
+toggles (`ALLOWED ASSETS · 1 PICKED` with no wallet connected), and the button reads
+`Connect wallet to create it`.
+
+`Fill` and `Exit` still hold their own `!address` branches, and those are dead in the console:
+`TradeCard` renders `Disconnected` rather than mounting either. They are reachable only from the
+prototype at `/`, and now say so in a comment rather than looking like live copy nobody had
+noticed was unreachable.
+
+**And a control that only navigates is not a wallet action.** `Follow this basket` and `install
+these as a mandate's exit rules` both work disconnected — they carry a hand-off, they do not sign.
+Gating them would have been gating the wrong verb.
+
+Measured across `/trade` disconnected afterwards: zero bare "Connect a wallet …" sentences, three
+real Connect buttons, all 48px.
