@@ -1,14 +1,14 @@
-import { fetchBoard } from "@/src/board-store";
-import { MandateManage } from "@/app/components/MandateManage";
-import { CreateMandateSlot } from "@/app/components/console/trade/CreateMandateSlot";
-import { Limits } from "@/app/components/console/trade/Limits";
-import { Section } from "@/app/components/console/trade/Section";
-import { TradeCard } from "@/app/components/console/trade/TradeCard";
+import { fetchBoard } from '@/src/board-store';
+import { MandateManage } from '@/app/components/MandateManage';
+import { CreateMandateSlot } from '@/app/components/console/trade/CreateMandateSlot';
+import { Limits } from '@/app/components/console/trade/Limits';
+import { Section } from '@/app/components/console/trade/Section';
+import { TradeCard } from '@/app/components/console/trade/TradeCard';
 
 export const metadata = {
-  title: "Trade · Reckonz",
+  title: 'Trade · Reckonz',
   description:
-    "The part that needs your wallet. You set the rules, the chain enforces them, and no key of ours can move your money.",
+    'The part that needs your wallet. You set the rules, the chain enforces them, and no key of ours can move your money.',
 };
 
 /**
@@ -16,7 +16,7 @@ export const metadata = {
  * measured hourly, and a page baked at deploy time would show whatever was true
  * when it shipped for as long as the deployment lived.
  */
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 /**
  * The trade surface, laid out the way the reference lays out an asset page:
@@ -46,7 +46,7 @@ export default async function TradePage() {
   // with liquidity and no price refuses on `NO_REFERENCE`, and a price with no
   // pool has nothing to fill against.
   const tradable = found
-    ? found.board.assets.filter((a) => a.depth === "ok" && a.publishable).length
+    ? found.board.assets.filter((a) => a.depth === 'ok' && a.publishable).length
     : null;
 
   return (
@@ -55,10 +55,8 @@ export default async function TradePage() {
         <div>
           <h1 className="text-title font-semibold tracking-tight">Trade</h1>
           <p className="mt-2.5 max-w-[68ch] text-body text-dim">
-            The one surface that needs your wallet. You write the rules, the
-            chain enforces them inside the trade itself, and a trade that breaks
-            them is undone before it settles. No key of ours can move your
-            money, and nothing is signed on your behalf.
+            You write the rules. The chain enforces them inside the trade itself, and no key of ours
+            can move your money.
           </p>
         </div>
 
@@ -68,7 +66,7 @@ export default async function TradePage() {
         {found && (
           <span className="flex items-center gap-2 rounded-full border border-line bg-panel px-3.5 py-1">
             <span
-              className={`h-1.5 w-1.5 rounded-full ${tradable ? "bg-signal" : "bg-caution"}`}
+              className={`h-1.5 w-1.5 rounded-full ${tradable ? 'bg-signal' : 'bg-caution'}`}
               aria-hidden
             />
             <span className="font-mono text-[12.5px] whitespace-nowrap text-dim">
@@ -96,9 +94,8 @@ export default async function TradePage() {
               <Limits board={found.board} now={now} />
             ) : (
               <p className="max-w-[62ch] text-meta leading-relaxed text-caution">
-                No board has been measured on this deployment. That is not the
-                same as an empty market: nothing is shown because nothing is
-                known.
+                No board has been measured on this deployment. That is not the same as an empty
+                market: nothing is shown because nothing is known.
               </p>
             )}
           </Section>

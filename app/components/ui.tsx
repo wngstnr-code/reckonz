@@ -6,6 +6,26 @@ export const usd = (n: number) =>
 export const pct = (bps: number | null | undefined) =>
   bps == null || !Number.isFinite(bps) ? '—' : `${(bps / 100).toFixed(2)}%`;
 
+/**
+ * A token amount, at a length a column can be read down.
+ *
+ * `formatUnits` returns every decimal the token has, and an 18-decimal balance
+ * printed whole is twenty digits nobody compares to the one below it. Eight is
+ * past the point any position here is meaningful and still shows a dust holding
+ * as something rather than rounding it to zero, which is the one direction this
+ * must not fail in: a balance the wallet holds must never render as none.
+ *
+ * Takes the formatted string rather than the bigint, so the caller keeps the
+ * exact value to put in a `title`.
+ */
+export const tokenAmount = (exact: string): string => {
+  const [whole, fraction = ''] = exact.split('.');
+  if (fraction.length <= 8) return exact;
+
+  const cut = `${whole}.${fraction.slice(0, 8)}`.replace(/0+$/, '').replace(/\.$/, '');
+  return cut === whole && Number(whole) === 0 ? '<0.00000001' : cut;
+};
+
 export function Card({
   step,
   title,

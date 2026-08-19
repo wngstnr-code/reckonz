@@ -81,7 +81,7 @@ export function BasketRail({ direction }: { direction: 'buy' | 'sell' }) {
     <div className="mb-5">
       <p className="mb-3 rounded-lg border border-signal-deep bg-signal/6 px-3 py-2 text-[12.5px] leading-relaxed text-ink">
         Following thesis <span className="font-mono">#{follow.thesisId}</span>. Each leg is its own
-        signature — one token, one amount, twenty minutes — so the basket is filled one at a time.
+        signature, so the basket fills one at a time.
       </p>
 
       <ul className="grid gap-1">

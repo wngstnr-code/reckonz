@@ -90,9 +90,8 @@ function Disconnected() {
       </button>
 
       <p className="mt-4 text-[12px] leading-relaxed text-faint">
-        Your funds never leave your wallet. Every fill is pulled against a Permit2 signature you
-        produce yourself — scoped to one token, capped in amount, expiring in twenty minutes — and
-        the guard bounds the trade inside the same transaction. No key of ours can move your money.
+        Every fill is pulled against a Permit2 signature you produce yourself, scoped to one token
+        and expiring in twenty minutes. No key of ours can move your money.
       </p>
     </>
   );

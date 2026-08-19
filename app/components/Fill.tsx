@@ -19,7 +19,7 @@ import {
 } from './follow';
 import { useFollow } from './useFollow';
 import { SwapBox, SwapLeg, TokenChip } from './console/trade/SwapBox';
-import { Legend, Num, Pill } from './ui';
+import { Legend, Num, Pill, tokenAmount } from './ui';
 import { useWallet } from './useWallet';
 
 /**
@@ -407,7 +407,7 @@ export function Fill() {
         }
         if (!visible) {
           throw new Error(
-            'the Permit2 approval was mined but is not readable yet — wait a moment and press ' +
+            'the Permit2 approval was mined but is not readable yet, wait a moment and press ' +
               'fill again rather than signing against state the chain has not served.',
           );
         }
@@ -467,7 +467,7 @@ export function Fill() {
       setPhase({ kind: 'mining', hash });
       const receipt = await awaitReceipt(publicClient, hash);
       if (receipt.status !== 'success') {
-        throw new Error(`the fill reverted on chain — ${hash}`);
+        throw new Error(`the fill reverted on chain: ${hash}`);
       }
 
       // A confirmed receipt does not mean the next read lands on a node that
@@ -550,8 +550,7 @@ export function Fill() {
         <p className="text-[13px] text-dim">Reading your mandates from the chain…</p>
       ) : mandates.length === 0 ? (
         <p className="text-[13px] leading-relaxed text-dim">
-          No mandate this wallet can execute against. Create one above — it has to be active, own
-          this wallet as both owner and agent, and point at the executor deployed here.
+          No mandate this wallet can execute against. Create one above.
         </p>
       ) : (
         <>
@@ -585,8 +584,11 @@ export function Fill() {
                 token={<TokenChip symbol="USDG" />}
                 hint={
                   cash ? (
-                    <span className={shortOfCash ? 'text-caution' : undefined}>
-                      balance {formatUnits(cash.balance, cash.decimals)}
+                    <span
+                      className={shortOfCash ? 'text-caution' : undefined}
+                      title={formatUnits(cash.balance, cash.decimals)}
+                    >
+                      balance {tokenAmount(formatUnits(cash.balance, cash.decimals))}
                     </span>
                   ) : null
                 }
@@ -635,16 +637,15 @@ export function Fill() {
 
           {shortOfCash && (
             <p className="mt-2 text-[12.5px] leading-relaxed text-caution">
-              That is more USDG than this wallet holds. The guard would allow it and the transfer
-              would fail — Permit2 authorises a pull, it does not create the balance.
+              More USDG than this wallet holds. Permit2 authorises a pull, it does not create the
+              balance.
             </p>
           )}
 
           {follow && !carriesThesis && (
             <p className="mt-2 text-[12.5px] leading-relaxed text-caution">
-              This asset is not one thesis #{follow.thesisId} held ({follow.symbols.join(', ')}), so
-              the fill will <em>not</em> carry its hash. Stamping it on a trade the thesis never
-              produced would look like evidence and be none.
+              Not an asset thesis #{follow.thesisId} held ({follow.symbols.join(', ')}), so this fill
+              will <em>not</em> carry its hash.
             </p>
           )}
 
@@ -707,7 +708,7 @@ export function Fill() {
           {phase.kind === 'confirming' && (
             <p className="mt-3 text-[12px] leading-relaxed text-faint">
               Mined. The public RPC load-balances, so a confirmed write is not immediately
-              readable — polling until the balance moves rather than reporting a zero (D18).
+              readable. Polling until the balance moves rather than reporting a zero (D18).
             </p>
           )}
 
@@ -715,7 +716,7 @@ export function Fill() {
             <div className="mt-4 rounded-lg border border-signal-deep bg-signal/6 px-4 py-3">
               {phase.received > 0n ? (
                 <p className="text-[13px] text-ink">
-                  Filled — <Num>{formatUnits(phase.received, phase.decimals)}</Num> {phase.symbol}{' '}
+                  Filled. <Num>{formatUnits(phase.received, phase.decimals)}</Num> {phase.symbol}{' '}
                   landed in your own wallet. The executor never held it.
                 </p>
               ) : (
@@ -724,7 +725,7 @@ export function Fill() {
                 // balance is not visible yet is true; saying zero arrived is not.
                 <p className="text-[13px] leading-relaxed text-ink">
                   Mined, and the {phase.symbol} balance has not become readable within 15 seconds.
-                  The transaction is below — check it on the explorer rather than trusting a zero.
+                  The transaction is below. Check it on the explorer rather than trusting a zero.
                 </p>
               )}
               {option.deployment.explorer && (
@@ -754,10 +755,9 @@ export function Fill() {
               that is where it is read, and because leading a trading card with a
               paragraph pushes the trade below the fold. */}
           <p className="mt-4 text-[12px] leading-relaxed text-faint">
-            The quote, the oracle read and the guard&apos;s verdict come from the server; the
-            approval, the signature and the transaction happen in your wallet. Nothing is signed on
-            your behalf, and the permit authorises one token, one amount, one contract, for twenty
-            minutes.
+            The quote and the verdict come from the server. The approval, the signature and the
+            transaction happen in your wallet, and the permit authorises one token, one amount, one
+            contract, for twenty minutes.
           </p>
         </>
       )}
@@ -804,7 +804,7 @@ function Plan({ plan }: { plan: WirePlan }) {
             </>
           ) : (
             <span className="text-caution">
-              withheld — the oracle will not defend a number for this asset
+              withheld, the oracle will not defend a number for this asset
             </span>
           )}
         </Row>
@@ -812,7 +812,7 @@ function Plan({ plan }: { plan: WirePlan }) {
           <Row label="">
             <span className="text-caution">
               past the oracle&apos;s {plan.oracle.maxAgeSeconds}s freshness limit, so the guard
-              refuses on age alone — the publisher is not running
+              refuses on age alone. The publisher is not running
             </span>
           </Row>
         )}
@@ -830,7 +830,7 @@ function Plan({ plan }: { plan: WirePlan }) {
       <Legend>verdict</Legend>
       <div className="mb-1 flex flex-wrap items-center gap-2">
         {plan.verdict.allow ? (
-          <Pill tone="ok">ALLOW — the guard would let this through</Pill>
+          <Pill tone="ok">ALLOW</Pill>
         ) : (
           <Pill tone="warn">REJECT · {plan.verdict.reason}</Pill>
         )}
@@ -843,7 +843,7 @@ function Plan({ plan }: { plan: WirePlan }) {
       {!plan.verdict.allow && (
         <p className="mb-2 text-[12px] leading-relaxed text-faint">
           Asked before any gas was spent. The same check runs inside the transaction, so executing
-          anyway would revert — this is the trip not taken, not a trip that failed.
+          anyway would revert. This is the trip not taken, not a trip that failed.
         </p>
       )}
 
@@ -860,8 +860,8 @@ function Plan({ plan }: { plan: WirePlan }) {
           {plan.evidence.persistence.kind === 'none' ? (
             <span className="text-caution">
               {!plan.verdict.allow
-                ? 'hashed but not archived — nothing was decided to happen here'
-                : `not archived — ${plan.evidence.persistence.reason}. Download it below, or the hash on chain will point at nothing.`}
+                ? 'hashed but not archived, nothing was decided to happen here'
+                : `not archived: ${plan.evidence.persistence.reason}. Download it below, or the hash on chain will point at nothing.`}
             </span>
           ) : plan.evidence.persistence.kind === 'blob' ? (
             <a
@@ -870,11 +870,11 @@ function Plan({ plan }: { plan: WirePlan }) {
               rel="noreferrer"
               className="break-all text-faint hover:text-signal"
             >
-              archived — anyone can fetch it and re-derive this hash
+              archived, anyone can fetch it and re-derive this hash
             </a>
           ) : (
             <span className="text-faint">
-              written to {plan.evidence.persistence.path} — the hash binds, the file is how anyone
+              written to {plan.evidence.persistence.path}. The hash binds, the file is how anyone
               checks it
             </span>
           )}
@@ -894,7 +894,7 @@ function Plan({ plan }: { plan: WirePlan }) {
             <span className="text-dim">
               #{plan.thesis.id}, published{' '}
               {new Date(plan.thesis.publishedAt * 1000).toISOString().slice(0, 16).replace('T', ' ')}
-              Z — before this fill
+              Z, before this fill
             </span>
           </Row>
         )}

@@ -722,6 +722,11 @@ proportions — a box each, the value the largest thing in it, the unit as a chi
 means inside its own box, the asset chips carrying their marks, and a full-width button that says
 why it is disabled.
 
+Then the copy: em-dashes out of every user-visible string on the page, and the prose cut to what
+changes what the reader does. Warnings stayed, restatements of what the interface already shows did
+not. `tokenAmount` in `ui.tsx` fixes a display bug found on the way, where positions printed all
+eighteen decimals.
+
 `BasketRail` is the missing accounting for a followed thesis — one row per leg, its state, and the
 reason on any refusal. It deliberately carries **no** asked-versus-executable total; D94 says why,
 and it is D50's constraint, not an oversight.

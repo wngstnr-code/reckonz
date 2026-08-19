@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { Mandate } from "../../Mandate";
-import { useMandateCount } from "../../mandate-presence";
-import { Section } from "./Section";
+import { Mandate } from '../../Mandate';
+import { useMandateCount } from '../../mandate-presence';
+import { Section } from './Section';
 
 /**
  * The create form, placed by whether it is the thing to do next.
@@ -24,27 +24,20 @@ import { Section } from "./Section";
  * connect button is the action then, and a form that can only say "connect a
  * wallet" is not worth the top of the page.
  */
-export function CreateMandateSlot({
-  position,
-}: {
-  position: "top" | "bottom";
-}) {
+export function CreateMandateSlot({ position }: { position: 'top' | 'bottom' }) {
   const count = useMandateCount();
-  const belongs = count === 0 ? "top" : "bottom";
+  const belongs = count === 0 ? 'top' : 'bottom';
   if (belongs !== position) return null;
 
   return (
     // The spacing belongs to the slot rather than to a wrapper on the page: a
     // wrapper with a margin around a component that renders nothing is a gap
     // above the footer for every wallet that owns a mandate.
-    <div className={position === "bottom" ? "mt-14" : undefined}>
+    <div className={position === 'bottom' ? 'mt-14' : undefined}>
       <Section title="Create a mandate">
         {count === 0 && (
           <p className="mb-5 max-w-[68ch] text-meta leading-relaxed text-dim">
-            This wallet owns none, and nothing on this page can be signed
-            without one. It is the rule set the chain enforces inside the trade
-            itself — what it may spend, how far off fair value it may pay, which
-            assets it may hold.
+            This wallet owns none, and nothing here can be signed without one.
           </p>
         )}
         <Mandate />

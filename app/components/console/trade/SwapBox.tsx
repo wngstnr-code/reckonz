@@ -29,7 +29,15 @@ export function SwapBox({ top, bottom }: { top: ReactNode; bottom: ReactNode }) 
         className="pointer-events-none absolute top-1/2 left-1/2 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-panel"
         aria-hidden
       >
-        <svg viewBox="0 0 24 24" className="h-4 w-4 text-dim" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          viewBox="0 0 24 24"
+          className="h-4 w-4 text-dim"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.9}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <path d="M12 5v14M6 13l6 6 6-6" />
         </svg>
       </span>
@@ -148,7 +156,16 @@ export function TokenChip({
       <span className="font-mono text-[13px] whitespace-nowrap text-ink">{symbol}</span>
       {choosable && (
         <>
-          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 text-faint" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <svg
+            viewBox="0 0 24 24"
+            className="h-3.5 w-3.5 text-faint"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
             <path d="m6 9 6 6 6-6" />
           </svg>
           <select

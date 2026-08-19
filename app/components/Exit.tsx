@@ -17,7 +17,7 @@ import {
   type QuotedDetail,
 } from './follow';
 import { SwapBox, SwapLeg, TokenChip } from './console/trade/SwapBox';
-import { Legend, Num, Pill } from './ui';
+import { Legend, Num, Pill, tokenAmount } from './ui';
 import { useWallet } from './useWallet';
 
 /**
@@ -401,7 +401,7 @@ export function Exit() {
         }
         if (!visible) {
           throw new Error(
-            'the Permit2 approval was mined but is not readable yet — wait a moment and press ' +
+            'the Permit2 approval was mined but is not readable yet, wait a moment and press ' +
               'exit again rather than signing against state the chain has not served.',
           );
         }
@@ -461,7 +461,7 @@ export function Exit() {
       setPhase({ kind: 'mining', hash });
       const receipt = await awaitReceipt(publicClient, hash);
       if (receipt.status !== 'success') {
-        throw new Error(`the exit reverted on chain — ${hash}`);
+        throw new Error(`the exit reverted on chain: ${hash}`);
       }
 
       // A confirmed receipt does not mean the next read lands on a node that has
@@ -538,8 +538,7 @@ export function Exit() {
       ) : mandates.length === 0 ? (
         <p className="text-[13px] leading-relaxed text-dim">
           No mandate this wallet can exit through. An exit is a fill, so it needs the same mandate
-          an entry does — active, this wallet as both owner and agent, pointing at the executor
-          deployed here.
+          an entry does.
         </p>
       ) : (
         <>
@@ -576,14 +575,17 @@ export function Exit() {
                     onChange={(next) => setAsset(next as Address)}
                     options={holdings.map((h) => ({
                       value: h.address,
-                      label: h.balance === 0n ? `${h.symbol} — none held` : h.symbol,
+                      label: h.balance === 0n ? `${h.symbol}, none held` : h.symbol,
                     }))}
                   />
                 }
                 hint={
                   holding ? (
-                    <span className={shortOfAsset ? 'text-caution' : undefined}>
-                      you hold {formatUnits(holding.balance, holding.decimals)}
+                    <span
+                      className={shortOfAsset ? 'text-caution' : undefined}
+                      title={formatUnits(holding.balance, holding.decimals)}
+                    >
+                      you hold {tokenAmount(formatUnits(holding.balance, holding.decimals))}
                     </span>
                   ) : null
                 }
@@ -611,8 +613,7 @@ export function Exit() {
 
           {holdings.length === 0 && (
             <p className="mt-2.5 text-[12.5px] leading-relaxed text-dim">
-              This mandate allows no assets, so there is nothing it can sell. An exit is a fill and
-              the guard checks the allowlist, so an asset has to be allowed to be left.
+              This mandate allows no assets, so there is nothing it can sell.
             </p>
           )}
 
@@ -624,15 +625,15 @@ export function Exit() {
               {mandate.fillsThisEpoch}/{mandate.maxFillsPerEpoch} fills this epoch, and this would
               be one
               {mandate.breaker && (
-                <span className="text-refuse"> · breaker tripped — exits are stopped too</span>
+                <span className="text-refuse"> · breaker tripped, exits stopped too</span>
               )}
             </p>
           )}
 
           {shortOfAsset && (
             <p className="mt-2 text-[12.5px] leading-relaxed text-caution">
-              That is more {holding?.symbol} than this wallet holds. Permit2 authorises a pull, it
-              does not create the balance.
+              More {holding?.symbol} than this wallet holds. Permit2 authorises a pull, it does not
+              create the balance.
             </p>
           )}
 
@@ -669,7 +670,7 @@ export function Exit() {
                   }}
                   className="accent-refuse"
                 />
-                Sell anyway — I accept that the mandate&apos;s slippage cap cannot apply
+                Sell anyway. I accept that the mandate&apos;s slippage cap cannot apply
               </label>
             </div>
           )}
@@ -722,7 +723,7 @@ export function Exit() {
           {phase.kind === 'confirming' && (
             <p className="mt-3 text-[12px] leading-relaxed text-faint">
               Mined. The public RPC load-balances, so a confirmed write is not immediately
-              readable — polling until the balance moves rather than reporting a zero (D18).
+              readable. Polling until the balance moves rather than reporting a zero (D18).
             </p>
           )}
 
@@ -730,14 +731,14 @@ export function Exit() {
             <div className="mt-4 rounded-lg border border-signal-deep bg-signal/6 px-4 py-3">
               {phase.received > 0n ? (
                 <p className="text-[13px] text-ink">
-                  Exited — <Num>{formatUnits(phase.received, phase.decimals)}</Num> USDG landed in
+                  Exited. <Num>{formatUnits(phase.received, phase.decimals)}</Num> USDG landed in
                   your own wallet, net of the execution fee. The executor held it only long enough
                   to split that fee off.
                 </p>
               ) : (
                 <p className="text-[13px] leading-relaxed text-ink">
                   Mined, and the USDG balance has not become readable within 15 seconds. The
-                  transaction is below — check it on the explorer rather than trusting a zero.
+                  transaction is below. Check it on the explorer rather than trusting a zero.
                 </p>
               )}
               {option.deployment.explorer && (
@@ -762,10 +763,9 @@ export function Exit() {
           )}
 
           <p className="mt-4 text-[12px] leading-relaxed text-faint">
-            The reverse trade, and the same division of labour: the server simulates every fee tier
-            and asks the guard, your wallet does the approving, the signing and the sending. The
-            permit here names the <em>asset</em> rather than USDG, so each xStock needs its own
-            one-off Permit2 approval.
+            The permit here names the <em>asset</em> rather than USDG, so each xStock needs its own
+            one-off Permit2 approval. The approval, the signature and the sending happen in your
+            wallet.
           </p>
         </>
       )}
@@ -819,14 +819,14 @@ function Plan({ plan }: { plan: WirePlan }) {
             </>
           ) : (
             <span className="text-caution">
-              withheld — the oracle will not defend a number for this asset
+              withheld, the oracle will not defend a number for this asset
             </span>
           )}
         </Row>
         <Row label="shortfall">
           {plan.predicted.shortfallBps === null ? (
             <span className="text-faint">
-              not measured — a value the oracle has stopped defending would compute a large false
+              not measured. A value the oracle has stopped defending would compute a large false
               shortfall, and the mandate&apos;s slippage limit would then block the exit. The
               contract catches the same revert and does the same thing.
             </span>
@@ -843,7 +843,7 @@ function Plan({ plan }: { plan: WirePlan }) {
           <Row label="">
             <span className="text-caution">
               past the oracle&apos;s {plan.oracle.maxAgeSeconds}s freshness limit. On the way out
-              that is a warning, not a refusal — trapping an open position because the publisher
+              that is a warning, not a refusal. Trapping an open position because the publisher
               stopped would be worse than letting it leave (D56). The floor above is the protection.
             </span>
           </Row>
@@ -853,7 +853,7 @@ function Plan({ plan }: { plan: WirePlan }) {
       <Legend>verdict</Legend>
       <div className="mb-1 flex flex-wrap items-center gap-2">
         {plan.verdict.allow ? (
-          <Pill tone="ok">ALLOW — the guard would let this through</Pill>
+          <Pill tone="ok">ALLOW</Pill>
         ) : (
           <Pill tone="warn">REJECT · {plan.verdict.reason}</Pill>
         )}
@@ -864,7 +864,7 @@ function Plan({ plan }: { plan: WirePlan }) {
       {!plan.verdict.allow && (
         <p className="mb-2 text-[12px] leading-relaxed text-faint">
           Asked before any gas was spent. The same check runs inside the transaction, so exiting
-          anyway would revert — this is the trip not taken, not a trip that failed.
+          anyway would revert. This is the trip not taken, not a trip that failed.
         </p>
       )}
 
@@ -881,8 +881,8 @@ function Plan({ plan }: { plan: WirePlan }) {
           {plan.evidence.persistence.kind === 'none' ? (
             <span className="text-caution">
               {!plan.verdict.allow
-                ? 'hashed but not archived — nothing was decided to happen here'
-                : `not archived — ${plan.evidence.persistence.reason}. Download it below, or the hash on chain will point at nothing.`}
+                ? 'hashed but not archived, nothing was decided to happen here'
+                : `not archived: ${plan.evidence.persistence.reason}. Download it below, or the hash on chain will point at nothing.`}
             </span>
           ) : plan.evidence.persistence.kind === 'blob' ? (
             <a
@@ -891,11 +891,11 @@ function Plan({ plan }: { plan: WirePlan }) {
               rel="noreferrer"
               className="break-all text-faint hover:text-signal"
             >
-              archived — anyone can fetch it and re-derive this hash
+              archived, anyone can fetch it and re-derive this hash
             </a>
           ) : (
             <span className="text-faint">
-              written to {plan.evidence.persistence.path} — the hash binds, the file is how anyone
+              written to {plan.evidence.persistence.path}. The hash binds, the file is how anyone
               checks it
             </span>
           )}

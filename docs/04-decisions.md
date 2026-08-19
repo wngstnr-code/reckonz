@@ -5078,3 +5078,31 @@ Three smaller corrections in the same pass:
 The opening paragraph moved under the button, where the reference puts its disclaimer and where the
 trade card already puts the non-custodial claim. **Leading a form with a paragraph pushes the form
 below the fold**, and the sentence is read after the decision anyway.
+
+### D94, amended a third time — the copy
+
+Nabil, on reading the page: no em-dashes, and too much description. Both were right, and the second
+one is the one worth writing down.
+
+**Every paragraph on this page was arguing.** The header explained what a mandate does before the
+reader had one. The fill card opened with four lines on the division of labour between server and
+wallet. The disconnected mandate section ran to two paragraphs. Each sentence was individually true
+and defensible, which is exactly how it accumulated: nobody adds a bad paragraph, they add a
+justified one, and thirty justified paragraphs is a page nobody reads. The reference gets this
+right by having almost no prose at all.
+
+So the rule for this surface: **a sentence earns its place by changing what the reader does.** What
+survived is the warnings, because a refusal without its reason is an error message (`09-design.md`),
+and D77's unmeasured-slippage acknowledgement, and the non-custodial claim, which is the product's
+whole position. What went is every restatement of something the interface already shows.
+
+Em-dashes are gone from user-visible copy across the page. They remain in code comments and in
+`docs/`, which is a different audience and a different register. The rule was previously recorded
+only for `docs/10-submission.md`; it is wider than that now.
+
+One thing found while doing it, which is a display bug rather than a copy one: **positions and
+balances were printing every decimal the token has.** `formatUnits` on an 18-decimal balance is
+twenty digits, and a column of them cannot be compared. `tokenAmount` in `ui.tsx` cuts at eight,
+with the exact value in a `title`. It is careful in one direction on purpose: a dust holding renders
+as `<0.00000001` rather than `0`, because a position the wallet holds must never read as none, and
+there is a sell button on that row.

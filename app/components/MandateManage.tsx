@@ -15,7 +15,7 @@ import {
   PICK_ASSET_EVENT,
   type PickAssetDetail,
 } from './follow';
-import { Legend, Pill } from './ui';
+import { Legend, Pill, tokenAmount } from './ui';
 import { Fact, Facts, Section } from './console/trade/Section';
 import { useWallet } from './useWallet';
 
@@ -250,15 +250,8 @@ export function MandateManage() {
     return (
       <Section title="Mandate">
         <p className="max-w-[68ch] text-meta leading-relaxed text-dim">
-          A mandate is the rule set the chain enforces inside the trade itself: the most it may
-          spend per fill, how many fills an epoch allows, how far off fair value it may pay, how
-          much overnight gap risk it will carry, and which assets it may hold at all. It is created
-          from your own wallet, so you are its owner, and PolicyGuard reverts any fill that breaches
-          it — in that fill&apos;s own transaction, not afterwards.
-        </p>
-        <p className="mt-3 max-w-[68ch] text-meta leading-relaxed text-dim">
-          Connect a wallet to read yours. The limits below need no wallet: they are measured from
-          the pools and are the same for everybody.
+          The rule set the chain enforces inside the trade itself: what it may spend, how far off
+          fair value it may pay, which assets it may hold. Connect a wallet to read yours.
         </p>
       </Section>
     );
@@ -346,11 +339,11 @@ export function MandateManage() {
               <span className="font-mono text-ink">
                 {formatUnits(m.maxNotionalPerTrade, USDG.decimals)}
               </span>{' '}
-              USDG each. The cap resets every {Math.round(m.policy.epochDuration / 3600)}h.
+              USDG each. Resets every {Math.round(m.policy.epochDuration / 3600)}h.
             </p>
           </div>
           {m.breaker ? (
-            <Pill tone="no">breaker tripped — nothing executes, exits included</Pill>
+            <Pill tone="no">breaker tripped, exits included</Pill>
           ) : (
             <Pill tone="ok">live</Pill>
           )}
@@ -394,9 +387,7 @@ export function MandateManage() {
       <Section
         title="Positions"
         aside={
-          <span className="text-[12.5px] text-faint">
-            what the guard recorded from settled fills
-          </span>
+          <span className="text-[12.5px] text-faint">recorded from settled fills</span>
         }
       >
         <div className="overflow-x-auto">
@@ -416,7 +407,11 @@ export function MandateManage() {
                     {a.units === 0n ? (
                       <span className="text-faint">no recorded position</span>
                     ) : (
-                      formatUnits(a.units, a.decimals)
+                      // The full value in the title, because it is the exact
+                      // number of tokens and somebody may want to copy it.
+                      <span title={formatUnits(a.units, a.decimals)}>
+                        {tokenAmount(formatUnits(a.units, a.decimals))}
+                      </span>
                     )}
                   </td>
                   <td className="py-2.5 text-right">
@@ -443,8 +438,7 @@ export function MandateManage() {
           </table>
         </div>
         <p className="mt-3 max-w-[68ch] text-[12.5px] leading-relaxed text-faint">
-          This can differ from your wallet balance when an asset was traded under a different
-          mandate. The permit pulls from the wallet; the guard decides against what it recorded.
+          Can differ from your wallet balance when an asset was traded under a different mandate.
         </p>
       </Section>
 
@@ -461,8 +455,8 @@ export function MandateManage() {
       >
         {m.triggers.length === 0 ? (
           <p className="mb-4 max-w-[68ch] text-meta leading-relaxed text-caution">
-            None. Nothing will ever tell this mandate to leave a position — it is bounded on size
-            and price, but it has no exit rule at all.
+            None. Nothing will tell this mandate to leave a position. It is bounded on size and
+            price, and has no exit rule at all.
           </p>
         ) : (
           <ul className="mb-4 grid gap-1">
@@ -532,9 +526,8 @@ export function MandateManage() {
           ))}
         </div>
         <p className="mb-3 max-w-[68ch] text-[12.5px] leading-relaxed text-faint">
-          Disallowing stops new fills into an asset — it does not sell what this mandate already
-          holds, and an exit is itself a fill the guard checks against this list. Exit first, then
-          disallow.
+          Disallowing stops new fills. It does not sell what the mandate holds, and an exit is a
+          fill the guard checks against this list. Exit first, then disallow.
         </p>
         <AssetAllowlistForm
           allowed={m.allowed}
@@ -581,8 +574,8 @@ export function MandateManage() {
 
         <Legend>agent</Legend>
         <p className="mb-2 max-w-[68ch] text-[12.5px] leading-relaxed text-faint">
-          The agent proposes trades. It can never exceed the policy above, and it can never move
-          funds without a Permit2 signature the owner produces per execution.
+          The agent proposes trades. It can never exceed the policy above, or move funds without a
+          Permit2 signature the owner produces.
         </p>
         <AddressForm
           current={m.agent}
@@ -604,8 +597,8 @@ export function MandateManage() {
 
         <Legend>executor</Legend>
         <p className="mb-2 max-w-[68ch] text-[12.5px] leading-relaxed text-faint">
-          Where fills are pulled from with Permit2. A mandate pointing at an executor not deployed
-          here can never be filled from this app.
+          Where fills are pulled from with Permit2. A mandate pointing elsewhere can never be
+          filled from this app.
         </p>
         <AddressForm
           current={m.executor}
@@ -676,9 +669,8 @@ export function MandateManage() {
         </div>
 
         <p className="mt-3 max-w-[68ch] text-[12.5px] leading-relaxed text-faint">
-          Tripping the breaker stops entries <em>and</em> exits through this system. Your assets stay
-          in your wallet and remain sellable anywhere — it stops Reckonz acting, not you. Closing is
-          permanent.
+          The breaker stops entries <em>and</em> exits through this system. Your assets stay in
+          your wallet and remain sellable anywhere. Closing is permanent.
         </p>
       </Section>
     </>
@@ -874,7 +866,7 @@ function boundedInt(raw: string, max: number, label: string): number {
   // here: `maxFillsPerEpoch: 0` refuses every fill the mandate will ever be
   // asked to make, entries and exits alike. An empty field is a mistake, not an
   // instruction.
-  if (raw.trim() === '') throw new Error(`${label} is empty — give it a number`);
+  if (raw.trim() === '') throw new Error(`${label} is empty, give it a number`);
   const n = Number(raw);
   if (!Number.isInteger(n) || n < 0 || n > max) {
     throw new Error(`${label} must be a whole number between 0 and ${max}`);
