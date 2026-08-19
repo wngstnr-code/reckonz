@@ -535,41 +535,52 @@ export function Mandate() {
       ) : (
         <>
           <Legend>blast radius — the most this mandate can ever spend</Legend>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {/* One row on a wide screen: these five are read across, not down —
+              they are one bound stated five ways, and stacking them into a block
+              made each look like an independent setting. The hints inside are
+              held to a few words so the boxes stay level; the one that is a
+              warning rather than a definition is under the row, at full width,
+              where it has the space to say why. */}
+          <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 lg:grid-cols-5">
             <Field
               label="max per trade"
               suffix="USDG"
-              hint="Defaults to 1 on mainnet: the loss you can absorb without caring if a key leaks or our sizing is wrong. Raise it on purpose."
+              hint="small on purpose"
               value={draft.maxNotionalUsdg}
               onChange={(v) => setDraft({ ...draft, maxNotionalUsdg: v })}
             />
             <Field
               label="fills per 24h"
-              hint="The rate limit. An exit spends one of these too."
+              hint="an exit spends one too"
               value={draft.maxFillsPerEpoch}
               onChange={(v) => setDraft({ ...draft, maxFillsPerEpoch: v })}
             />
             <Field
               label="max slippage"
               suffix="bps"
-              hint="How far the fill may land from the size quoted."
+              hint="off the size quoted"
               value={draft.maxSlippageBps}
               onChange={(v) => setDraft({ ...draft, maxSlippageBps: v })}
             />
             <Field
               label="max off fair value"
               suffix="bps"
-              hint="How far the pool price may sit from the oracle's, or the guard reverts."
+              hint="off the oracle's price"
               value={draft.maxDeviationBps}
               onChange={(v) => setDraft({ ...draft, maxDeviationBps: v })}
             />
             <Field
               label="max gap risk"
-              hint="0–100. How much overnight gap this mandate will carry."
+              hint="overnight, 0-100"
               value={draft.maxGapRisk}
               onChange={(v) => setDraft({ ...draft, maxGapRisk: v })}
             />
           </div>
+          <p className="mt-2.5 max-w-[68ch] text-[12.5px] leading-relaxed text-faint">
+            On mainnet the size defaults to <Num>1</Num> USDG per trade — the
+            loss you can absorb without caring if a key leaks or our sizing is
+            wrong. Raise it on purpose.
+          </p>
 
           <Legend>
             allowed assets — {picked.length} picked

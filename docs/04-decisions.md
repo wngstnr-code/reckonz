@@ -5059,6 +5059,13 @@ trailing the input, and `focus-within` on the container because the box is what 
 the control. What each cap *means* moved inside its own box, where it is read at the moment of
 choosing, instead of into one paragraph under the row.
 
+**And then onto one row**, which Nabil asked for next and which is the better reading of them: the
+five are not five independent settings stacked down a block, they are one bound stated five ways
+and they are read *across*. That costs the space the in-box explanations had, so each is now held
+to a few words and pinned to the bottom of its box — five labels of different heights still line
+their numbers and their hints up across the row. The one that is a warning rather than a definition
+sits under the row at full width, where it has room to say why the mainnet default is 1 USDG.
+
 Three smaller corrections in the same pass:
 
 - **The asset chips carry their mark.** Thirty bare tickers is a wall of text; the same thirty with
