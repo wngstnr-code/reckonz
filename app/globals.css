@@ -603,3 +603,184 @@
   border-radius: 9999px;
   background: var(--color-signal);
 }
+
+/* ------------------------------------------------------- the approach section
+ *
+ * Three arrivals, all of them once and all of them on scroll. Every one is a
+ * `transform` or a stroke offset, which is the only reason a page can run three
+ * at a time without the compositor noticing.
+ */
+
+/* A line of a heading, rising out of its own mask.
+ *
+ * The mask is the effect: the words come from *behind the line above*, not from
+ * lower on the page, which is what makes the block read as one thing unfolding
+ * rather than four paragraphs fading in. `overflow: hidden` on the wrapper and
+ * a full line-height of travel on the inner span.
+ *
+ * The delay is set per line from the component, so the stagger is a property of
+ * the list rather than a number written four times.
+ */
+.rise-mask {
+  display: block;
+  overflow: hidden;
+}
+
+.rise-mask > span {
+  display: block;
+  transform: translateY(110%);
+}
+
+.reveal-on .rise-mask > span {
+  animation: rise 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--rise-delay, 0ms);
+}
+
+@keyframes rise {
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* The ornament, drawn rather than shown.
+ *
+ * One dash exactly as long as the path, pushed off the end and pulled back on.
+ * `--len` is the path's own length in user units, measured by `Ornament` and
+ * written to the node; `--draw` is how far the reader has scrolled. So the dash
+ * pattern is one path long by construction, whatever curve is in the `d`.
+ *
+ * It was written as `pathLength="1"` with fractions here, which is the tidier
+ * form and did not survive contact with `non-scaling-stroke` — that resolves
+ * the dash against the rendered line while `pathLength` normalises against the
+ * user-unit one, and a pattern that is not exactly one path long draws as
+ * dashes rather than as a line arriving. Both are gone.
+ *
+ * The fallback is 9999 rather than 1, and it is a fallback to *hidden*: for the
+ * frame before the measurement lands, an offset of 9999 leaves nothing on
+ * screen. A fallback of 1 would flash the whole stroke, or a dotted version of
+ * it, at every reader who arrives with the section already in view.
+ *
+ * From `--len` to 0 draws it from the start of the path, so the direction is
+ * decided by which end the `d` begins at.
+ *
+ * Drawn by the scroll rather than on arrival: `--draw` is written from the
+ * scroll position every frame, so the offset is a readout rather than an
+ * animation — the line is exactly as far along as the reader is, and scrolling
+ * back takes it apart at the same rate.
+ *
+ * No transition, deliberately. A transition chasing a value that is rewritten
+ * sixty times a second never arrives anywhere; it only puts lag between the
+ * scroll and the line. */
+.draw-stroke {
+  stroke-dasharray: var(--len, 9999);
+  stroke-dashoffset: calc(var(--len, 9999) * (1 - var(--draw, 0)));
+}
+
+/* The demo, turning to face the reader as it grows.
+ *
+ * It was a spring: a bounce on arrival, translate and scale, fired once by an
+ * observer. That read as a card being *presented* — and this section's argument
+ * is that the reader is arriving at the thing, not being shown it. So the whole
+ * move is on `--grow`, the same kind of scroll readout the ornament runs on,
+ * and it is reversible for the same reason.
+ *
+ * ## It is a rotation, not a zoom
+ *
+ * The card starts small, angled, and seen from off to one side, and it unwinds
+ * to flat and full as the reader comes down the page. A zoom alone would say
+ * "this is getting bigger"; turning to face you says "this was always here and
+ * you are getting to it", which is the sentence the section is making.
+ *
+ * Every angle is the same expression — `(1 - --grow)` times a maximum — so
+ * there is exactly one clock. At `--grow: 1` every rotation is 0deg and the
+ * scale is 1, which means the finished state is the untransformed element
+ * rather than a set of numbers that have to cancel out to look untransformed.
+ *
+ * ## Why the origin is the right edge
+ *
+ * `perspective()` inside the transform list takes its vanishing point from
+ * `transform-origin`, so the two cannot disagree. Pinning both to the right
+ * edge means the card grows *leftward* out of the corner it starts in and the
+ * shape converges toward the far side — the near edge tall, the far edge short,
+ * which is the geometry the reference is drawing.
+ *
+ * It is also the composition: the frame this replaced was right-aligned, so
+ * expanding from that edge starts the motion where the eye already is.
+ *
+ * ## No transition
+ *
+ * Same reason as the stroke: the value is rewritten every scroll frame, and a
+ * transition chasing it only adds lag between the reader and the card.
+ */
+/* The demo, on its way from the gap in the text to the whole screen.
+ *
+ * Every number here is measured rather than declared. `--dx`, `--dy` and
+ * `--s` are the distance and the ratio between two rectangles the browser is
+ * already laying out — the gap beside the prose, and this element's own fixed
+ * box — so the card is placed by geometry rather than by a start pose somebody
+ * typed in and has to re-type whenever the layout moves.
+ *
+ * At rest that means `--dx/--dy` are wherever the gap currently is and `--s`
+ * is how much smaller it is, and both are recomputed every frame. So the card
+ * scrolls with the page without anything animating: it is being told, sixty
+ * times a second, where a scrolling element is. On landing all three arrive at
+ * zero, zero and one, which is the untransformed element.
+ *
+ * ## The turn is a bump
+ *
+ * `--b` is a half sine over the flight: flat at rest, fully angled halfway,
+ * flat again on landing. The reference's first and last frames are both square
+ * and only the ones between are seen from the side, and that is the whole
+ * sentence — an ordinary rectangle turns to face you and lands as an ordinary
+ * rectangle again, much larger. An angle that only decayed to zero would have
+ * the card already skewed while it was still sitting in the paragraph.
+ *
+ * ## Order
+ *
+ * `perspective()` first, taking its vanishing point from `transform-origin`,
+ * so the two cannot disagree. Then the translate, in unscaled pixels, which is
+ * what `--dx/--dy` are measured as. Neither the rotations nor the scale move
+ * the centre, so those two numbers place the card on their own.
+ *
+ * No transition, deliberately. Every value is rewritten each scroll frame, and
+ * a transition chasing them only puts lag between the reader and the card.
+ */
+.card-zoom {
+  transform-origin: 50% 50%;
+  transform: perspective(1600px) translate3d(var(--dx, 0px), var(--dy, 0px), 0)
+    rotateY(calc(var(--b, 0) * 26deg)) rotateX(calc(var(--b, 0) * 8deg))
+    rotate(calc(var(--b, 0) * -4deg)) scale(var(--s, 1));
+}
+
+/* The invitation, on the scroll after the card lands.
+ *
+ * Its own readout rather than a delay on the same one. `--grow` finishes when
+ * the card is full; `--reveal` starts a quarter of a viewport later and takes
+ * half a viewport of its own, so the reader's next scroll is what produces it.
+ * A control that faded in on a timer would appear whether or not anybody was
+ * still there, and would appear at a different point in the page every time.
+ *
+ * It travels a little as it arrives, which is what keeps it from reading as a
+ * layer that was already there at zero opacity.
+ */
+.reel-in {
+  opacity: var(--reveal, 0);
+  transform: translateY(calc((1 - var(--reveal, 0)) * 1.5rem));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-on .rise-mask > span {
+    animation: none;
+    transform: none;
+  }
+
+  /* The stroke has no transition to remove; the card has no transition either,
+     but it does have a transform, and a reader who has asked for less motion
+     should be handed the finished card rather than the angled one. The
+     JavaScript pins `--grow` to 1 for the same reason — this is the half that
+     survives if the effect never runs. */
+  .card-zoom,
+  .reel-in {
+    transform: none;
+  }
+}
