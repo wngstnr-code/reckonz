@@ -405,14 +405,21 @@ export function Mandate() {
   return (
     <section ref={panel}>
       <FormCard>
+      {/* The one green the product owns, the same field the hero and the
+          settled-fill panel use. A tint at 6% with a hairline read as a disabled
+          input rather than as a state the page is in.
+
+          The caveat inside cannot be `caution`: that token is a dark ochre on
+          light and would be dark-on-dark here. Weight carries it instead. */}
       {follow && (
-        <div className="mb-4 rounded-lg border border-signal-deep bg-signal/6 px-4 py-2.5">
-          <p className="text-meta leading-relaxed text-ink">
-            Following thesis <Num>#{follow.thesisId}</Num>. Its basket ({follow.symbols.join(', ')})
-            is what gets allowed here. The caps and the size stay yours.
+        <div className="mb-4 rounded-lg bg-frame px-4 py-3">
+          <p className="text-meta leading-relaxed text-cta-ink">
+            Following thesis <span className="font-mono">#{follow.thesisId}</span>. Its basket (
+            {follow.symbols.join(', ')}) is what gets allowed here. The caps and the size stay
+            yours.
           </p>
           {universe && address && option && picked.length < follow.assets.length && (
-            <p className="mt-1 text-meta text-caution">
+            <p className="mt-1.5 text-meta font-semibold text-cta-ink">
               {follow.assets.length - picked.length} of its assets are not in the universe this page
               can read, and were not selected.
             </p>
