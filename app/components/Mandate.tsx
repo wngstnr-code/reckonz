@@ -544,7 +544,7 @@ export function Mandate() {
             />
           </div>
           <p className="mt-2.5 max-w-[68ch] text-[12.5px] leading-relaxed text-faint">
-            Defaults to <Num>1</Num> USDG per trade on mainnet, the loss you can absorb if a key
+            Defaults to <Num>1</Num> USDG per trade, the loss you can absorb if a key
             leaks or our sizing is wrong. Raise it on purpose.
           </p>
 

@@ -9,15 +9,20 @@ import type { UniverseEntry } from '@/src/pipeline';
 import { describeOnchainTrigger, scaleThreshold, type OnchainTrigger } from '@/src/triggers';
 import { awaitReceipt } from './awaitReceipt';
 import { publishMandateCount } from './mandate-presence';
-import {
-  FILLED_EVENT,
-  MANDATES_CHANGED_EVENT,
-  PICK_ASSET_EVENT,
-  type PickAssetDetail,
-} from './follow';
+import { FILLED_EVENT, MANDATES_CHANGED_EVENT } from './follow';
 import { Legend, Pill, tokenAmount } from './ui';
 import { Fact, Facts, Section } from './console/trade/Section';
-import { Field, FormCard, FormRow, Ghost, Primary, SelectField, Toggle } from './console/trade/Form';
+import {
+  Field,
+  FormActions,
+  FormCard,
+  FormRow,
+  Ghost,
+  Primary,
+  Secondary,
+  SelectField,
+  Toggle,
+} from './console/trade/Form';
 import { AssetMark } from './console/AssetMark';
 import { useWallet } from './useWallet';
 
@@ -406,8 +411,7 @@ export function MandateManage() {
             <thead>
               <tr className="border-b border-line text-[11px] tracking-[0.09em] text-faint uppercase">
                 <th className="pb-2 pr-4 text-left font-semibold">Asset</th>
-                <th className="pb-2 pr-4 text-right font-semibold">Units</th>
-                <th className="pb-2 text-right font-semibold" />
+                <th className="pb-2 text-right font-semibold">Units</th>
               </tr>
             </thead>
             <tbody>
@@ -419,7 +423,7 @@ export function MandateManage() {
                       <span className="font-mono text-meta text-ink">{label(a.address)}</span>
                     </span>
                   </td>
-                  <td className="py-2.5 pr-4 text-right font-mono text-meta tabular-nums text-dim">
+                  <td className="py-2.5 text-right font-mono text-meta tabular-nums text-dim">
                     {a.units === 0n ? (
                       <span className="text-faint">no recorded position</span>
                     ) : (
@@ -428,24 +432,6 @@ export function MandateManage() {
                       <span title={formatUnits(a.units, a.decimals)}>
                         {tokenAmount(formatUnits(a.units, a.decimals))}
                       </span>
-                    )}
-                  </td>
-                  <td className="py-2.5 text-right">
-                    {a.units > 0n && (
-                      // The card that can sell is in the right rail, so the row
-                      // names the asset and the rail switches to it.
-                      <button
-                        onClick={() =>
-                          window.dispatchEvent(
-                            new CustomEvent<PickAssetDetail>(PICK_ASSET_EVENT, {
-                              detail: { asset: a.address, direction: 'sell' },
-                            }),
-                          )
-                        }
-                        className="rounded-full bg-inset px-3.5 py-1.5 text-[13px] text-ink hover:bg-line"
-                      >
-                        Sell
-                      </button>
                     )}
                   </td>
                 </tr>
@@ -768,8 +754,9 @@ function TriggerForm({
         })}
       </div>
 
-      <div className="mt-4">
+      <FormActions>
         <Primary
+          full
           onClick={() =>
             onAdd({
               metric: metricIndex(metric),
@@ -785,7 +772,7 @@ function TriggerForm({
         >
           Add trigger
         </Primary>
-      </div>
+      </FormActions>
     </FormCard>
   );
 }
@@ -809,24 +796,22 @@ function AssetAllowlistForm({
 
   return (
     <FormCard>
-      <FormRow>
-        <SelectField
-          label="Asset"
-          value={picked}
-          placeholder="choose one"
-          onChange={(next) => setPicked(next as Address)}
-          options={options.map((u) => ({
-            value: u.address,
-            label: u.symbol,
-            icon: <AssetMark symbol={u.symbol} size={22} />,
-          }))}
-        />
-        <div className="flex items-end">
-          <Primary onClick={() => picked && onAllow(picked)} disabled={disabled || !picked}>
-            Allow
-          </Primary>
-        </div>
-      </FormRow>
+      <SelectField
+        label="Asset"
+        value={picked}
+        placeholder="choose one"
+        onChange={(next) => setPicked(next as Address)}
+        options={options.map((u) => ({
+          value: u.address,
+          label: u.symbol,
+          icon: <AssetMark symbol={u.symbol} size={22} />,
+        }))}
+      />
+      <FormActions>
+        <Primary full onClick={() => picked && onAllow(picked)} disabled={disabled || !picked}>
+          Allow
+        </Primary>
+      </FormActions>
     </FormCard>
   );
 }
@@ -997,11 +982,11 @@ function PolicyForm({
 
       {err && <p className="mt-3 text-[12.5px] leading-relaxed text-refuse">{err}</p>}
 
-      <div className="mt-4 flex flex-wrap items-center gap-2.5">
-        <Primary onClick={submit} disabled={disabled}>
+      <FormActions>
+        <Primary full onClick={submit} disabled={disabled}>
           Update policy
         </Primary>
-        <Ghost
+        <Secondary
           onClick={() => {
             setDraft(draftFromPolicy(policy));
             setErr(null);
@@ -1009,11 +994,11 @@ function PolicyForm({
           }}
         >
           Cancel
-        </Ghost>
-        <span className="text-[12.5px] text-dim">
-          Every field not changed above is sent back unchanged.
-        </span>
-      </div>
+        </Secondary>
+      </FormActions>
+      <p className="mt-2.5 text-[12.5px] text-dim">
+        Every field not changed above is sent back unchanged.
+      </p>
     </FormCard>
   );
 }
@@ -1051,30 +1036,20 @@ function AddressForm({
   return (
     <FormCard>
       <p className="mb-2.5 font-mono text-[12.5px] break-all text-dim">{current}</p>
-      <FormRow>
-        <Field
-          label="New address"
-          value={value}
-          onChange={setValue}
-          placeholder="0x…"
-          width="flex-[3]"
-        />
-        <div className="flex items-end">
-          <Primary onClick={submit} disabled={disabled || !isAddress(value)}>
-            {submitLabel}
-          </Primary>
-        </div>
-      </FormRow>
-      {defaultAddress && (
-        <div className="mt-2.5">
-          <Ghost
+      <Field label="New address" value={value} onChange={setValue} placeholder="0x…" />
+      <FormActions>
+        <Primary full onClick={submit} disabled={disabled || !isAddress(value)}>
+          {submitLabel}
+        </Primary>
+        {defaultAddress && (
+          <Secondary
             onClick={() => setValue(defaultAddress)}
             disabled={disabled || pointsAtDefault}
           >
             {pointsAtDefault ? 'Already here' : (defaultLabel ?? 'Use default')}
-          </Ghost>
-        </div>
-      )}
+          </Secondary>
+        )}
+      </FormActions>
     </FormCard>
   );
 }

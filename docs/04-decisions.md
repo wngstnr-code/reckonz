@@ -5228,3 +5228,37 @@ redundant RPC walk from every page load on a chain whose public endpoint throttl
 
 The general form: **anything derived from data that arrives on a different clock should be derived
 where it is used, not frozen into the slower one.**
+
+### D94, amended a seventh time — actions get their own row
+
+Four notes, three of them the same defect.
+
+**The sell button is gone from the positions table.** Nabil's reading, and it is right: selling
+already lives in the rail, which is sticky and on screen the whole time the table is being read. The
+row button was a shortcut that saved one click and duplicated the affordance, and a second way to
+say the same thing is a second thing to keep consistent. `PICK_ASSET_EVENT` stays: the basket rail
+still uses it in both directions.
+
+**The other three were one defect wearing three faces.** *Add trigger* sat small at the bottom of a
+form it belonged to, *Allow* was a different height from the field beside it, and *Update policy* and
+*Cancel* were different sizes from each other. All three came from putting an action on the same row
+as an input: **a button beside a field has to guess the field's height**, and each of these forms had
+guessed differently — one sat on the baseline, one on the bottom edge, and the pair on the policy
+form had two different paddings.
+
+So actions get their own row. `FormActions` below the fields, the primary at the form's full width,
+and `Secondary` beside it when there are two — same radius, same padding, same type size as
+`Primary`, differing only in surface, which is the only difference that should show.
+
+The general form is worth keeping: **when two things have to line up, do not ask one of them to
+match the other's size. Put them somewhere the question does not arise.**
+
+### One thing that looked like a bug and was not
+
+Assets rendered as truncated addresses again in one screenshot, right after the fix above claimed to
+have solved exactly that. `/api/universe` answered 200 eight times on that load, and the console said
+why: `[Fast Refresh] rebuilding` at the same second. HMR had remounted the panel mid-load, which
+resets `universe` to `[]` and restarts the chain walk. A clean load renders `wTSLAx` immediately.
+
+Recorded because the symptom is identical to the real bug it followed, and the next person to see it
+should check the console for Fast Refresh before re-fixing something that already works.

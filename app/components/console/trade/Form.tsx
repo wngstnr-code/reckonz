@@ -126,6 +126,19 @@ export function SelectField({
 }
 
 /**
+ * The row a form ends on.
+ *
+ * Actions get their own row rather than sharing one with the last field. A
+ * button beside an input is a button that has to guess the input's height, and
+ * every form here had guessed differently: one sat on the field's baseline, one
+ * on its bottom edge, and the two on the policy form were different sizes from
+ * each other. Below, at the form's full width, there is nothing to match.
+ */
+export function FormActions({ children }: { children: ReactNode }) {
+  return <div className="mt-3 flex items-stretch gap-2.5">{children}</div>;
+}
+
+/**
  * The one primary shape on the page: solid ink.
  *
  * Deliberately not `signal`. A green button beside a green `ALLOW` pill spends
@@ -157,7 +170,33 @@ export function Primary({
   );
 }
 
-/** A secondary action: a pill sunk into whatever it sits on. */
+/**
+ * Beside a `Primary`, and the same shape as it.
+ *
+ * Same radius, same padding, same type size, so a pair of actions reads as a
+ * pair. Only the surface differs, which is the only difference that should show.
+ */
+export function Secondary({
+  onClick,
+  disabled,
+  children,
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="rounded-xl bg-inset px-5 py-3 text-[15px] font-semibold text-ink hover:bg-line disabled:opacity-30"
+    >
+      {children}
+    </button>
+  );
+}
+
+/** A small secondary action inline in prose or a table row. */
 export function Ghost({
   onClick,
   disabled,
