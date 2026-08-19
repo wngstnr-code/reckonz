@@ -529,31 +529,31 @@ export function Fill() {
   return (
     <>
       {!address ? (
-        <p className="text-[13px] text-dim">Connect a wallet to place one.</p>
+        <p className="text-meta text-dim">Connect a wallet to place one.</p>
       ) : !option ? (
-        <p className="text-[13px] text-caution">
+        <p className="text-meta text-caution">
           This wallet is on a chain with no deployment. Switch to X&nbsp;Layer using the control in
           the header.
         </p>
       ) : !mainnet ? (
-        <p className="text-[13px] leading-relaxed text-caution">
+        <p className="text-meta leading-relaxed text-caution">
           Only mainnet means anything here: X&nbsp;Layer testnet has no xStock pools, so a quote
           would be priced against liquidity that chain does not have and the swap would revert.
           Switch to X&nbsp;Layer 196.
         </p>
       ) : loadError ? (
         <div className="rounded-lg border border-refuse/40 bg-refuse/6 px-4 py-3">
-          <p className="font-mono text-[12px] leading-relaxed break-words text-refuse">
+          <p className="font-mono text-meta leading-relaxed break-words text-refuse">
             {loadError}
           </p>
-          <p className="mt-1 text-[12px] text-faint">
+          <p className="mt-1 text-meta text-faint">
             The chain could not be read, which is not the same as owning no mandate.
           </p>
         </div>
       ) : mandates === null ? (
-        <p className="text-[13px] text-dim">Reading your mandates from the chain…</p>
+        <p className="text-meta text-dim">Reading your mandates from the chain…</p>
       ) : mandates.length === 0 ? (
-        <p className="text-[13px] leading-relaxed text-dim">
+        <p className="text-meta leading-relaxed text-dim">
           No mandate this wallet can execute against. Create one above.
         </p>
       ) : (
@@ -569,9 +569,9 @@ export function Fill() {
               aria-expanded={menu.open}
               className="flex w-full items-center justify-between gap-3 rounded-lg bg-inset px-3.5 py-2.5"
             >
-              <span className="text-[14px] text-ink">Mandate</span>
+              <span className="text-meta text-ink">Mandate</span>
               <span className="flex items-center gap-1.5">
-                <span className="font-mono text-[15px] text-ink">#{mandateId?.toString()}</span>
+                <span className="font-mono text-data text-ink">#{mandateId?.toString()}</span>
                 <Chevron open={menu.open} />
               </span>
             </button>
@@ -609,7 +609,7 @@ export function Fill() {
                   mandate && cash ? (
                     <button
                       onClick={() => setAmount(formatUnits(mandate.maxNotionalPerTrade, cash.decimals))}
-                      className="font-mono text-[11.5px] text-faint underline decoration-dotted hover:text-ink"
+                      className="font-mono text-meta text-faint underline decoration-dotted hover:text-ink"
                     >
                       max {formatUnits(mandate.maxNotionalPerTrade, cash.decimals)}
                     </button>
@@ -642,21 +642,21 @@ export function Fill() {
           />
 
           {mandate && (
-            <p className="mt-2.5 font-mono text-[12px] text-ink tabular-nums">
+            <p className="mt-2.5 font-mono text-meta text-ink tabular-nums">
               {mandate.fillsThisEpoch}/{mandate.maxFillsPerEpoch} fills this epoch
               {mandate.breaker && <span className="text-refuse"> · breaker tripped</span>}
             </p>
           )}
 
           {shortOfCash && (
-            <p className="mt-2 text-[12.5px] leading-relaxed text-caution">
+            <p className="mt-2 text-meta leading-relaxed text-caution">
               More USDG than this wallet holds. Permit2 authorises a pull, it does not create the
               balance.
             </p>
           )}
 
           {follow && !carriesThesis && (
-            <p className="mt-2 text-[12.5px] leading-relaxed text-caution">
+            <p className="mt-2 text-meta leading-relaxed text-caution">
               Not an asset thesis #{follow.thesisId} held ({follow.symbols.join(', ')}), so this fill
               will <em>not</em> carry its hash.
             </p>
@@ -666,7 +666,7 @@ export function Fill() {
             <button
               onClick={check}
               disabled={busy || !asset || !validAmount}
-              className="mt-4 w-full rounded-xl bg-ink px-4 py-3.5 text-[15px] font-semibold text-ground hover:opacity-90 disabled:opacity-30"
+              className="mt-4 w-full rounded-xl bg-ink px-4 py-3.5 text-data font-semibold text-ground hover:opacity-90 disabled:opacity-30"
             >
               {phase.kind === 'quoting' ? 'quoting…' : 'Quote & check'}
             </button>
@@ -692,7 +692,7 @@ export function Fill() {
                   'USDG',
                   plan.cashDecimals,
                 ).map((line) => (
-                  <li key={line} className="font-mono text-[12px] text-dim">
+                  <li key={line} className="font-mono text-meta text-dim">
                     · {line}
                   </li>
                 ))}
@@ -701,7 +701,7 @@ export function Fill() {
               <button
                 onClick={fill}
                 disabled={busy || shortOfCash}
-                className="w-full rounded-xl bg-ink px-4 py-3.5 text-[15px] font-semibold text-ground hover:opacity-90 disabled:opacity-30"
+                className="w-full rounded-xl bg-ink px-4 py-3.5 text-data font-semibold text-ground hover:opacity-90 disabled:opacity-30"
               >
                 {phase.kind === 'approving'
                   ? 'approving Permit2 in your wallet…'
@@ -719,7 +719,7 @@ export function Fill() {
           )}
 
           {phase.kind === 'confirming' && (
-            <p className="mt-3 text-[12px] leading-relaxed text-faint">
+            <p className="mt-3 text-meta leading-relaxed text-faint">
               Mined. The public RPC load-balances, so a confirmed write is not immediately
               readable. Polling until the balance moves rather than reporting a zero (D18).
             </p>
@@ -728,7 +728,7 @@ export function Fill() {
           {phase.kind === 'done' && (
             <div className="mt-4 rounded-lg border border-signal-deep bg-signal/6 px-4 py-3">
               {phase.received > 0n ? (
-                <p className="text-[13px] text-ink">
+                <p className="text-meta text-ink">
                   Filled. <Num>{formatUnits(phase.received, phase.decimals)}</Num> {phase.symbol}{' '}
                   landed in your own wallet. The executor never held it.
                 </p>
@@ -736,7 +736,7 @@ export function Fill() {
                 // A fill that worked once printed "received 0" because the read
                 // hit a node that had not seen the block (D18). Saying the
                 // balance is not visible yet is true; saying zero arrived is not.
-                <p className="text-[13px] leading-relaxed text-ink">
+                <p className="text-meta leading-relaxed text-ink">
                   Mined, and the {phase.symbol} balance has not become readable within 15 seconds.
                   The transaction is below. Check it on the explorer rather than trusting a zero.
                 </p>
@@ -746,7 +746,7 @@ export function Fill() {
                   href={`${option.deployment.explorer}/tx/${phase.hash}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-1 block font-mono text-[11px] break-all text-faint hover:text-signal"
+                  className="mt-1 block font-mono text-meta break-all text-faint hover:text-signal"
                 >
                   {phase.hash}
                 </a>
@@ -756,7 +756,7 @@ export function Fill() {
 
           {phase.kind === 'failed' && (
             <div className="mt-4 rounded-lg border border-refuse/40 bg-refuse/6 px-4 py-3">
-              <p className="font-mono text-[12px] leading-relaxed break-words text-refuse">
+              <p className="font-mono text-meta leading-relaxed break-words text-refuse">
                 {phase.message}
               </p>
             </div>
@@ -767,7 +767,7 @@ export function Fill() {
               key of ours can move the money. It sits under the button because
               that is where it is read, and because leading a trading card with a
               paragraph pushes the trade below the fold. */}
-          <p className="mt-4 text-[12.5px] leading-relaxed text-ink">
+          <p className="mt-4 text-meta leading-relaxed text-ink">
             The quote and the verdict come from the server. The approval, the signature and the
             transaction happen in your wallet, and the permit authorises one token, one amount, one
             contract, for twenty minutes.
@@ -783,7 +783,7 @@ function Plan({ plan }: { plan: WirePlan }) {
   return (
     <>
       <Legend>quote</Legend>
-      <ul className="grid gap-0.5 font-mono text-[12px] tabular-nums">
+      <ul className="grid gap-0.5 font-mono text-meta tabular-nums">
         <Row label="buys">
           <Num>{plan.quote.out.toFixed(6)}</Num> {plan.symbol} at{' '}
           <Num>{plan.quote.effectivePrice.toFixed(4)}</Num>
@@ -804,7 +804,7 @@ function Plan({ plan }: { plan: WirePlan }) {
       </ul>
 
       <Legend>oracle</Legend>
-      <ul className="grid gap-0.5 font-mono text-[12px] tabular-nums">
+      <ul className="grid gap-0.5 font-mono text-meta tabular-nums">
         <Row label="fair value">
           {plan.oracle.hasValue ? (
             <>
@@ -848,19 +848,19 @@ function Plan({ plan }: { plan: WirePlan }) {
           <Pill tone="warn">REJECT · {plan.verdict.reason}</Pill>
         )}
         {plan.verdict.offendingAsset && (
-          <span className="font-mono text-[11px] text-faint">
+          <span className="font-mono text-meta text-faint">
             on {plan.verdict.offendingAsset}
           </span>
         )}
       </div>
       {!plan.verdict.allow && (
-        <p className="mb-2 text-[12px] leading-relaxed text-faint">
+        <p className="mb-2 text-meta leading-relaxed text-faint">
           Asked before any gas was spent. The same check runs inside the transaction, so executing
           anyway would revert. This is the trip not taken, not a trip that failed.
         </p>
       )}
 
-      <ul className="grid gap-0.5 font-mono text-[11.5px]">
+      <ul className="grid gap-0.5 font-mono text-meta">
         <Row label="evidence">
           <span className="break-all text-dim">{plan.evidence.hash}</span>
         </Row>
@@ -919,8 +919,8 @@ function Plan({ plan }: { plan: WirePlan }) {
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <li className="flex flex-wrap items-baseline gap-3">
-      <span className="w-20 shrink-0 text-faint">{label}</span>
-      <span className="text-dim">{children}</span>
+      <span className="w-20 shrink-0 text-dim">{label}</span>
+      <span className="text-ink">{children}</span>
     </li>
   );
 }

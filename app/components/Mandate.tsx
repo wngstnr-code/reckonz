@@ -407,12 +407,12 @@ export function Mandate() {
       <FormCard>
       {follow && (
         <div className="mb-4 rounded-lg border border-signal-deep bg-signal/6 px-4 py-2.5">
-          <p className="text-[12.5px] leading-relaxed text-ink">
+          <p className="text-meta leading-relaxed text-ink">
             Following thesis <Num>#{follow.thesisId}</Num>. Its basket ({follow.symbols.join(', ')})
             is what gets allowed here. The caps and the size stay yours.
           </p>
           {universe && address && option && picked.length < follow.assets.length && (
-            <p className="mt-1 text-[12px] text-caution">
+            <p className="mt-1 text-meta text-caution">
               {follow.assets.length - picked.length} of its assets are not in the universe this page
               can read, and were not selected.
             </p>
@@ -423,10 +423,10 @@ export function Mandate() {
       {compiled && (
         <div className="mb-4 rounded-lg border border-line bg-raised px-4 py-3">
           <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-            <h3 className="text-[10.5px] font-semibold tracking-[0.09em] text-faint uppercase">
+            <h3 className="text-micro font-semibold text-faint uppercase">
               Exit rules from your thesis
             </h3>
-            <label className="flex items-center gap-2 text-[12px] text-dim">
+            <label className="flex items-center gap-2 text-meta text-dim">
               <input
                 type="checkbox"
                 checked={installRules}
@@ -444,20 +444,20 @@ export function Mandate() {
           {encoded && encoded.triggers.length > 0 ? (
             <ul className="grid gap-1.5">
               {encoded.triggers.map((t, i) => (
-                <li key={i} className="font-mono text-[12px] text-ink">
+                <li key={i} className="font-mono text-meta text-ink">
                   {describeOnchainTrigger(t, symbolOf)}
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-[12.5px] text-caution">
+            <p className="text-meta text-caution">
               None of the compiled rules survive against the assets picked above. Pick the assets the
               thesis named, or add them later.
             </p>
           )}
 
           {encoded && encoded.dropped.length > 0 && (
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-[12px] text-caution">
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-meta text-caution">
               {encoded.dropped.map((d, i) => (
                 <li key={i}>
                   <span className="font-mono text-ink">{d.description}</span> · {d.reason}
@@ -467,7 +467,7 @@ export function Mandate() {
           )}
 
           {encoded && encoded.flagged.length > 0 && (
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-[12px] text-refuse">
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-meta text-refuse">
               {encoded.flagged.map((f, i) => (
                 <li key={i}>
                   <span className="font-mono">{f.description}</span> · {f.reason}
@@ -477,14 +477,14 @@ export function Mandate() {
           )}
 
           {compiled.manualWatch.length > 0 && (
-            <p className="mt-2 text-[12px] text-dim">
+            <p className="mt-2 text-meta text-dim">
               {compiled.manualWatch.length} condition
               {compiled.manualWatch.length === 1 ? '' : 's'} no metric captures stay yours to watch.
               They are not installed, and nothing pretends otherwise.
             </p>
           )}
 
-          <p className="mt-2 text-[12px] text-faint">
+          <p className="mt-2 text-meta text-faint">
             This is a <strong className="text-dim">second transaction</strong> after the mandate is
             created: <code className="font-mono">createMandate</code> takes a policy and an
             allowlist, not rules. You will be asked to sign twice.
@@ -493,9 +493,9 @@ export function Mandate() {
       )}
 
       {!address ? (
-        <p className="text-[13px] text-dim">Connect a wallet to create one.</p>
+        <p className="text-meta text-dim">Connect a wallet to create one.</p>
       ) : !option ? (
-        <p className="text-[13px] text-caution">
+        <p className="text-meta text-caution">
           This wallet is on a chain with no deployment. Switch to X&nbsp;Layer using the control in
           the header.
         </p>
@@ -543,7 +543,7 @@ export function Mandate() {
               onChange={(v) => setDraft({ ...draft, maxGapRisk: v })}
             />
           </div>
-          <p className="mt-2.5 max-w-[68ch] text-[12.5px] leading-relaxed text-faint">
+          <p className="mt-2.5 max-w-[68ch] text-meta leading-relaxed text-dim">
             Defaults to <Num>1</Num> USDG per trade, the loss you can absorb if a key
             leaks or our sizing is wrong. Raise it on purpose.
           </p>
@@ -555,9 +555,9 @@ export function Mandate() {
             )}
           </Legend>
           {universe === null ? (
-            <p className="text-[13px] text-dim">Reading the universe from the chain…</p>
+            <p className="text-meta text-dim">Reading the universe from the chain…</p>
           ) : universe.length === 0 ? (
-            <p className="text-[13px] text-caution">
+            <p className="text-meta text-caution">
               The universe could not be read. Reload rather than creating a mandate that can hold
               nothing.
             </p>
@@ -597,7 +597,7 @@ export function Mandate() {
           </div>
 
           {phase.kind === 'confirming' && (
-            <p className="mt-3 text-[12px] leading-relaxed text-faint">
+            <p className="mt-3 text-meta leading-relaxed text-faint">
               Mined. The public RPC load-balances, so a confirmed write is not immediately
               readable. Polling until it is (D18) rather than showing you a zero.
             </p>
@@ -605,7 +605,7 @@ export function Mandate() {
 
           {phase.kind === 'done' && (
             <div className="mt-4 rounded-lg border border-signal-deep bg-signal/6 px-4 py-3">
-              <p className="text-[13px] text-ink">
+              <p className="text-meta text-ink">
                 Mandate <Num>#{phase.mandateId.toString()}</Num> created, allowing{' '}
                 <Num>{phase.allowed.length}</Num> assets.
               </p>
@@ -614,19 +614,19 @@ export function Mandate() {
                   href={`${explorer}/tx/${phase.hash}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-1 block font-mono text-[11px] break-all text-faint hover:text-signal"
+                  className="mt-1 block font-mono text-meta break-all text-faint hover:text-signal"
                 >
                   {phase.hash}
                 </a>
               )}
 
               {phase.rules.kind === 'installing' && (
-                <p className="mt-2 text-[12.5px] text-dim">
+                <p className="mt-2 text-meta text-dim">
                   Installing the exit rules. Confirm the second transaction in your wallet.
                 </p>
               )}
               {phase.rules.kind === 'installed' && (
-                <p className="mt-2 text-[12.5px] text-ink">
+                <p className="mt-2 text-meta text-ink">
                   <Num>{phase.rules.count}</Num> exit rule
                   {phase.rules.count === 1 ? '' : 's'} installed and read back from the chain.
                   PolicyGuard now refuses a fill on this mandate while any of them is firing.
@@ -635,7 +635,7 @@ export function Mandate() {
                       href={`${explorer}/tx/${phase.rules.hash}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="mt-1 block font-mono text-[11px] break-all text-faint hover:text-signal"
+                      className="mt-1 block font-mono text-meta break-all text-faint hover:text-signal"
                     >
                       {phase.rules.hash}
                     </a>
@@ -646,7 +646,7 @@ export function Mandate() {
                   a user who reads that line and stops has a live mandate with no
                   exit rules on it. */}
               {phase.rules.kind === 'failed' && (
-                <p className="mt-2 rounded-md border border-refuse/40 bg-refuse/6 px-3 py-2 text-[12.5px] text-refuse">
+                <p className="mt-2 rounded-md border border-refuse/40 bg-refuse/6 px-3 py-2 text-meta text-refuse">
                   The mandate exists, but its exit rules were <strong>not</strong> installed:{' '}
                   {phase.rules.message}. Add them from the mandate panel below, or with{' '}
                   <code className="font-mono">
@@ -660,12 +660,12 @@ export function Mandate() {
 
           {phase.kind === 'failed' && (
             <div className="mt-4 rounded-lg border border-refuse/40 bg-refuse/6 px-4 py-3">
-              <p className="font-mono text-[12px] leading-relaxed break-words text-refuse">
+              <p className="font-mono text-meta leading-relaxed break-words text-refuse">
                 {phase.message}
               </p>
             </div>
           )}
-          <p className="mt-4 text-[12px] leading-relaxed text-faint">
+          <p className="mt-4 text-meta leading-relaxed text-faint">
             You send this transaction, so you are both <code className="font-mono">owner</code> and
             <code className="font-mono"> agent</code>. PolicyGuard enforces the policy above on
             every future fill, reverting in the trade&apos;s own transaction if one breaches it.

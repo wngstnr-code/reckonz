@@ -517,30 +517,30 @@ export function Exit() {
   return (
     <>
       {!address ? (
-        <p className="text-[13px] text-dim">Connect a wallet to sell one.</p>
+        <p className="text-meta text-dim">Connect a wallet to sell one.</p>
       ) : !option ? (
-        <p className="text-[13px] text-caution">
+        <p className="text-meta text-caution">
           This wallet is on a chain with no deployment. Switch to X&nbsp;Layer using the control in
           the header.
         </p>
       ) : !mainnet ? (
-        <p className="text-[13px] leading-relaxed text-caution">
+        <p className="text-meta leading-relaxed text-caution">
           Only mainnet means anything here: X&nbsp;Layer testnet has no xStock pools, so there is
           nothing to sell into. Switch to X&nbsp;Layer 196.
         </p>
       ) : loadError ? (
         <div className="rounded-lg border border-refuse/40 bg-refuse/6 px-4 py-3">
-          <p className="font-mono text-[12px] leading-relaxed break-words text-refuse">
+          <p className="font-mono text-meta leading-relaxed break-words text-refuse">
             {loadError}
           </p>
-          <p className="mt-1 text-[12px] text-faint">
+          <p className="mt-1 text-meta text-faint">
             The chain could not be read, which is not the same as holding nothing.
           </p>
         </div>
       ) : mandates === null ? (
-        <p className="text-[13px] text-dim">Reading your mandates from the chain…</p>
+        <p className="text-meta text-dim">Reading your mandates from the chain…</p>
       ) : mandates.length === 0 ? (
-        <p className="text-[13px] leading-relaxed text-dim">
+        <p className="text-meta leading-relaxed text-dim">
           No mandate this wallet can exit through. An exit is a fill, so it needs the same mandate
           an entry does.
         </p>
@@ -553,9 +553,9 @@ export function Exit() {
               aria-expanded={menu.open}
               className="flex w-full items-center justify-between gap-3 rounded-lg bg-inset px-3.5 py-2.5"
             >
-              <span className="text-[14px] text-ink">Mandate</span>
+              <span className="text-meta text-ink">Mandate</span>
               <span className="flex items-center gap-1.5">
-                <span className="font-mono text-[15px] text-ink">#{mandateId?.toString()}</span>
+                <span className="font-mono text-data text-ink">#{mandateId?.toString()}</span>
                 <Chevron open={menu.open} />
               </span>
             </button>
@@ -606,7 +606,7 @@ export function Exit() {
                   holding && holding.balance > 0n ? (
                     <button
                       onClick={() => setUnits(formatUnits(holding.balance, holding.decimals))}
-                      className="font-mono text-[11.5px] text-faint underline decoration-dotted hover:text-ink"
+                      className="font-mono text-meta text-faint underline decoration-dotted hover:text-ink"
                     >
                       all
                     </button>
@@ -625,13 +625,13 @@ export function Exit() {
           />
 
           {holdings.length === 0 && (
-            <p className="mt-2.5 text-[12.5px] leading-relaxed text-dim">
+            <p className="mt-2.5 text-meta leading-relaxed text-dim">
               This mandate allows no assets, so there is nothing it can sell.
             </p>
           )}
 
           {mandate && (
-            <p className="mt-2.5 font-mono text-[12px] text-ink tabular-nums">
+            <p className="mt-2.5 font-mono text-meta text-ink tabular-nums">
               {/* An exit spends one of the epoch's fills. Showing it here rather
                   than letting the user meet EPOCH_LIMIT at the quote: the point
                   of a rate limit is to be visible before it binds. */}
@@ -644,7 +644,7 @@ export function Exit() {
           )}
 
           {shortOfAsset && (
-            <p className="mt-2 text-[12.5px] leading-relaxed text-caution">
+            <p className="mt-2 text-meta leading-relaxed text-caution">
               More {holding?.symbol} than this wallet holds. Permit2 authorises a pull, it does not
               create the balance.
             </p>
@@ -654,7 +654,7 @@ export function Exit() {
             <button
               onClick={() => void check()}
               disabled={busy || !asset || !validUnits || shortOfAsset}
-              className="mt-4 w-full rounded-xl bg-ink px-4 py-3.5 text-[15px] font-semibold text-ground hover:opacity-90 disabled:opacity-30"
+              className="mt-4 w-full rounded-xl bg-ink px-4 py-3.5 text-data font-semibold text-ground hover:opacity-90 disabled:opacity-30"
             >
               {phase.kind === 'quoting' ? 'quoting…' : 'Quote & check'}
             </button>
@@ -669,11 +669,11 @@ export function Exit() {
               they may not discover it afterwards from a receipt reading 0 bps. */}
           {plan && !plan.signable.ok && (
             <div className="mb-4 rounded-lg border border-refuse/40 bg-refuse/6 px-4 py-3">
-              <p className="text-[12.5px] leading-relaxed text-refuse">
+              <p className="text-meta leading-relaxed text-refuse">
                 This sale would go out <strong>with no slippage protection</strong>.{' '}
                 {plan.signable.reason}
               </p>
-              <label className="mt-2 flex items-center gap-2 text-[12.5px] text-dim">
+              <label className="mt-2 flex items-center gap-2 text-meta text-dim">
                 <input
                   type="checkbox"
                   checked={ack}
@@ -707,7 +707,7 @@ export function Exit() {
                   plan.symbol,
                   plan.decimals,
                 ).map((line) => (
-                  <li key={line} className="font-mono text-[12px] text-dim">
+                  <li key={line} className="font-mono text-meta text-dim">
                     · {line}
                   </li>
                 ))}
@@ -716,7 +716,7 @@ export function Exit() {
               <button
                 onClick={sell}
                 disabled={busy}
-                className="w-full rounded-xl bg-ink px-4 py-3.5 text-[15px] font-semibold text-ground hover:opacity-90 disabled:opacity-30"
+                className="w-full rounded-xl bg-ink px-4 py-3.5 text-data font-semibold text-ground hover:opacity-90 disabled:opacity-30"
               >
                 {phase.kind === 'approving'
                   ? `approving Permit2 for ${plan.symbol} in your wallet…`
@@ -734,7 +734,7 @@ export function Exit() {
           )}
 
           {phase.kind === 'confirming' && (
-            <p className="mt-3 text-[12px] leading-relaxed text-faint">
+            <p className="mt-3 text-meta leading-relaxed text-faint">
               Mined. The public RPC load-balances, so a confirmed write is not immediately
               readable. Polling until the balance moves rather than reporting a zero (D18).
             </p>
@@ -743,13 +743,13 @@ export function Exit() {
           {phase.kind === 'done' && (
             <div className="mt-4 rounded-lg border border-signal-deep bg-signal/6 px-4 py-3">
               {phase.received > 0n ? (
-                <p className="text-[13px] text-ink">
+                <p className="text-meta text-ink">
                   Exited. <Num>{formatUnits(phase.received, phase.decimals)}</Num> USDG landed in
                   your own wallet, net of the execution fee. The executor held it only long enough
                   to split that fee off.
                 </p>
               ) : (
-                <p className="text-[13px] leading-relaxed text-ink">
+                <p className="text-meta leading-relaxed text-ink">
                   Mined, and the USDG balance has not become readable within 15 seconds. The
                   transaction is below. Check it on the explorer rather than trusting a zero.
                 </p>
@@ -759,7 +759,7 @@ export function Exit() {
                   href={`${option.deployment.explorer}/tx/${phase.hash}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-1 block font-mono text-[11px] break-all text-faint hover:text-signal"
+                  className="mt-1 block font-mono text-meta break-all text-faint hover:text-signal"
                 >
                   {phase.hash}
                 </a>
@@ -769,13 +769,13 @@ export function Exit() {
 
           {phase.kind === 'failed' && (
             <div className="mt-4 rounded-lg border border-refuse/40 bg-refuse/6 px-4 py-3">
-              <p className="font-mono text-[12px] leading-relaxed break-words text-refuse">
+              <p className="font-mono text-meta leading-relaxed break-words text-refuse">
                 {phase.message}
               </p>
             </div>
           )}
 
-          <p className="mt-4 text-[12.5px] leading-relaxed text-ink">
+          <p className="mt-4 text-meta leading-relaxed text-ink">
             The permit here names the <em>asset</em> rather than USDG, so each xStock needs its own
             one-off Permit2 approval. The approval, the signature and the sending happen in your
             wallet.
@@ -791,7 +791,7 @@ function Plan({ plan }: { plan: WirePlan }) {
   return (
     <>
       <Legend>quote</Legend>
-      <ul className="grid gap-0.5 font-mono text-[12px] tabular-nums">
+      <ul className="grid gap-0.5 font-mono text-meta tabular-nums">
         <Row label="sells">
           <Num>{formatUnits(BigInt(plan.units), plan.decimals)}</Num> {plan.symbol} for{' '}
           <Num>{formatUnits(BigInt(plan.quote.amountOut), plan.cashDecimals)}</Num> USDG
@@ -819,7 +819,7 @@ function Plan({ plan }: { plan: WirePlan }) {
       </ul>
 
       <Legend>oracle</Legend>
-      <ul className="grid gap-0.5 font-mono text-[12px] tabular-nums">
+      <ul className="grid gap-0.5 font-mono text-meta tabular-nums">
         <Row label="fair value">
           {plan.oracle.hasValue ? (
             <>
@@ -871,17 +871,17 @@ function Plan({ plan }: { plan: WirePlan }) {
           <Pill tone="warn">REJECT · {plan.verdict.reason}</Pill>
         )}
         {plan.verdict.offendingAsset && (
-          <span className="font-mono text-[11px] text-faint">on {plan.verdict.offendingAsset}</span>
+          <span className="font-mono text-meta text-faint">on {plan.verdict.offendingAsset}</span>
         )}
       </div>
       {!plan.verdict.allow && (
-        <p className="mb-2 text-[12px] leading-relaxed text-faint">
+        <p className="mb-2 text-meta leading-relaxed text-faint">
           Asked before any gas was spent. The same check runs inside the transaction, so exiting
           anyway would revert. This is the trip not taken, not a trip that failed.
         </p>
       )}
 
-      <ul className="grid gap-0.5 font-mono text-[11.5px]">
+      <ul className="grid gap-0.5 font-mono text-meta">
         <Row label="evidence">
           <span className="break-all text-dim">{plan.evidence.hash}</span>
         </Row>
@@ -931,8 +931,8 @@ function Plan({ plan }: { plan: WirePlan }) {
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <li className="flex flex-wrap items-baseline gap-3">
-      <span className="w-20 shrink-0 text-faint">{label}</span>
-      <span className="text-dim">{children}</span>
+      <span className="w-20 shrink-0 text-dim">{label}</span>
+      <span className="text-ink">{children}</span>
     </li>
   );
 }

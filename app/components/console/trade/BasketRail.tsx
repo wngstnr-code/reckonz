@@ -79,7 +79,7 @@ export function BasketRail({ direction }: { direction: 'buy' | 'sell' }) {
 
   return (
     <div className="mb-5">
-      <p className="mb-3 rounded-lg border border-signal-deep bg-signal/6 px-3 py-2 text-[12.5px] leading-relaxed text-ink">
+      <p className="mb-3 rounded-lg border border-signal-deep bg-signal/6 px-3 py-2 text-meta leading-relaxed text-ink">
         Following thesis <span className="font-mono">#{follow.thesisId}</span>. Each leg is its own
         signature, so the basket fills one at a time.
       </p>
@@ -100,7 +100,7 @@ export function BasketRail({ direction }: { direction: 'buy' | 'sell' }) {
                 }
                 className="flex w-full items-baseline justify-between gap-3 rounded-lg border border-line bg-raised px-3 py-2 text-left hover:border-edge"
               >
-                <span className="font-mono text-[13px] text-ink">{symbol}</span>
+                <span className="font-mono text-meta text-ink">{symbol}</span>
                 <LegMark state={state} />
               </button>
             </li>
@@ -108,7 +108,7 @@ export function BasketRail({ direction }: { direction: 'buy' | 'sell' }) {
         })}
       </ul>
 
-      <p className="mt-2 text-right font-mono text-[11.5px] text-faint tabular-nums">
+      <p className="mt-2 text-right font-mono text-meta text-dim tabular-nums">
         {filled} of {follow.symbols.length} filled
         {refused.length > 0 && (
           // Grouped and counted rather than listed. Four refusals for one reason
@@ -122,22 +122,22 @@ export function BasketRail({ direction }: { direction: 'buy' | 'sell' }) {
 
 function LegMark({ state }: { state: LegState }) {
   if (state.kind === 'filled') {
-    return <span className="font-mono text-[11.5px] text-signal">● filled</span>;
+    return <span className="font-mono text-meta text-signal">● filled</span>;
   }
   if (state.kind === 'allowed') {
-    return <span className="font-mono text-[11.5px] text-signal">● allowed</span>;
+    return <span className="font-mono text-meta text-signal">● allowed</span>;
   }
   if (state.kind === 'refused') {
     return (
-      <span className="text-right font-mono text-[11.5px] text-caution">
+      <span className="text-right font-mono text-meta text-caution">
         ● refused
         {state.reason && (
-          <span className="block text-[11px] font-normal">
+          <span className="block text-meta font-normal">
             {REFUSAL[state.reason] ?? state.reason}
           </span>
         )}
       </span>
     );
   }
-  return <span className="font-mono text-[11.5px] text-faint">○ not quoted</span>;
+  return <span className="font-mono text-meta text-faint">○ not quoted</span>;
 }

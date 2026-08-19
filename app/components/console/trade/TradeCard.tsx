@@ -88,12 +88,12 @@ function Disconnected() {
 
       <button
         onClick={() => window.dispatchEvent(new Event(OPEN_WALLET_EVENT))}
-        className="mt-4 w-full rounded-xl bg-ink px-4 py-3.5 text-[15px] font-semibold text-ground hover:opacity-90"
+        className="mt-4 w-full rounded-xl bg-ink px-4 py-3.5 text-data font-semibold text-ground hover:opacity-90"
       >
         Connect wallet
       </button>
 
-      <p className="mt-4 text-[12.5px] leading-relaxed text-ink">
+      <p className="mt-4 text-meta leading-relaxed text-ink">
         Every fill is pulled against a Permit2 signature you produce yourself, scoped to one token
         and expiring in twenty minutes. No key of ours can move your money.
       </p>
@@ -127,7 +127,7 @@ function TabButton({
       role="tab"
       aria-selected={active}
       onClick={() => onSelect(value)}
-      className={`-mb-px flex-1 border-b-[3px] py-4 text-center text-[17px] transition-colors ${
+      className={`-mb-px flex-1 border-b-[3px] py-4 text-center text-lead transition-colors ${
         active ? 'border-ink text-ink' : 'border-transparent text-faint hover:text-dim'
       }`}
     >

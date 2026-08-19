@@ -55,22 +55,22 @@ export function Field({
     <label
       className={`flex min-w-[8rem] flex-col rounded-xl bg-well px-3.5 py-2.5 focus-within:ring-1 focus-within:ring-ink/25 ${width}`}
     >
-      <span className="text-[12px] leading-tight text-dim">{label}</span>
+      <span className="text-meta leading-tight text-dim">{label}</span>
       <span className="mt-1.5 flex items-baseline gap-1.5">
         <input
           value={value}
           inputMode={placeholder?.startsWith('0x') ? 'text' : 'decimal'}
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full min-w-0 bg-transparent font-mono text-[17px] tabular-nums text-ink outline-none placeholder:text-faint"
+          className="w-full min-w-0 bg-transparent font-mono text-lead tabular-nums text-ink outline-none placeholder:text-faint"
         />
         {suffix && (
-          <span className="shrink-0 rounded-full bg-card px-1.5 py-0.5 font-mono text-[10.5px] text-dim">
+          <span className="shrink-0 rounded-full bg-card px-1.5 py-0.5 font-mono text-meta text-dim">
             {suffix}
           </span>
         )}
       </span>
-      {hint && <span className="mt-auto pt-2 text-[11.5px] leading-snug text-faint">{hint}</span>}
+      {hint && <span className="mt-auto pt-2 text-meta leading-snug text-dim">{hint}</span>}
     </label>
   );
 }
@@ -103,10 +103,10 @@ export function SelectField({
         aria-expanded={menu.open}
         className="flex h-full w-full flex-col rounded-xl bg-well px-3.5 py-2.5 text-left"
       >
-        <span className="text-[12px] leading-tight text-dim">{label}</span>
+        <span className="text-meta leading-tight text-dim">{label}</span>
         <span className="mt-1.5 flex items-center justify-between gap-2">
           <span
-            className={`truncate font-mono text-[17px] ${chosen ? 'text-ink' : 'text-faint'}`}
+            className={`truncate font-mono text-lead ${chosen ? 'text-ink' : 'text-faint'}`}
           >
             {chosen?.label ?? placeholder ?? '—'}
           </span>
@@ -161,7 +161,7 @@ export function Primary({
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`rounded-xl bg-ink px-5 py-3 text-[15px] font-semibold whitespace-nowrap text-ground hover:opacity-90 disabled:opacity-30 ${
+      className={`rounded-xl bg-ink px-5 py-3 text-data font-semibold whitespace-nowrap text-ground hover:opacity-90 disabled:opacity-30 ${
         full ? 'w-full' : ''
       }`}
     >
@@ -198,7 +198,7 @@ export function Secondary({
     <button
       onClick={onClick}
       disabled={disabled}
-      className="min-w-[9.5rem] rounded-xl bg-inset px-5 py-3 text-[15px] font-semibold whitespace-nowrap text-ink hover:bg-line disabled:opacity-30"
+      className="min-w-[9.5rem] rounded-xl bg-inset px-5 py-3 text-data font-semibold whitespace-nowrap text-ink hover:bg-line disabled:opacity-30"
     >
       {children}
     </button>
@@ -225,7 +225,7 @@ export function Ghost({
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className={`rounded-full px-3.5 py-1.5 text-[13px] whitespace-nowrap disabled:opacity-40 ${
+      className={`rounded-full px-3.5 py-1.5 text-meta whitespace-nowrap disabled:opacity-40 ${
         tone === 'danger'
           ? 'bg-refuse/10 text-refuse hover:bg-refuse/16'
           : 'bg-inset text-ink hover:bg-line'
@@ -252,7 +252,7 @@ export function Toggle({
     <button
       onClick={onClick}
       title={title}
-      className={`flex items-center gap-1.5 rounded-full py-1 pr-3 pl-1.5 text-[13px] transition-colors ${
+      className={`flex items-center gap-1.5 rounded-full py-1 pr-3 pl-1.5 text-meta transition-colors ${
         on ? 'bg-ink text-ground' : 'bg-inset text-dim hover:text-ink'
       }`}
     >

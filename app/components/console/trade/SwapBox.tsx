@@ -79,7 +79,7 @@ export function SwapLeg({
   const editable = onAmountChange !== undefined;
   return (
     <div>
-      <div className="mb-1 text-[14px] text-dim">{label}</div>
+      <div className="mb-1 text-meta text-dim">{label}</div>
       <div className="flex items-center justify-between gap-3">
         {editable ? (
           <input
@@ -87,20 +87,20 @@ export function SwapLeg({
             inputMode="decimal"
             placeholder="0"
             onChange={(e) => onAmountChange(e.target.value)}
-            className="w-full min-w-0 bg-transparent font-mono text-[28px] tabular-nums text-ink outline-none placeholder:text-faint"
+            className="w-full min-w-0 bg-transparent font-mono text-display tabular-nums text-ink outline-none placeholder:text-faint"
           />
         ) : (
           // Not a disabled input. A field the user cannot type into still reads
           // as one they should try to, and the greyed-out version of that is a
           // control that looks broken rather than derived.
-          <output className="w-full min-w-0 truncate font-mono text-[28px] tabular-nums text-dim">
+          <output className="w-full min-w-0 truncate font-mono text-display tabular-nums text-dim">
             {amount || '0'}
           </output>
         )}
         <div className="shrink-0">{token}</div>
       </div>
       {(hint || right) && (
-        <div className="mt-1.5 flex items-baseline justify-between gap-3 text-[12px] text-faint">
+        <div className="mt-1.5 flex items-baseline justify-between gap-3 text-meta text-dim">
           <span className="min-w-0 truncate">{hint}</span>
           <span className="shrink-0">{right}</span>
         </div>
@@ -178,7 +178,7 @@ export function TokenChip({
   const face = (
     <>
       <TokenMark symbol={symbol} />
-      <span className="text-[15px] whitespace-nowrap text-ink">{symbol}</span>
+      <span className="text-data whitespace-nowrap text-ink">{symbol}</span>
       {choosable && <Chevron open={menu.open} />}
     </>
   );

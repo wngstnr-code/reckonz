@@ -319,14 +319,14 @@ export function MandateManage() {
 
       {mandates.length > 1 && (
         <div className="mb-5 flex flex-wrap items-center gap-1.5">
-          <span className="mr-1 text-[11px] font-semibold tracking-[0.09em] text-faint uppercase">
+          <span className="mr-1 text-micro font-semibold text-faint uppercase">
             mandate
           </span>
           {mandates.map((one) => (
             <button
               key={one.id.toString()}
               onClick={() => setShowId(one.id)}
-              className={`rounded-full border px-3 py-0.5 font-mono text-[12px] transition-colors ${
+              className={`rounded-full border px-3 py-0.5 font-mono text-meta transition-colors ${
                 one.id === m.id
                   ? 'border-signal-deep bg-signal/6 text-signal'
                   : 'border-line bg-raised text-faint hover:text-ink'
@@ -343,7 +343,7 @@ export function MandateManage() {
       <div className="rounded-2xl bg-card px-6 py-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h2 className="text-[11px] font-semibold tracking-[0.09em] text-faint uppercase">
+            <h2 className="text-micro font-semibold text-faint uppercase">
               Spendable this epoch · mandate #{m.id.toString()}
             </h2>
             <p className="mt-2 font-mono text-display tabular-nums text-ink">
@@ -366,7 +366,7 @@ export function MandateManage() {
           {m.breaker ? (
             <Pill tone="no">breaker tripped, exits included</Pill>
           ) : (
-            <span className="font-mono text-[12.5px] text-signal">live</span>
+            <span className="font-mono text-meta text-signal">live</span>
           )}
         </div>
 
@@ -408,13 +408,13 @@ export function MandateManage() {
       <Section
         title="Positions"
         aside={
-          <span className="text-[12.5px] text-faint">recorded from settled fills</span>
+          <span className="text-meta text-dim">recorded from settled fills</span>
         }
       >
         <div className="overflow-x-auto">
           <table className="w-full min-w-[26rem] border-collapse">
             <thead>
-              <tr className="border-b border-line text-[11px] tracking-[0.09em] text-faint uppercase">
+              <tr className="border-b border-line text-micro text-faint uppercase">
                 <th className="pb-2 pr-4 text-left font-semibold">Asset</th>
                 <th className="pb-2 text-right font-semibold">Units</th>
               </tr>
@@ -444,7 +444,7 @@ export function MandateManage() {
             </tbody>
           </table>
         </div>
-        <p className="mt-3 max-w-[68ch] text-[12.5px] leading-relaxed text-faint">
+        <p className="mt-3 max-w-[68ch] text-meta leading-relaxed text-dim">
           Can differ from your wallet balance when an asset was traded under a different mandate.
         </p>
       </Section>
@@ -452,7 +452,7 @@ export function MandateManage() {
       <Section
         title="Triggers"
         aside={
-          <span className="text-[12.5px] text-faint">
+          <span className="text-meta text-dim">
             {m.triggers.length} installed
             {m.firing.length > 0 && (
               <span className="text-caution"> · {m.firing.length} firing</span>
@@ -507,7 +507,7 @@ export function MandateManage() {
           {m.allowed.map((a) => (
             <span
               key={a.address}
-              className="flex items-center gap-2 rounded-full bg-inset py-1 pr-2.5 pl-1.5 text-[13px] text-ink"
+              className="flex items-center gap-2 rounded-full bg-inset py-1 pr-2.5 pl-1.5 text-meta text-ink"
             >
               <AssetMark symbol={label(a.address)} size={20} />
               {label(a.address)}
@@ -533,7 +533,7 @@ export function MandateManage() {
             </span>
           ))}
         </div>
-        <p className="mb-3 max-w-[68ch] text-[12.5px] leading-relaxed text-faint">
+        <p className="mb-3 max-w-[68ch] text-meta leading-relaxed text-dim">
           Disallowing stops new fills. It does not sell what the mandate holds, and an exit is a
           fill the guard checks against this list. Exit first, then disallow.
         </p>
@@ -581,7 +581,7 @@ export function MandateManage() {
         />
 
         <Legend>agent</Legend>
-        <p className="mb-2 max-w-[68ch] text-[12.5px] leading-relaxed text-faint">
+        <p className="mb-2 max-w-[68ch] text-meta leading-relaxed text-dim">
           The agent proposes trades. It can never exceed the policy above, or move funds without a
           Permit2 signature the owner produces.
         </p>
@@ -604,7 +604,7 @@ export function MandateManage() {
         />
 
         <Legend>executor</Legend>
-        <p className="mb-2 max-w-[68ch] text-[12.5px] leading-relaxed text-faint">
+        <p className="mb-2 max-w-[68ch] text-meta leading-relaxed text-dim">
           Where fills are pulled from with Permit2. A mandate pointing elsewhere can never be
           filled from this app.
         </p>
@@ -648,7 +648,7 @@ export function MandateManage() {
             // amber on dark, so a fixed white label is unreadable in one of the
             // two themes. `ground` inverts with the theme and lands on the
             // readable side of both.
-            className={`rounded-full px-3.5 py-1.5 text-[13px] font-semibold disabled:opacity-40 ${
+            className={`rounded-full px-3.5 py-1.5 text-meta font-semibold disabled:opacity-40 ${
               m.breaker
                 ? 'bg-signal text-ground hover:opacity-90'
                 : 'bg-caution text-ground hover:opacity-90'
@@ -671,17 +671,17 @@ export function MandateManage() {
               )
             }
             disabled={busy !== null}
-            className="rounded-full bg-refuse px-3.5 py-1.5 text-[13px] font-semibold text-ground hover:opacity-90 disabled:opacity-40"
+            className="rounded-full bg-refuse px-3.5 py-1.5 text-meta font-semibold text-ground hover:opacity-90 disabled:opacity-40"
           >
             Close mandate
           </button>
 
           {busy?.id === m.id && (
-            <span className="text-[13px] text-dim">{busy.what}…</span>
+            <span className="text-meta text-dim">{busy.what}…</span>
           )}
         </div>
 
-        <p className="mt-3 max-w-[68ch] text-[12.5px] leading-relaxed text-faint">
+        <p className="mt-3 max-w-[68ch] text-meta leading-relaxed text-dim">
           The breaker stops entries <em>and</em> exits through this system. Your assets stay in
           your wallet and remain sellable anywhere. Closing is permanent.
         </p>
@@ -693,7 +693,7 @@ export function MandateManage() {
 function WriteError({ message }: { message: string }) {
   return (
     <div className="mb-5 rounded-lg border border-refuse/40 bg-refuse/6 px-4 py-3">
-      <p className="font-mono text-[12.5px] leading-relaxed break-words text-refuse">{message}</p>
+      <p className="font-mono text-meta leading-relaxed break-words text-refuse">{message}</p>
     </div>
   );
 }
@@ -741,7 +741,7 @@ function TriggerForm({
       </FormRow>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <span className="text-[12.5px] text-dim">Applies to</span>
+        <span className="text-meta text-dim">Applies to</span>
         <Toggle on={scope.length === 0} onClick={() => setScope([])}>
           <span className="pl-1.5">Whole basket</span>
         </Toggle>
@@ -976,7 +976,7 @@ function PolicyForm({
             onChange={set('minRebalanceInterval')}
           />
           <label className="flex min-w-[8rem] flex-1 flex-col rounded-xl bg-well px-3.5 py-2.5">
-            <span className="text-[12px] leading-tight text-dim">Enforce weights</span>
+            <span className="text-meta leading-tight text-dim">Enforce weights</span>
             <span className="mt-1.5 flex items-center gap-2">
               <input
                 type="checkbox"
@@ -984,13 +984,13 @@ function PolicyForm({
                 onChange={(e) => setDraft((d) => ({ ...d, enforceWeights: e.target.checked }))}
                 className="h-4 w-4 accent-ink"
               />
-              <span className="text-[15px] text-ink">{draft.enforceWeights ? 'on' : 'off'}</span>
+              <span className="text-data text-ink">{draft.enforceWeights ? 'on' : 'off'}</span>
             </span>
           </label>
         </FormRow>
       </div>
 
-      {err && <p className="mt-3 text-[12.5px] leading-relaxed text-refuse">{err}</p>}
+      {err && <p className="mt-3 text-meta leading-relaxed text-refuse">{err}</p>}
 
       <FormActions>
         <Primary full onClick={submit} disabled={disabled}>
@@ -1006,7 +1006,7 @@ function PolicyForm({
           Cancel
         </Secondary>
       </FormActions>
-      <p className="mt-2.5 text-[12.5px] text-dim">
+      <p className="mt-2.5 text-meta text-dim">
         Every field not changed above is sent back unchanged.
       </p>
     </FormCard>
@@ -1045,7 +1045,7 @@ function AddressForm({
 
   return (
     <FormCard>
-      <p className="mb-2.5 font-mono text-[12.5px] break-all text-dim">{current}</p>
+      <p className="mb-2.5 font-mono text-meta break-all text-dim">{current}</p>
       <Field label="New address" value={value} onChange={setValue} placeholder="0x…" />
       <FormActions>
         <Primary full onClick={submit} disabled={disabled || !isAddress(value)}>

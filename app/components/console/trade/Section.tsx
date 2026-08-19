@@ -65,7 +65,7 @@ export function Fact({
       <dt className="text-meta text-dim">{label}</dt>
       <dd className="text-right">
         <div className="font-mono text-meta tabular-nums text-ink">{children}</div>
-        {hint && <div className="mt-0.5 text-[12px] text-faint">{hint}</div>}
+        {hint && <div className="mt-0.5 text-meta text-dim">{hint}</div>}
       </dd>
     </div>
   );

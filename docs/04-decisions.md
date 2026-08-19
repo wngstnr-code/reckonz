@@ -5299,3 +5299,46 @@ two themes. `ground` inverts with the theme and lands on the readable side of bo
 **`Secondary` takes a width floor.** Two secondaries in different forms, sized only by their labels,
 come out visibly different widths, and `Cancel` beside `Already here` read as two kinds of control
 rather than one. The floor is the longer of them, so nothing is stretched. Both measure 152×47.
+
+### D94, amended a ninth time — the type scale, and which grey means what
+
+Nabil: the font sizes have to match `/assets`, and the greys need another look. Both were fair, and
+the first one is a self-inflicted wound worth naming.
+
+**`/assets` is built almost entirely from the tokens** in `globals.css`: `text-data` 36 times,
+`text-micro` 26, `text-meta` 11, plus `title`, `body` and `lead`. The handful of arbitrary sizes
+there are chrome that sits outside the reading surface — the footer, the nav, the wordmark.
+
+**`/trade` had none of them.** Ten distinct hard-coded sizes across 125 class strings, most of them
+*smaller* than anything the scale defines: 34 uses of `12px`, 30 of `12.5px`, 26 of `13px`, against a
+scale whose smallest step is `micro` at 13.5. Each one was chosen in the moment to fit the box it
+was in, and the aggregate is a page that looks like it belongs to a different product than the one
+it links to. Now on the scale, with one exception: an 11px glyph inside a 24px disc, which is an
+icon rather than type.
+
+The mapping that stuck, and the rule behind it: **`text-micro` is for uppercase labels only** — it
+carries `0.09em` tracking, which is right for a column head and wrong for a sentence. Small prose is
+`text-meta`. That distinction is why a blanket size map is not enough and the uppercase cases had to
+be handled first.
+
+**And the greys.** The rule, applied across the page rather than per component:
+
+| | For |
+|---|---|
+| `ink` | values, headings, control labels, anything the reader must act on |
+| `dim` | supporting prose: hints, footnotes, field labels, the balance under a field |
+| `faint` | incidental only: table heads, placeholders, inactive states |
+
+What moved: every explanatory paragraph from `faint` to `dim` — they are the sentences that say what
+a control does, and at `faint` they were decoration. The plan rows in the fill and exit cards
+inverted: the label was `faint` and the *value* was `dim`, so the measurement was quieter than the
+word introducing it. Label `dim`, value `ink`.
+
+The card's fine print stays `ink` rather than dropping to `dim`, because that was an explicit call
+in the seventh amendment and nothing since has argued against it.
+
+A practice note: the script that did the size mapping matched quoted strings with an alternation
+including `'…'`, which can run across an apostrophe in prose and swallow a whole region. It produced
+exactly one wrong result — a `text-micro` on a sentence, caught by grepping for `text-micro` without
+`uppercase` beside it. The diff being symmetric at 134 insertions and 134 deletions is what proved
+nothing else had been eaten.

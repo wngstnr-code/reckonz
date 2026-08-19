@@ -45,7 +45,7 @@ export function Limits({ board, now }: { board: Board; now: number }) {
       <div className="overflow-x-auto">
         <table className="w-full min-w-[34rem] border-collapse">
           <thead>
-            <tr className="border-b border-line text-[11px] tracking-[0.09em] text-faint uppercase">
+            <tr className="border-b border-line text-micro text-faint uppercase">
               <th className="pb-2 pr-4 text-left font-semibold">Market</th>
               <th className="pb-2 pr-4 text-right font-semibold">Absorbs @{tight}bp</th>
               <th className="pb-2 pr-4 text-right font-semibold">@{loose}bp</th>
@@ -73,7 +73,7 @@ export function Limits({ board, now }: { board: Board; now: number }) {
                   <td className="py-2.5 pr-4 text-right font-mono text-meta tabular-nums text-dim">
                     {asset.gapRisk}
                   </td>
-                  <td className={`py-2.5 text-right text-[12.5px] ${state.tone}`}>{state.text}</td>
+                  <td className={`py-2.5 text-right text-meta ${state.tone}`}>{state.text}</td>
                 </tr>
               );
             })}
