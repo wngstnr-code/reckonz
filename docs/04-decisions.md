@@ -5178,3 +5178,14 @@ reformatted since the string was read. The chip kept its old markup through a ty
 a screenshot before it was caught by asking the DOM what was actually there. Assert on every
 scripted edit, and check the rendered page for the thing that changed rather than for the page
 looking fine.
+
+Two more from the same note, after the logo landed in the repo:
+
+**Buy and Sell split the card's width** rather than sitting together on the left. With one card and
+exactly two directions, a tab row that stops halfway leaves the rule looking unfinished and the
+second choice looking like an afterthought.
+
+**USDG has its own mark**, `public/xstock-logos/usdg.avif`, in the same directory as the thirty
+because that is where token artwork lives. It is round and unclipped: `AssetMark` draws everything
+inside the xStock notch, and the notch says *xStock*, which USDG is not. It is what they settle
+against. A bare `img` rather than `next/image` for one 24px file out of our own `public/`.

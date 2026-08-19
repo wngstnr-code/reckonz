@@ -770,7 +770,7 @@ export function Fill() {
           <p className="mt-4 text-[12.5px] leading-relaxed text-ink">
             The quote and the verdict come from the server. The approval, the signature and the
             transaction happen in your wallet, and the permit authorises one token, one amount, one
-            contract, for 20 minutes.
+            contract, for twenty minutes.
           </p>
         </>
       )}

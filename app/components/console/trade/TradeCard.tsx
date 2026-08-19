@@ -38,8 +38,11 @@ export function TradeCard() {
 
   return (
     <aside className="rounded-2xl bg-card lg:sticky lg:top-6">
-      {/* Across the top, on the card's own hairline, as the reference has it. */}
-      <div role="tablist" aria-label="trade direction" className="flex border-b border-line px-5">
+      {/* Across the top, on the card's own hairline. The two split the width
+          rather than sitting together on the left: with one card and exactly two
+          directions, a tab that stops halfway leaves the rule looking unfinished
+          and the second choice looking like an afterthought. */}
+      <div role="tablist" aria-label="trade direction" className="flex border-b border-line">
         <TabButton current={tab} value="buy" onSelect={setTab}>
           Buy
         </TabButton>
@@ -124,7 +127,7 @@ function TabButton({
       role="tab"
       aria-selected={active}
       onClick={() => onSelect(value)}
-      className={`-mb-px border-b-[3px] px-4 py-4 text-[17px] transition-colors ${
+      className={`-mb-px flex-1 border-b-[3px] py-4 text-center text-[17px] transition-colors ${
         active ? 'border-ink text-ink' : 'border-transparent text-faint hover:text-dim'
       }`}
     >

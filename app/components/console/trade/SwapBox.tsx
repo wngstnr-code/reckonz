@@ -124,19 +124,38 @@ export function SwapLeg({
  * The settlement currency is not one of the thirty, and must not wear their mark.
  *
  * `AssetMark` draws every symbol inside the xStock notch and falls back to two
- * letters in it when there is no artwork — which rendered USDG as a tokenised
- * stock nobody had drawn a logo for. It is a stablecoin, and the notch is a
- * claim about what a token *is*. So anything outside the `w…x` naming gets a
- * plain disc instead.
+ * letters in it when there is no artwork, which rendered USDG as a tokenised
+ * stock nobody had drawn a logo for. Its own mark is in the same directory
+ * because that is where token artwork lives, but it is round and unclipped: the
+ * notch says "xStock", and USDG is what they settle against.
+ *
+ * A bare `img`, not `next/image`. One 24px mark from our own `public/` gains
+ * nothing from a resize pipeline it would have to be configured for.
  */
 function TokenMark({ symbol }: { symbol: string }) {
   if (/^w[A-Z]/.test(symbol)) return <AssetMark symbol={symbol} size={24} />;
+
+  // Round, not notched. The xStock mark is a claim about what a token *is*, and
+  // the settlement currency is not one of the thirty.
+  if (symbol === 'USDG') {
+    // eslint-disable-next-line @next/next/no-img-element
+    return (
+      <img
+        src="/xstock-logos/usdg.avif"
+        alt=""
+        width={24}
+        height={24}
+        className="h-[24px] w-[24px] shrink-0 rounded-full"
+      />
+    );
+  }
+
   return (
     <span
       className="flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-full bg-dim font-mono text-[11px] text-well"
       aria-hidden
     >
-      {symbol === '—' ? '?' : '$'}
+      ?
     </span>
   );
 }
