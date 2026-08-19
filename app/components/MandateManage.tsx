@@ -268,7 +268,11 @@ export function MandateManage() {
       <Section title="Mandate">
         <p className="max-w-[68ch] text-meta leading-relaxed text-dim">
           The rule set the chain enforces inside the trade itself: what it may spend, how far off
-          fair value it may pay, which assets it may hold. Connect a wallet to read yours.
+          fair value it may pay, which assets it may hold. Connect a wallet to read yours, or{' '}
+          <a href="#create-mandate" className="underline decoration-dotted hover:text-ink">
+            see what one is made of
+          </a>
+          .
         </p>
       </Section>
     );
@@ -295,9 +299,20 @@ export function MandateManage() {
         {error && <WriteError message={error} />}
         <Section title="Mandate">
           <p className="max-w-[68ch] text-meta leading-relaxed text-dim">
-            This wallet owns none, and nothing here can be signed without one. The form to create it
-            is at the foot of this page.
+            This wallet owns none, and nothing here can be signed without one. A mandate is the rule
+            set the chain enforces inside the trade: what it may spend, how far off fair value it
+            may pay, which assets it may hold.
           </p>
+          {/* The only thing this wallet can do on this page, so it is a control
+              rather than a sentence describing where a control is. It used to
+              read "the form is at the foot of this page", which is true and
+              leaves the reader to find it a screen and a half down. */}
+          <a
+            href="#create-mandate"
+            className="mt-4 inline-block rounded-xl bg-ink px-5 py-3 text-data font-semibold text-ground hover:opacity-90"
+          >
+            Create one
+          </a>
         </Section>
       </>
     );
@@ -414,6 +429,7 @@ export function MandateManage() {
       </Section>
 
       <Section
+        id="positions"
         title="Positions"
         aside={
           <span className="text-meta text-dim">recorded from settled fills</span>

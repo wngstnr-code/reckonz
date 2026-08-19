@@ -792,6 +792,26 @@ export function Exit() {
                   {phase.hash}
                 </a>
               )}
+              {/* Where the story used to stop. The hash proves it happened;
+                  these say where it landed and where the record of the decision
+                  lives. The bundle link is the one the product is actually about
+                  — the hash on chain points at it, and a fill whose evidence
+                  nobody can reach is the quiet loss D80 names. */}
+              <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-meta text-cta-3">
+                <a href="#positions" className="underline decoration-dotted hover:text-cta-ink">
+                  Your position, now smaller
+                </a>
+                {plan?.evidence.persistence.kind === 'blob' && (
+                  <a
+                    href={plan.evidence.persistence.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline decoration-dotted hover:text-cta-ink"
+                  >
+                    The evidence behind it
+                  </a>
+                )}
+              </div>
             </div>
           )}
 

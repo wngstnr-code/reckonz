@@ -12,6 +12,7 @@ import {
   MANDATES_CHANGED_EVENT,
   PICK_ASSET_EVENT,
   QUOTED_EVENT,
+  publishSizing,
   type FilledDetail,
   type FollowRequest,
   type PickAssetDetail,
@@ -116,7 +117,7 @@ type Phase =
 const e8 = (raw: string) => (Number(BigInt(raw)) / 1e8).toFixed(4);
 const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000' as const;
 
-export function Fill() {
+export function Fill({ active = true }: { active?: boolean } = {}) {
   const { address, option, walletClient, publicClient } = useWallet();
 
   const [universe, setUniverse] = useState<UniverseEntry[]>([]);
@@ -343,6 +344,15 @@ export function Fill() {
 
   const validAmount = /^\d+(\.\d+)?$/.test(amount) && Number(amount) > 0;
   const wanted = cash && validAmount ? parseUnits(amount, cash.decimals) : null;
+
+  // Tell the capacity table what is being asked for, so it can answer about
+  // this trade rather than about the market in general. Cleared on unmount:
+  // the table must not keep marking rows against a size no longer on screen,
+  // and this panel is hidden rather than unmounted only while the card lives.
+  useEffect(() => {
+    publishSizing(active && validAmount ? Number(amount) : null);
+  }, [active, amount, validAmount]);
+  useEffect(() => () => publishSizing(null), []);
   const shortOfCash = wanted !== null && cash !== null && cash.balance < wanted;
 
   async function check() {
@@ -570,7 +580,11 @@ export function Fill() {
         <p className="text-meta text-dim">Reading your mandates from the chain…</p>
       ) : mandates.length === 0 ? (
         <p className="text-meta leading-relaxed text-dim">
-          No mandate this wallet can execute against. Create one at the foot of this page.
+          No mandate this wallet can execute against.{' '}
+          <a href="#create-mandate" className="underline decoration-dotted hover:text-ink">
+            Create one
+          </a>
+          .
         </p>
       ) : (
         <>
@@ -781,6 +795,26 @@ export function Fill() {
                   {phase.hash}
                 </a>
               )}
+              {/* Where the story used to stop. The hash proves it happened;
+                  these say where it landed and where the record of the decision
+                  lives. The bundle link is the one the product is actually about
+                  — the hash on chain points at it, and a fill whose evidence
+                  nobody can reach is the quiet loss D80 names. */}
+              <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-meta text-cta-3">
+                <a href="#positions" className="underline decoration-dotted hover:text-cta-ink">
+                  Now in your positions
+                </a>
+                {plan?.evidence.persistence.kind === 'blob' && (
+                  <a
+                    href={plan.evidence.persistence.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline decoration-dotted hover:text-cta-ink"
+                  >
+                    The evidence behind it
+                  </a>
+                )}
+              </div>
             </div>
           )}
 

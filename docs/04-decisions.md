@@ -5548,3 +5548,37 @@ the committed file as a floor, so re-measuring locally and committing does *not*
 shows while an archive exists. The new rungs arrive when the **worker** re-measures with this code
 deployed. Committing the file still matters for a clone with no archive, and it now carries the new
 ladder.
+
+## D97 — The trade page stated facts and left the reader to connect them
+
+Three things on `/trade` were each correct on their own and did not reach the reader, because
+nothing joined them to the decision being taken.
+
+**A wallet with no mandate was told where the form was, not shown it.** `MandateManage` and the
+fill panel both said the create form is "at the foot of this page". That is true, and the foot of
+the page is about 1,400px down: a sentence describing where a control lives, in place of the
+control. The create section now carries `id="create-mandate"`, the empty-mandate state renders an
+actual button to it, and the disconnected state a link. Prose that points at something the page
+already contains should be a link to it.
+
+**A settled fill ended at the hash.** The explorer link was already there. What was not was any
+route onward: the position that just moved is in `Positions` further down the same page, and the
+evidence bundle the hash commits to is archived at a URL the plan block knows. Both are now links
+in the green panel. The bundle one matters most — an auditable receipt nobody is given a path to
+is the quiet loss D80 describes, one step later.
+
+**`Limits` measured the market while the reader was sizing a trade.** The table answers "what can
+each pool absorb"; the card two columns away holds the number the user is actually deciding on,
+and the two had never met. `SIZING_EVENT` carries the buy amount across, and the table now leads
+with how many markets take *that* size and dims the ones that cannot.
+
+Two constraints on that last one, both about not answering the wrong question:
+
+- **Buy only.** An exit can be sized in units of the asset (D68), and a table comparing a share
+  count against a dollar capacity would be confidently wrong. Switching to Sell clears it.
+- **A pool with no measurement is neither.** `capacityUsdg[tight] == null` keeps the row's own
+  description and stays out of both the numerator and the denominator, same rule as D89.
+
+`Limits` became a client component to hear the event. It still takes the whole board as a prop
+from the server render, so it needs no wallet and no fetch, and a visitor who connects nothing
+sees exactly what they saw before.

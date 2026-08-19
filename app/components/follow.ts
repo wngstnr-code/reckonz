@@ -172,3 +172,29 @@ export interface PickAssetDetail {
  * it says. So the rail's button is real and the header opens.
  */
 export const OPEN_WALLET_EVENT = 'reckonz:open-wallet';
+
+/**
+ * Fired as the fill amount changes, before anything is quoted.
+ *
+ * The capacity table is measured on the server and knows every pool's absorbable
+ * size; the trade card knows the size being asked for. Neither could answer the
+ * only question either of them is really being read for — will *this* trade fit
+ * — because the two numbers were never in the same place. This carries one to
+ * the other.
+ *
+ * USDG, and only from the buy side. A sell can be sized in units of the asset,
+ * and a table that compared a share count against a dollar capacity would be
+ * confidently wrong rather than silent.
+ *
+ * `null` clears it: no amount, an unparseable one, or the card left on Sell.
+ */
+export const SIZING_EVENT = 'reckonz:sizing';
+
+export interface SizingDetail {
+  usdg: number | null;
+}
+
+export function publishSizing(usdg: number | null) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent<SizingDetail>(SIZING_EVENT, { detail: { usdg } }));
+}

@@ -87,7 +87,7 @@ export default async function TradePage() {
           owns a mandate or not: setting one up is a step you take once and then
           scroll past, not a thing to be met with. */}
       <div className="mt-14">
-        <Section title="Create a mandate">
+        <Section id="create-mandate" title="Create a mandate">
           <Mandate />
         </Section>
       </div>

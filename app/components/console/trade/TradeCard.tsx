@@ -65,7 +65,7 @@ export function TradeCard() {
           <>
             <BasketRail direction={tab} />
             <div className={tab === 'buy' ? undefined : 'hidden'}>
-              <Fill />
+              <Fill active={tab === 'buy'} />
             </div>
             <div className={tab === 'sell' ? undefined : 'hidden'}>
               <Exit />

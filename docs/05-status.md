@@ -699,7 +699,15 @@ reminder.
 
 ## Log
 
-**2026-08-19 (latest, twenty-sixth)** — **the trade page offered fills the guard refuses** (D95).
+**2026-08-19 (latest, twenty-seventh)** — **three facts on `/trade` that never reached the
+reader** (D97). A wallet with no mandate was told the create form was "at the foot of this page"
+rather than given a button to it; a settled fill ended at the hash with no route to the position it
+moved or the evidence bundle it commits to; and `Limits` measured the market while the card two
+columns away held the size the user was deciding on. All three are now joined: anchors for the
+first two, a `SIZING_EVENT` for the third, so the capacity table leads with how many markets take
+*that* size. Buy only, and cleared on the Sell tab, because an exit can be sized in units.
+
+**2026-08-19 (twenty-sixth)** — **the trade page offered fills the guard refuses** (D95).
 Driving a real fill through the rebuilt page returned `REJECT · ASSET_NOT_ALLOWED` for wTSLAx, an
 asset the page had drawn as allowed. `allowedAssets()` returns `_assetList`, which is append-only:
 disallowing flips `isAllowedAsset` and leaves the address in the array. The browser had the ABI for

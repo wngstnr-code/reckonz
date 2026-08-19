@@ -14,17 +14,20 @@ import type { ReactNode } from 'react';
  * for a page that is mostly reading.
  */
 export function Section({
+  id,
   title,
   aside,
   children,
 }: {
+  /** Makes the section a link target. `scroll-mt` so the heading clears the header. */
+  id?: string;
   title: string;
   /** Sits opposite the heading, on the same baseline. Counts, states, controls. */
   aside?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <section className="mt-11 first:mt-0">
+    <section id={id} className="mt-11 scroll-mt-8 first:mt-0">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h2 className="text-title font-semibold tracking-tight">{title}</h2>
         {aside}
