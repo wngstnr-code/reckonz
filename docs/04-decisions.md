@@ -5358,3 +5358,28 @@ screen the title comes first, then the thing you came to do, then everything des
 above the grid could only ever get one of the two right: aligned on desktop meant the card below the
 whole header on mobile, or action-first on mobile meant the title below the card. Explicit cell
 placement gets both from one DOM order.
+
+### D94, amended an eleventh time — and it deletes the first amendment
+
+Nabil: creating a mandate belongs at the bottom in every state, at the page's full width.
+
+**That reverses the first amendment above, which is the point of leaving it in place.** That one
+argued the form has two right positions and built machinery to choose between them:
+`CreateMandateSlot` mounted in two places, `mandate-presence.ts` publishing a three-state count so
+the choice could be made without a third serial walk over the RPC, and a rule for what to do while
+the answer was unknown. All of it is deleted. Both files are gone.
+
+The simpler reading is better, and it is not only simpler. **At full width the form has room the
+reading column could not give it**: five caps across one row instead of three-then-two, and thirty
+asset chips in two rows instead of four. It is also the same shape every time, which the moving
+version could never be — a control that relocates when your account state changes is a control you
+have to find again.
+
+The reason the machinery existed was real: with no mandate the page is inert and the one control
+that unblocks it was under a thirty-row table. That is answered by a sentence instead. The Mandate
+section now says the wallet owns none and where the form is, and the fill card's line changed from
+*Create one above* to *Create one at the foot of this page* — a string that had been quietly wrong
+from the moment the form moved.
+
+**A hundred lines of state machinery replaced by knowing where something is.** Worth remembering the
+next time a layout question looks like it needs to be computed.

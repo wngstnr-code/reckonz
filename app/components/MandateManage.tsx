@@ -8,7 +8,6 @@ import { USDG } from '@/src/chain';
 import type { UniverseEntry } from '@/src/pipeline';
 import { describeOnchainTrigger, scaleThreshold, type OnchainTrigger } from '@/src/triggers';
 import { awaitReceipt } from './awaitReceipt';
-import { publishMandateCount } from './mandate-presence';
 import { FILLED_EVENT, MANDATES_CHANGED_EVENT } from './follow';
 import { Legend, Pill, tokenAmount } from './ui';
 import { Fact, Facts, Section } from './console/trade/Section';
@@ -202,26 +201,15 @@ export function MandateManage() {
         });
       }
       setMandates(found);
-      publishMandateCount(found.length);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setMandates([]);
-      // Not zero, and not "still loading" either. A throttled read is not an
-      // empty account, and reporting it as one would move the create form under
-      // a user who owns three mandates.
-      publishMandateCount('unreadable');
     }
   }, [publicClient, option, address]);
 
   useEffect(() => {
     void load();
   }, [load]);
-
-  // Disconnecting is not the same as owning nothing, and the layout that reads
-  // this has to be told the difference the moment the wallet goes away.
-  useEffect(() => {
-    if (!address) publishMandateCount(null);
-  }, [address]);
 
   // A mandate created above, or a fill placed below, changes what this panel is
   // describing — a new mandate, or a position that just moved. Re-read rather
@@ -288,11 +276,18 @@ export function MandateManage() {
     return <p className="text-meta text-dim">Reading your mandates from the chain…</p>;
   }
 
-  // Nothing, rather than an empty-state block: with no mandate the create form
-  // has already taken this column's first position, and a panel saying "you have
-  // none" directly under the form that makes one is the same sentence twice.
   if (mandates.length === 0) {
-    return error ? <WriteError message={error} /> : null;
+    return (
+      <>
+        {error && <WriteError message={error} />}
+        <Section title="Mandate">
+          <p className="max-w-[68ch] text-meta leading-relaxed text-dim">
+            This wallet owns none, and nothing here can be signed without one. The form to create it
+            is at the foot of this page.
+          </p>
+        </Section>
+      </>
+    );
   }
 
   // The newest by default. A user with several is nearly always working on the

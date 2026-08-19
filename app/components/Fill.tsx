@@ -554,7 +554,7 @@ export function Fill() {
         <p className="text-meta text-dim">Reading your mandates from the chain…</p>
       ) : mandates.length === 0 ? (
         <p className="text-meta leading-relaxed text-dim">
-          No mandate this wallet can execute against. Create one above.
+          No mandate this wallet can execute against. Create one at the foot of this page.
         </p>
       ) : (
         <>

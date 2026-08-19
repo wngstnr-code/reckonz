@@ -1,6 +1,6 @@
 import { fetchBoard } from '@/src/board-store';
+import { Mandate } from '@/app/components/Mandate';
 import { MandateManage } from '@/app/components/MandateManage';
-import { CreateMandateSlot } from '@/app/components/console/trade/CreateMandateSlot';
 import { Limits } from '@/app/components/console/trade/Limits';
 import { Section } from '@/app/components/console/trade/Section';
 import { TradeCard } from '@/app/components/console/trade/TradeCard';
@@ -29,9 +29,8 @@ export const dynamic = 'force-dynamic';
  * one card in the rail, the mandate became the document you read beside it, and
  * creating one dropped to the bottom where a once-per-mandate step belongs.
  *
- * Creating a mandate moves: it is the first thing in the left column for a
- * wallet that owns none, because nothing else on the page works until it is
- * used, and the last thing on the page for a wallet that already has one.
+ * Creating a mandate is always last, and always at the page's full width. It is
+ * a step taken once per mandate; the daily act is the card in the rail.
  *
  * The panels still talk to each other while they run — a new mandate tells the
  * fill card to re-read the chain, a settled fill tells the manager its positions
@@ -67,9 +66,6 @@ export default async function TradePage() {
         </div>
 
         <div className="min-w-0 lg:col-start-1 lg:row-start-2">
-          {/* Above the mandate it creates, and only while there is none to
-              describe. See `CreateMandateSlot`. */}
-          <CreateMandateSlot position="top" />
           <MandateManage />
 
           <Section title="Limits">
@@ -85,7 +81,16 @@ export default async function TradePage() {
         </div>
       </div>
 
-      <CreateMandateSlot position="bottom" />
+      {/* Outside the grid, so it takes the whole page rather than the reading
+          column. Five caps and thirty asset chips are cramped at 940px and
+          comfortable at full width, and it is the same shape whether this wallet
+          owns a mandate or not: setting one up is a step you take once and then
+          scroll past, not a thing to be met with. */}
+      <div className="mt-14">
+        <Section title="Create a mandate">
+          <Mandate />
+        </Section>
+      </div>
     </>
   );
 }
