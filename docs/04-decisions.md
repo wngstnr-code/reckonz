@@ -5582,3 +5582,59 @@ Two constraints on that last one, both about not answering the wrong question:
 `Limits` became a client component to hear the event. It still takes the whole board as a prop
 from the server render, so it needs no wallet and no fetch, and a visitor who connects nothing
 sees exactly what they saw before.
+
+## D98 — A page called Receipts was built as a list of theses
+
+Twenty receipts have settled on mainnet. Six carry a thesis hash; fourteen do not.
+
+The page rendered the six in full — basket, weights, record, price, shortfall, gap, evidence,
+a follow button — and gave the other fourteen **one line each**: a number, a timestamp, a ticker.
+No price, no shortfall, no evidence hash, no link anywhere. Its own header read *"Losses stay on
+the page as long as the wins do"* while its structure rendered the flattering thirty percent in
+full and footnoted the rest. The exit settled on 2026-08-19 was among the fourteen: the only proof
+the sell path works, invisible in detail on the page whose job is showing proof.
+
+That is not a styling problem, and it is why this is a rewrite rather than a restyle.
+
+**Receipts are the grid; a thesis is an attribute of one.** `src/receipts-view.ts` flattens both
+lists into `allReceipts()`, newest first, each carrying `thesisId: number | null`. Attributed and
+unattributed differ by one field and are otherwise the same object, which is what makes the header
+sentence structurally true rather than merely written.
+
+**The card headlines the shortfall, not the money.** `AssetCard` chose capacity over price because
+price is on every exchange and capacity is what nobody else measured; the same argument lands here.
+An explorer already shows what a trade cost. What it cannot show is how far that sat from the value
+the oracle would defend at that second, and whether anything measured it at all. The tint follows
+the quality of the record — measured and within policy, measured and wide, unmeasured, unaudited —
+and never profit and loss, which none of these pages know.
+
+**The evidence check runs on the detail page and nowhere else.** Re-deriving a hash costs a fetch,
+and the grid renders twenty cards. So the index counts hashes *stamped* and the detail says
+*verifies*, which are different claims and are now worded as different claims. `checkEvidence` in
+`src/evidence.ts` reports four outcomes, and `unreachable` and `mismatch` are kept apart: the first
+was never auditable, the second means a bundle exists and has been edited.
+
+**Integrity shows the checks that passed.** Orphaned hashes were computed and rendered only when
+non-empty, so a reader never learned that zero was the result of looking. A zero that is shown is
+a claim; a zero that is hidden is nothing at all.
+
+### Three defects the rewrite surfaced
+
+- **`FillRecord.slippageBps` was documented as "against the quote the agent acted on".** It is the
+  realised shortfall against the **oracle's fair value** — `Executor._shortfallBps` is the
+  definition. The comment had been wrong for months. A correct number under a wrong label is worse
+  than a missing one, and this one nearly shipped into UI copy.
+- **`amountOut` carries two units in one field**: the asset at its own decimals on an entry, USDG
+  at six on an exit. Nothing on the wire carries those decimals, and rendering it blind showed one
+  entry as `642628309.796078`. The field is now only formatted when `isExit` is true, and the
+  interface says why.
+- **`select` never had a pointer cursor.** `label:has(select)` set the wrapper and the control
+  painted over it, so every sort dropdown in the console showed an arrow. Fixed in the base layer,
+  which fixes `/assets` too.
+
+### What was deliberately not built
+
+A thesis has no page of its own. Everything it can say fits on its row in the `Theses` list, and
+its one action — following the basket — lives on the detail of any receipt that executed it, where
+the fill that proves it sits beside it. A third route would have been a page whose whole content
+was a link to another page.

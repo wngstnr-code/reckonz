@@ -3,18 +3,26 @@ import { Exit } from './components/Exit';
 import { Fill } from './components/Fill';
 import { Mandate } from './components/Mandate';
 import { MandateManage } from './components/MandateManage';
-import { Theses } from './components/Theses';
+import { Theses } from './components/console/receipts/Theses';
 import { Wallet } from './components/Wallet';
 import { MAINNET, TESTNET } from '@/src/deployments';
 import { DEFAULT_MANDATE } from '@/src/guard';
 import { pickProvider } from '@/src/provider';
+import { toWire } from '@/src/receipts-view';
+import { loadRegistry } from '@/src/track-record';
 
 export const dynamic = 'force-dynamic';
 
 /** Server component: the deployment and provider facts come from the same
  *  modules the pipeline uses, so the header cannot drift from the engine. */
-export default function Page() {
+export default async function Page() {
   const deployments = [TESTNET, MAINNET].filter((d) => d !== null);
+  // The prototype surface predates `/receipts` and still stacks every panel on
+  // one page. `Theses` reads its data from a prop now rather than fetching it
+  // itself, so the page that owns the layout is the page that loads it.
+  const snapshot = await loadRegistry()
+    .then(toWire)
+    .catch(() => null);
   let provider: string;
   try {
     provider = pickProvider().label;
@@ -72,7 +80,7 @@ export default function Page() {
 
         <MandateManage />
 
-        <Theses />
+        {snapshot && <Theses theses={snapshot.theses} />}
 
         <Fill />
 

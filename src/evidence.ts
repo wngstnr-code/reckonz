@@ -156,3 +156,61 @@ export async function readEvidence(hash: Hex): Promise<EvidenceBundle | null> {
 export function verifyEvidence(bundle: EvidenceBundle, claimed: Hex): boolean {
   return evidenceHash(bundle).toLowerCase() === claimed.toLowerCase();
 }
+
+/**
+ * Where a bundle was found, and whether it still hashes to what the chain says.
+ *
+ * `unreachable` and `mismatch` are different failures and only one of them is
+ * ours: a bundle nobody archived was never auditable, and a bundle that no
+ * longer re-derives its hash has been edited. Collapsing them into "not
+ * verified" would hide the second inside the first.
+ */
+export type EvidenceCheck =
+  | { kind: 'none' }
+  | { kind: 'verified'; source: 'file' | 'blob'; url: string | null }
+  | { kind: 'mismatch'; source: 'file' | 'blob' }
+  | { kind: 'unreachable' };
+
+const ZERO_EVIDENCE = '0x0000000000000000000000000000000000000000000000000000000000000000';
+
+/**
+ * Check one receipt's evidence hash against the bundle it claims.
+ *
+ * Disk first, then the archive, for the reason `readEvidence` gives — but this
+ * reports which of the two answered, because only the archive is a URL a
+ * stranger can open. A bundle that exists solely on the machine that made it is
+ * a private record, and rendering it as a public one would be the loudest kind
+ * of lie this page could tell.
+ *
+ * Never throws: a page about twenty receipts must not fail because one bundle
+ * is missing.
+ */
+export async function checkEvidence(claimed: string): Promise<EvidenceCheck> {
+  if (!claimed || claimed.toLowerCase() === ZERO_EVIDENCE) return { kind: 'none' };
+  const hash = claimed as Hex;
+
+  const { readFile } = await import('node:fs/promises');
+  try {
+    const bundle = JSON.parse(await readFile(evidencePath(hash), 'utf8')) as EvidenceBundle;
+    return verifyEvidence(bundle, hash)
+      ? { kind: 'verified', source: 'file', url: null }
+      : { kind: 'mismatch', source: 'file' };
+  } catch {
+    /* not on this machine — the archive is the only other place it can be */
+  }
+
+  const { EVIDENCE_BLOB_BASE, evidenceKey } = await import('./evidence-store');
+  if (!EVIDENCE_BLOB_BASE) return { kind: 'unreachable' };
+
+  const url = `${EVIDENCE_BLOB_BASE.replace(/\/$/, '')}/${evidenceKey(hash)}`;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return { kind: 'unreachable' };
+    const bundle = (await response.json()) as EvidenceBundle;
+    return verifyEvidence(bundle, hash)
+      ? { kind: 'verified', source: 'blob', url }
+      : { kind: 'mismatch', source: 'blob' };
+  } catch {
+    return { kind: 'unreachable' };
+  }
+}

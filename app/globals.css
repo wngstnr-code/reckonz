@@ -255,7 +255,11 @@
   [role='tab'],
   [role='option'],
   label:has(input[type='checkbox']),
-  label:has(select) {
+  label:has(select),
+  /* The control itself, not only the label around it. `label:has(select)` sets
+     the wrapper and the select paints over it, so every sort dropdown in the
+     console still showed an arrow. */
+  select:not(:disabled) {
     cursor: pointer;
   }
   button:disabled {

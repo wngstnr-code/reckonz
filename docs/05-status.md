@@ -16,7 +16,7 @@ colliding. `06-assessment.md` is the honest read on whether this is a business.
 ```bash
 cd /Users/mac/Desktop/okxai
 set -a && source .env && set +a     # PRIVATE_KEY, GEMINI_API_KEY, CASH
-pnpm typecheck && pnpm test         # expect: clean, 281 unit tests, then 106 passed
+pnpm typecheck && pnpm test         # expect: clean, 287 unit tests, then 106 passed
 git status --short                  # expect: clean; docs/ is tracked now, not ignored
 pnpm dev                            # the web app, port 3000 (falls back if taken)
 ```
@@ -699,7 +699,15 @@ reminder.
 
 ## Log
 
-**2026-08-19 (latest, twenty-eighth)** — **the exit path driven through the rebuilt card, for the
+**2026-08-19 (latest, twenty-ninth)** — **`/receipts` rebuilt receipt-first** (D98). It was a list
+of theses on a page called Receipts: six of twenty receipts rendered in full, fourteen given one
+line holding a ticker and a timestamp. Now a card grid with filters and a table toggle in `/assets`'
+own shape, a `/receipts/[id]` detail that actually re-derives the evidence hash, a compact `Theses`
+list, and an `Integrity` block that shows the checks which passed. Server-rendered from
+`loadRegistry()` rather than fetched from `/api/theses` on mount, so the page arrives holding
+numbers. Six new unit tests over the aggregation, 281 → 287.
+
+**2026-08-19 (twenty-eighth)** — **the exit path driven through the rebuilt card, for the
 first time**. Everything about Sell was a "logic untouched" claim until now. Receipt **#19**, block
 68358800, `status: success`, 570,299 gas: the whole wNVDAx position, 0.002288687254507964 units, out
 for 0.505138 USDG net of the fee, against a floor of 0.500807. Oracle 7s old, shortfall **2 bps
@@ -790,7 +798,7 @@ the `sessionStorage` hand-off, so arriving at `/trade` from a published thesis �
 produces a follow — the fill panel's follow banner never rendered, while the thesis hash still rode
 along on the fill.
 
-`pnpm typecheck` clean, 281 unit tests pass, `pnpm build` clean, `/trade` now server-rendered per
+`pnpm typecheck` clean, 287 unit tests pass, `pnpm build` clean, `/trade` now server-rendered per
 request. Nav and footer untouched.
 
 **2026-08-18 (twenty-fourth)** — **the worker's price history is in the repo, and the

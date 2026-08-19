@@ -1,5 +1,6 @@
 import type { Board } from '@/src/board';
 import { usd } from './board-format';
+import { Figure } from './Figure';
 
 /**
  * The three numbers a reader should carry away, sized for the green frame.
@@ -41,33 +42,6 @@ export function BoardFigures({ board }: { board: Board }) {
           {largest.symbol} alone, {usd(largest.usdg)}
         </Figure>
       )}
-    </div>
-  );
-}
-
-/**
- * One number, with the thing that stops it being read alone underneath.
- *
- * Smaller than the same figure was outside the frame. It shares the row with a
- * heading now, and a 36px number beside a 23px title reads as the title being
- * the caption rather than the other way round.
- */
-function Figure({
-  label,
-  value,
-  children,
-}: {
-  label: string;
-  value: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="min-w-0">
-      <div className="font-mono text-[10.5px] tracking-wide text-cta-3 uppercase">{label}</div>
-      <div className="mt-1.5 font-mono text-[27px] leading-none font-semibold text-cta-ink">
-        {value}
-      </div>
-      <div className="mt-1.5 text-[12.5px] whitespace-nowrap text-cta-3">{children}</div>
     </div>
   );
 }

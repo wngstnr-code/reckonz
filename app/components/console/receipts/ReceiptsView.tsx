@@ -1,84 +1,95 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type { Board, BoardAsset } from '@/src/board';
-import { AssetCard } from './AssetCard';
-import { BoardTable } from './BoardTable';
-import { verdictOf } from './board-format';
-import { ChevronMark, GridMark, RowsMark, SearchMark } from './marks';
+import { shortfallMeasured } from '@/src/abi';
+import type { ViewReceipt } from '@/src/receipts-view';
+import { hasEvidence } from '@/src/receipts-view';
+import { ChevronMark, GridMark, RowsMark, SearchMark } from '../marks';
+import { ReceiptCard } from './ReceiptCard';
+import { ReceiptsTable } from './ReceiptsTable';
+import { notionalOf } from './format';
 
 /**
- * The controls, and the two ways to look at the same thirty rows.
+ * The controls, and the two ways to look at the same receipts.
  *
- * Ondo ships both a card grid and a table behind one toggle, and the reason is
- * the same one that made this a decision rather than a preference: browsing and
- * comparing are different jobs. A card is quicker to take in; a column is the
- * only way to see that one asset absorbs twenty times what the next one does.
- * Cards lead because most arrivals are browsing, and the table is one click
- * away for the moment they are not.
+ * Copied in structure from `BoardView` rather than reinvented: a reader who has
+ * used the board already knows this row, and two consoles with two different
+ * control bars read as two products.
  *
  * Filtering and sorting live here rather than in either view, so a card and a
  * row can never disagree about what is on screen or in what order.
  */
 
 type View = 'grid' | 'table';
-type Filter = 'all' | 'tradable' | 'allowed' | 'refused' | 'dry';
-type Sort = 'capacity' | 'gap' | 'symbol' | 'value';
+type Filter = 'all' | 'entries' | 'exits' | 'thesis' | 'unmeasured' | 'unaudited';
+type Sort = 'recent' | 'oldest' | 'slippage' | 'notional';
 
 const FILTERS: { id: Filter; label: string }[] = [
-  { id: 'all', label: 'All assets' },
-  { id: 'tradable', label: 'Tradable' },
-  { id: 'allowed', label: 'Allowed' },
-  { id: 'refused', label: 'Refused' },
-  { id: 'dry', label: 'No depth' },
+  { id: 'all', label: 'All' },
+  { id: 'entries', label: 'Entries' },
+  { id: 'exits', label: 'Exits' },
+  { id: 'thesis', label: 'With a thesis' },
+  { id: 'unmeasured', label: 'Unmeasured' },
+  { id: 'unaudited', label: 'No evidence' },
 ];
 
 const SORTS: { id: Sort; label: string }[] = [
-  { id: 'capacity', label: 'Deepest first' },
-  { id: 'gap', label: 'Riskiest first' },
-  { id: 'value', label: 'Highest price' },
-  { id: 'symbol', label: 'A to Z' },
+  { id: 'recent', label: 'Newest first' },
+  { id: 'oldest', label: 'Oldest first' },
+  { id: 'slippage', label: 'Widest shortfall' },
+  { id: 'notional', label: 'Largest first' },
 ];
 
-export function BoardView({ board, sizeUsdg }: { board: Board; sizeUsdg: number }) {
+export function ReceiptsView({ receipts }: { receipts: ViewReceipt[] }) {
   const [view, setView] = useState<View>('grid');
   const [filter, setFilter] = useState<Filter>('all');
-  const [sort, setSort] = useState<Sort>('capacity');
+  const [sort, setSort] = useState<Sort>('recent');
   const [query, setQuery] = useState('');
 
   const shown = useMemo(() => {
     const needle = query.trim().toLowerCase();
 
-    const matches = (a: BoardAsset) => {
-      if (needle && !`${a.symbol} ${a.name ?? ''}`.toLowerCase().includes(needle)) return false;
+    const matches = (r: ViewReceipt) => {
+      if (needle) {
+        const hay = `#${r.id} ${r.fills.map((f) => f.symbol).join(' ')} ${r.evidenceHash}`;
+        if (!hay.toLowerCase().includes(needle)) return false;
+      }
       if (filter === 'all') return true;
-      const kind = verdictOf(a, sizeUsdg).kind;
-      if (filter === 'tradable') return a.depth === 'ok';
-      if (filter === 'allowed') return kind === 'allowed';
-      if (filter === 'refused') return kind === 'refused';
-      return kind === 'dry' || kind === 'unreadable';
+      if (filter === 'entries') return r.fills.some((f) => !f.isExit);
+      if (filter === 'exits') return r.fills.some((f) => f.isExit);
+      if (filter === 'thesis') return r.thesisId !== null;
+      // The two filters that exist to surface a problem rather than a category:
+      // without them a reader finds D77's cases only by scrolling twenty cards.
+      //
+      // Kept apart because they are different failures. A sale nothing priced
+      // still has a full record of the decision behind it; a receipt with no
+      // evidence hash has none, whatever its shortfall reads as. One chip
+      // covering both would have made the label a small lie.
+      if (filter === 'unmeasured') return r.fills.some((f) => !shortfallMeasured(f));
+      return !hasEvidence(r);
     };
 
-    const cap = (a: BoardAsset) => a.capacityUsdg[50] ?? -1;
+    const worst = (r: ViewReceipt) =>
+      r.fills.length ? Math.max(...r.fills.map((f) => f.slippageBps)) : -1;
 
-    return board.assets.filter(matches).sort((a, b) => {
-      if (sort === 'capacity') return cap(b) - cap(a);
-      if (sort === 'gap') return b.gapRisk - a.gapRisk;
-      if (sort === 'value') return (b.fairValue ?? -1) - (a.fairValue ?? -1);
-      return a.symbol.localeCompare(b.symbol);
+    return receipts.filter(matches).sort((a, b) => {
+      if (sort === 'recent') return b.id - a.id;
+      if (sort === 'oldest') return a.id - b.id;
+      if (sort === 'slippage') return worst(b) - worst(a);
+      return Number(BigInt(notionalOf(b)) - BigInt(notionalOf(a)));
     });
-  }, [board.assets, filter, query, sort, sizeUsdg]);
+  }, [receipts, filter, query, sort]);
 
   return (
     <>
       <div className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-3">
         <label className="relative">
-          <span className="sr-only">Search assets</span>
+          <span className="sr-only">Search receipts</span>
           <SearchMark className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-faint" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search asset name or ticker"
+            placeholder="Search ticker, receipt or hash"
             spellCheck={false}
             className="w-[19rem] rounded-lg border border-line py-2 pr-3 pl-9 text-data outline-none placeholder:text-faint focus:border-signal-deep"
           />
@@ -105,7 +116,11 @@ export function BoardView({ board, sizeUsdg }: { board: Board; sizeUsdg: number 
             <ViewButton active={view === 'grid'} onClick={() => setView('grid')} label="Card view">
               <GridMark className="h-4 w-4" />
             </ViewButton>
-            <ViewButton active={view === 'table'} onClick={() => setView('table')} label="Table view">
+            <ViewButton
+              active={view === 'table'}
+              onClick={() => setView('table')}
+              label="Table view"
+            >
               <RowsMark className="h-4 w-4" />
             </ViewButton>
           </div>
@@ -129,19 +144,19 @@ export function BoardView({ board, sizeUsdg }: { board: Board; sizeUsdg: number 
       </div>
 
       {shown.length === 0 ? (
-        // Not an empty grid. Nothing matching a filter and nothing existing are
-        // different facts, and only one of them is about the market.
+        // Nothing matching a filter and nothing existing are different facts,
+        // and only one of them is about the chain.
         <p className="rounded-xl border border-line bg-panel px-4 py-6 text-data text-dim">
-          No asset matches that. {board.assets.length} were measured.
+          No receipt matches that. {receipts.length} have settled.
         </p>
       ) : view === 'grid' ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-          {shown.map((a) => (
-            <AssetCard key={a.symbol} asset={a} sizeUsdg={sizeUsdg} />
+          {shown.map((r) => (
+            <ReceiptCard key={r.id} receipt={r} />
           ))}
         </div>
       ) : (
-        <BoardTable assets={shown} sizeUsdg={sizeUsdg} />
+        <ReceiptsTable receipts={shown} />
       )}
     </>
   );

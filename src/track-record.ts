@@ -27,7 +27,7 @@ import { RECEIPT_REGISTRY_ABI, THESIS_REGISTRY_ABI } from './abi';
 import { client, serial, USDG } from './chain';
 import { MAINNET } from './deployments';
 import { readIndex } from './indexer';
-import { loadToken } from './pool';
+import { loadToken, type TokenInfo } from './pool';
 
 const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
@@ -39,10 +39,27 @@ export interface FillRecord {
   isExit: boolean;
   /** USDG in, 6 decimals. */
   amountInUsdg: bigint;
+  /**
+   * What came back, and **the unit depends on the direction**: the asset on an
+   * entry, at the asset's own decimals, and USDG at six on an exit.
+   *
+   * Nothing here carries those decimals, so a consumer that formats this field
+   * without checking `isExit` will print an entry at the wrong scale -- one
+   * showed as 642,628,309 of something before the receipts page stopped
+   * rendering it for entries at all. Only format this when `isExit` is true.
+   */
   amountOut: bigint;
   /** Realised price, 8 decimals. */
   executionPriceE8: bigint;
-  /** Realised slippage against the quote the agent acted on. */
+  /**
+   * Realised shortfall against the **oracle's fair value** at execution, not
+   * against the quote. `Executor._shortfallBps` is the definition; this comment
+   * said "against the quote the agent acted on" and was wrong for months, which
+   * is the kind of error that makes a correct number mean the wrong thing.
+   *
+   * One-sided by design: buying below fair value records 0, as does selling
+   * above it. Zero is "no worse than fair", never "exactly fair".
+   */
   slippageBps: number;
   /** The oracle's fair value at execution time, 8 decimals. */
   fairValueE8: bigint;
@@ -151,10 +168,10 @@ function registryAddresses() {
  * `addressBySymbol()` in pool.ts loads all 30 xStocks; a track record touches a
  * handful, and the public RPC is the scarce resource here.
  */
-async function symbolsFor(assets: Address[]): Promise<Map<Address, string>> {
+async function symbolsFor(assets: Address[]): Promise<Map<Address, TokenInfo>> {
   const unique = [...new Set(assets.map((a) => a.toLowerCase() as Address))];
   const tokens = await serial(unique, (a: Address) => loadToken(a));
-  return new Map(tokens.map((t) => [t.address.toLowerCase() as Address, t.symbol]));
+  return new Map(tokens.map((t) => [t.address.toLowerCase() as Address, t]));
 }
 
 /**
@@ -207,7 +224,7 @@ async function loadReceipts(registry: Address): Promise<ReceiptRecord[]> {
       blockNumber: receipt.blockNumber,
       fills: fills.map((f) => ({
         asset: f.asset,
-        symbol: symbols.get(f.asset.toLowerCase() as Address) ?? f.asset,
+        symbol: symbols.get(f.asset.toLowerCase() as Address)?.symbol ?? f.asset,
         isExit: f.isExit,
         amountInUsdg: f.amountInUsdg,
         amountOut: f.amountOut,
