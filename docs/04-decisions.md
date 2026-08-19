@@ -5495,3 +5495,56 @@ that has to interrupt.
 **The bullets in *what you are about to sign* are drawn dots.** They were `·` characters, which at
 14px are nearly invisible, and a text bullet also sits inside the paragraph so a wrapped line lands
 under the marker instead of under the first word. A real marker hangs outside the text.
+
+---
+
+## D96 — $250 read as a minimum and never was one
+
+Asked on 2026-08-19: X Layer is a new market, so what happens to somebody who wants $5 of an
+xStock, when the board starts at $250?
+
+**Nothing stops them.** `LADDER_USDG` is the grid of sizes the board *measures*, not a floor on
+trading. The smallest fill on this deployment is **0.5 USDG** and the live mandate caps at 1 USDG
+per trade. Nothing in the guard, the executor or Permit2 has a minimum. What binds at small size is
+not the market:
+
+| | at $5 |
+|---|---|
+| Gas | 579,643 at 0.02 gwei = **0.0000116 OKB**, measured on receipt #18 |
+| Execution fee | taken off the top before anything reaches a pool, recorded separately |
+| Price impact | strictly **smaller** than at $250, so any market allowed at $250 is allowed at $5 |
+
+Everything that could refuse a $5 fill — gap risk, staleness, distance from fair value — is
+size-independent and binds identically at $250.
+
+**So the defect was not in what the system does, it was in what the page could say.** `verdictOf`
+answers only for a size the board actually walked, and refuses to interpolate: falling back to the
+nearest rung would answer a $50,000 question with a $250 decision, and it would fail in the one
+direction a verdict must never fail in. Correct, and it means the slider's floor is also the floor
+of what the product will discuss. **A page whose smallest answer is 500x the size we ourselves
+trade at is describing somebody else's market.**
+
+`LADDER_USDG` now starts at **25** and adds **100**. Two rungs rather than four, deliberately: impact
+is already near zero down there, and each extra rung only adds another position where every asset is
+allowed, under a curve whose whole argument is where they stop being allowed. Measured on the new
+ladder, live:
+
+```
+25: 19/19   100: 19/19   250: 19/19   500: 19/19   1,000: 14/19
+2,500: 9/19   5,000: 4/19   10,000: 1/19   25,000: 1/19   50,000: 1/19
+```
+
+Four flat positions before the collapse starts rather than two. That is the cost, and it is worth
+paying: retail size working and institutional size failing is a *truer* description of this market
+than one that begins where retail has already left.
+
+**Rungs are free.** `loadVenues` is the expensive call, once per asset; every rung after it is
+arithmetic over pool state already in memory. The walk still took 92s for thirty assets with ten
+rungs. Nothing else needed changing either — `SizeControl`, `Board` and `DepthCurve` all read
+`board.ladderUsdg` rather than the constant, so the UI follows whatever was measured.
+
+**One thing to know about when it appears.** `fetchBoard` prefers the blob unconditionally and treats
+the committed file as a floor, so re-measuring locally and committing does *not* change what the site
+shows while an archive exists. The new rungs arrive when the **worker** re-measures with this code
+deployed. Committing the file still matters for a clone with no archive, and it now carries the new
+ladder.

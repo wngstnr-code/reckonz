@@ -9,7 +9,7 @@ import type { BoardAsset } from '@/src/board';
  * to that price when *you* are the one buying. A shallow curve is a market that
  * can take size. One that leaves the frame is one that cannot.
  *
- * **It is drawn from the ladder, not from a shape.** Those eight points are the
+ * **It is drawn from the ladder, not from a shape.** Those points are the
  * real measurement — `bestQuote` against live pool state at eight sizes — so a
  * card whose curve looks alarming is showing an alarming market rather than a
  * decorative squiggle.

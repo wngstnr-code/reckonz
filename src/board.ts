@@ -47,8 +47,21 @@ export const CAPACITY_LIMITS_BPS = [50, 100, 200, 500] as const;
  * what refuses assets now is `PRICE_IMPACT`, and impact is a function of size.
  * "22 refused" is not a fact about the market, it is the answer to "refused at
  * what size" — so the board carries the whole ladder and the page can ask.
+ *
+ * **It starts at $25, not $250.** The old floor read as a minimum trade size and
+ * never was one: the smallest fill on this deployment is 0.5 USDG and the live
+ * mandate caps at 1. On a chain this new the sizes people actually arrive with
+ * are small, and a page whose smallest answer is 500x the size we trade at is
+ * describing somebody else's market. Two rungs rather than four, because impact
+ * is already near zero down here and each extra one only adds another row of
+ * "allowed" under a curve whose argument is where it stops being allowed.
+ *
+ * Rungs are free. `loadVenues` is the expensive call, once per asset; every rung
+ * after it is arithmetic over pool state already in memory.
  */
-export const LADDER_USDG = [250, 500, 1_000, 2_500, 5_000, 10_000, 25_000, 50_000] as const;
+export const LADDER_USDG = [
+  25, 100, 250, 500, 1_000, 2_500, 5_000, 10_000, 25_000, 50_000,
+] as const;
 
 export interface Rung {
   sizeUsdg: number;
