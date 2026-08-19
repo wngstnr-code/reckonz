@@ -5441,3 +5441,36 @@ Fixed with `max-h-[calc(100vh-3rem)]` and `overflow-y-auto`, so the card scrolls
 Worth naming: a sticky element that can outgrow the viewport has to be scrollable, or it is a panel
 whose most important control is the one you cannot reach. It took a real fill to notice, because
 every screenshot until then was of a card with no quote in it.
+
+### D95, amended — the plan reads as blocks, and one fill has now gone through
+
+**The first real fill through the rebuilt page landed on 2026-08-19**: mandate #1, 0.5 USDG into
+wNVDAx, tx `0x6b3cbb5a3592de54861b43c3d9dfae97fb7f5d2a81c0446b715a477b21a20995`, block 68352279,
+`status: success`, 579,643 gas. 0.002274338923847281 wNVDAx into the owner's own wallet. The whole
+path — quote, guard verdict, evidence hash, Permit2 approval, signature, execute, balance poll —
+worked end to end on the new surface. Until this, everything on this page was rendering verified and
+execution assumed.
+
+**The plan was still the old page's shape.** A run of `Legend` headings over flat lists with a fixed
+label column, which was right at 900px and is neither aligned nor readable at 400. And it sat on the
+card's own ground while every other group of facts on the page sits on something.
+
+`Readout.tsx` gives it the same language as the rest: each group a `well` block like the swap box,
+each row a label on the left and the measurement on the right in mono, the caveat under the value
+rather than trailing it — at this width a value and its caveat on one line wrap into each other and
+stop being two facts.
+
+One thing that only shows on a real quote: **`overflow-wrap: break-word` does not break an evidence
+hash.** A 66-character hex string has no break opportunity, so the evidence block measured 679px of
+content in a 360px column and simply overflowed the rail. `[overflow-wrap:anywhere]` fixes it;
+measured again at zero overflowing elements. Worth knowing wherever this design puts a hash or an
+address in a narrow column.
+
+### Why the allowlist form takes one asset at a time
+
+Because `PolicyGuard.setAssetAllowed(mandateId, asset, allowed)` takes one asset. `createMandate`
+accepts an array — that is the only place a batch exists — and there is no array setter afterwards.
+So allowing three assets is three transactions and three signatures whatever the form looks like.
+A multi-select would gather them into one control and then produce three wallet prompts in a row,
+which hides the cost rather than removing it. Left as one at a time, on the same reasoning the fill
+card uses: one signature, one act.

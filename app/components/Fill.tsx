@@ -19,8 +19,9 @@ import {
 } from './follow';
 import { useFollow } from './useFollow';
 import { SwapBox, SwapLeg, TokenChip } from './console/trade/SwapBox';
+import { Aside, Line, Readout } from './console/trade/Readout';
 import { Chevron, MenuList, useMenu } from './console/trade/Menu';
-import { Legend, Num, Pill, tokenAmount } from './ui';
+import { Num, Pill, tokenAmount } from './ui';
 import { useWallet } from './useWallet';
 
 /**
@@ -560,9 +561,7 @@ export function Fill() {
         </p>
       ) : loadError ? (
         <div className="rounded-lg border border-refuse/40 bg-refuse/6 px-4 py-3">
-          <p className="font-mono text-meta leading-relaxed break-words text-refuse">
-            {loadError}
-          </p>
+          <p className="font-mono text-meta leading-relaxed break-words text-refuse">{loadError}</p>
           <p className="mt-1 text-meta text-faint">
             The chain could not be read, which is not the same as owning no mandate.
           </p>
@@ -625,7 +624,9 @@ export function Fill() {
                 right={
                   mandate && cash ? (
                     <button
-                      onClick={() => setAmount(formatUnits(mandate.maxNotionalPerTrade, cash.decimals))}
+                      onClick={() =>
+                        setAmount(formatUnits(mandate.maxNotionalPerTrade, cash.decimals))
+                      }
                       className="font-mono text-meta text-faint underline decoration-dotted hover:text-ink"
                     >
                       max {formatUnits(mandate.maxNotionalPerTrade, cash.decimals)}
@@ -674,8 +675,8 @@ export function Fill() {
 
           {follow && !carriesThesis && (
             <p className="mt-2 text-meta leading-relaxed text-caution">
-              Not an asset thesis #{follow.thesisId} held ({follow.symbols.join(', ')}), so this fill
-              will <em>not</em> carry its hash.
+              Not an asset thesis #{follow.thesisId} held ({follow.symbols.join(', ')}), so this
+              fill will <em>not</em> carry its hash.
             </p>
           )}
 
@@ -693,32 +694,34 @@ export function Fill() {
 
           {plan?.verdict.allow && (
             <>
-              <Legend>what you are about to sign</Legend>
-              <ul className="mb-3 grid gap-0.5">
-                {describePermit(
-                  {
-                    token: plan.cash,
-                    amount: BigInt(plan.amountIn),
-                    spender: plan.executor,
-                    owner: address,
-                    chainId: option.chain.id,
-                  },
-                  // The permit is built when you commit, moments from now, so
-                  // this is the TTL it will carry rather than one already running.
-                  BigInt(Math.floor(Date.now() / 1000) + PERMIT_TTL_SEC),
-                  'USDG',
-                  plan.cashDecimals,
-                ).map((line) => (
-                  <li key={line} className="font-mono text-meta text-dim">
-                    · {line}
-                  </li>
-                ))}
-              </ul>
+              <div className="mt-2.5 rounded-xl bg-well px-3.5 py-3">
+                <h3 className="text-micro text-faint uppercase">what you are about to sign</h3>
+                <ul className="mt-2 grid gap-1.5">
+                  {describePermit(
+                    {
+                      token: plan.cash,
+                      amount: BigInt(plan.amountIn),
+                      spender: plan.executor,
+                      owner: address,
+                      chainId: option.chain.id,
+                    },
+                    // The permit is built when you commit, moments from now, so
+                    // this is the TTL it will carry rather than one already running.
+                    BigInt(Math.floor(Date.now() / 1000) + PERMIT_TTL_SEC),
+                    'USDG',
+                    plan.cashDecimals,
+                  ).map((line) => (
+                    <li key={line} className="text-meta leading-relaxed [overflow-wrap:anywhere] text-dim">
+                      · {line}
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
               <button
                 onClick={fill}
                 disabled={busy || shortOfCash}
-                className="w-full rounded-xl bg-ink px-4 py-3.5 text-data font-semibold text-ground hover:opacity-90 disabled:opacity-30"
+                className="mt-4 w-full rounded-xl bg-ink px-4 py-3.5 text-data font-semibold text-ground hover:opacity-90 disabled:opacity-30"
               >
                 {phase.kind === 'approving'
                   ? 'approving Permit2 in your wallet…'
@@ -737,8 +740,8 @@ export function Fill() {
 
           {phase.kind === 'confirming' && (
             <p className="mt-3 text-meta leading-relaxed text-faint">
-              Mined. The public RPC load-balances, so a confirmed write is not immediately
-              readable. Polling until the balance moves rather than reporting a zero (D18).
+              Mined. The public RPC load-balances, so a confirmed write is not immediately readable.
+              Polling until the balance moves rather than reporting a zero (D18).
             </p>
           )}
 
@@ -799,146 +802,120 @@ export function Fill() {
 function Plan({ plan }: { plan: WirePlan }) {
   return (
     <>
-      <Legend>quote</Legend>
-      <ul className="grid gap-0.5 font-mono text-meta tabular-nums">
-        <Row label="buys">
-          <Num>{plan.quote.out.toFixed(6)}</Num> {plan.symbol} at{' '}
-          <Num>{plan.quote.effectivePrice.toFixed(4)}</Num>
-        </Row>
-        <Row label="impact">
-          <Num tone={plan.quote.impactBps > 50 ? 'caution' : undefined}>
-            {(plan.quote.impactBps / 100).toFixed(2)}%
-          </Num>{' '}
-          <span className="text-faint">
-            fee tier {plan.quote.feeTier} · pool {plan.quote.pool.slice(0, 10)}…, the one the
-            executor derives
-          </span>
-        </Row>
-        <Row label="floor">
-          {formatUnits(BigInt(plan.leg.minAmountOut), plan.decimals)} {plan.symbol}{' '}
-          <span className="text-faint">or the swap reverts</span>
-        </Row>
-      </ul>
+      <Readout title="quote">
+        <Line label="Buys" note={`at ${plan.quote.effectivePrice.toFixed(4)}`}>
+          {plan.quote.out.toFixed(6)} {plan.symbol}
+        </Line>
+        <Line
+          label="Impact"
+          tone={plan.quote.impactBps > 50 ? 'caution' : undefined}
+          note={`fee tier ${plan.quote.feeTier} · pool ${plan.quote.pool.slice(0, 10)}…, the one the executor derives`}
+        >
+          {(plan.quote.impactBps / 100).toFixed(2)}%
+        </Line>
+        <Line label="Floor" note="or the swap reverts">
+          {formatUnits(BigInt(plan.leg.minAmountOut), plan.decimals)} {plan.symbol}
+        </Line>
+      </Readout>
 
-      <Legend>oracle</Legend>
-      <ul className="grid gap-0.5 font-mono text-meta tabular-nums">
-        <Row label="fair value">
-          {plan.oracle.hasValue ? (
-            <>
-              <Num tone={plan.oracle.stale ? 'caution' : undefined}>
-                {e8(plan.oracle.fairValueE8)}
-              </Num>{' '}
-              <span className="text-faint">
-                ±{(plan.oracle.confidenceBps / 100).toFixed(2)}% · {plan.oracle.ageSeconds}s old
-              </span>
-            </>
-          ) : (
-            <span className="text-caution">
-              withheld, the oracle will not defend a number for this asset
-            </span>
-          )}
-        </Row>
-        {plan.oracle.stale && (
-          <Row label="">
-            <span className="text-caution">
-              past the oracle&apos;s {plan.oracle.maxAgeSeconds}s freshness limit, so the guard
-              refuses on age alone. The publisher is not running
-            </span>
-          </Row>
-        )}
-        <Row label="gap risk">
-          <Num tone={plan.oracle.gapRisk > 50 ? 'caution' : undefined}>{plan.oracle.gapRisk}</Num>
-        </Row>
-        <Row label="predicted">
-          <Num>{e8(plan.predicted.executionPriceE8)}</Num>{' '}
-          <span className="text-faint">
-            paid, {plan.predicted.slippageBps} bps above fair value
-          </span>
-        </Row>
-      </ul>
-
-      <Legend>verdict</Legend>
-      <div className="mb-1 flex flex-wrap items-center gap-2">
-        {plan.verdict.allow ? (
-          <Pill tone="ok">ALLOW</Pill>
+      <Readout title="oracle">
+        {plan.oracle.hasValue ? (
+          <Line
+            label="Fair value"
+            tone={plan.oracle.stale ? 'caution' : undefined}
+            note={`±${(plan.oracle.confidenceBps / 100).toFixed(2)}% · ${plan.oracle.ageSeconds}s old`}
+          >
+            {e8(plan.oracle.fairValueE8)}
+          </Line>
         ) : (
-          <Pill tone="warn">REJECT · {plan.verdict.reason}</Pill>
+          <Aside tone="caution">
+            No fair value: the oracle will not defend a number for this asset.
+          </Aside>
         )}
-        {plan.verdict.offendingAsset && (
-          <span className="font-mono text-meta text-faint">
-            on {plan.verdict.offendingAsset}
-          </span>
+        {plan.oracle.stale && (
+          <Aside tone="caution">
+            Past the oracle&apos;s {plan.oracle.maxAgeSeconds}s freshness limit, so the guard
+            refuses on age alone. The publisher is not running.
+          </Aside>
+        )}
+        <Line label="Gap risk" tone={plan.oracle.gapRisk > 50 ? 'caution' : undefined}>
+          {plan.oracle.gapRisk}
+        </Line>
+        <Line label="Predicted" note={`paid, ${plan.predicted.slippageBps} bps above fair value`}>
+          {e8(plan.predicted.executionPriceE8)}
+        </Line>
+      </Readout>
+
+      <div className="mt-2.5 rounded-xl bg-well px-3.5 py-3">
+        <h3 className="text-micro text-faint uppercase">verdict</h3>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {plan.verdict.allow ? (
+            <Pill tone="ok">ALLOW</Pill>
+          ) : (
+            <Pill tone="warn">REJECT · {plan.verdict.reason}</Pill>
+          )}
+          {plan.verdict.offendingAsset && (
+            <span className="font-mono text-meta text-faint">on {plan.verdict.offendingAsset}</span>
+          )}
+        </div>
+        {!plan.verdict.allow && (
+          <p className="mt-2 text-meta leading-relaxed text-dim">
+            Asked before any gas was spent. The same check runs inside the transaction, so executing
+            anyway would revert. This is the trip not taken, not a trip that failed.
+          </p>
         )}
       </div>
-      {!plan.verdict.allow && (
-        <p className="mb-2 text-meta leading-relaxed text-faint">
-          Asked before any gas was spent. The same check runs inside the transaction, so executing
-          anyway would revert. This is the trip not taken, not a trip that failed.
-        </p>
-      )}
 
-      <ul className="grid gap-0.5 font-mono text-meta">
-        <Row label="evidence">
-          <span className="break-all text-dim">{plan.evidence.hash}</span>
-        </Row>
-        <Row label="">
-          {/* The hash goes on chain either way, so an unarchived bundle is not a
-              broken fill — it is a fill nobody can ever audit, which is a
-              different and quieter kind of loss. It used to read "not stored"
-              in the same grey as everything else; in production that was every
-              fill (D80). */}
-          {plan.evidence.persistence.kind === 'none' ? (
-            <span className="text-caution">
-              {!plan.verdict.allow
-                ? 'hashed but not archived, nothing was decided to happen here'
-                : `not archived: ${plan.evidence.persistence.reason}. Download it below, or the hash on chain will point at nothing.`}
-            </span>
-          ) : plan.evidence.persistence.kind === 'blob' ? (
+      <Readout title="evidence">
+        <Line label="Hash">
+          {plan.evidence.hash}
+        </Line>
+        {/* The hash goes on chain either way, so an unarchived bundle is not a
+            broken fill — it is a fill nobody can ever audit, which is a
+            different and quieter kind of loss. It used to read "not stored" in
+            the same grey as everything else; in production that was every fill
+            (D80). */}
+        {plan.evidence.persistence.kind === 'none' ? (
+          <Aside tone="caution">
+            {!plan.verdict.allow
+              ? 'Hashed but not archived: nothing was decided to happen here.'
+              : `Not archived: ${plan.evidence.persistence.reason}. Download it below, or the hash on chain will point at nothing.`}
+          </Aside>
+        ) : plan.evidence.persistence.kind === 'blob' ? (
+          <Aside>
             <a
               href={plan.evidence.persistence.url}
               target="_blank"
               rel="noreferrer"
-              className="break-all text-faint hover:text-signal"
+              className="underline decoration-dotted hover:text-signal"
             >
-              archived, anyone can fetch it and re-derive this hash
+              Archived. Anyone can fetch it and re-derive this hash.
             </a>
-          ) : (
-            <span className="text-faint">
-              written to {plan.evidence.persistence.path}. The hash binds, the file is how anyone
-              checks it
-            </span>
-          )}
-        </Row>
-        <Row label="">
-          {/* Offered whatever happened above: the bundle is the user's own
-              record of what they were shown before they signed. */}
-          <button
-            onClick={() => downloadBundle(plan.evidence.hash, plan.evidence.bundle)}
-            className="text-faint underline decoration-dotted hover:text-signal"
-          >
-            download the bundle
-          </button>
-        </Row>
-        {plan.thesis && (
-          <Row label="thesis">
-            <span className="text-dim">
-              #{plan.thesis.id}, published{' '}
-              {new Date(plan.thesis.publishedAt * 1000).toISOString().slice(0, 16).replace('T', ' ')}
-              Z, before this fill
-            </span>
-          </Row>
+          </Aside>
+        ) : (
+          <Aside>
+            Written to {plan.evidence.persistence.path}. The hash binds, the file is how anyone
+            checks it.
+          </Aside>
         )}
-      </ul>
+        {plan.thesis && (
+          <Line
+            label="Thesis"
+            note={`published ${new Date(plan.thesis.publishedAt * 1000).toISOString().slice(0, 16).replace('T', ' ')}Z, before this fill`}
+          >
+            #{plan.thesis.id}
+          </Line>
+        )}
+        {/* Offered whatever happened above: the bundle is the user's own record
+            of what they were shown before they signed. */}
+        <button
+          onClick={() => downloadBundle(plan.evidence.hash, plan.evidence.bundle)}
+          className="text-left text-meta text-dim underline decoration-dotted hover:text-ink"
+        >
+          Download the bundle
+        </button>
+      </Readout>
     </>
-  );
-}
-
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <li className="flex flex-wrap items-baseline gap-3">
-      <span className="w-20 shrink-0 text-dim">{label}</span>
-      <span className="text-ink">{children}</span>
-    </li>
   );
 }
 

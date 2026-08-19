@@ -17,8 +17,9 @@ import {
   type QuotedDetail,
 } from './follow';
 import { SwapBox, SwapLeg, TokenChip } from './console/trade/SwapBox';
+import { Aside, Line, Readout } from './console/trade/Readout';
 import { Chevron, MenuList, useMenu } from './console/trade/Menu';
-import { Legend, Num, Pill, tokenAmount } from './ui';
+import { Num, Pill, tokenAmount } from './ui';
 import { useWallet } from './useWallet';
 
 /**
@@ -547,9 +548,7 @@ export function Exit() {
         </p>
       ) : loadError ? (
         <div className="rounded-lg border border-refuse/40 bg-refuse/6 px-4 py-3">
-          <p className="font-mono text-meta leading-relaxed break-words text-refuse">
-            {loadError}
-          </p>
+          <p className="font-mono text-meta leading-relaxed break-words text-refuse">{loadError}</p>
           <p className="mt-1 text-meta text-faint">
             The chain could not be read, which is not the same as holding nothing.
           </p>
@@ -707,33 +706,35 @@ export function Exit() {
 
           {plan?.verdict.allow && plan.signable.ok && (
             <>
-              <Legend>what you are about to sign</Legend>
-              <ul className="mb-3 grid gap-0.5">
-                {describePermit(
-                  {
-                    token: plan.leg.asset,
-                    amount: BigInt(plan.leg.amountIn),
-                    spender: plan.executor,
-                    owner: address,
-                    chainId: option.chain.id,
-                  },
-                  // The permit is built when you commit, moments from now, so
-                  // this is the TTL it will carry rather than one already
-                  // running.
-                  BigInt(Math.floor(Date.now() / 1000) + PERMIT_TTL_SEC),
-                  plan.symbol,
-                  plan.decimals,
-                ).map((line) => (
-                  <li key={line} className="font-mono text-meta text-dim">
-                    · {line}
-                  </li>
-                ))}
-              </ul>
+              <div className="mt-2.5 rounded-xl bg-well px-3.5 py-3">
+                <h3 className="text-micro text-faint uppercase">what you are about to sign</h3>
+                <ul className="mt-2 grid gap-1.5">
+                  {describePermit(
+                    {
+                      token: plan.leg.asset,
+                      amount: BigInt(plan.leg.amountIn),
+                      spender: plan.executor,
+                      owner: address,
+                      chainId: option.chain.id,
+                    },
+                    // The permit is built when you commit, moments from now, so
+                    // this is the TTL it will carry rather than one already
+                    // running.
+                    BigInt(Math.floor(Date.now() / 1000) + PERMIT_TTL_SEC),
+                    plan.symbol,
+                    plan.decimals,
+                  ).map((line) => (
+                    <li key={line} className="text-meta leading-relaxed [overflow-wrap:anywhere] text-dim">
+                      · {line}
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
               <button
                 onClick={sell}
                 disabled={busy}
-                className="w-full rounded-xl bg-ink px-4 py-3.5 text-data font-semibold text-ground hover:opacity-90 disabled:opacity-30"
+                className="mt-4 w-full rounded-xl bg-ink px-4 py-3.5 text-data font-semibold text-ground hover:opacity-90 disabled:opacity-30"
               >
                 {phase.kind === 'approving'
                   ? `approving Permit2 for ${plan.symbol} in your wallet…`
@@ -752,8 +753,8 @@ export function Exit() {
 
           {phase.kind === 'confirming' && (
             <p className="mt-3 text-meta leading-relaxed text-faint">
-              Mined. The public RPC load-balances, so a confirmed write is not immediately
-              readable. Polling until the balance moves rather than reporting a zero (D18).
+              Mined. The public RPC load-balances, so a confirmed write is not immediately readable.
+              Polling until the balance moves rather than reporting a zero (D18).
             </p>
           )}
 
@@ -807,150 +808,128 @@ export function Exit() {
 function Plan({ plan }: { plan: WirePlan }) {
   return (
     <>
-      <Legend>quote</Legend>
-      <ul className="grid gap-0.5 font-mono text-meta tabular-nums">
-        <Row label="sells">
-          <Num>{formatUnits(BigInt(plan.units), plan.decimals)}</Num> {plan.symbol} for{' '}
-          <Num>{formatUnits(BigInt(plan.quote.amountOut), plan.cashDecimals)}</Num> USDG
-        </Row>
-        <Row label="price">
-          <Num>{e8(plan.predicted.executionPriceE8)}</Num>{' '}
-          <span className="text-faint">
-            per {plan.symbol}, gross of the execution fee · fee tier {plan.quote.feeTier} · pool{' '}
-            {plan.quote.pool.slice(0, 10)}…, the one the executor derives
-          </span>
-        </Row>
-        <Row label="floor">
-          {formatUnits(BigInt(plan.leg.minAmountOutUsdg), plan.cashDecimals)} USDG{' '}
-          <span className="text-faint">or the swap reverts</span>
-        </Row>
+      <Readout title="quote">
+        <Line
+          label="Sells"
+          note={`for ${formatUnits(BigInt(plan.quote.amountOut), plan.cashDecimals)} USDG`}
+        >
+          {formatUnits(BigInt(plan.units), plan.decimals)} {plan.symbol}
+        </Line>
+        <Line
+          label="Price"
+          note={`per ${plan.symbol}, gross of the execution fee · fee tier ${plan.quote.feeTier} · pool ${plan.quote.pool.slice(0, 10)}…, the one the executor derives`}
+        >
+          {e8(plan.predicted.executionPriceE8)}
+        </Line>
+        <Line label="Floor" note="or the swap reverts">
+          {formatUnits(BigInt(plan.leg.minAmountOutUsdg), plan.cashDecimals)} USDG
+        </Line>
         {plan.quote.considered.length > 1 && (
-          <Row label="tiers">
-            <span className="text-faint">
-              {plan.quote.considered
-                .map((c) => `${c.fee}: ${formatUnits(BigInt(c.out), plan.cashDecimals)}`)
-                .join(' · ')}
-            </span>
-          </Row>
+          <Line label="Tiers">
+            {plan.quote.considered
+              .map((c) => `${c.fee}: ${formatUnits(BigInt(c.out), plan.cashDecimals)}`)
+              .join(' · ')}
+          </Line>
         )}
-      </ul>
+      </Readout>
 
-      <Legend>oracle</Legend>
-      <ul className="grid gap-0.5 font-mono text-meta tabular-nums">
-        <Row label="fair value">
-          {plan.oracle.hasValue ? (
-            <>
-              <Num tone={plan.oracle.stale ? 'caution' : undefined}>
-                {e8(plan.oracle.fairValueE8)}
-              </Num>{' '}
-              <span className="text-faint">
-                ±{(plan.oracle.confidenceBps / 100).toFixed(2)}% · {plan.oracle.ageSeconds}s old
-              </span>
-            </>
-          ) : (
-            <span className="text-caution">
-              withheld, the oracle will not defend a number for this asset
-            </span>
-          )}
-        </Row>
-        <Row label="shortfall">
-          {plan.predicted.shortfallBps === null ? (
-            <span className="text-faint">
-              not measured. A value the oracle has stopped defending would compute a large false
-              shortfall, and the mandate&apos;s slippage limit would then block the exit. The
-              contract catches the same revert and does the same thing.
-            </span>
-          ) : (
-            <>
-              <Num tone={plan.predicted.shortfallBps > 100 ? 'caution' : undefined}>
-                {plan.predicted.shortfallBps}
-              </Num>{' '}
-              <span className="text-faint">bps below fair value</span>
-            </>
-          )}
-        </Row>
-        {plan.oracle.stale && (
-          <Row label="">
-            <span className="text-caution">
-              past the oracle&apos;s {plan.oracle.maxAgeSeconds}s freshness limit. On the way out
-              that is a warning, not a refusal. Trapping an open position because the publisher
-              stopped would be worse than letting it leave (D56). The floor above is the protection.
-            </span>
-          </Row>
-        )}
-      </ul>
-
-      <Legend>verdict</Legend>
-      <div className="mb-1 flex flex-wrap items-center gap-2">
-        {plan.verdict.allow ? (
-          <Pill tone="ok">ALLOW</Pill>
+      <Readout title="oracle">
+        {plan.oracle.hasValue ? (
+          <Line
+            label="Fair value"
+            tone={plan.oracle.stale ? 'caution' : undefined}
+            note={`±${(plan.oracle.confidenceBps / 100).toFixed(2)}% · ${plan.oracle.ageSeconds}s old`}
+          >
+            {e8(plan.oracle.fairValueE8)}
+          </Line>
         ) : (
-          <Pill tone="warn">REJECT · {plan.verdict.reason}</Pill>
+          <Aside tone="caution">
+            No fair value: the oracle will not defend a number for this asset.
+          </Aside>
         )}
-        {plan.verdict.offendingAsset && (
-          <span className="font-mono text-meta text-faint">on {plan.verdict.offendingAsset}</span>
+
+        {/* A zero here has two meanings and only one is a measurement (D77), so
+            the unmeasured case is a sentence rather than a number. */}
+        {plan.predicted.shortfallBps === null ? (
+          <Aside>
+            Shortfall not measured. A value the oracle has stopped defending would compute a large
+            false shortfall, and the mandate&apos;s slippage limit would then block the exit. The
+            contract catches the same revert and does the same thing.
+          </Aside>
+        ) : (
+          <Line
+            label="Shortfall"
+            tone={plan.predicted.shortfallBps > 100 ? 'caution' : undefined}
+            note="bps below fair value"
+          >
+            {plan.predicted.shortfallBps}
+          </Line>
+        )}
+
+        {plan.oracle.stale && (
+          <Aside tone="caution">
+            Past the oracle&apos;s {plan.oracle.maxAgeSeconds}s freshness limit. On the way out that
+            is a warning, not a refusal. Trapping an open position because the publisher stopped
+            would be worse than letting it leave (D56). The floor above is the protection.
+          </Aside>
+        )}
+      </Readout>
+
+      <div className="mt-2.5 rounded-xl bg-well px-3.5 py-3">
+        <h3 className="text-micro text-faint uppercase">verdict</h3>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {plan.verdict.allow ? (
+            <Pill tone="ok">ALLOW</Pill>
+          ) : (
+            <Pill tone="warn">REJECT · {plan.verdict.reason}</Pill>
+          )}
+          {plan.verdict.offendingAsset && (
+            <span className="font-mono text-meta text-faint">on {plan.verdict.offendingAsset}</span>
+          )}
+        </div>
+        {!plan.verdict.allow && (
+          <p className="mt-2 text-meta leading-relaxed text-dim">
+            Asked before any gas was spent. The same check runs inside the transaction, so executing
+            anyway would revert. This is the trip not taken, not a trip that failed.
+          </p>
         )}
       </div>
-      {!plan.verdict.allow && (
-        <p className="mb-2 text-meta leading-relaxed text-faint">
-          Asked before any gas was spent. The same check runs inside the transaction, so exiting
-          anyway would revert. This is the trip not taken, not a trip that failed.
-        </p>
-      )}
 
-      <ul className="grid gap-0.5 font-mono text-meta">
-        <Row label="evidence">
-          <span className="break-all text-dim">{plan.evidence.hash}</span>
-        </Row>
-        <Row label="">
-          {/* The hash goes on chain either way, so an unarchived bundle is not a
-              broken fill — it is a fill nobody can ever audit, which is a
-              different and quieter kind of loss. It used to read "not stored"
-              in the same grey as everything else; in production that was every
-              fill (D80). */}
-          {plan.evidence.persistence.kind === 'none' ? (
-            <span className="text-caution">
-              {!plan.verdict.allow
-                ? 'hashed but not archived, nothing was decided to happen here'
-                : `not archived: ${plan.evidence.persistence.reason}. Download it below, or the hash on chain will point at nothing.`}
-            </span>
-          ) : plan.evidence.persistence.kind === 'blob' ? (
+      <Readout title="evidence">
+        <Line label="Hash">
+          {plan.evidence.hash}
+        </Line>
+        {plan.evidence.persistence.kind === 'none' ? (
+          <Aside tone="caution">
+            {!plan.verdict.allow
+              ? 'Hashed but not archived: nothing was decided to happen here.'
+              : `Not archived: ${plan.evidence.persistence.reason}. Download it below, or the hash on chain will point at nothing.`}
+          </Aside>
+        ) : plan.evidence.persistence.kind === 'blob' ? (
+          <Aside>
             <a
               href={plan.evidence.persistence.url}
               target="_blank"
               rel="noreferrer"
-              className="break-all text-faint hover:text-signal"
+              className="underline decoration-dotted hover:text-signal"
             >
-              archived, anyone can fetch it and re-derive this hash
+              Archived. Anyone can fetch it and re-derive this hash.
             </a>
-          ) : (
-            <span className="text-faint">
-              written to {plan.evidence.persistence.path}. The hash binds, the file is how anyone
-              checks it
-            </span>
-          )}
-        </Row>
-        <Row label="">
-          {/* Offered whatever happened above: the bundle is the user's own
-              record of what they were shown before they signed. */}
-          <button
-            onClick={() => downloadBundle(plan.evidence.hash, plan.evidence.bundle)}
-            className="text-faint underline decoration-dotted hover:text-signal"
-          >
-            download the bundle
-          </button>
-        </Row>
-      </ul>
+          </Aside>
+        ) : (
+          <Aside>
+            Written to {plan.evidence.persistence.path}. The hash binds, the file is how anyone
+            checks it.
+          </Aside>
+        )}
+        <button
+          onClick={() => downloadBundle(plan.evidence.hash, plan.evidence.bundle)}
+          className="text-left text-meta text-dim underline decoration-dotted hover:text-ink"
+        >
+          Download the bundle
+        </button>
+      </Readout>
     </>
-  );
-}
-
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <li className="flex flex-wrap items-baseline gap-3">
-      <span className="w-20 shrink-0 text-dim">{label}</span>
-      <span className="text-ink">{children}</span>
-    </li>
   );
 }
 
