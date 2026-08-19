@@ -5106,3 +5106,42 @@ twenty digits, and a column of them cannot be compared. `tokenAmount` in `ui.tsx
 with the exact value in a `title`. It is careful in one direction on purpose: a dust holding renders
 as `<0.00000001` rather than `0`, because a position the wallet holds must never read as none, and
 there is a sell button on that row.
+
+### D94, amended a fourth time — the card's colours, and the rules under the headings
+
+Nabil sent a screenshot of the reference's card. The layout was already right; the **surfaces** were
+not, and that is what was carrying the look.
+
+The reference builds the card out of a figure-and-field pair: **a grey card sunk into a white page,
+and a white box floated out of it.** No borders anywhere. Ours had it inverted, a light panel with a
+slightly darker box inside, both outlined, which reads as a form rather than as an instrument.
+
+That pair cannot be `panel` and `raised`, because **it has to invert between themes.** On light,
+raised means whiter. On dark, raised means lighter than black, and the card has to be the darker of
+the two. So there are three new tokens and they are named for their role rather than their value:
+
+| Token | Light | Dark | Role |
+|---|---|---|---|
+| `card` | `#ededf0` | `#0b0d10` | the field |
+| `well` | `#ffffff` | `#171b21` | the thing raised out of it |
+| `inset` | `#e2e6ea` | `#05070a` | the thing sunk into it |
+
+`inset` earned its own token rather than being `line` at an opacity: on dark, `line` is *lighter*
+than the card, so a segmented track painted with it put the active segment below its own container.
+Caught by looking at the page in dark mode, which is the reason to look.
+
+Two changes that came with it:
+
+**Direction moved from a tab row into a segmented control.** The reference's top tabs are a *venue*
+switch, a different kind of choice; buy-or-sell is a property of the trade being composed under it,
+and it belongs in the small pill control where the reference puts it.
+
+**The primary button is solid ink, not tinted green.** This is the better change of the two and it
+is not only cosmetic: a green button beside a green `ALLOW` pill spends the same colour on "press
+this" and on "the guard permits this". `09-design.md` says `signal` is used sparingly because it is
+not the point. A neutral button gives the colour back to the verdict, which is the one place it
+means something.
+
+**And the rule under every section heading is gone.** One rule separates. A rule under every heading
+on a long page stops reading as a separator and becomes a texture, which is the ruled-band look this
+layout exists to get away from. Space does the work.

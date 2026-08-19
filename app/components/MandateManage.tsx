@@ -324,7 +324,7 @@ export function MandateManage() {
 
       {/* Where the reference puts the price and its chart. The equivalent claim
           here is not a price — it is how much room the rules leave. */}
-      <div className="rounded-2xl border border-line bg-panel px-6 py-6">
+      <div className="rounded-2xl bg-card px-6 py-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="text-[11px] font-semibold tracking-[0.09em] text-faint uppercase">

@@ -558,14 +558,12 @@ export function Fill() {
               the mandate, which is the same kind of choice: the rule set this
               trade will be bounded by, chosen before the amount rather than
               discovered at the verdict. */}
-          <label className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-line bg-raised px-3 py-2">
-            <span className="text-[11px] font-semibold tracking-[0.09em] text-faint uppercase">
-              mandate
-            </span>
+          <label className="mb-3 flex items-center justify-between gap-3 rounded-lg bg-inset px-3.5 py-2.5">
+            <span className="text-[14px] text-dim">Mandate</span>
             <select
               value={mandateId?.toString() ?? ''}
               onChange={(e) => setMandateId(BigInt(e.target.value))}
-              className="cursor-pointer bg-transparent font-mono text-[13px] text-ink outline-none"
+              className="cursor-pointer bg-transparent font-mono text-[15px] text-ink outline-none"
             >
               {mandates.map((m) => (
                 <option key={m.id.toString()} value={m.id.toString()}>
@@ -653,7 +651,7 @@ export function Fill() {
             <button
               onClick={check}
               disabled={busy || !asset || !validAmount}
-              className="mt-4 w-full rounded-xl border border-signal-deep bg-signal/8 px-4 py-3 font-mono text-[14px] text-signal hover:bg-signal/14 disabled:opacity-40"
+              className="mt-4 w-full rounded-xl bg-ink px-4 py-3.5 text-[15px] font-semibold text-ground hover:opacity-90 disabled:opacity-30"
             >
               {phase.kind === 'quoting' ? 'quoting…' : 'Quote & check'}
             </button>
@@ -688,7 +686,7 @@ export function Fill() {
               <button
                 onClick={fill}
                 disabled={busy || shortOfCash}
-                className="w-full rounded-xl border border-signal-deep bg-signal/8 px-4 py-3 font-mono text-[14px] text-signal hover:bg-signal/14 disabled:opacity-40"
+                className="w-full rounded-xl bg-ink px-4 py-3.5 text-[15px] font-semibold text-ground hover:opacity-90 disabled:opacity-30"
               >
                 {phase.kind === 'approving'
                   ? 'approving Permit2 in your wallet…'

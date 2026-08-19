@@ -722,6 +722,12 @@ proportions — a box each, the value the largest thing in it, the unit as a chi
 means inside its own box, the asset chips carrying their marks, and a full-width button that says
 why it is disabled.
 
+Then the surfaces, against a screenshot of the reference's own card: `card`, `well` and `inset` are
+new tokens, named for role because the pair inverts between themes, and they replace the bordered
+panel-inside-panel with a white box floated out of a grey card. Direction moved into a segmented
+control, and the primary button is solid ink rather than tinted green, which gives `signal` back to
+the verdict it is supposed to mean. The rule under every section heading is gone.
+
 Then the copy: em-dashes out of every user-visible string on the page, and the prose cut to what
 changes what the reader does. Warnings stayed, restatements of what the interface already shows did
 not. `tokenAmount` in `ui.tsx` fixes a display bug found on the way, where positions printed all

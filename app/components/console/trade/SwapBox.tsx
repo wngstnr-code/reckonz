@@ -6,6 +6,10 @@ import { AssetMark } from '../AssetMark';
 /**
  * The two halves of a trade, in one box, with the direction drawn between them.
  *
+ * White, borderless, floated out of the grey card around it. That contrast is
+ * the whole structure of the reference's card: the field is grey, the one thing
+ * you act on is the surface raised out of it, and no border is needed to say so.
+ *
  * Copied in shape from the reference's asset page, and it fits for a reason
  * beyond looking like it: what this box describes really is one token in and one
  * token out. A Permit2 signature names one token, one amount, one spender and
@@ -18,15 +22,15 @@ import { AssetMark } from '../AssetMark';
  */
 export function SwapBox({ top, bottom }: { top: ReactNode; bottom: ReactNode }) {
   return (
-    <div className="relative rounded-2xl border border-line bg-raised">
-      <div className="px-4 pt-3.5 pb-5">{top}</div>
-      <div className="border-t border-line px-4 pt-5 pb-3.5">{bottom}</div>
+    <div className="relative rounded-2xl bg-well">
+      <div className="px-4 pt-4 pb-7">{top}</div>
+      <div className="border-t border-line px-4 pt-7 pb-4">{bottom}</div>
 
       {/* Centred on the seam rather than sitting under it. `bg-panel` matches
           the card behind, so the arrow punches a hole in the rule instead of
           floating over it. */}
       <span
-        className="pointer-events-none absolute top-1/2 left-1/2 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-panel"
+        className="pointer-events-none absolute top-1/2 left-1/2 flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-well"
         aria-hidden
       >
         <svg
@@ -74,9 +78,7 @@ export function SwapLeg({
   const editable = onAmountChange !== undefined;
   return (
     <div>
-      <div className="mb-1.5 text-[11px] font-semibold tracking-[0.09em] text-faint uppercase">
-        {label}
-      </div>
+      <div className="mb-1 text-[14px] text-dim">{label}</div>
       <div className="flex items-center justify-between gap-3">
         {editable ? (
           <input
@@ -125,10 +127,10 @@ export function SwapLeg({
  * plain disc instead.
  */
 function TokenMark({ symbol }: { symbol: string }) {
-  if (/^w[A-Z]/.test(symbol)) return <AssetMark symbol={symbol} size={22} />;
+  if (/^w[A-Z]/.test(symbol)) return <AssetMark symbol={symbol} size={24} />;
   return (
     <span
-      className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-line font-mono text-[10px] text-dim"
+      className="flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-full bg-dim font-mono text-[11px] text-well"
       aria-hidden
     >
       {symbol === '—' ? '?' : '$'}

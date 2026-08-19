@@ -24,6 +24,29 @@
   --color-dim: #5a6472;
   --color-faint: #8b95a4;
 
+  /* The trade card, and the box inside it.
+   *
+   * Two tokens rather than reusing `panel` and `raised`, because the pair has to
+   * invert between themes and those two cannot. On light, the reference sinks a
+   * grey card into the page and floats a white box out of it: the box is the
+   * brighter surface. On dark, brighter means lighter, so the card has to be the
+   * darker of the two and the box the lighter. Written as one pair, `card` is
+   * always the field and `well` is always the thing raised out of it, and the
+   * components never have to know which theme they are in.
+   *
+   * `card` on light is a step past `raised`. `raised` reads as barely-not-white
+   * against `panel`, which is right for a strip inside a panel and too faint for
+   * a card the eye is meant to find on a page that is mostly white. */
+  --color-card: #ededf0;
+  --color-well: #ffffff;
+
+  /* Sunk into the card, the opposite of `well`. The segmented control's track
+     and the selector row sit in it, so the thing chosen can be `well` and read
+     as lifted out. It has to be a token of its own rather than `line` at an
+     opacity: on dark, `line` is *lighter* than the card, so a track painted with
+     it put the active segment below its own container. */
+  --color-inset: #e2e6ea;
+
   /* The lit top edge of a raised surface. On dark it is what makes a panel read
      as a surface rather than as the same plane. On light there is nothing to
      light, so it resolves to the panel's own colour and disappears rather than
@@ -178,6 +201,11 @@
   --color-dim: #8b95a4;
   --color-faint: #5d6675;
   --color-edge: #2b323d;
+
+  /* Inverted, as the note on them says. */
+  --color-card: #0b0d10;
+  --color-well: #171b21;
+  --color-inset: #05070a;
 
   --color-signal: #6ee7b7;
   --color-signal-deep: #2f6f5b;

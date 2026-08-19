@@ -37,17 +37,17 @@ export function TradeCard() {
   }, []);
 
   return (
-    <aside className="rounded-2xl border border-line bg-panel lg:sticky lg:top-6">
-      <div role="tablist" aria-label="trade direction" className="flex border-b border-line px-2">
-        <TabButton current={tab} value="buy" onSelect={setTab}>
-          Buy
-        </TabButton>
-        <TabButton current={tab} value="sell" onSelect={setTab}>
-          Sell
-        </TabButton>
-      </div>
+    <aside className="rounded-2xl bg-card lg:sticky lg:top-6">
+      <div className="p-4">
+        <div role="tablist" aria-label="trade direction" className="mb-3 flex w-fit rounded-lg bg-inset p-1">
+          <TabButton current={tab} value="buy" onSelect={setTab}>
+            Buy
+          </TabButton>
+          <TabButton current={tab} value="sell" onSelect={setTab}>
+            Sell
+          </TabButton>
+        </div>
 
-      <div className="px-5 py-5">
         {!address ? (
           <Disconnected />
         ) : (
@@ -84,7 +84,7 @@ function Disconnected() {
 
       <button
         onClick={() => window.dispatchEvent(new Event(OPEN_WALLET_EVENT))}
-        className="mt-4 w-full rounded-xl border border-signal-deep bg-signal/8 px-4 py-3 font-mono text-[14px] text-signal hover:bg-signal/14"
+        className="mt-3 w-full rounded-xl bg-ink px-4 py-3.5 text-[15px] font-semibold text-ground hover:opacity-90"
       >
         Connect wallet
       </button>
@@ -98,8 +98,13 @@ function Disconnected() {
 }
 
 /**
- * The underline sits on the card's own bottom border, so the active tab reads as
- * joined to the panel under it rather than as a button that happens to be dark.
+ * A segment, not a tab with an underline.
+ *
+ * The reference puts direction in a small pill control rather than in the card's
+ * top navigation, and it is the better place: the top row of that card is a
+ * *venue* switch, a different kind of choice, and buy-or-sell is a property of
+ * the trade being composed below it. The active segment is the well colour on
+ * the card, which is the same figure-on-field relationship the swap box has.
  */
 function TabButton({
   current,
@@ -118,8 +123,8 @@ function TabButton({
       role="tab"
       aria-selected={active}
       onClick={() => onSelect(value)}
-      className={`-mb-px border-b-2 px-4 py-3.5 text-[15px] font-semibold transition-colors ${
-        active ? 'border-ink text-ink' : 'border-transparent text-faint hover:text-dim'
+      className={`rounded-md px-4 py-1.5 text-[14px] font-semibold transition-colors ${
+        active ? 'bg-well text-ink shadow-[0_1px_2px_rgba(0,0,0,0.06)]' : 'text-faint hover:text-dim'
       }`}
     >
       {children}

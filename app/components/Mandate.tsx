@@ -585,7 +585,7 @@ export function Mandate() {
           <button
             onClick={create}
             disabled={busy || picked.length === 0 || tooMany}
-            className="mt-7 w-full rounded-xl border border-signal-deep bg-signal/8 px-4 py-3 font-mono text-[14px] text-signal hover:bg-signal/14 disabled:opacity-40"
+            className="mt-7 w-full rounded-xl bg-ink px-4 py-3.5 text-[15px] font-semibold text-ground hover:opacity-90 disabled:opacity-30"
           >
             {phase.kind === 'signing'
               ? 'confirm in your wallet…'

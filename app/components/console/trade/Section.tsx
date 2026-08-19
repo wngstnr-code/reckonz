@@ -3,12 +3,15 @@ import type { ReactNode } from 'react';
 /**
  * A left-column section: a plain heading, a hairline, and whatever it holds.
  *
- * The reference lays its detail page out as a run of these — About, Statistics,
- * Session Limits — with no card, no border and no tint around any of them. The
- * separation is done by the rule under the heading and by the space between
- * sections, which is why the page reads as one document rather than as a stack
- * of widgets. `Card` in `ui.tsx` is the other shape and still right where a
- * panel really is a panel; this is the shape for a page that is mostly reading.
+ * The reference lays its detail page out as a run of these: About, Statistics,
+ * Session Limits, with no card, no border and no tint around any of them.
+ *
+ * The separation is done by space alone. There was a rule under each heading and
+ * it is gone, because with one under every heading on the page they stop reading
+ * as separators and start reading as a texture, and a page of ruled bands is the
+ * table-heavy look this layout exists to get away from. `Card` in `ui.tsx` is the
+ * other shape and still right where a panel really is a panel; this is the shape
+ * for a page that is mostly reading.
  */
 export function Section({
   title,
@@ -22,7 +25,7 @@ export function Section({
 }) {
   return (
     <section className="mt-11 first:mt-0">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-line pb-2.5">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h2 className="text-title font-semibold tracking-tight">{title}</h2>
         {aside}
       </div>
