@@ -5896,3 +5896,10 @@ Gating them would have been gating the wrong verb.
 
 Measured across `/trade` disconnected afterwards: zero bare "Connect a wallet …" sentences, three
 real Connect buttons, all 48px.
+
+**Corrected within the hour, by applying it too eagerly.** `MandateManage`'s disconnected state got
+a Connect button too, which made three identical controls on one page and turned an explanatory
+paragraph into something that looked like a form. That section is a *reading* surface: it says what
+a mandate is, which is worth reading with or without an account. The rule's second half is about
+actions; a section that explains something falls under the first half and should stay quiet about
+wallets. Button removed, prose kept.

@@ -149,6 +149,12 @@ What this yields concretely: the create form renders and can be filled in and to
 wallet, because a wallet is needed to *send* it and not to read it. Only the button is gated, and
 it says `Connect wallet to create it` rather than `Create mandate`.
 
+**One Connect button per thing that is actually blocked, and none on a reading surface.** The
+`Mandate` section describes what a mandate is, which is worth reading with or without an account;
+giving it a Connect button of its own put a third identical control on a page that already had two,
+and made a paragraph look like a form. The rule's second half applies to *actions*. A section that
+explains something is covered by the first half.
+
 **A control that only navigates is not a wallet action.** `Follow this basket` on a receipt and
 `install these as a mandate's exit rules` on `/idea` both work disconnected, because they carry a
 hand-off to another page rather than signing anything. Gating them would be gating the wrong verb.
