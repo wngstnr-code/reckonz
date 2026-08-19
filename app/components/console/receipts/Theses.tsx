@@ -39,18 +39,19 @@ import { usdg, when } from './format';
  * question worth asking.
  *
  * So the same bar the receipts grid uses, and nothing at all below the
- * threshold. Ten fits above the grid without pushing it off the screen; under
- * that there are no controls to explain, and the section heading already says
- * how many exist.
+ * threshold: under it there are no controls to explain, and the section heading
+ * already says how many exist.
  */
 
 /**
- * Ten rows before the bar appears.
+ * Four rows before the bar appears.
  *
- * Larger than the grid's sixteen-per-page in effect, because these are rows and
- * those are cards: ten rows is about the height of one screen of cards.
+ * A thesis row is three lines tall and the grid below it is the page's main
+ * content, so this is set by how much can sit above that without pushing it off
+ * the screen rather than by how many rows read comfortably. Four is roughly a
+ * third of the viewport at the widest breakpoint.
  */
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 4;
 
 export function Theses({ theses }: { theses: WireThesis[] }) {
   const [page, setPage] = useState(1);

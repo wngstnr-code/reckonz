@@ -5676,7 +5676,14 @@ better — the comparison was against the collapsed state and never against the 
 "read them all" stops being something anyone does at that size, so the distinction that justified
 the disclosure dissolves at exactly the scale that made the question worth asking.
 
-So: the same bar the grid uses, `PAGE_SIZE = 10`, and **nothing rendered at all below it**. A page
+So: the same bar the grid uses, `PAGE_SIZE = 4`, and **nothing rendered at all below it**. A page
 bar reading "1-3 of 3" is a control that does nothing, under a heading that already said three.
-Verified at 27 by inflating the list temporarily rather than reasoning about it — the third such
-claim about scale in this page's history, and the first one actually looked at.
+Four rather than ten: a thesis row is three lines tall, the grid under it is the page's main
+content, and the size is set by how much can sit above that without pushing it off screen rather
+than by how many rows read comfortably.
+
+Verified by inflating the list temporarily rather than reasoning about it — the third such claim
+about scale in this page's history and the first one actually looked at. The boundary is exact: four
+theses render no bar, five render `1-4 of 5` with two pages. **Which means the bar is invisible
+today and stays invisible until a fifth thesis is published**, and that is the design rather than a
+defect.
