@@ -608,7 +608,7 @@ export function MandateManage() {
           disabled={busy !== null}
           submitLabel="Point at executor"
           defaultAddress={option.deployment.contracts.Executor as Address | undefined}
-          defaultLabel="Use this deployment's Executor"
+          defaultLabel="Use default"
           onSubmit={(next) =>
             write(m.id, 'pointing at a new executor', (guard) =>
               walletClient!.writeContract({

@@ -5262,3 +5262,10 @@ resets `universe` to `[]` and restarts the chain walk. A clean load renders `wTS
 
 Recorded because the symptom is identical to the real bug it followed, and the next person to see it
 should check the console for Fast Refresh before re-fixing something that already works.
+
+One follow-on: `Secondary` and `Primary` both take `whitespace-nowrap`. Same padding is only the
+same button while the label fits on one line, and *Use this deployment's Executor* did not: two
+lines inside the same padding is a taller button, and the pair stopped being a pair. The label is
+`Use default` now. The sentence it was carrying is already in the paragraph above the form, and the
+constraint is worth keeping as a rule: **a button label that needs a second line is a label, not a
+button.** All seven actions on the page measure 47px.

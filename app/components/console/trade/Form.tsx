@@ -161,7 +161,7 @@ export function Primary({
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`rounded-xl bg-ink px-5 py-3 text-[15px] font-semibold text-ground hover:opacity-90 disabled:opacity-30 ${
+      className={`rounded-xl bg-ink px-5 py-3 text-[15px] font-semibold whitespace-nowrap text-ground hover:opacity-90 disabled:opacity-30 ${
         full ? 'w-full' : ''
       }`}
     >
@@ -175,6 +175,10 @@ export function Primary({
  *
  * Same radius, same padding, same type size, so a pair of actions reads as a
  * pair. Only the surface differs, which is the only difference that should show.
+ *
+ * `whitespace-nowrap` because that promise breaks the moment a label wraps: two
+ * lines of type inside the same padding is a taller button, and the pair stops
+ * being a pair. Keep the labels to a word or two and this never comes up.
  */
 export function Secondary({
   onClick,
@@ -189,7 +193,7 @@ export function Secondary({
     <button
       onClick={onClick}
       disabled={disabled}
-      className="rounded-xl bg-inset px-5 py-3 text-[15px] font-semibold text-ink hover:bg-line disabled:opacity-30"
+      className="rounded-xl bg-inset px-5 py-3 text-[15px] font-semibold whitespace-nowrap text-ink hover:bg-line disabled:opacity-30"
     >
       {children}
     </button>
