@@ -138,7 +138,7 @@ export function Limits({ board, now }: { board: Board; now: number }) {
  * would report a failure as a fact about the market.
  */
 function Capacity({ value }: { value: number | null | undefined }) {
-  if (value == null) return <span className="text-faint">—</span>;
+  if (value == null) return <span className="text-faint">n/a</span>;
   return <>{usd(value)}</>;
 }
 

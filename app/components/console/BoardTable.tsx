@@ -85,7 +85,7 @@ function Row({ asset, sizeUsdg }: { asset: BoardAsset; sizeUsdg: number }) {
             >
               {asset.symbol}
             </Link>
-            <div className="text-fine text-faint">{asset.name ?? '—'}</div>
+            <div className="text-fine text-faint">{asset.name ?? 'n/a'}</div>
           </div>
         </div>
       </td>
@@ -106,7 +106,7 @@ function Row({ asset, sizeUsdg }: { asset: BoardAsset; sizeUsdg: number }) {
 
       <td className="py-2.5 pr-4 text-right align-top">
         {asset.onchainPrice === null ? (
-          <div className="font-mono text-data text-faint">—</div>
+          <div className="font-mono text-data text-faint">n/a</div>
         ) : (
           <>
             <div className="font-mono text-data text-ink">{asset.onchainPrice.toFixed(2)}</div>

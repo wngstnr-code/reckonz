@@ -300,7 +300,7 @@ export function describeTrigger(r: ResolvedTrigger): string {
   const scope = t.appliesTo.length
     ? r.symbols.length
       ? r.symbols.join(', ')
-      : '(nothing — see unresolved)'
+      : '(nothing, see unresolved)'
     : 'basket';
   return `${scope}: exit when ${t.metric} ${t.comparator === 'gt' ? '>' : '<'} ${t.threshold}`;
 }

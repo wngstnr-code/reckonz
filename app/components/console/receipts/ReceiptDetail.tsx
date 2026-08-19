@@ -152,7 +152,7 @@ export function ReceiptDetail({
                     </Fact>
                   ) : (
                     <Fact label="Bought" hint={f.symbol}>
-                      {unitsBought(f.amountInUsdg, f.executionPriceE8) ?? '—'}
+                      {unitsBought(f.amountInUsdg, f.executionPriceE8) ?? 'n/a'}
                     </Fact>
                   )}
                 </Facts>

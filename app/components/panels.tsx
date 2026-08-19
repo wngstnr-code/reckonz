@@ -362,7 +362,7 @@ export function OraclePanel({ oracle }: { oracle: NonNullable<RunState['oracle']
                 </Metric>
                 <Metric label="± band">{pct(r.confidenceBps)}</Metric>
                 <Metric label="on chain">
-                  {v.onchainPrice == null ? '—' : v.onchainPrice.toFixed(2)}
+                  {v.onchainPrice == null ? 'n/a' : v.onchainPrice.toFixed(2)}
                 </Metric>
                 <Metric label="basis">{pct(r.basisBps)}</Metric>
                 <Metric label="gap risk">

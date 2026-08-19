@@ -139,7 +139,7 @@ export async function persistBundle(bundle: EvidenceBundle): Promise<Persistence
     file ?? {
       kind: 'none',
       reason:
-        'no blob store is configured for this runtime and the filesystem is read-only — this bundle is not archived anywhere',
+        'no blob store is configured for this runtime and the filesystem is read-only, so this bundle is not archived anywhere',
     }
   );
 }
@@ -167,6 +167,6 @@ export function describePersistence(p: Persistence): string {
     case 'file':
       return `written to ${p.path}`;
     case 'none':
-      return `NOT ARCHIVED — ${p.reason}`;
+      return `NOT ARCHIVED: ${p.reason}`;
   }
 }

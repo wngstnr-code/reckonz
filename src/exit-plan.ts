@@ -102,9 +102,9 @@ export function describeShortfallStatus(status: ShortfallStatus): string {
     case 'measured':
       return 'measured against a fair value the oracle is standing behind';
     case 'unmeasured-stale':
-      return 'not measured — the oracle is past its freshness limit, so the mandate’s slippage cap has nothing to compare against and will not block this sale';
+      return 'not measured: the oracle is past its freshness limit, so the mandate’s slippage cap has nothing to compare against and will not block this sale';
     case 'unmeasured-no-value':
-      return 'not measured — the oracle is publishing no value for this asset, so the mandate’s slippage cap cannot apply';
+      return 'not measured: the oracle is publishing no value for this asset, so the mandate’s slippage cap cannot apply';
   }
 }
 
@@ -277,7 +277,7 @@ export async function prepareExit(req: ExitRequest): Promise<ExitPlan> {
   if (mandate.owner.toLowerCase() !== req.sender.toLowerCase()) {
     throw new Error(
       `mandate #${req.mandateId} is owned by ${mandate.owner}. The permit has to be signed by the ` +
-        `owner — that is who Permit2 pulls the asset from and who receives the proceeds — so ` +
+        `owner, which is who Permit2 pulls the asset from and who receives the proceeds, so ` +
         `this wallet (${req.sender}) cannot exit it, even as its agent.`,
     );
   }
@@ -514,7 +514,7 @@ export async function prepareExit(req: ExitRequest): Promise<ExitPlan> {
       : {
           kind: 'none',
           reason: allow
-            ? 'unacknowledged unmeasured exit — this plan cannot be signed, so nothing was archived'
+            ? 'unacknowledged unmeasured exit: this plan cannot be signed, so nothing was archived'
             : 'the guard refused this exit, so no bundle was archived',
         };
 

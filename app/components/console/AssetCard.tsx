@@ -48,7 +48,7 @@ export function AssetCard({ asset, sizeUsdg }: { asset: BoardAsset; sizeUsdg: nu
         <div className="min-w-0">
           <div className="truncate font-mono text-data font-semibold text-ink">{asset.symbol}</div>
           <div className="truncate text-micro tracking-normal text-faint normal-case">
-            {asset.name ?? '—'}
+            {asset.name ?? 'n/a'}
           </div>
         </div>
       </header>

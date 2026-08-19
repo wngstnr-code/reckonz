@@ -120,7 +120,7 @@ export function SelectField({
           <span
             className={`truncate font-mono text-lead ${chosen ? 'text-ink' : 'text-faint'}`}
           >
-            {chosen?.label ?? placeholder ?? '—'}
+            {chosen?.label ?? placeholder ?? 'n/a'}
           </span>
           <Chevron open={menu.open} />
         </span>

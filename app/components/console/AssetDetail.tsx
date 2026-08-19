@@ -107,9 +107,7 @@ export function AssetDetail({
       {/* --------------------------------------------------------- ladder */}
 
       <section className="mt-11">
-        <h2 className="font-mono text-micro text-faint uppercase">
-          What happens as the size grows
-        </h2>
+        <h2 className="text-title font-semibold tracking-tight">What happens as the size grows</h2>
         <p className="mt-2 max-w-[74ch] text-data leading-relaxed text-dim">
           Each row is a real quote walked through this market&rsquo;s liquidity, not an estimate
           from its size. The verdict is the same check the contract runs, against a{' '}
@@ -124,6 +122,8 @@ export function AssetDetail({
           <>
             <DepthCurve
               asset={asset}
+              limitBps={limit}
+              interactive
               className={`mt-5 h-24 w-full ${TONE[verdictOf(asset, asset.ladder[0].sizeUsdg).kind].curve}`}
             />
 
@@ -150,7 +150,7 @@ export function AssetDetail({
                         </td>
                         <td className="py-2.5 pr-4 text-right font-mono text-data text-dim">
                           {rung.effectivePrice === null
-                            ? '—'
+                            ? 'n/a'
                             : `$${rung.effectivePrice.toFixed(2)}`}
                         </td>
                         <td className={`py-2.5 text-data ${TONE[v.kind].text}`}>
@@ -182,7 +182,7 @@ export function AssetDetail({
                   ) : (
                     <>
                       {' '}
-                      — measured separately at{' '}
+                      , measured separately at{' '}
                       <b className="font-semibold text-ink">{usd(measuredCapacity)}</b>.
                     </>
                   )}
@@ -201,7 +201,7 @@ export function AssetDetail({
       {/* ------------------------------------------------------- capacity */}
 
       <section className="mt-11">
-        <h2 className="font-mono text-micro text-faint uppercase">
+        <h2 className="text-title font-semibold tracking-tight">
           How much it takes, by what you will tolerate
         </h2>
         <p className="mt-2 max-w-[74ch] text-data leading-relaxed text-dim">
@@ -231,7 +231,7 @@ export function AssetDetail({
       {/* ------------------------------------------------------- gap risk */}
 
       <section className="mt-11">
-        <h2 className="font-mono text-micro text-faint uppercase">What the gap score is made of</h2>
+        <h2 className="text-title font-semibold tracking-tight">What the gap score is made of</h2>
         <p className="mt-2 max-w-[74ch] text-data leading-relaxed text-dim">
           A stock keeps trading after this token stops. These four are what the oracle weighs to
           decide how far it could move before you can act, and a score you can take apart is worth
@@ -287,7 +287,7 @@ export function AssetDetail({
 
         {asset.notes.length > 0 && (
           <div className="mt-7">
-            <h2 className="font-mono text-micro text-faint uppercase">
+            <h2 className="text-title font-semibold tracking-tight">
               What the oracle said about this
             </h2>
             <ul className="mt-2.5 max-w-[74ch] space-y-1.5">

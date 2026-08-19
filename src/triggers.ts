@@ -213,7 +213,7 @@ export function encodeTriggers(
         // label on a safety control is worse than a missing one.
         dropped.push({
           description,
-          reason: `${metric} cannot reach ${t.threshold} — the rule could never fire`,
+          reason: `${metric} cannot reach ${t.threshold}, so the rule could never fire`,
         });
         continue;
       case 'always':
@@ -224,7 +224,7 @@ export function encodeTriggers(
         // repo has to choose, it chooses refusing to trade.
         flagged.push({
           description,
-          reason: `${metric} always satisfies ${comparator} ${t.threshold} — this mandate will refuse every trade`,
+          reason: `${metric} always satisfies ${comparator} ${t.threshold}, so this mandate will refuse every trade`,
         });
         break;
     }

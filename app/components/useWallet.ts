@@ -181,7 +181,7 @@ function walletConnect(): Promise<DiscoveredWallet> {
         },
       }),
       20_000,
-      'WalletConnect could not reach its relay — check the project id, or the network',
+      'WalletConnect could not reach its relay. Check the project id, or the network.',
     );
 
     return {

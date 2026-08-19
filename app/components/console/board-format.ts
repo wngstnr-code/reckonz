@@ -23,7 +23,7 @@ export const usdExact = (n: number) =>
   `$${n.toLocaleString('en-US', { maximumFractionDigits: n < 100 ? 2 : 0 })}`;
 
 export const pct = (bps: number | null | undefined) =>
-  bps == null || !Number.isFinite(bps) ? '—' : `${(bps / 100).toFixed(2)}%`;
+  bps == null || !Number.isFinite(bps) ? 'n/a' : `${(bps / 100).toFixed(2)}%`;
 
 /**
  * The guard's codes, in words a first-time reader can act on.

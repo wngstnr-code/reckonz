@@ -142,7 +142,7 @@ export async function applyOnchainWithholding(
     ]);
     if (o.updatedAt === 0n) {
       report.publishable = false;
-      report.notes.push('no observation published on chain for this asset — the guard would reject NO_DATA');
+      report.notes.push('no observation published on chain for this asset, so the guard would reject NO_DATA');
       return;
     }
 
@@ -160,7 +160,7 @@ export async function applyOnchainWithholding(
     const age = BigInt(now) - o.updatedAt;
     if (age > maxAge) {
       report.notes.push(
-        `the on-chain observation is ${age}s old against a ${maxAge}s limit — executing for real ` +
+        `the on-chain observation is ${age}s old against a ${maxAge}s limit, so executing for real ` +
           'would need the oracle republished first, though the verdict above still holds',
       );
     }
@@ -168,7 +168,7 @@ export async function applyOnchainWithholding(
     if (!o.hasValue) {
       report.publishable = false;
       report.notes.push(
-        'the deployed oracle is withholding this value — most likely the publish-time jump ' +
+        'the deployed oracle is withholding this value, most likely the publish-time jump ' +
           'bound has not confirmed a move yet (D41). The chain refuses it whatever this ' +
           'estimate says.',
       );

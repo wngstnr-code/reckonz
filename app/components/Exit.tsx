@@ -603,7 +603,7 @@ export function Exit() {
                 onAmountChange={setUnits}
                 token={
                   <TokenChip
-                    symbol={holding?.symbol ?? symbolOf.get((asset ?? '').toLowerCase()) ?? '—'}
+                    symbol={holding?.symbol ?? symbolOf.get((asset ?? '').toLowerCase()) ?? 'n/a'}
                     value={asset ?? ''}
                     onChange={(next) => setAsset(next as Address)}
                     options={holdings.map((h) => ({

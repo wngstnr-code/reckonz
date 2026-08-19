@@ -663,7 +663,7 @@ export function Fill({ active = true }: { active?: boolean } = {}) {
                 amount={plan ? plan.quote.out.toFixed(6) : ''}
                 token={
                   <TokenChip
-                    symbol={symbolOf.get((asset ?? '').toLowerCase()) ?? '—'}
+                    symbol={symbolOf.get((asset ?? '').toLowerCase()) ?? 'n/a'}
                     value={asset ?? ''}
                     onChange={(next) => setAsset(next as Address)}
                     options={(mandate?.assets ?? []).map((a) => ({

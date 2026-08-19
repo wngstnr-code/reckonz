@@ -58,7 +58,7 @@ export function ReceiptsTable({ receipts }: { receipts: ViewReceipt[] }) {
                     {first && <AssetMark symbol={first.symbol} size={22} />}
                     <span className="min-w-0">
                       <span className="block font-mono text-meta text-ink">
-                        {many ? `${r.fills.length} assets` : (first?.symbol ?? '—')}
+                        {many ? `${r.fills.length} assets` : (first?.symbol ?? 'n/a')}
                       </span>
                       <span className="block font-mono text-micro tracking-normal text-faint normal-case">
                         {direction(r.fills)}
@@ -70,7 +70,7 @@ export function ReceiptsTable({ receipts }: { receipts: ViewReceipt[] }) {
                   {usdg(notionalOf(r))}
                 </td>
                 <td className="py-2.5 pr-4 text-right font-mono text-meta tabular-nums text-dim">
-                  {many || !first ? '—' : e8(first.executionPriceE8)}
+                  {many || !first ? 'n/a' : e8(first.executionPriceE8)}
                 </td>
                 {/* Zero and unmeasured are different answers and must not share
                     a glyph. The slippage field really is `0` on a fill nothing
@@ -84,10 +84,10 @@ export function ReceiptsTable({ receipts }: { receipts: ViewReceipt[] }) {
                   )}
                 </td>
                 <td className="py-2.5 pr-4 text-right font-mono text-meta tabular-nums text-dim">
-                  {first?.gapRisk ?? '—'}
+                  {first?.gapRisk ?? 'n/a'}
                 </td>
                 <td className="py-2.5 pr-4 font-mono text-meta text-dim">
-                  {r.thesisId === null ? <span className="text-faint">—</span> : `#${r.thesisId}`}
+                  {r.thesisId === null ? <span className="text-faint">n/a</span> : `#${r.thesisId}`}
                 </td>
                 <td className="py-2.5 font-mono text-meta">
                   {hasEvidence(r) ? (

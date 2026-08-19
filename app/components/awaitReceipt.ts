@@ -38,6 +38,6 @@ export async function awaitReceipt(
   throw new Error(
     `the transaction was sent but no receipt became readable in ${Math.round(
       (attempts * delayMs) / 1000,
-    )}s. It may still have succeeded — check ${hash} on the explorer before sending another.`,
+    )}s. It may still have succeeded: check ${hash} on the explorer before sending another.`,
   );
 }

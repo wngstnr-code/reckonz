@@ -4,7 +4,7 @@ export const usd = (n: number) =>
   n.toLocaleString('en-US', { maximumFractionDigits: 0 });
 
 export const pct = (bps: number | null | undefined) =>
-  bps == null || !Number.isFinite(bps) ? '—' : `${(bps / 100).toFixed(2)}%`;
+  bps == null || !Number.isFinite(bps) ? 'n/a' : `${(bps / 100).toFixed(2)}%`;
 
 /**
  * A token amount, at a length a column can be read down.

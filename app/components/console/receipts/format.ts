@@ -87,7 +87,7 @@ export function headline(receipt: ViewReceipt): { value: string; note: string } 
 
 /** One line naming what moved, for a card header or a table cell. */
 export function direction(fills: WireFill[]): string {
-  if (fills.length === 0) return '—';
+  if (fills.length === 0) return 'n/a';
   const exits = fills.filter((f) => f.isExit).length;
   if (exits === 0) return fills.length === 1 ? 'entry' : `${fills.length} entries`;
   if (exits === fills.length) return fills.length === 1 ? 'exit' : `${fills.length} exits`;

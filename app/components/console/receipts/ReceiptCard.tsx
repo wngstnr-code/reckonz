@@ -35,7 +35,7 @@ export function ReceiptCard({ receipt }: { receipt: ViewReceipt }) {
         {first ? <AssetMark symbol={first.symbol} /> : null}
         <div className="min-w-0 flex-1">
           <div className="truncate font-mono text-data font-semibold text-ink">
-            {many ? `${receipt.fills.length} assets` : (first?.symbol ?? '—')}
+            {many ? `${receipt.fills.length} assets` : (first?.symbol ?? 'n/a')}
           </div>
           <div className="truncate text-micro tracking-normal text-faint normal-case">
             receipt #{receipt.id} · {direction(receipt.fills)}
