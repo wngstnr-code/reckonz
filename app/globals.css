@@ -604,35 +604,51 @@
   background: var(--color-signal);
 }
 
-/* ------------------------------------------------------- the approach section
+/* ---------------------------------------------------------- masked entrances
  *
- * Three arrivals, all of them once and all of them on scroll. Every one is a
- * `transform` or a stroke offset, which is the only reason a page can run three
- * at a time without the compositor noticing.
- */
-
-/* A line of a heading, rising out of its own mask.
+ * One move, used by three sections: a piece of type held in a box that clips,
+ * starting a full line below where it belongs and travelling up into place.
+ * The mask is the effect — the words come from behind the line above rather
+ * than up from the page, which is what makes a block read as one thing
+ * unfolding instead of several things fading in.
  *
- * The mask is the effect: the words come from *behind the line above*, not from
- * lower on the page, which is what makes the block read as one thing unfolding
- * rather than four paragraphs fading in. `overflow: hidden` on the wrapper and
- * a full line-height of travel on the inner span.
+ * Two shapes of mask, and the only difference between them is display type.
+ * `.rise-mask` takes a whole line. `.inline-mask` takes a piece of one and sits
+ * on the text baseline, so it needs `vertical-align: bottom` — without it each
+ * mask is offset by the descender space of a line it does not contain, and the
+ * pieces sit at slightly different heights. It does not care whether what it is
+ * handed is a letter or a word.
  *
- * The delay is set per line from the component, so the stagger is a property of
- * the list rather than a number written four times.
+ * Both clip at the line box, so type with descenders set at display leading
+ * loses its tails and has to be given the room back.
+ *
+ * The delay is set per piece from the component, so a stagger is a property of
+ * the list rather than a number written out once per item.
  */
 .rise-mask {
   display: block;
   overflow: hidden;
 }
 
-.rise-mask > span {
+.inline-mask {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+}
+
+.rise-mask > span,
+.inline-mask > span {
   display: block;
   transform: translateY(110%);
 }
 
-.reveal-on .rise-mask > span {
-  animation: rise 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+.inline-mask > span {
+  display: inline-block;
+}
+
+.reveal-on .rise-mask > span,
+.reveal-on .inline-mask > span {
+  animation: rise 860ms cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: var(--rise-delay, 0ms);
 }
 
@@ -641,6 +657,21 @@
     transform: translateY(0);
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-on .rise-mask > span,
+  .reveal-on .inline-mask > span {
+    animation: none;
+    transform: none;
+  }
+}
+
+/* ------------------------------------------------------- the approach section
+ *
+ * Three arrivals, all of them once and all of them on scroll. Every one is a
+ * `transform` or a stroke offset, which is the only reason a page can run three
+ * at a time without the compositor noticing.
+ */
 
 /* The ornament, drawn rather than shown.
  *
@@ -803,33 +834,6 @@
  * the second pass as on the first.
  */
 
-/* A letter, rising out of its own mask.
- *
- * The block version of this is `.rise-mask`, and the only difference is the
- * display type — but that difference is the whole reason it is a separate rule:
- * an inline-block sits on the text baseline, so `vertical-align: bottom` is
- * what stops each mask from being offset by the descender space of a line it
- * does not contain. Without it the letters sit at slightly different heights.
- *
- * It clips at the line box. A heading with descenders set at this leading would
- * lose their tails and would need the room given back.
- */
-.letter-mask {
-  display: inline-block;
-  overflow: hidden;
-  vertical-align: bottom;
-}
-
-.letter-mask > span {
-  display: inline-block;
-  transform: translateY(110%);
-}
-
-.reveal-on .letter-mask > span {
-  animation: rise 820ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: var(--rise-delay, 0ms);
-}
-
 /* The caption, arriving from above.
  *
  * The mirror of the heading's move, and the mirror is the point: the two are at
@@ -968,7 +972,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .reveal-on .letter-mask > span,
   .drop-mask > span,
   .roll-track,
   .side-mask > span {
@@ -982,5 +985,46 @@
   .cards-on .frame-open {
     animation: none;
     clip-path: inset(0% round 1.25rem);
+  }
+}
+
+/* -------------------------------------------------------- the closing section
+ *
+ * One movement, and it is the second half of another one: after a line's words
+ * have risen into place, the line gives a little to the right.
+ *
+ * **Late, small, and per line.** It starts after that line's own last word has
+ * landed, travels a fraction of an em, and each line has its own delay because
+ * each has a different number of words to wait for. What the reader sees is
+ * type that arrived and then settled, rather than type that stopped dead on its
+ * mark. A page whose last gesture is a hard stop reads as having run out.
+ *
+ * The shift is on the line and the rise is on the words inside it, so the two
+ * are transforms on different elements and neither can overwrite the other. One
+ * element carrying both would need them composed into a single `transform`,
+ * and the composition would have to be re-derived every time either changed.
+ *
+ * `ease-out` rather than the easing the rest of the page uses: this is a
+ * settle, not an arrival, and an entrance curve on it would make the line look
+ * like it was starting a second journey.
+ */
+.line-settle {
+  transform: translateX(0);
+}
+
+.reveal-on .line-settle {
+  animation: settle 700ms ease-out both;
+  animation-delay: var(--settle-delay, 0ms);
+}
+
+@keyframes settle {
+  to {
+    transform: translateX(0.16em);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-on .line-settle {
+    animation: none;
   }
 }

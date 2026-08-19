@@ -1,5 +1,6 @@
 import { fetchBoard } from '@/src/board-store';
 import { Approach } from '@/app/components/landing/Approach';
+import { Closing } from '@/app/components/landing/Closing';
 import { Hero } from '@/app/components/landing/Hero';
 import { HowItWorks } from '@/app/components/landing/HowItWorks';
 import { TopBar } from '@/app/components/landing/TopBar';
@@ -40,6 +41,7 @@ export default async function LandingPage() {
       <Hero symbols={symbols} />
       <Approach />
       <HowItWorks />
+      <Closing />
     </main>
   );
 }

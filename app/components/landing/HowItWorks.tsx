@@ -237,7 +237,7 @@ function Letters({ text }: { text: string }) {
             return (
               <span
                 key={c}
-                className="letter-mask"
+                className="inline-mask"
                 style={{ ['--rise-delay' as string]: `${delay}ms` }}
               >
                 <span>{character}</span>
