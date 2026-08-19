@@ -604,8 +604,8 @@ export function Mandate() {
           )}
 
           {phase.kind === 'done' && (
-            <div className="mt-4 rounded-lg border border-signal-deep bg-signal/6 px-4 py-3">
-              <p className="text-meta text-ink">
+            <div className="mt-4 rounded-xl bg-frame px-4 py-3.5">
+              <p className="text-meta text-cta-ink">
                 Mandate <Num>#{phase.mandateId.toString()}</Num> created, allowing{' '}
                 <Num>{phase.allowed.length}</Num> assets.
               </p>
@@ -614,19 +614,19 @@ export function Mandate() {
                   href={`${explorer}/tx/${phase.hash}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-1 block font-mono text-meta break-all text-faint hover:text-signal"
+                  className="mt-1.5 block font-mono text-meta break-all text-cta-3 hover:text-cta-ink"
                 >
                   {phase.hash}
                 </a>
               )}
 
               {phase.rules.kind === 'installing' && (
-                <p className="mt-2 text-meta text-dim">
+                <p className="mt-2 text-meta text-cta-3">
                   Installing the exit rules. Confirm the second transaction in your wallet.
                 </p>
               )}
               {phase.rules.kind === 'installed' && (
-                <p className="mt-2 text-meta text-ink">
+                <p className="mt-2 text-meta text-cta-ink">
                   <Num>{phase.rules.count}</Num> exit rule
                   {phase.rules.count === 1 ? '' : 's'} installed and read back from the chain.
                   PolicyGuard now refuses a fill on this mandate while any of them is firing.
@@ -635,7 +635,7 @@ export function Mandate() {
                       href={`${explorer}/tx/${phase.rules.hash}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="mt-1 block font-mono text-meta break-all text-faint hover:text-signal"
+                      className="mt-1.5 block font-mono text-meta break-all text-cta-3 hover:text-cta-ink"
                     >
                       {phase.rules.hash}
                     </a>

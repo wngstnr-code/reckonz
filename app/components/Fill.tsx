@@ -711,8 +711,18 @@ export function Fill() {
                     'USDG',
                     plan.cashDecimals,
                   ).map((line) => (
-                    <li key={line} className="text-meta leading-relaxed [overflow-wrap:anywhere] text-dim">
-                      · {line}
+                    <li key={line} className="flex gap-2.5">
+                      {/* A drawn dot rather than a `·` character: at 14px the
+                          middle dot is nearly invisible, and a real marker also
+                          hangs outside the text so a wrapped line stays aligned
+                          under the first. */}
+                      <span
+                        className="mt-[0.5em] h-1.5 w-1.5 shrink-0 rounded-full bg-dim"
+                        aria-hidden
+                      />
+                      <span className="text-meta leading-relaxed [overflow-wrap:anywhere] text-dim">
+                        {line}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -746,9 +756,9 @@ export function Fill() {
           )}
 
           {phase.kind === 'done' && (
-            <div className="mt-4 rounded-lg border border-signal-deep bg-signal/6 px-4 py-3">
+            <div className="mt-4 rounded-xl bg-frame px-4 py-3.5">
               {phase.received > 0n ? (
-                <p className="text-meta text-ink">
+                <p className="text-meta text-cta-ink">
                   Filled. <Num>{formatUnits(phase.received, phase.decimals)}</Num> {phase.symbol}{' '}
                   landed in your own wallet. The executor never held it.
                 </p>
@@ -756,7 +766,7 @@ export function Fill() {
                 // A fill that worked once printed "received 0" because the read
                 // hit a node that had not seen the block (D18). Saying the
                 // balance is not visible yet is true; saying zero arrived is not.
-                <p className="text-meta leading-relaxed text-ink">
+                <p className="text-meta leading-relaxed text-cta-ink">
                   Mined, and the {phase.symbol} balance has not become readable within 15 seconds.
                   The transaction is below. Check it on the explorer rather than trusting a zero.
                 </p>
@@ -766,7 +776,7 @@ export function Fill() {
                   href={`${option.deployment.explorer}/tx/${phase.hash}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-1 block font-mono text-meta break-all text-faint hover:text-signal"
+                  className="mt-1.5 block font-mono text-meta break-all text-cta-3 hover:text-cta-ink"
                 >
                   {phase.hash}
                 </a>
@@ -850,7 +860,7 @@ function Plan({ plan }: { plan: WirePlan }) {
         <h3 className="text-micro text-faint uppercase">verdict</h3>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           {plan.verdict.allow ? (
-            <Pill tone="ok">ALLOW</Pill>
+            <span className="font-mono text-data text-signal">ALLOW</span>
           ) : (
             <Pill tone="warn">REJECT · {plan.verdict.reason}</Pill>
           )}

@@ -5474,3 +5474,24 @@ So allowing three assets is three transactions and three signatures whatever the
 A multi-select would gather them into one control and then produce three wallet prompts in a row,
 which hides the cost rather than removing it. Left as one at a time, on the same reasoning the fill
 card uses: one signature, one act.
+
+### D95, amended again — the settled panel is green, and ALLOW is a word
+
+Three notes from Nabil on the fill that had just landed.
+
+**The "Filled" panel is the brand green with white type.** Not a new colour: `--color-frame` with
+`--color-cta-ink` is the pair the `/assets` hero already uses, and the contrast on it was **derived
+rather than picked** when that frame was built — the note on the token records the measurement.
+Neither is overridden in dark, so it reads the same in both themes, which is the reason it exists.
+The transaction hash under it takes `cta-3`, the lighter mint that clears AA on that ground.
+
+Applied to all three settled panels — a fill, an exit, a created mandate — because they are the same
+event and were three slightly different tinted boxes.
+
+**`ALLOW` lost its pill and is now a green word.** Same rule the `live` mark follows: the expected
+reading does not need a badge to announce it. `REJECT` keeps its chrome, because that is the one
+that has to interrupt.
+
+**The bullets in *what you are about to sign* are drawn dots.** They were `·` characters, which at
+14px are nearly invisible, and a text bullet also sits inside the paragraph so a wrapped line lands
+under the marker instead of under the first word. A real marker hangs outside the text.
