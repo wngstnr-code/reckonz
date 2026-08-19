@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { INSTALL_TRIGGERS_EVENT, type TriggerInstallRequest } from './follow';
 import { stashHandoff } from './handoff';
+import type { Address } from 'viem';
 import type { RunState } from './useRun';
 import { Bar, Legend, Note, Num, Pill, pct, usd } from './ui';
 import { Section } from './console/trade/Section';
@@ -152,7 +153,14 @@ export function AllocationPanel({
 
 /* -------------------------------------------------- 3 · the exit triggers */
 
-export function MandatePanel({ mandate }: { mandate: NonNullable<RunState['mandate']> }) {
+export function MandatePanel({
+  mandate,
+  basket,
+}: {
+  mandate: NonNullable<RunState['mandate']>;
+  /** The compiled legs with addresses, so the hand-off can carry them. */
+  basket: { asset: Address; symbol: string }[];
+}) {
   const router = useRouter();
   return (
     <Section title="Exit triggers, from the same compilation">
@@ -213,6 +221,8 @@ export function MandatePanel({ mandate }: { mandate: NonNullable<RunState['manda
               const detail: TriggerInstallRequest = {
                 exitTriggers: mandate.exitTriggers,
                 manualWatch: mandate.manualWatch,
+                assets: basket.map((b) => b.asset),
+                symbols: basket.map((b) => b.symbol),
               };
               // Both: the event for when the mandate form shares this page,
               // the stash for when it does not. See `handoff.ts`.

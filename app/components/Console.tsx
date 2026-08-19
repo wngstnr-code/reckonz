@@ -100,7 +100,7 @@ export function Console() {
 
       {state.compile && <ThesisPanel data={state.compile} />}
       {state.allocate && <AllocationPanel allocation={state.allocate} universe={state.universe} />}
-      {state.mandate && <MandatePanel mandate={state.mandate} />}
+      {state.mandate && <MandatePanel mandate={state.mandate} basket={basket} />}
       {state.plan && <PlanPanel plan={state.plan} />}
       {state.oracle && <OraclePanel oracle={state.oracle} />}
 

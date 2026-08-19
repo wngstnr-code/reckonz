@@ -5826,3 +5826,23 @@ with it.
 of every trigger that resolved marks the ordinary case, which is most of them, so the colour carried
 no information and the row read as generated. The caution edge stays, because that one marks the
 exception it is there for.
+
+**Amended once more: `install these as a mandate's exit rules` had never been pressed.**
+
+It worked, in the sense that the rules arrived. What arrived with them was nothing else, and
+`TriggerInstallRequest` carried only `exitTriggers` and `manualWatch` — so the mandate form opened
+holding two live rules and an empty allowlist, and its first act was to declare both of them dead:
+*"none of its assets are on the mandate allowlist"*. True, useless, and fixable only by hand-picking
+the same assets out of thirty chips.
+
+The same shape of hole as the follow one, found the same way. A trigger is scoped to assets; the run
+that compiled the rules knows exactly which; the hand-off dropped them on the floor. `assets` and
+`symbols` travel with the rules now, and `Mandate` preselects them.
+
+Kept apart from `follow` rather than folded into it: installing exit rules is not following a
+thesis, and reusing that state would have rendered a *"Following thesis #N"* banner over an arrival
+that names no thesis at all.
+
+**Two hand-offs, two identical bugs, both invisible until somebody pressed the button.** The
+pattern is worth naming: a sender that navigates away is the only place some facts exist, and
+whatever it does not put in the payload is gone by the time anyone notices something is missing.

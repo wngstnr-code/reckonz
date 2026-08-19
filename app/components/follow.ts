@@ -56,6 +56,18 @@ export interface TriggerInstallRequest {
   exitTriggers: ResolvedTrigger[];
   /** What no metric could capture, carried so the form can repeat the warning. */
   manualWatch: string[];
+  /**
+   * The assets those rules name.
+   *
+   * Carried because a trigger is scoped to assets and the form checks its rules
+   * against the allowlist being built. Without them the hand-off arrived with
+   * live rules and nothing selected, so the form's first act was to declare
+   * every one of them dead -- true, useless, and fixable only by hand-picking
+   * the same assets out of thirty chips. The run that produced the rules already
+   * knows which they are.
+   */
+  assets: Address[];
+  symbols: string[];
 }
 
 export interface FollowRequest {

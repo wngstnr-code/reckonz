@@ -97,6 +97,14 @@ export function Mandate() {
   const [draft, setDraft] = useState<Draft>(() => draftFor(196));
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
   const [follow, setFollow] = useState<FollowRequest | null>(null);
+  /**
+   * Assets a hand-off asked for, when it was not a follow.
+   *
+   * Kept apart from `follow` on purpose: installing exit rules is not following
+   * a thesis, and reusing `follow` would have rendered a "Following thesis #N"
+   * banner over an arrival that named no thesis at all.
+   */
+  const [wanted, setWanted] = useState<Address[] | null>(null);
   const [compiled, setCompiled] = useState<TriggerInstallRequest | null>(null);
   const [installRules, setInstallRules] = useState(true);
   const panel = useRef<HTMLElement>(null);
@@ -141,8 +149,10 @@ export function Mandate() {
 
   useEffect(() => {
     const onTriggers = (e: Event) => {
-      setCompiled((e as CustomEvent<TriggerInstallRequest>).detail);
+      const detail = (e as CustomEvent<TriggerInstallRequest>).detail;
+      setCompiled(detail);
       setInstallRules(true);
+      setWanted(detail.assets);
       panel.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
     window.addEventListener(INSTALL_TRIGGERS_EVENT, onTriggers);
@@ -171,6 +181,10 @@ export function Mandate() {
     } else {
       setCompiled(handoff.payload);
       setInstallRules(true);
+      // The rules are scoped to these, and a rule whose asset is not on the
+      // allowlist is dead. Arriving with the rules and not the assets made the
+      // form open by calling all of them dead.
+      setWanted(handoff.payload.assets);
     }
   }, []);
 
@@ -179,10 +193,11 @@ export function Mandate() {
   // never visible. Runs again when the universe arrives, so a follow that lands
   // first is not lost.
   useEffect(() => {
-    if (!follow || !universe) return;
-    const wanted = new Set(follow.assets.map((a) => a.toLowerCase()));
-    setPicked(universe.filter((u) => wanted.has(u.address.toLowerCase())).map((u) => u.address));
-  }, [follow, universe]);
+    const from = follow?.assets ?? wanted;
+    if (!from || !universe) return;
+    const want = new Set(from.map((a) => a.toLowerCase()));
+    setPicked(universe.filter((u) => want.has(u.address.toLowerCase())).map((u) => u.address));
+  }, [follow, wanted, universe]);
 
   useEffect(() => {
     let live = true;
