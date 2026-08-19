@@ -418,6 +418,147 @@
   }
 }
 
+/* The landing wall: thirty tokenised listings, running.
+ *
+ * Two keyframes rather than one plus a negative duration, because a reversed
+ * animation also reverses the easing — irrelevant at `linear`, and exactly the
+ * kind of thing that stops being irrelevant the moment somebody eases it.
+ *
+ * Each track holds its row twice and travels half its own width, so the copy
+ * lands where the original started and the loop has no seam to hide. `%` of the
+ * element, not of the viewport, which is why the row can be any length.
+ */
+@keyframes wall-left {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes wall-right {
+  from {
+    transform: translateX(-50%);
+  }
+}
+
+/* Direction and speed arrive as custom properties from the component, so the
+   animation itself is declared here once — which is what lets the media query
+   below switch it off. An `animation` written inline as a style attribute beats
+   any stylesheet rule, so a wall built that way could not honour the setting
+   without `!important`. */
+.wall-track {
+  animation-name: var(--wall-name);
+  animation-duration: var(--wall-duration);
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wall-track {
+    animation: none;
+  }
+}
+
+/* A tile is the mark and nothing else.
+ *
+ * There was a white plate under each one, bevelled with an inset shadow, which
+ * is what the reference's grey squares suggested. It was wrong for these files:
+ * every xStock mark is a full-bleed canvas whose corners are notched into an X,
+ * and a plate behind it — even clipped to the same notch — puts back a surface
+ * the artwork spends its own alpha cutting away. The console has had this rule
+ * since `AssetMark` was written; the landing page had to learn it too.
+ *
+ * What survives is the cast shadow, because a filter follows the mark's own
+ * alpha rather than its box. So the thing standing off the ground is the shape
+ * of the logo itself, which is the only version of that effect these files can
+ * honestly support.
+ */
+.wall-tile {
+  filter: drop-shadow(0 14px 18px rgb(0 0 0 / 0.55)) drop-shadow(0 2px 4px rgb(0 0 0 / 0.4));
+  /* Position and size, both as `transform` and nothing else, which is the whole
+   * reason this can run against a marquee: layout never changes, so the track's
+   * own width stays constant and its `translateX(-50%)` loop keeps landing
+   * exactly on its seam. A version that shrank tiles by changing their `width`
+   * would reflow the track under the animation every frame.
+   *
+   * No transition. The wall eases the numbers itself, frame by frame, because a
+   * CSS transition chasing a value rewritten sixty times a second never arrives
+   * anywhere — it only adds lag between the pointer and the response. */
+  transform: translateX(var(--shift, 0px)) scale(var(--shrink, 1));
+  will-change: transform;
+}
+
+/* The menu panel, arriving and leaving.
+ *
+ * Blur and a tilt away from the reader, so it reads as coming up out of the
+ * page rather than sliding across it. It leaves the other way — down, and
+ * tilted the other sign — which is what stops an open-close-open from looking
+ * like the same animation played twice.
+ *
+ * The rotation is about **Z**, in the plane of the screen, so the panel swings
+ * left and right rather than hinging away from the reader.
+ *
+ * Thirty degrees at both ends, the same sign. It swings up into square and then
+ * falls back the way it came, which is a pendulum returning to rest — not a
+ * panel that carries on through to the mirror of where it started. The two
+ * animations still differ in the half that matters: one rises and sharpens, the
+ * other drops and blurs.
+ *
+ * `transform-origin` is the panel's own centre. Hung from its top edge the lean
+ * was a corner lifting, which reads as a page peeling; about the centre the
+ * whole panel tips as one object, which is what a lean is.
+ *
+ * And it starts well below where it lands, far enough that the rise is a
+ * distance rather than a settle. A short travel over a long duration reads as
+ * hesitation.
+ */
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    filter: blur(12px);
+    transform: translateY(5rem) rotateZ(30deg);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) rotateZ(0deg);
+  }
+}
+
+@keyframes menu-out {
+  from {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) rotateZ(0deg);
+  }
+  to {
+    opacity: 0;
+    filter: blur(12px);
+    transform: translateY(5rem) rotateZ(30deg);
+  }
+}
+
+.menu-panel {
+  transform-origin: center center;
+}
+
+.menu-opening {
+  animation: menu-in 340ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.menu-closing {
+  animation: menu-out 260ms cubic-bezier(0.55, 0, 0.68, 0.35) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-opening,
+  .menu-closing {
+    animation-duration: 1ms;
+  }
+}
+
+
+
+
 
 /*
  * The size slider, drawn rather than accented.
