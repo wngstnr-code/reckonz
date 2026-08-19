@@ -784,3 +784,203 @@
     transform: none;
   }
 }
+
+/* --------------------------------------------------- the how-it-works section
+ *
+ * **Two gates, not one.** The heading and its caption answer the section
+ * arriving; the frames and their names answer the row of cards arriving, on
+ * their own observer. One gate meant the cards played out while they were still
+ * most of a screen below the fold, so by the time a reader got to them there
+ * was nothing left to see — the animation had happened to nobody. `.reveal-on`
+ * is the section's; `.cards-on` is the row's.
+ *
+ * Five entrances, and every one of them is an entrance only. Nothing here is
+ * scrubbed by the scroll the way the section above it is: the class arrives
+ * when the section does, the animations run once, and `both` holds the last
+ * frame. Leaving takes the class away, which puts every element back at its
+ * starting position — so coming back, from either direction, plays it again.
+ * That is deliberate. A section read on the way past should look the same on
+ * the second pass as on the first.
+ */
+
+/* A letter, rising out of its own mask.
+ *
+ * The block version of this is `.rise-mask`, and the only difference is the
+ * display type — but that difference is the whole reason it is a separate rule:
+ * an inline-block sits on the text baseline, so `vertical-align: bottom` is
+ * what stops each mask from being offset by the descender space of a line it
+ * does not contain. Without it the letters sit at slightly different heights.
+ *
+ * It clips at the line box. A heading with descenders set at this leading would
+ * lose their tails and would need the room given back.
+ */
+.letter-mask {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+}
+
+.letter-mask > span {
+  display: inline-block;
+  transform: translateY(110%);
+}
+
+.reveal-on .letter-mask > span {
+  animation: rise 820ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--rise-delay, 0ms);
+}
+
+/* The caption, arriving from above.
+ *
+ * The mirror of the heading's move, and the mirror is the point: the two are at
+ * opposite ends of one line, so having them arrive from opposite directions
+ * makes the line read as opening rather than as two things being placed.
+ */
+.drop-mask {
+  display: block;
+  overflow: hidden;
+}
+
+.drop-mask > span {
+  transform: translateY(-110%);
+}
+
+/* The animation is declared here rather than parked and paused above. A paused
+   animation freezes wherever it had got to, so leaving the section mid-flight
+   and coming back would resume from the middle. Declaring it only under the
+   class means the class going away takes the animation with it and the element
+   returns to the rule above — which is what makes the replay a replay. */
+.reveal-on .drop-mask > span {
+  animation: rise 820ms cubic-bezier(0.22, 1, 0.36, 1) 180ms both;
+}
+
+/* The frame, opening from its own centre.
+ *
+ * `clip-path`, not width and height. The picture is at its final size in the
+ * first frame and the frame uncovers it, so nothing is ever scaled: no soft
+ * edges on the way in, no reflow of anything under it, and the caption below
+ * does not move while the image arrives.
+ *
+ * 15% a side, so the frame starts at 70% of itself rather than at nothing. A
+ * frame that opens from zero is a point becoming a rectangle — there is no
+ * frame there to expand for most of it. Starting near the size it ends at makes
+ * the move read as the thing it is: an opening, not a birth.
+ *
+ * The radius is carried in the `inset()` because a clip path replaces the
+ * element's own rounding — without `round`, the corners would be square for
+ * the length of the animation and then snap.
+ *
+ * Both cards run this together on purpose: they are two halves of one
+ * statement, and a stagger would make the second read as a consequence of the
+ * first.
+ *
+ * `cubic-bezier(0.16, 1, 0.3, 1)` over 520ms, and both halves of that matter.
+ * The easing before it was slow at each end and quick through the middle, which
+ * is right for something with weight being moved and wrong for a frame: it
+ * spent its first fifth barely opening, so the animation looked like it was
+ * working up to the move rather than making it. This one leaves at full speed
+ * and spends the rest arriving. No delay either — the frame is the first thing
+ * to answer the scroll, so anything in front of it is a pause the reader has to
+ * sit through.
+ */
+.frame-open {
+  clip-path: inset(15% round 1.25rem);
+}
+
+.cards-on .frame-open {
+  animation: frame-open 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes frame-open {
+  to {
+    clip-path: inset(0% round 1.25rem);
+  }
+}
+
+/* The name, rolling past itself.
+ *
+ * Four identical copies in a box one of them tall; the track travels three, so
+ * the word goes by three times and settles on the fourth. Fast and decelerating
+ * — `cubic-bezier(0.16, 1, 0.3, 1)` spends most of its time arriving, which is
+ * what makes three passes read as one quick roll that stops rather than as a
+ * loop that was cut off.
+ *
+ * The percentage is of the track's own height, which is why the copies must
+ * stay at four: 75% of four lines is three lines, and any other count needs a
+ * different number here.
+ */
+/* One line tall, explicitly.
+ *
+ * `overflow: hidden` hides what is outside the box; it does not decide how big
+ * the box is. Four stacked copies made a four-line box with three lines of
+ * nothing under the word, and the line below the name was pushed down by all
+ * three. `1lh` is one line box of this element's own type, so the mask stays
+ * correct if the size or the leading changes. */
+.roll-mask {
+  display: block;
+  height: 1lh;
+  overflow: hidden;
+}
+
+.roll-track {
+  display: block;
+  transform: translateY(0);
+}
+
+.cards-on .roll-track {
+  animation: roll 760ms cubic-bezier(0.16, 1, 0.3, 1) 170ms both;
+}
+
+@keyframes roll {
+  to {
+    transform: translateY(-75%);
+  }
+}
+
+/* The line under it, sliding in from the side.
+ *
+ * The mask is the text's own width rather than the column's — `inline-block`
+ * over `nowrap` — so a line longer than the card runs on to the right instead
+ * of wrapping, and the thing hiding it is still exactly as wide as the thing it
+ * hides. 102% rather than 100% covers the sub-pixel edge a fractional width
+ * leaves behind.
+ */
+.side-mask {
+  display: inline-block;
+  overflow: hidden;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.side-mask > span {
+  display: inline-block;
+  transform: translateX(-102%);
+}
+
+.cards-on .side-mask > span {
+  animation: slide-in 720ms cubic-bezier(0.22, 1, 0.36, 1) 320ms both;
+}
+
+@keyframes slide-in {
+  to {
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-on .letter-mask > span,
+  .drop-mask > span,
+  .roll-track,
+  .side-mask > span {
+    animation: none;
+    transform: none;
+  }
+
+  /* The roll has four copies and no animation to land it on the fourth, so the
+     box shows the first — the same word. The frame is simply open. */
+  .frame-open,
+  .cards-on .frame-open {
+    animation: none;
+    clip-path: inset(0% round 1.25rem);
+  }
+}
