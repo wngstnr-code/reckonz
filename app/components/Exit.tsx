@@ -7,8 +7,17 @@ import { ADDR } from '@/src/chain';
 import { awaitReceipt } from './awaitReceipt';
 import type { UniverseEntry } from '@/src/pipeline';
 import { buildPermit, describePermit, PERMIT_TTL_SEC } from '@/src/permit';
-import { FILLED_EVENT, MANDATES_CHANGED_EVENT } from './follow';
-import { Card, Legend, Note, Num, Pill } from './ui';
+import {
+  FILLED_EVENT,
+  MANDATES_CHANGED_EVENT,
+  PICK_ASSET_EVENT,
+  QUOTED_EVENT,
+  type FilledDetail,
+  type PickAssetDetail,
+  type QuotedDetail,
+} from './follow';
+import { SwapBox, SwapLeg, TokenChip } from './console/trade/SwapBox';
+import { Legend, Num, Pill } from './ui';
 import { useWallet } from './useWallet';
 
 /**
@@ -147,6 +156,17 @@ export function Exit() {
   }, []);
 
   const symbolOf = new Map(universe.map((u) => [u.address.toLowerCase(), u.symbol]));
+
+  // A position row in the left column, or a leg in the basket rail, naming what
+  // to sell. Only the sell direction: the buy message belongs to `Fill`.
+  useEffect(() => {
+    const onPick = (e: Event) => {
+      const d = (e as CustomEvent<PickAssetDetail>).detail;
+      if (d?.direction === 'sell') setAsset(d.asset as Address);
+    };
+    window.addEventListener(PICK_ASSET_EVENT, onPick);
+    return () => window.removeEventListener(PICK_ASSET_EVENT, onPick);
+  }, []);
 
   /**
    * The mandates this wallet can exit through, and what it actually holds of
@@ -320,8 +340,19 @@ export function Exit() {
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body?.error ?? `the quote failed (${response.status})`);
-      setPlan(body as WirePlan);
+      const quoted = body as WirePlan;
+      setPlan(quoted);
       setPhase({ kind: 'idle' });
+      window.dispatchEvent(
+        new CustomEvent<QuotedDetail>(QUOTED_EVENT, {
+          detail: {
+            symbol: quoted.symbol,
+            isExit: true,
+            allow: quoted.verdict.allow,
+            reason: quoted.verdict.allow ? undefined : quoted.verdict.reason,
+          },
+        }),
+      );
     } catch (e) {
       setPhase({ kind: 'failed', message: e instanceof Error ? e.message : String(e) });
     }
@@ -459,7 +490,11 @@ export function Exit() {
       // recorded position moved, a receipt now exists, and the fill panel's cash
       // line just went up. The listener above re-reads this panel, so there is
       // no explicit `load()` here.
-      window.dispatchEvent(new Event(FILLED_EVENT));
+      window.dispatchEvent(
+        new CustomEvent<FilledDetail>(FILLED_EVENT, {
+          detail: { symbol: plan.symbol, isExit: true },
+        }),
+      );
     } catch (e) {
       const code = (e as { code?: number })?.code;
       if (code === 4001) {
@@ -476,14 +511,7 @@ export function Exit() {
   }
 
   return (
-    <Card title="Exit a position">
-      <Note>
-        The reverse trade, and the same division of labour: the server simulates every fee tier and
-        asks the guard, your wallet does the approving, the signing and the sending. The permit here
-        names the <em>asset</em> rather than USDG, so each xStock needs its own one-off Permit2
-        approval.
-      </Note>
-
+    <>
       {!address ? (
         <p className="text-[13px] text-dim">Connect a wallet to sell one.</p>
       ) : !option ? (
@@ -515,98 +543,107 @@ export function Exit() {
         </p>
       ) : (
         <>
-          <div className="mb-1 flex flex-wrap items-end gap-4">
-            <label className="flex flex-col gap-1">
-              <span className="text-[10.5px] tracking-[0.09em] text-faint uppercase">mandate</span>
-              <select
-                value={mandateId?.toString() ?? ''}
-                onChange={(e) => setMandateId(BigInt(e.target.value))}
-                className="rounded-md border border-line bg-raised px-2 py-1 font-mono text-[12px] text-ink outline-none focus:border-signal-deep"
-              >
-                {mandates.map((m) => (
-                  <option key={m.id.toString()} value={m.id.toString()}>
-                    #{m.id.toString()}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="flex flex-col gap-1">
-              <span className="text-[10.5px] tracking-[0.09em] text-faint uppercase">sell</span>
-              <select
-                value={asset ?? ''}
-                onChange={(e) => setAsset(e.target.value as Address)}
-                className="rounded-md border border-line bg-raised px-2 py-1 font-mono text-[12px] text-ink outline-none focus:border-signal-deep"
-              >
-                {holdings.map((h) => (
-                  <option key={h.address} value={h.address}>
-                    {h.symbol}
-                    {h.balance === 0n ? ' — none held' : ''}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="flex flex-col gap-1">
-              <span className="text-[10.5px] tracking-[0.09em] text-faint uppercase">units</span>
-              <span className="flex items-baseline gap-1.5">
-                <input
-                  value={units}
-                  inputMode="decimal"
-                  placeholder="0.0"
-                  onChange={(e) => setUnits(e.target.value)}
-                  className="w-32 rounded-md border border-line bg-raised px-2 py-1 font-mono text-[12px] text-ink outline-none focus:border-signal-deep"
-                />
-                <button
-                  onClick={() =>
-                    holding && setUnits(formatUnits(holding.balance, holding.decimals))
-                  }
-                  disabled={!holding || holding.balance === 0n}
-                  className="rounded-full border border-line bg-raised px-2 py-0.5 font-mono text-[10.5px] text-faint hover:text-ink disabled:opacity-40"
-                >
-                  all
-                </button>
-              </span>
-            </label>
-
-            <button
-              onClick={() => void check()}
-              disabled={busy || !asset || !validUnits || shortOfAsset}
-              className="rounded-full border border-line bg-raised px-4 py-1 font-mono text-[12px] text-ink hover:border-signal-deep disabled:opacity-40"
+          <label className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-line bg-raised px-3 py-2">
+            <span className="text-[11px] font-semibold tracking-[0.09em] text-faint uppercase">
+              mandate
+            </span>
+            <select
+              value={mandateId?.toString() ?? ''}
+              onChange={(e) => setMandateId(BigInt(e.target.value))}
+              className="cursor-pointer bg-transparent font-mono text-[13px] text-ink outline-none"
             >
-              {phase.kind === 'quoting' ? 'quoting…' : 'quote & check'}
-            </button>
-          </div>
+              {mandates.map((m) => (
+                <option key={m.id.toString()} value={m.id.toString()}>
+                  #{m.id.toString()}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {/* The same box as the entry, with the halves swapped. That is what an
+              exit is, and giving it its own layout would make the reverse trade
+              look like a different kind of act than the one it undoes. */}
+          <SwapBox
+            top={
+              <SwapLeg
+                label="Sell"
+                amount={units}
+                onAmountChange={setUnits}
+                token={
+                  <TokenChip
+                    symbol={holding?.symbol ?? symbolOf.get((asset ?? '').toLowerCase()) ?? '—'}
+                    value={asset ?? ''}
+                    onChange={(next) => setAsset(next as Address)}
+                    options={holdings.map((h) => ({
+                      value: h.address,
+                      label: h.balance === 0n ? `${h.symbol} — none held` : h.symbol,
+                    }))}
+                  />
+                }
+                hint={
+                  holding ? (
+                    <span className={shortOfAsset ? 'text-caution' : undefined}>
+                      you hold {formatUnits(holding.balance, holding.decimals)}
+                    </span>
+                  ) : null
+                }
+                right={
+                  holding && holding.balance > 0n ? (
+                    <button
+                      onClick={() => setUnits(formatUnits(holding.balance, holding.decimals))}
+                      className="font-mono text-[11.5px] text-faint underline decoration-dotted hover:text-ink"
+                    >
+                      all
+                    </button>
+                  ) : null
+                }
+              />
+            }
+            bottom={
+              <SwapLeg
+                label="Receive"
+                amount={plan ? formatUnits(BigInt(plan.quote.amountOut), plan.cashDecimals) : ''}
+                token={<TokenChip symbol="USDG" />}
+                hint={plan ? `at ${plan.quote.effectivePrice.toFixed(4)}` : 'quote to see the size'}
+              />
+            }
+          />
 
           {holdings.length === 0 && (
-            <p className="mb-2 text-[13px] leading-relaxed text-dim">
+            <p className="mt-2.5 text-[12.5px] leading-relaxed text-dim">
               This mandate allows no assets, so there is nothing it can sell. An exit is a fill and
               the guard checks the allowlist, so an asset has to be allowed to be left.
             </p>
           )}
 
-          {holding && mandate && (
-            <p className="mb-2 font-mono text-[11px] text-faint">
-              you hold <Num>{formatUnits(holding.balance, holding.decimals)}</Num> {holding.symbol} ·{' '}
+          {mandate && (
+            <p className="mt-2.5 font-mono text-[11.5px] text-faint tabular-nums">
               {/* An exit spends one of the epoch's fills. Showing it here rather
                   than letting the user meet EPOCH_LIMIT at the quote: the point
                   of a rate limit is to be visible before it binds. */}
               {mandate.fillsThisEpoch}/{mandate.maxFillsPerEpoch} fills this epoch, and this would
               be one
               {mandate.breaker && (
-                <span className="text-refuse">
-                  {' '}
-                  · breaker tripped — exits are stopped too, release it above
-                </span>
+                <span className="text-refuse"> · breaker tripped — exits are stopped too</span>
               )}
             </p>
           )}
 
           {shortOfAsset && (
-            <p className="mb-2 text-[12px] leading-relaxed text-caution">
+            <p className="mt-2 text-[12.5px] leading-relaxed text-caution">
               That is more {holding?.symbol} than this wallet holds. Permit2 authorises a pull, it
               does not create the balance.
             </p>
+          )}
+
+          {!plan && (
+            <button
+              onClick={() => void check()}
+              disabled={busy || !asset || !validUnits || shortOfAsset}
+              className="mt-4 w-full rounded-xl border border-signal-deep bg-signal/8 px-4 py-3 font-mono text-[14px] text-signal hover:bg-signal/14 disabled:opacity-40"
+            >
+              {phase.kind === 'quoting' ? 'quoting…' : 'Quote & check'}
+            </button>
           )}
 
           {plan && <Plan plan={plan} />}
@@ -665,7 +702,7 @@ export function Exit() {
               <button
                 onClick={sell}
                 disabled={busy}
-                className="rounded-full border border-signal-deep bg-signal/6 px-4 py-1 font-mono text-[12px] text-signal hover:bg-signal/12 disabled:opacity-40"
+                className="w-full rounded-xl border border-signal-deep bg-signal/8 px-4 py-3 font-mono text-[14px] text-signal hover:bg-signal/14 disabled:opacity-40"
               >
                 {phase.kind === 'approving'
                   ? `approving Permit2 for ${plan.symbol} in your wallet…`
@@ -723,9 +760,16 @@ export function Exit() {
               </p>
             </div>
           )}
+
+          <p className="mt-4 text-[12px] leading-relaxed text-faint">
+            The reverse trade, and the same division of labour: the server simulates every fee tier
+            and asks the guard, your wallet does the approving, the signing and the sending. The
+            permit here names the <em>asset</em> rather than USDG, so each xStock needs its own
+            one-off Permit2 approval.
+          </p>
         </>
       )}
-    </Card>
+    </>
   );
 }
 

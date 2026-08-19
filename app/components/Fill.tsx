@@ -7,8 +7,19 @@ import { ADDR } from '@/src/chain';
 import { awaitReceipt } from './awaitReceipt';
 import type { UniverseEntry } from '@/src/pipeline';
 import { buildPermit, describePermit, PERMIT_TTL_SEC } from '@/src/permit';
-import { FILLED_EVENT, FOLLOW_EVENT, MANDATES_CHANGED_EVENT, type FollowRequest } from './follow';
-import { Card, Legend, Note, Num, Pill } from './ui';
+import {
+  FILLED_EVENT,
+  MANDATES_CHANGED_EVENT,
+  PICK_ASSET_EVENT,
+  QUOTED_EVENT,
+  type FilledDetail,
+  type FollowRequest,
+  type PickAssetDetail,
+  type QuotedDetail,
+} from './follow';
+import { useFollow } from './useFollow';
+import { SwapBox, SwapLeg, TokenChip } from './console/trade/SwapBox';
+import { Legend, Num, Pill } from './ui';
 import { useWallet } from './useWallet';
 
 /**
@@ -111,7 +122,6 @@ export function Fill() {
   const [mandateId, setMandateId] = useState<bigint | null>(null);
   const [asset, setAsset] = useState<Address | null>(null);
   const [amount, setAmount] = useState('0.5');
-  const [follow, setFollow] = useState<FollowRequest | null>(null);
   const [plan, setPlan] = useState<WirePlan | null>(null);
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
   const [cash, setCash] = useState<{ address: Address; decimals: number; balance: bigint } | null>(
@@ -129,10 +139,23 @@ export function Fill() {
       .catch(() => {});
   }, []);
 
+  // Read from the store rather than from the event alone. Arriving on `/trade`
+  // from a published thesis, the hand-off is drained from `sessionStorage` by
+  // the mandate form, and an event fired before this panel mounted is one it
+  // never hears — which is why the follow banner used to be invisible on exactly
+  // the path that produces a follow.
+  const follow = useFollow();
+
+  // A basket leg or a position row naming what to load. Ignored on the sell
+  // side: that message belongs to `Exit`, and acting on both would leave the two
+  // panels quoting different assets from one click.
   useEffect(() => {
-    const onFollow = (e: Event) => setFollow((e as CustomEvent<FollowRequest>).detail);
-    window.addEventListener(FOLLOW_EVENT, onFollow);
-    return () => window.removeEventListener(FOLLOW_EVENT, onFollow);
+    const onPick = (e: Event) => {
+      const d = (e as CustomEvent<PickAssetDetail>).detail;
+      if (d?.direction === 'buy') setAsset(d.asset as Address);
+    };
+    window.addEventListener(PICK_ASSET_EVENT, onPick);
+    return () => window.removeEventListener(PICK_ASSET_EVENT, onPick);
   }, []);
 
   const symbolOf = new Map(universe.map((u) => [u.address.toLowerCase(), u.symbol]));
@@ -321,8 +344,21 @@ export function Fill() {
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body?.error ?? `the quote failed (${response.status})`);
-      setPlan(body as WirePlan);
+      const quoted = body as WirePlan;
+      setPlan(quoted);
       setPhase({ kind: 'idle' });
+      // The rail above shows where a followed basket has got to, and only the
+      // panel that asked knows what the guard said about this leg.
+      window.dispatchEvent(
+        new CustomEvent<QuotedDetail>(QUOTED_EVENT, {
+          detail: {
+            symbol: quoted.symbol,
+            isExit: false,
+            allow: quoted.verdict.allow,
+            reason: quoted.verdict.allow ? undefined : quoted.verdict.reason,
+          },
+        }),
+      );
     } catch (e) {
       setPhase({ kind: 'failed', message: e instanceof Error ? e.message : String(e) });
     }
@@ -466,7 +502,11 @@ export function Fill() {
       // Which re-reads this panel too, through the listener above — so there is
       // no explicit `load()` here any more. Doing both ran two serial chain
       // walks at once against an RPC that throttles.
-      window.dispatchEvent(new Event(FILLED_EVENT));
+      window.dispatchEvent(
+        new CustomEvent<FilledDetail>(FILLED_EVENT, {
+          detail: { symbol: plan.symbol, isExit: false },
+        }),
+      );
     } catch (e) {
       const code = (e as { code?: number })?.code;
       if (code === 4001) {
@@ -483,13 +523,7 @@ export function Fill() {
   }
 
   return (
-    <Card title="Execute a fill">
-      <Note>
-        The quote, the oracle read and the guard&apos;s verdict come from the server; the approval,
-        the signature and the transaction happen in your wallet. Nothing is signed on your behalf,
-        and the permit below authorises one token, one amount, one contract, for twenty minutes.
-      </Note>
-
+    <>
       {!address ? (
         <p className="text-[13px] text-dim">Connect a wallet to place one.</p>
       ) : !option ? (
@@ -521,101 +555,107 @@ export function Fill() {
         </p>
       ) : (
         <>
-          {follow && (
-            <div className="mb-4 flex flex-wrap items-start justify-between gap-3 rounded-lg border border-signal-deep bg-signal/6 px-4 py-2.5">
-              <p className="max-w-[70ch] text-[12.5px] leading-relaxed text-ink">
-                Following thesis <Num>#{follow.thesisId}</Num> —{' '}
-                {carriesThesis ? (
-                  <>
-                    this fill will carry its hash, so it lands in that thesis&apos;s track record
-                    rather than counting as an untethered trade.
-                  </>
-                ) : (
-                  <span className="text-caution">
-                    the asset selected is not one this thesis held ({follow.symbols.join(', ')}),
-                    so the fill will <em>not</em> carry its hash. Stamping it on a trade the thesis
-                    never produced would look like evidence and be none.
-                  </span>
-                )}
-              </p>
-              <button
-                onClick={() => setFollow(null)}
-                className="rounded-full border border-line bg-raised px-2.5 py-0.5 font-mono text-[10.5px] text-faint hover:text-ink"
-              >
-                stop following
-              </button>
-            </div>
-          )}
-
-          <div className="mb-1 flex flex-wrap items-end gap-4">
-            <label className="flex flex-col gap-1">
-              <span className="text-[10.5px] tracking-[0.09em] text-faint uppercase">mandate</span>
-              <select
-                value={mandateId?.toString() ?? ''}
-                onChange={(e) => setMandateId(BigInt(e.target.value))}
-                className="rounded-md border border-line bg-raised px-2 py-1 font-mono text-[12px] text-ink outline-none focus:border-signal-deep"
-              >
-                {mandates.map((m) => (
-                  <option key={m.id.toString()} value={m.id.toString()}>
-                    #{m.id.toString()}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="flex flex-col gap-1">
-              <span className="text-[10.5px] tracking-[0.09em] text-faint uppercase">asset</span>
-              <select
-                value={asset ?? ''}
-                onChange={(e) => setAsset(e.target.value as Address)}
-                className="rounded-md border border-line bg-raised px-2 py-1 font-mono text-[12px] text-ink outline-none focus:border-signal-deep"
-              >
-                {(mandate?.assets ?? []).map((a) => (
-                  <option key={a} value={a}>
-                    {symbolOf.get(a.toLowerCase()) ?? a.slice(0, 10)}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="flex flex-col gap-1">
-              <span className="text-[10.5px] tracking-[0.09em] text-faint uppercase">size</span>
-              <span className="flex items-baseline gap-1.5">
-                <input
-                  value={amount}
-                  inputMode="decimal"
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="w-24 rounded-md border border-line bg-raised px-2 py-1 font-mono text-[12px] text-ink outline-none focus:border-signal-deep"
-                />
-                <span className="font-mono text-[11px] text-faint">USDG</span>
-              </span>
-            </label>
-
-            <button
-              onClick={check}
-              disabled={busy || !asset || !validAmount}
-              className="rounded-full border border-line bg-raised px-4 py-1 font-mono text-[12px] text-ink hover:border-signal-deep disabled:opacity-40"
+          {/* The reference puts the chain picker here, above the box. Ours picks
+              the mandate, which is the same kind of choice: the rule set this
+              trade will be bounded by, chosen before the amount rather than
+              discovered at the verdict. */}
+          <label className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-line bg-raised px-3 py-2">
+            <span className="text-[11px] font-semibold tracking-[0.09em] text-faint uppercase">
+              mandate
+            </span>
+            <select
+              value={mandateId?.toString() ?? ''}
+              onChange={(e) => setMandateId(BigInt(e.target.value))}
+              className="cursor-pointer bg-transparent font-mono text-[13px] text-ink outline-none"
             >
-              {phase.kind === 'quoting' ? 'quoting…' : 'quote & check'}
-            </button>
-          </div>
+              {mandates.map((m) => (
+                <option key={m.id.toString()} value={m.id.toString()}>
+                  #{m.id.toString()}
+                </option>
+              ))}
+            </select>
+          </label>
 
-          {mandate && cash && (
-            <p className="mb-2 font-mono text-[11px] text-faint">
-              {formatUnits(mandate.maxNotionalPerTrade, cash.decimals)} USDG per trade ·{' '}
-              {mandate.fillsThisEpoch}/{mandate.maxFillsPerEpoch} fills this epoch · you hold{' '}
-              <span className={shortOfCash ? 'text-caution' : undefined}>
-                {formatUnits(cash.balance, cash.decimals)} USDG
-              </span>
+          <SwapBox
+            top={
+              <SwapLeg
+                label="Spend"
+                amount={amount}
+                onAmountChange={setAmount}
+                token={<TokenChip symbol="USDG" />}
+                hint={
+                  cash ? (
+                    <span className={shortOfCash ? 'text-caution' : undefined}>
+                      balance {formatUnits(cash.balance, cash.decimals)}
+                    </span>
+                  ) : null
+                }
+                right={
+                  mandate && cash ? (
+                    <button
+                      onClick={() => setAmount(formatUnits(mandate.maxNotionalPerTrade, cash.decimals))}
+                      className="font-mono text-[11.5px] text-faint underline decoration-dotted hover:text-ink"
+                    >
+                      max {formatUnits(mandate.maxNotionalPerTrade, cash.decimals)}
+                    </button>
+                  ) : null
+                }
+              />
+            }
+            bottom={
+              <SwapLeg
+                label="Receive"
+                // Blank until the server has quoted. A live estimate here would
+                // be a number nothing measured, and it is the number the user
+                // decides on — `setPlan(null)` on every edit is what keeps this
+                // from ever showing a figure belonging to a different size.
+                amount={plan ? plan.quote.out.toFixed(6) : ''}
+                token={
+                  <TokenChip
+                    symbol={symbolOf.get((asset ?? '').toLowerCase()) ?? '—'}
+                    value={asset ?? ''}
+                    onChange={(next) => setAsset(next as Address)}
+                    options={(mandate?.assets ?? []).map((a) => ({
+                      value: a,
+                      label: symbolOf.get(a.toLowerCase()) ?? a.slice(0, 10),
+                    }))}
+                  />
+                }
+                hint={plan ? `at ${plan.quote.effectivePrice.toFixed(4)}` : 'quote to see the size'}
+              />
+            }
+          />
+
+          {mandate && (
+            <p className="mt-2.5 font-mono text-[11.5px] text-faint tabular-nums">
+              {mandate.fillsThisEpoch}/{mandate.maxFillsPerEpoch} fills this epoch
               {mandate.breaker && <span className="text-refuse"> · breaker tripped</span>}
             </p>
           )}
 
           {shortOfCash && (
-            <p className="mb-2 text-[12px] leading-relaxed text-caution">
+            <p className="mt-2 text-[12.5px] leading-relaxed text-caution">
               That is more USDG than this wallet holds. The guard would allow it and the transfer
               would fail — Permit2 authorises a pull, it does not create the balance.
             </p>
+          )}
+
+          {follow && !carriesThesis && (
+            <p className="mt-2 text-[12.5px] leading-relaxed text-caution">
+              This asset is not one thesis #{follow.thesisId} held ({follow.symbols.join(', ')}), so
+              the fill will <em>not</em> carry its hash. Stamping it on a trade the thesis never
+              produced would look like evidence and be none.
+            </p>
+          )}
+
+          {!plan && (
+            <button
+              onClick={check}
+              disabled={busy || !asset || !validAmount}
+              className="mt-4 w-full rounded-xl border border-signal-deep bg-signal/8 px-4 py-3 font-mono text-[14px] text-signal hover:bg-signal/14 disabled:opacity-40"
+            >
+              {phase.kind === 'quoting' ? 'quoting…' : 'Quote & check'}
+            </button>
           )}
 
           {plan && <Plan plan={plan} />}
@@ -647,7 +687,7 @@ export function Fill() {
               <button
                 onClick={fill}
                 disabled={busy || shortOfCash}
-                className="rounded-full border border-signal-deep bg-signal/6 px-4 py-1 font-mono text-[12px] text-signal hover:bg-signal/12 disabled:opacity-40"
+                className="w-full rounded-xl border border-signal-deep bg-signal/8 px-4 py-3 font-mono text-[14px] text-signal hover:bg-signal/14 disabled:opacity-40"
               >
                 {phase.kind === 'approving'
                   ? 'approving Permit2 in your wallet…'
@@ -707,9 +747,21 @@ export function Fill() {
               </p>
             </div>
           )}
+
+          {/* Where the reference prints its securities disclaimer. Ours says the
+              one thing that is structurally true here and is not true there: no
+              key of ours can move the money. It sits under the button because
+              that is where it is read, and because leading a trading card with a
+              paragraph pushes the trade below the fold. */}
+          <p className="mt-4 text-[12px] leading-relaxed text-faint">
+            The quote, the oracle read and the guard&apos;s verdict come from the server; the
+            approval, the signature and the transaction happen in your wallet. Nothing is signed on
+            your behalf, and the permit authorises one token, one amount, one contract, for twenty
+            minutes.
+          </p>
         </>
       )}
-    </Card>
+    </>
   );
 }
 

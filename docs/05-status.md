@@ -1,6 +1,6 @@
 # Status — resume here
 
-Last updated **2026-08-12**. Submission deadline **2026-08-21 23:59 UTC** (9 days).
+Last updated **2026-08-19**. Submission deadline **2026-08-21 23:59 UTC** (2 days).
 
 Repo: **github.com/wngstnr-code/reckonz** — private, `main`. `docs/` is **in the repo** as of
 2026-08-11; it used to be gitignored, which stopped working once the project became two people.
@@ -699,7 +699,36 @@ reminder.
 
 ## Log
 
-**2026-08-18 (latest, twenty-fourth)** — **the worker's price history is in the repo, and the
+**2026-08-19 (latest, twenty-fifth)** — **`/trade` rebuilt to the reference's shape** (D94), at
+Nabil's request. Ondo Finance's app was looked at again rather than recalled: an asset page there is
+context down the left and a sticky action card on the right, and the card holds a tab row, a
+selector, one spend-over-receive box with the direction drawn on the seam, a full-width button, and
+the fine print under it.
+
+The four stacked panels are now that layout. `Fill` and `Exit` are one card with `Buy`/`Sell` tabs,
+both kept mounted so a quote survives a tab switch; their three-fields-on-a-row form became the swap
+box, which is honest about what a fill is, since Permit2 scopes a signature to one token and one
+amount. The mandate became the document you read beside the trade — Mandate, Positions, Triggers,
+Allowlist, Controls, as plain sections rather than one panel — headed by *spendable this epoch*,
+derived as `maxNotionalPerTrade x fills remaining` from chain state. Creating a mandate dropped to
+the bottom, where a once-per-mandate step belongs. `Limits` is new and is the reference's Session
+Limits answered from measurement rather than policy: absorbable size per pool, and the one section
+that says anything to a visitor with no wallet.
+
+`BasketRail` is the missing accounting for a followed thesis — one row per leg, its state, and the
+reason on any refusal. It deliberately carries **no** asked-versus-executable total; D94 says why,
+and it is D50's constraint, not an oversight.
+
+Two seams moved with it. `FILLED_EVENT` now carries `{ symbol, isExit }`; `QUOTED_EVENT` is new.
+And `publishFollow` fixes a live bug rather than a cosmetic one: `Mandate` was the only reader of
+the `sessionStorage` hand-off, so arriving at `/trade` from a published thesis — the only path that
+produces a follow — the fill panel's follow banner never rendered, while the thesis hash still rode
+along on the fill.
+
+`pnpm typecheck` clean, 281 unit tests pass, `pnpm build` clean, `/trade` now server-rendered per
+request. Nav and footer untouched.
+
+**2026-08-18 (twenty-fourth)** — **the worker's price history is in the repo, and the
 measurement `PLAN_HEADROOM` was promised now exists** (D90). `/data/issuer-marks.jsonl` pulled off
 the Railway volume and folded in with `pnpm sample --merge`: **60 marks -> 4,290**, 30 assets,
 24.5 hours, 0 duplicates. `pnpm measure` before and after says the same thing both times —

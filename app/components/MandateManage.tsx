@@ -8,8 +8,14 @@ import { USDG } from '@/src/chain';
 import type { UniverseEntry } from '@/src/pipeline';
 import { describeOnchainTrigger, scaleThreshold, type OnchainTrigger } from '@/src/triggers';
 import { awaitReceipt } from './awaitReceipt';
-import { FILLED_EVENT, MANDATES_CHANGED_EVENT } from './follow';
-import { Card, Legend, Note, Num, Pill } from './ui';
+import {
+  FILLED_EVENT,
+  MANDATES_CHANGED_EVENT,
+  PICK_ASSET_EVENT,
+  type PickAssetDetail,
+} from './follow';
+import { Legend, Pill } from './ui';
+import { Fact, Facts, Section } from './console/trade/Section';
 import { useWallet } from './useWallet';
 
 /**
@@ -68,6 +74,8 @@ export function MandateManage() {
   const [universe, setUniverse] = useState<UniverseEntry[]>([]);
   const [busy, setBusy] = useState<Busy>(null);
   const [error, setError] = useState<string | null>(null);
+  /** Which mandate the left column describes. Null means "the newest". */
+  const [showId, setShowId] = useState<bigint | null>(null);
 
   useEffect(() => {
     fetch('/api/universe')
@@ -223,281 +231,462 @@ export function MandateManage() {
     }
   }
 
-  if (!address || !option) return null;
+  // Not `null`. The left column is what a visitor reads before they connect
+  // anything, and a section that simply vanishes leaves the page opening on a
+  // capacity table with no account of what the rules on this page even are.
+  if (!address) {
+    return (
+      <Section title="Mandate">
+        <p className="max-w-[68ch] text-meta leading-relaxed text-dim">
+          A mandate is the rule set the chain enforces inside the trade itself: the most it may
+          spend per fill, how many fills an epoch allows, how far off fair value it may pay, how
+          much overnight gap risk it will carry, and which assets it may hold at all. It is created
+          from your own wallet, so you are its owner, and PolicyGuard reverts any fill that breaches
+          it — in that fill&apos;s own transaction, not afterwards.
+        </p>
+        <p className="mt-3 max-w-[68ch] text-meta leading-relaxed text-dim">
+          Connect a wallet to read yours. The limits below need no wallet: they are measured from
+          the pools and are the same for everybody.
+        </p>
+      </Section>
+    );
+  }
+
+  if (!option) {
+    return (
+      <Section title="Mandate">
+        <p className="max-w-[68ch] text-meta leading-relaxed text-caution">
+          This wallet is on a chain with no deployment. Switch to X&nbsp;Layer using the control in
+          the header.
+        </p>
+      </Section>
+    );
+  }
+
+  if (mandates === null) {
+    return <p className="text-meta text-dim">Reading your mandates from the chain…</p>;
+  }
+
+  if (mandates.length === 0) {
+    return (
+      <>
+        {error && <WriteError message={error} />}
+        <div className="max-w-[62ch] rounded-xl border border-line bg-panel p-5">
+          <h2 className="text-title font-semibold tracking-tight">No mandate yet</h2>
+          <p className="mt-2 text-meta leading-relaxed text-dim">
+            A mandate is the rule set the chain enforces inside the trade itself — the most it may
+            spend, how far off fair value it may pay, which assets it may hold. Nothing can be
+            signed without one. Create it at the bottom of this page.
+          </p>
+        </div>
+      </>
+    );
+  }
+
+  // The newest by default. A user with several is nearly always working on the
+  // one they just made, and defaulting to the oldest would open the page on a
+  // mandate they had finished with.
+  const m = mandates.find((x) => x.id === showId) ?? mandates[mandates.length - 1]!;
+
+  /**
+   * The most this mandate can still spend before the epoch resets.
+   *
+   * Derived, not stored: the chain knows `maxNotionalPerTrade` and how many
+   * fills this epoch has used, and the product of the two is what is left. It is
+   * the honest headline for this page because it is the number that actually
+   * binds — the cap per trade on its own says nothing about how many trades are
+   * left, and the fill count on its own says nothing about how large they are.
+   */
+  const fillsLeft = Math.max(0, m.maxFillsPerEpoch - m.fillsThisEpoch);
+  const spendable = m.maxNotionalPerTrade * BigInt(fillsLeft);
+  const used = m.maxFillsPerEpoch > 0 ? m.fillsThisEpoch / m.maxFillsPerEpoch : 0;
 
   return (
-    <Card title="Your mandates">
-      <Note>
-        What each mandate holds, what rules bound it, and the controls to change them. The position
-        is what the guard recorded from settled fills — it can differ from your wallet balance when
-        an asset was traded under a different mandate.
-      </Note>
+    <>
+      {error && <WriteError message={error} />}
 
-      {mandates === null ? (
-        <p className="text-[13px] text-dim">Reading your mandates from the chain…</p>
-      ) : mandates.length === 0 ? (
-        <p className="text-[13px] text-dim">
-          No active mandate owned by this address. Create one above.
+      {mandates.length > 1 && (
+        <div className="mb-5 flex flex-wrap items-center gap-1.5">
+          <span className="mr-1 text-[11px] font-semibold tracking-[0.09em] text-faint uppercase">
+            mandate
+          </span>
+          {mandates.map((one) => (
+            <button
+              key={one.id.toString()}
+              onClick={() => setShowId(one.id)}
+              className={`rounded-full border px-3 py-0.5 font-mono text-[12px] transition-colors ${
+                one.id === m.id
+                  ? 'border-signal-deep bg-signal/6 text-signal'
+                  : 'border-line bg-raised text-faint hover:text-ink'
+              }`}
+            >
+              #{one.id.toString()}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Where the reference puts the price and its chart. The equivalent claim
+          here is not a price — it is how much room the rules leave. */}
+      <div className="rounded-2xl border border-line bg-panel px-6 py-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="text-[11px] font-semibold tracking-[0.09em] text-faint uppercase">
+              Spendable this epoch · mandate #{m.id.toString()}
+            </h2>
+            <p className="mt-2 font-mono text-display tabular-nums text-ink">
+              {formatUnits(spendable, USDG.decimals)}
+              <span className="ml-2 text-title text-faint">USDG</span>
+            </p>
+            <p className="mt-1.5 text-meta text-dim">
+              {fillsLeft} of {m.maxFillsPerEpoch} fills left, at{' '}
+              <span className="font-mono text-ink">
+                {formatUnits(m.maxNotionalPerTrade, USDG.decimals)}
+              </span>{' '}
+              USDG each. The cap resets every {Math.round(m.policy.epochDuration / 3600)}h.
+            </p>
+          </div>
+          {m.breaker ? (
+            <Pill tone="no">breaker tripped — nothing executes, exits included</Pill>
+          ) : (
+            <Pill tone="ok">live</Pill>
+          )}
+        </div>
+
+        <span className="mt-5 block h-1.5 w-full overflow-hidden rounded-full bg-line">
+          <span
+            className={`block h-full ${used >= 1 ? 'bg-caution' : 'bg-signal'}`}
+            style={{ width: `${Math.min(1, used) * 100}%` }}
+          />
+        </span>
+      </div>
+
+      <Section title="Mandate">
+        <Facts>
+          <Fact label="Max per trade" hint="USDG">
+            {formatUnits(m.maxNotionalPerTrade, USDG.decimals)}
+          </Fact>
+          <Fact label="Agent">
+            <span className="break-all">{m.agent}</span>
+          </Fact>
+          <Fact label="Fills per epoch">
+            {m.fillsThisEpoch} / {m.maxFillsPerEpoch}
+          </Fact>
+          <Fact label="Executor">
+            <span className="break-all">{m.executor}</span>
+          </Fact>
+          <Fact label="Max slippage" hint="of the size quoted">
+            {m.maxSlippageBps} bp
+          </Fact>
+          <Fact label="Max off fair value" hint="or the guard reverts">
+            {m.policy.maxDeviationBps} bp
+          </Fact>
+          <Fact label="Max gap risk" hint="0–100, overnight">
+            {m.maxGapRisk}
+          </Fact>
+          <Fact label="Version">v{m.version}</Fact>
+        </Facts>
+      </Section>
+
+      <Section
+        title="Positions"
+        aside={
+          <span className="text-[12.5px] text-faint">
+            what the guard recorded from settled fills
+          </span>
+        }
+      >
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[26rem] border-collapse">
+            <thead>
+              <tr className="border-b border-line text-[11px] tracking-[0.09em] text-faint uppercase">
+                <th className="pb-2 pr-4 text-left font-semibold">Asset</th>
+                <th className="pb-2 pr-4 text-right font-semibold">Units</th>
+                <th className="pb-2 text-right font-semibold" />
+              </tr>
+            </thead>
+            <tbody>
+              {m.allowed.map((a) => (
+                <tr key={a.address} className="border-b border-line/60 last:border-b-0">
+                  <td className="py-2.5 pr-4 font-mono text-meta text-ink">{a.symbol}</td>
+                  <td className="py-2.5 pr-4 text-right font-mono text-meta tabular-nums text-dim">
+                    {a.units === 0n ? (
+                      <span className="text-faint">no recorded position</span>
+                    ) : (
+                      formatUnits(a.units, a.decimals)
+                    )}
+                  </td>
+                  <td className="py-2.5 text-right">
+                    {a.units > 0n && (
+                      // The card that can sell is in the right rail, so the row
+                      // names the asset and the rail switches to it.
+                      <button
+                        onClick={() =>
+                          window.dispatchEvent(
+                            new CustomEvent<PickAssetDetail>(PICK_ASSET_EVENT, {
+                              detail: { asset: a.address, direction: 'sell' },
+                            }),
+                          )
+                        }
+                        className="rounded-full border border-line bg-raised px-3 py-0.5 font-mono text-[11.5px] text-dim hover:border-edge hover:text-ink"
+                      >
+                        sell
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-3 max-w-[68ch] text-[12.5px] leading-relaxed text-faint">
+          This can differ from your wallet balance when an asset was traded under a different
+          mandate. The permit pulls from the wallet; the guard decides against what it recorded.
         </p>
-      ) : (
-        mandates.map((m) => (
-          <div key={m.id.toString()} className="mb-5 rounded-lg border border-line px-4 py-3 last:mb-0">
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              <span className="font-mono text-[13px] text-ink">mandate #{m.id.toString()}</span>
-              <span className="font-mono text-[11px] text-faint">v{m.version}</span>
-              {m.breaker ? (
-                <Pill tone="no">breaker tripped — nothing executes, exits included</Pill>
-              ) : (
-                <Pill tone="ok">live</Pill>
-              )}
-              <span className="font-mono text-[11px] text-faint">
-                {formatUnits(m.maxNotionalPerTrade, USDG.decimals)} USDG/trade · ≤{m.maxSlippageBps}bp
-                slip · gap ≤{m.maxGapRisk} · {m.fillsThisEpoch}/{m.maxFillsPerEpoch} fills
-              </span>
-            </div>
+      </Section>
 
-            <Legend>positions</Legend>
-            <ul className="mb-1 grid gap-0.5">
-              {m.allowed.map((a) => (
-                <li key={a.address} className="flex items-baseline gap-3 font-mono text-[12px]">
-                  <span className="w-16 text-dim">{a.symbol}</span>
-                  <Num>{formatUnits(a.units, a.decimals)}</Num>
-                  {a.units === 0n && <span className="text-faint">— no recorded position</span>}
-                </li>
-              ))}
-            </ul>
-
-            <Legend>
-              exit triggers ({m.triggers.length})
-              {m.firing.length > 0 && (
-                <span className="text-caution"> · {m.firing.length} firing</span>
-              )}
-            </Legend>
-            {m.triggers.length === 0 ? (
-              <p className="mb-2 text-[12.5px] leading-relaxed text-caution">
-                None. Nothing will ever tell this mandate to leave a position — it is bounded on
-                size and price, but it has no exit rule at all.
-              </p>
-            ) : (
-              <ul className="mb-2 grid gap-0.5">
-                {m.triggers.map((t, i) => (
-                  <li key={i} className="font-mono text-[12px]">
-                    <span className={m.firing.includes(i) ? 'text-caution' : 'text-dim'}>
-                      {m.firing.includes(i) ? '⚠ ' : '  '}
-                      {describeOnchainTrigger(t, symbolOf)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+      <Section
+        title="Triggers"
+        aside={
+          <span className="text-[12.5px] text-faint">
+            {m.triggers.length} installed
+            {m.firing.length > 0 && (
+              <span className="text-caution"> · {m.firing.length} firing</span>
             )}
+          </span>
+        }
+      >
+        {m.triggers.length === 0 ? (
+          <p className="mb-4 max-w-[68ch] text-meta leading-relaxed text-caution">
+            None. Nothing will ever tell this mandate to leave a position — it is bounded on size
+            and price, but it has no exit rule at all.
+          </p>
+        ) : (
+          <ul className="mb-4 grid gap-1">
+            {m.triggers.map((t, i) => (
+              <li
+                key={i}
+                className={`border-b border-line/60 py-2 font-mono text-meta last:border-b-0 ${
+                  m.firing.includes(i) ? 'text-caution' : 'text-dim'
+                }`}
+              >
+                {m.firing.includes(i) ? '⚠ ' : ''}
+                {describeOnchainTrigger(t, symbolOf)}
+              </li>
+            ))}
+          </ul>
+        )}
 
-            <TriggerForm
-              assets={m.allowed}
-              disabled={busy !== null}
-              onAdd={(added) =>
-                write(m.id, 'installing a trigger', (guard) =>
-                  walletClient!.writeContract({
-                    address: guard,
-                    abi: POLICY_GUARD_ABI,
-                    functionName: 'setTriggers',
-                    // Replaces wholesale on chain, so the existing set is
-                    // rewritten alongside the new one. Sending only the new one
-                    // would silently delete every rule already installed.
-                    args: [m.id, [...m.triggers, added]],
-                    chain: option.chain,
-                    account: address!,
-                  }),
-                )
-              }
-            />
+        <TriggerForm
+          assets={m.allowed}
+          disabled={busy !== null}
+          onAdd={(added) =>
+            write(m.id, 'installing a trigger', (guard) =>
+              walletClient!.writeContract({
+                address: guard,
+                abi: POLICY_GUARD_ABI,
+                functionName: 'setTriggers',
+                // Replaces wholesale on chain, so the existing set is rewritten
+                // alongside the new one. Sending only the new one would silently
+                // delete every rule already installed.
+                args: [m.id, [...m.triggers, added]],
+                chain: option.chain,
+                account: address!,
+              }),
+            )
+          }
+        />
+      </Section>
 
-            <Legend>asset allowlist</Legend>
-            <div className="mb-1 flex flex-wrap items-center gap-1.5">
-              {m.allowed.map((a) => (
-                <span
-                  key={a.address}
-                  className="flex items-center gap-1 rounded-full border border-line bg-raised px-2 py-0.5 font-mono text-[11px] text-dim"
-                >
-                  {a.symbol}
-                  <button
-                    onClick={() =>
-                      write(m.id, `disallowing ${a.symbol}`, (guard) =>
-                        walletClient!.writeContract({
-                          address: guard,
-                          abi: POLICY_GUARD_ABI,
-                          functionName: 'setAssetAllowed',
-                          args: [m.id, a.address, false],
-                          chain: option.chain,
-                          account: address!,
-                        }),
-                      )
-                    }
-                    disabled={busy !== null}
-                    className="text-refuse hover:text-refuse disabled:opacity-40"
-                    title={`disallow ${a.symbol}`}
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-            <p className="mb-1 text-[12px] leading-relaxed text-faint">
-              Disallowing stops new fills into an asset — it does not sell what this mandate already
-              holds, and an exit is itself a fill the guard checks against this list. Exit first,
-              then disallow.
-            </p>
-            <AssetAllowlistForm
-              allowed={m.allowed}
-              universe={universe}
-              disabled={busy !== null}
-              onAllow={(asset) =>
-                write(m.id, 'allowing an asset', (guard) =>
-                  walletClient!.writeContract({
-                    address: guard,
-                    abi: POLICY_GUARD_ABI,
-                    functionName: 'setAssetAllowed',
-                    args: [m.id, asset, true],
-                    chain: option.chain,
-                    account: address!,
-                  }),
-                )
-              }
-            />
-
-            <Legend>policy</Legend>
-            <PolicyForm
-              key={`${m.id}-${m.version}`}
-              policy={m.policy}
-              disabled={busy !== null}
-              onSubmit={(next) =>
-                write(m.id, 'updating the policy', (guard) =>
-                  walletClient!.writeContract({
-                    address: guard,
-                    abi: POLICY_GUARD_ABI,
-                    functionName: 'updatePolicy',
-                    // The whole struct, always — every field not touched in the
-                    // form is carried over from what was just read, because
-                    // `updatePolicy` replaces wholesale and rebuilding it from
-                    // defaults would silently reset them.
-                    args: [m.id, next],
-                    chain: option.chain,
-                    account: address!,
-                  }),
-                )
-              }
-            />
-
-            <Legend>agent</Legend>
-            <p className="mb-1 text-[12px] leading-relaxed text-faint">
-              The agent proposes trades. It can never exceed the policy above, and it can never move
-              funds without a Permit2 signature the owner produces per execution.
-            </p>
-            <AddressForm
-              current={m.agent}
-              disabled={busy !== null}
-              submitLabel="rotate agent"
-              onSubmit={(next) =>
-                write(m.id, 'rotating the agent', (guard) =>
-                  walletClient!.writeContract({
-                    address: guard,
-                    abi: POLICY_GUARD_ABI,
-                    functionName: 'setAgent',
-                    args: [m.id, next],
-                    chain: option.chain,
-                    account: address!,
-                  }),
-                )
-              }
-            />
-
-            <Legend>executor</Legend>
-            <p className="mb-1 text-[12px] leading-relaxed text-faint">
-              Where fills are pulled from with Permit2. A mandate pointing at an executor not
-              deployed here can never be filled from this app.
-            </p>
-            <AddressForm
-              current={m.executor}
-              disabled={busy !== null}
-              submitLabel="point at executor"
-              defaultAddress={option.deployment.contracts.Executor as Address | undefined}
-              defaultLabel="use this deployment's Executor"
-              onSubmit={(next) =>
-                write(m.id, 'pointing at a new executor', (guard) =>
-                  walletClient!.writeContract({
-                    address: guard,
-                    abi: POLICY_GUARD_ABI,
-                    functionName: 'setExecutor',
-                    args: [m.id, next],
-                    chain: option.chain,
-                    account: address!,
-                  }),
-                )
-              }
-            />
-
-            <div className="mt-4 flex flex-wrap gap-2">
+      <Section title="Allowlist">
+        <div className="mb-2 flex flex-wrap items-center gap-1.5">
+          {m.allowed.map((a) => (
+            <span
+              key={a.address}
+              className="flex items-center gap-1.5 rounded-full border border-line bg-raised px-3 py-0.5 font-mono text-[12px] text-dim"
+            >
+              {a.symbol}
               <button
                 onClick={() =>
-                  write(m.id, 'breaker', (guard) =>
+                  write(m.id, `disallowing ${a.symbol}`, (guard) =>
                     walletClient!.writeContract({
                       address: guard,
                       abi: POLICY_GUARD_ABI,
-                      functionName: 'setCircuitBreaker',
-                      args: [m.id, !m.breaker],
+                      functionName: 'setAssetAllowed',
+                      args: [m.id, a.address, false],
                       chain: option.chain,
                       account: address!,
                     }),
                   )
                 }
                 disabled={busy !== null}
-                className={`rounded-full border px-3 py-0.5 font-mono text-[11px] disabled:opacity-40 ${
-                  m.breaker
-                    ? 'border-signal-deep bg-signal/6 text-signal hover:bg-signal/12'
-                    : 'border-caution/40 bg-caution/6 text-caution hover:bg-caution/12'
-                }`}
+                className="text-refuse hover:text-refuse disabled:opacity-40"
+                title={`disallow ${a.symbol}`}
               >
-                {m.breaker ? 'release breaker' : 'trip breaker'}
+                ×
               </button>
-
-              <button
-                onClick={() => {
-                  write(m.id, 'closing', (guard) =>
-                    walletClient!.writeContract({
-                      address: guard,
-                      abi: POLICY_GUARD_ABI,
-                      functionName: 'closeMandate',
-                      args: [m.id],
-                      chain: option.chain,
-                      account: address!,
-                    }),
-                  );
-                }}
-                disabled={busy !== null}
-                className="rounded-full border border-refuse/40 bg-refuse/6 px-3 py-0.5 font-mono text-[11px] text-refuse hover:bg-refuse/12 disabled:opacity-40"
-              >
-                close mandate
-              </button>
-
-              {busy?.id === m.id && (
-                <span className="font-mono text-[11px] text-faint">{busy.what}…</span>
-              )}
-            </div>
-
-            <p className="mt-2 text-[12px] leading-relaxed text-faint">
-              Tripping the breaker stops entries <em>and</em> exits through this system. Your assets
-              stay in your wallet and remain sellable anywhere — it stops Reckonz acting, not you.
-              Closing is permanent.
-            </p>
-          </div>
-        ))
-      )}
-
-      {error && (
-        <div className="mt-3 rounded-lg border border-refuse/40 bg-refuse/6 px-4 py-3">
-          <p className="font-mono text-[12px] leading-relaxed break-words text-refuse">{error}</p>
+            </span>
+          ))}
         </div>
-      )}
-    </Card>
+        <p className="mb-3 max-w-[68ch] text-[12.5px] leading-relaxed text-faint">
+          Disallowing stops new fills into an asset — it does not sell what this mandate already
+          holds, and an exit is itself a fill the guard checks against this list. Exit first, then
+          disallow.
+        </p>
+        <AssetAllowlistForm
+          allowed={m.allowed}
+          universe={universe}
+          disabled={busy !== null}
+          onAllow={(asset) =>
+            write(m.id, 'allowing an asset', (guard) =>
+              walletClient!.writeContract({
+                address: guard,
+                abi: POLICY_GUARD_ABI,
+                functionName: 'setAssetAllowed',
+                args: [m.id, asset, true],
+                chain: option.chain,
+                account: address!,
+              }),
+            )
+          }
+        />
+      </Section>
+
+      <Section title="Controls">
+        <Legend>policy</Legend>
+        <PolicyForm
+          key={`${m.id}-${m.version}`}
+          policy={m.policy}
+          disabled={busy !== null}
+          onSubmit={(next) =>
+            write(m.id, 'updating the policy', (guard) =>
+              walletClient!.writeContract({
+                address: guard,
+                abi: POLICY_GUARD_ABI,
+                functionName: 'updatePolicy',
+                // The whole struct, always — every field not touched in the form
+                // is carried over from what was just read, because
+                // `updatePolicy` replaces wholesale and rebuilding it from
+                // defaults would silently reset them.
+                args: [m.id, next],
+                chain: option.chain,
+                account: address!,
+              }),
+            )
+          }
+        />
+
+        <Legend>agent</Legend>
+        <p className="mb-2 max-w-[68ch] text-[12.5px] leading-relaxed text-faint">
+          The agent proposes trades. It can never exceed the policy above, and it can never move
+          funds without a Permit2 signature the owner produces per execution.
+        </p>
+        <AddressForm
+          current={m.agent}
+          disabled={busy !== null}
+          submitLabel="rotate agent"
+          onSubmit={(next) =>
+            write(m.id, 'rotating the agent', (guard) =>
+              walletClient!.writeContract({
+                address: guard,
+                abi: POLICY_GUARD_ABI,
+                functionName: 'setAgent',
+                args: [m.id, next],
+                chain: option.chain,
+                account: address!,
+              }),
+            )
+          }
+        />
+
+        <Legend>executor</Legend>
+        <p className="mb-2 max-w-[68ch] text-[12.5px] leading-relaxed text-faint">
+          Where fills are pulled from with Permit2. A mandate pointing at an executor not deployed
+          here can never be filled from this app.
+        </p>
+        <AddressForm
+          current={m.executor}
+          disabled={busy !== null}
+          submitLabel="point at executor"
+          defaultAddress={option.deployment.contracts.Executor as Address | undefined}
+          defaultLabel="use this deployment's Executor"
+          onSubmit={(next) =>
+            write(m.id, 'pointing at a new executor', (guard) =>
+              walletClient!.writeContract({
+                address: guard,
+                abi: POLICY_GUARD_ABI,
+                functionName: 'setExecutor',
+                args: [m.id, next],
+                chain: option.chain,
+                account: address!,
+              }),
+            )
+          }
+        />
+
+        <div className="mt-6 flex flex-wrap items-center gap-2">
+          <button
+            onClick={() =>
+              write(m.id, 'breaker', (guard) =>
+                walletClient!.writeContract({
+                  address: guard,
+                  abi: POLICY_GUARD_ABI,
+                  functionName: 'setCircuitBreaker',
+                  args: [m.id, !m.breaker],
+                  chain: option.chain,
+                  account: address!,
+                }),
+              )
+            }
+            disabled={busy !== null}
+            className={`rounded-full border px-3 py-1 font-mono text-[12px] disabled:opacity-40 ${
+              m.breaker
+                ? 'border-signal-deep bg-signal/6 text-signal hover:bg-signal/12'
+                : 'border-caution/40 bg-caution/6 text-caution hover:bg-caution/12'
+            }`}
+          >
+            {m.breaker ? 'release breaker' : 'trip breaker'}
+          </button>
+
+          <button
+            onClick={() =>
+              write(m.id, 'closing', (guard) =>
+                walletClient!.writeContract({
+                  address: guard,
+                  abi: POLICY_GUARD_ABI,
+                  functionName: 'closeMandate',
+                  args: [m.id],
+                  chain: option.chain,
+                  account: address!,
+                }),
+              )
+            }
+            disabled={busy !== null}
+            className="rounded-full border border-refuse/40 bg-refuse/6 px-3 py-1 font-mono text-[12px] text-refuse hover:bg-refuse/12 disabled:opacity-40"
+          >
+            close mandate
+          </button>
+
+          {busy?.id === m.id && (
+            <span className="font-mono text-[11.5px] text-faint">{busy.what}…</span>
+          )}
+        </div>
+
+        <p className="mt-3 max-w-[68ch] text-[12.5px] leading-relaxed text-faint">
+          Tripping the breaker stops entries <em>and</em> exits through this system. Your assets stay
+          in your wallet and remain sellable anywhere — it stops Reckonz acting, not you. Closing is
+          permanent.
+        </p>
+      </Section>
+    </>
+  );
+}
+
+function WriteError({ message }: { message: string }) {
+  return (
+    <div className="mb-5 rounded-lg border border-refuse/40 bg-refuse/6 px-4 py-3">
+      <p className="font-mono text-[12.5px] leading-relaxed break-words text-refuse">{message}</p>
+    </div>
   );
 }
 

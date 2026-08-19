@@ -4925,3 +4925,90 @@ becomes a guess wearing a measurement's clothes.
 **1/30 boundaries** — σ counts close-to-open jumps, so it advances once a trading day no matter how
 densely the sampler runs. Thirty boundaries is roughly six weeks of the worker being up. The
 recorded σ from 2026-08-12 stays in force, which `pnpm measure` says on every run.
+
+---
+
+## D94 — The trade page was in the order the work happens, which is not the order it is used
+
+Written 2026-08-19, at Nabil's request. `/trade` was four `Card` panels stacked down one column —
+create a mandate, manage it, fill, exit — in the order a first mandate comes into existence. That
+order is defensible once. After that it is wrong in three ways at the same time:
+
+- **The setup step sat above the daily one.** A user with a mandate scrolled past a form they had
+  already used to reach the thing they came for.
+- **Buying and selling were separated by a scroll**, so the two halves of one decision read as two
+  unrelated features.
+- **The mandate — the rules the chain will enforce — was a panel you configured, never a document
+  you read beside the trade it bounds.** Nothing on screen said what the trade was about to be
+  measured against unless you scrolled up to the manager and held it in your head.
+
+`/assets` already takes its shape from Ondo Finance's app, and the same reference answers this
+page: an asset page there is context down the left and a sticky action card on the right. Looked at
+again on 2026-08-19 rather than from recall — the card carries a tab row, a chain selector, one
+box with **spend** above **receive** and the direction drawn on the seam between them, a
+full-width button, and the legal fine print *under* it.
+
+**The layout now mirrors that, and the mapping is not decoration.** The reference's swap box holds
+one token in and one token out, which is exactly what a fill is here and could not be otherwise: a
+Permit2 signature names one token, one amount, one spender, twenty minutes. The old three-fields-
+on-a-row layout let the eye read a fill as a form. It is a swap, and the box says so.
+
+What each part of the reference became:
+
+| Reference | Here |
+|---|---|
+| `● Asset Open for Trade` | `● 19 of 30 tradable` — depth *and* a defensible price, both required |
+| Chain selector above the box | the mandate selector: the rule set this trade will be bounded by |
+| Spend → Receive box | USDG → xStock, and reversed on the sell tab |
+| `Buy` / `Trade` tabs | `Buy` / `Sell`, one card, **both kept mounted** |
+| Securities disclaimer under the button | the non-custodial claim and the Permit2 scope |
+| About / Statistics tables | Mandate, Positions, Triggers, Allowlist, Controls |
+| **Session Limits** | **Limits** — absorbable size per pool, measured hourly |
+
+Three things that are ours rather than the reference's, each for a reason:
+
+**Both panels stay mounted, hidden rather than unmounted.** Each holds a quote, a plan, an evidence
+hash and a wallet phase. Unmounting on a tab switch throws all of it away, and a user who quotes a
+buy, glances at the sell side and comes back would pay for the round trip again.
+
+**The headline is not a price.** The reference puts the chart and the last trade at the top left.
+The equivalent claim here is how much room the rules leave, so it is *spendable this epoch* —
+`maxNotionalPerTrade × fills remaining`, derived from chain state, never stored. The cap per trade
+says nothing about how many trades are left and the fill count says nothing about their size; only
+the product binds.
+
+**Session Limits is the one block this product answers better than the original.** Theirs is a
+policy the issuer sets. Ours is a measurement of the pools, so it moves on its own and carries a
+date — and it is the only section that still says something to a visitor with no wallet, which is
+what a judge with ninety seconds is.
+
+### The basket rail, and the number that is deliberately not on it
+
+A followed thesis is a basket; a fill is one token. Until now the only sign of that was a one-line
+banner: the user reselected an asset, requoted and repeated, with nothing saying how many legs were
+left or which had already refused. `BasketRail` is that missing accounting — one row per leg, its
+state, and **the reason on any refusal**, because `docs/09-design.md` names a column of bare red
+marks as the failure mode most likely to be reached by making refusals look tidy.
+
+**It carries no asked-versus-executable headline, and the omission is the decision.** That figure —
+*"$250,000 asked, $2,191 executable"* — is the most persuasive number this product makes, and
+09-design puts it at display size at the top of the plan stage. It cannot go here. `FollowRequest`
+carries the thesis's assets and nothing else *on purpose* (D50): the follower sizes the basket
+themselves, and the depth that absorbed the author's notional is not the depth that will absorb
+theirs. A total assembled from the author's numbers, printed beside this user's wallet, would be a
+measurement of somebody else's trade. Legs count up as this user quotes and fills them, and before
+that they read as what they are, which is unexamined.
+
+### Two supporting seams
+
+`FILLED_EVENT` now carries `{ symbol, isExit }` instead of being a bare `Event`, so the rail can
+tick off the leg that actually landed and can tell an entry from a sale. Existing listeners ignore
+the detail and are unchanged. `QUOTED_EVENT` is new and carries the guard's verdict for a leg,
+because only the panel that asked knows what it said.
+
+`publishFollow` in `follow.ts` fixes a real gap rather than a cosmetic one. `Mandate` drains the
+`sessionStorage` hand-off on mount and was the only reader; a DOM event fired before a component
+mounts is one it never hears. So arriving at `/trade` from a published thesis — the one path that
+produces a follow — the fill panel's follow banner was **invisible**, and the thesis hash rode
+along on the fill while nothing on screen said it would. The store keeps the value for whatever
+mounts next.

@@ -9,6 +9,7 @@ import { encodeTriggers, describeOnchainTrigger } from '@/src/triggers';
 import { awaitReceipt } from './awaitReceipt';
 import {
   FOLLOW_EVENT,
+  publishFollow,
   INSTALL_TRIGGERS_EVENT,
   MANDATES_CHANGED_EVENT,
   type FollowRequest,
@@ -160,6 +161,11 @@ export function Mandate() {
     if (!handoff) return;
     if (handoff.kind === 'follow') {
       setFollow(handoff.payload);
+      // And tell the rest of the page. This form is the only thing that drains
+      // the hand-off, so without this the fill card and the basket rail never
+      // learn a thesis is being followed — which was every arrival from
+      // `/receipts`, the one path that produces a follow.
+      publishFollow(handoff.payload);
     } else {
       setCompiled(handoff.payload);
       setInstallRules(true);
@@ -385,7 +391,7 @@ export function Mandate() {
   const explorer = option?.deployment.explorer;
 
   return (
-    <Card ref={panel} title="Create a mandate">
+    <Card ref={panel}>
       <Note>
         The mandate is yours: you are <code className="font-mono text-dim">owner</code> because you
         send this transaction, your funds never leave your wallet, and the policy below is what

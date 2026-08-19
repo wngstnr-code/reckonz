@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { OPEN_WALLET_EVENT } from './follow';
 import { CHAINS, useWallet, WC_ICON, type DiscoveredWallet } from './useWallet';
 
 const short = (address: string) => `${address.slice(0, 6)}…${address.slice(-4)}`;
@@ -29,6 +30,13 @@ export function Wallet() {
 
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
+
+  // The trade card's connect button. See `OPEN_WALLET_EVENT`.
+  useEffect(() => {
+    const onOpen = () => setOpen(true);
+    window.addEventListener(OPEN_WALLET_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_WALLET_EVENT, onOpen);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
