@@ -722,6 +722,11 @@ proportions — a box each, the value the largest thing in it, the unit as a chi
 means inside its own box, the asset chips carrying their marks, and a full-width button that says
 why it is disabled.
 
+Direction sits back at the top of the card as an underlined tab row, the card's small type is `ink`
+rather than grey, and both dropdowns are drawn rather than native: `Menu.tsx` holds `useMenu`,
+`MenuList` and `Chevron`, and the outside-click-and-Escape pattern `Wallet.tsx` already had is now
+written once.
+
 Then the surfaces, against a screenshot of the reference's own card: `card`, `well` and `inset` are
 new tokens, named for role because the pair inverts between themes, and they replace the bordered
 panel-inside-panel with a white box floated out of a grey card. Direction moved into a segmented

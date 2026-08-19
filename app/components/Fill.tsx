@@ -19,6 +19,7 @@ import {
 } from './follow';
 import { useFollow } from './useFollow';
 import { SwapBox, SwapLeg, TokenChip } from './console/trade/SwapBox';
+import { Chevron, MenuList, useMenu } from './console/trade/Menu';
 import { Legend, Num, Pill, tokenAmount } from './ui';
 import { useWallet } from './useWallet';
 
@@ -128,6 +129,9 @@ export function Fill() {
     null,
   );
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  /** The mandate picker, which is ours rather than the platform's. See `Menu`. */
+  const menu = useMenu();
 
   const mainnet = option?.chain.id === 196;
   const executor = option?.deployment.contracts.Executor as Address | undefined;
@@ -558,20 +562,31 @@ export function Fill() {
               the mandate, which is the same kind of choice: the rule set this
               trade will be bounded by, chosen before the amount rather than
               discovered at the verdict. */}
-          <label className="mb-3 flex items-center justify-between gap-3 rounded-lg bg-inset px-3.5 py-2.5">
-            <span className="text-[14px] text-dim">Mandate</span>
-            <select
-              value={mandateId?.toString() ?? ''}
-              onChange={(e) => setMandateId(BigInt(e.target.value))}
-              className="cursor-pointer bg-transparent font-mono text-[15px] text-ink outline-none"
+          <div ref={menu.box} className="relative mb-3">
+            <button
+              onClick={() => menu.setOpen(!menu.open)}
+              aria-haspopup="listbox"
+              aria-expanded={menu.open}
+              className="flex w-full items-center justify-between gap-3 rounded-lg bg-inset px-3.5 py-2.5"
             >
-              {mandates.map((m) => (
-                <option key={m.id.toString()} value={m.id.toString()}>
-                  #{m.id.toString()}
-                </option>
-              ))}
-            </select>
-          </label>
+              <span className="text-[14px] text-ink">Mandate</span>
+              <span className="flex items-center gap-1.5">
+                <span className="font-mono text-[15px] text-ink">#{mandateId?.toString()}</span>
+                <Chevron open={menu.open} />
+              </span>
+            </button>
+            {menu.open && (
+              <MenuList
+                options={mandates.map((m) => ({
+                  value: m.id.toString(),
+                  label: `Mandate #${m.id.toString()}`,
+                }))}
+                value={mandateId?.toString() ?? ''}
+                onChange={(next) => setMandateId(BigInt(next))}
+                onClose={() => menu.setOpen(false)}
+              />
+            )}
+          </div>
 
           <SwapBox
             top={
@@ -627,7 +642,7 @@ export function Fill() {
           />
 
           {mandate && (
-            <p className="mt-2.5 font-mono text-[11.5px] text-faint tabular-nums">
+            <p className="mt-2.5 font-mono text-[12px] text-ink tabular-nums">
               {mandate.fillsThisEpoch}/{mandate.maxFillsPerEpoch} fills this epoch
               {mandate.breaker && <span className="text-refuse"> · breaker tripped</span>}
             </p>
@@ -752,10 +767,10 @@ export function Fill() {
               key of ours can move the money. It sits under the button because
               that is where it is read, and because leading a trading card with a
               paragraph pushes the trade below the fold. */}
-          <p className="mt-4 text-[12px] leading-relaxed text-faint">
+          <p className="mt-4 text-[12.5px] leading-relaxed text-ink">
             The quote and the verdict come from the server. The approval, the signature and the
             transaction happen in your wallet, and the permit authorises one token, one amount, one
-            contract, for twenty minutes.
+            contract, for 20 minutes.
           </p>
         </>
       )}

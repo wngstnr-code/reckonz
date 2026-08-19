@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { AssetMark } from '../AssetMark';
+import { Chevron, MenuList, useMenu } from './Menu';
 
 /**
  * The two halves of a trade, in one box, with the direction drawn between them.
@@ -26,8 +27,8 @@ export function SwapBox({ top, bottom }: { top: ReactNode; bottom: ReactNode }) 
       <div className="px-4 pt-4 pb-7">{top}</div>
       <div className="border-t border-line px-4 pt-7 pb-4">{bottom}</div>
 
-      {/* Centred on the seam rather than sitting under it. `bg-panel` matches
-          the card behind, so the arrow punches a hole in the rule instead of
+      {/* Centred on the seam rather than sitting under it. `bg-well` matches the
+          box it is cut into, so the arrow punches a hole in the rule instead of
           floating over it. */}
       <span
         className="pointer-events-none absolute top-1/2 left-1/2 flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-well"
@@ -111,11 +112,13 @@ export function SwapLeg({
 /**
  * The token on one side of the swap, as a chip.
  *
- * A real `<select>` laid transparently over the chip rather than a custom
- * listbox: it keeps the keyboard, the screen reader and the mobile picker that
- * the platform already gets right, and the chip is only paint. Where there is
- * nothing to choose between, the chevron is dropped and no select is rendered —
- * an affordance for a menu with one item is a small lie.
+ * It opened a native `<select>` under a painted chip, which was the cheap
+ * correct answer until the mandate picker beside it got a drawn menu: a card
+ * with one styled dropdown and one drawn by the operating system reads as
+ * unfinished. Both use `Menu` now.
+ *
+ * Where there is nothing to choose between, the chevron is dropped and no menu
+ * is mounted. An affordance for a list with one item is a small lie.
  */
 /**
  * The settlement currency is not one of the thirty, and must not wear their mark.
@@ -150,40 +153,49 @@ export function TokenChip({
   value?: string;
   onChange?: (next: string) => void;
 }) {
+  const menu = useMenu();
   const choosable = options !== undefined && options.length > 1 && onChange !== undefined;
 
-  return (
-    <span className="relative flex items-center gap-2 rounded-full border border-line bg-panel py-1 pr-3 pl-1">
+  const face = (
+    <>
       <TokenMark symbol={symbol} />
-      <span className="font-mono text-[13px] whitespace-nowrap text-ink">{symbol}</span>
-      {choosable && (
-        <>
-          <svg
-            viewBox="0 0 24 24"
-            className="h-3.5 w-3.5 text-faint"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden
-          >
-            <path d="m6 9 6 6 6-6" />
-          </svg>
-          <select
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            aria-label="asset"
-            className="absolute inset-0 cursor-pointer opacity-0"
-          >
-            {options.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </>
+      <span className="text-[15px] whitespace-nowrap text-ink">{symbol}</span>
+      {choosable && <Chevron open={menu.open} />}
+    </>
+  );
+
+  if (!choosable) {
+    return (
+      <span className="flex items-center gap-2 rounded-full bg-card py-1.5 pr-3.5 pl-1.5">
+        {face}
+      </span>
+    );
+  }
+
+  return (
+    <div ref={menu.box} className="relative">
+      <button
+        onClick={() => menu.setOpen(!menu.open)}
+        aria-haspopup="listbox"
+        aria-expanded={menu.open}
+        aria-label="asset"
+        className="flex items-center gap-2 rounded-full bg-card py-1.5 pr-3.5 pl-1.5"
+      >
+        {face}
+      </button>
+      {menu.open && (
+        <MenuList
+          align="right"
+          options={options.map((o) => ({
+            value: o.value,
+            label: o.label,
+            icon: <TokenMark symbol={o.label.split(' ')[0] ?? o.label} />,
+          }))}
+          value={value ?? ''}
+          onChange={onChange}
+          onClose={() => menu.setOpen(false)}
+        />
       )}
-    </span>
+    </div>
   );
 }

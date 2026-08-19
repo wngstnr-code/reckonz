@@ -5145,3 +5145,36 @@ means something.
 **And the rule under every section heading is gone.** One rule separates. A rule under every heading
 on a long page stops reading as a separator and becomes a texture, which is the ruled-band look this
 layout exists to get away from. Space does the work.
+
+### D94, amended a fifth time — the drawn menu, and why the native one had to go
+
+Three notes on the card, from a second screenshot of the reference.
+
+**Direction goes back to the top of the card, underlined.** The fourth amendment moved it into a
+segmented pill on the argument that the reference's top row is a venue switch. Looking at the row
+itself rather than reasoning about it: it is a tab row with a thick rule under the active label and
+a hairline across the card, and that is what this card wanted. The earlier argument was about what
+the reference *means* by that row, and the answer to a question about how something looks is to look.
+
+**The card's small type is `ink`, not `faint`.** The mandate label, the fill counter and the fine
+print under the button. They were grey on grey and they are the sentences that say what the button
+will do.
+
+**The two dropdowns are drawn, not native.** A `<select>` under a painted trigger was the cheap
+correct answer and is what shipped first: it keeps the keyboard, the screen reader and the mobile
+picker the platform already gets right, for free. What it cannot do is look like anything, and the
+reference's menu is a white panel with the current choice held as a filled row inside it. **A card
+with one styled dropdown and one drawn by the operating system reads as unfinished**, so once the
+mandate picker needed a panel, the asset chip needed the same one.
+
+`Menu.tsx` is what the platform stopped giving us: `useMenu` for outside-click and Escape, which is
+the pattern `Wallet.tsx` already had in the header and is now written once, `MenuList` for the panel,
+`Chevron` for the affordance. The selected row is filled with `inset` rather than ticked in the
+margin, which is the reference's choice and the stronger signal at a glance.
+
+**Two edits in this pass failed silently and shipped nothing**, which is worth recording as a
+practice note rather than a decision: a scripted `replace` with no assertion on a file that had been
+reformatted since the string was read. The chip kept its old markup through a typecheck, a build and
+a screenshot before it was caught by asking the DOM what was actually there. Assert on every
+scripted edit, and check the rendered page for the thing that changed rather than for the page
+looking fine.

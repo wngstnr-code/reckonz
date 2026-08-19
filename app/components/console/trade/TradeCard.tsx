@@ -38,16 +38,17 @@ export function TradeCard() {
 
   return (
     <aside className="rounded-2xl bg-card lg:sticky lg:top-6">
-      <div className="p-4">
-        <div role="tablist" aria-label="trade direction" className="mb-3 flex w-fit rounded-lg bg-inset p-1">
-          <TabButton current={tab} value="buy" onSelect={setTab}>
-            Buy
-          </TabButton>
-          <TabButton current={tab} value="sell" onSelect={setTab}>
-            Sell
-          </TabButton>
-        </div>
+      {/* Across the top, on the card's own hairline, as the reference has it. */}
+      <div role="tablist" aria-label="trade direction" className="flex border-b border-line px-5">
+        <TabButton current={tab} value="buy" onSelect={setTab}>
+          Buy
+        </TabButton>
+        <TabButton current={tab} value="sell" onSelect={setTab}>
+          Sell
+        </TabButton>
+      </div>
 
+      <div className="px-5 py-5">
         {!address ? (
           <Disconnected />
         ) : (
@@ -84,12 +85,12 @@ function Disconnected() {
 
       <button
         onClick={() => window.dispatchEvent(new Event(OPEN_WALLET_EVENT))}
-        className="mt-3 w-full rounded-xl bg-ink px-4 py-3.5 text-[15px] font-semibold text-ground hover:opacity-90"
+        className="mt-4 w-full rounded-xl bg-ink px-4 py-3.5 text-[15px] font-semibold text-ground hover:opacity-90"
       >
         Connect wallet
       </button>
 
-      <p className="mt-4 text-[12px] leading-relaxed text-faint">
+      <p className="mt-4 text-[12.5px] leading-relaxed text-ink">
         Every fill is pulled against a Permit2 signature you produce yourself, scoped to one token
         and expiring in twenty minutes. No key of ours can move your money.
       </p>
@@ -98,13 +99,13 @@ function Disconnected() {
 }
 
 /**
- * A segment, not a tab with an underline.
+ * The card's top navigation, underlined.
  *
- * The reference puts direction in a small pill control rather than in the card's
- * top navigation, and it is the better place: the top row of that card is a
- * *venue* switch, a different kind of choice, and buy-or-sell is a property of
- * the trade being composed below it. The active segment is the well colour on
- * the card, which is the same figure-on-field relationship the swap box has.
+ * The rule sits on the card's own bottom border and is drawn thicker than it, so
+ * the active tab reads as joined to the body under it. The inactive one is
+ * `faint` rather than a lighter weight: the reference tells them apart by colour
+ * and holds the type at one size, which keeps the row from shifting as the
+ * choice changes.
  */
 function TabButton({
   current,
@@ -123,8 +124,8 @@ function TabButton({
       role="tab"
       aria-selected={active}
       onClick={() => onSelect(value)}
-      className={`rounded-md px-4 py-1.5 text-[14px] font-semibold transition-colors ${
-        active ? 'bg-well text-ink shadow-[0_1px_2px_rgba(0,0,0,0.06)]' : 'text-faint hover:text-dim'
+      className={`-mb-px border-b-[3px] px-4 py-4 text-[17px] transition-colors ${
+        active ? 'border-ink text-ink' : 'border-transparent text-faint hover:text-dim'
       }`}
     >
       {children}
