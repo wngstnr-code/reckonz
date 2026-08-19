@@ -230,7 +230,7 @@ snapshot, fair value / gap risk, thesis→basket compilation.
    publish-time jump bound and a 2-of-3 Safe on admin (D41, D42)
 4. `PolicyGuard` + `ReceiptRegistry` ✅ — deployed and verified on both chains
 5. Thesis Compiler ✅ — live on Gemini, refuses to substitute unmapped names
-6. Mainnet with small caps ✅ — twenty real fills, 25→1 USDG blast radius, receipts #0–#19
+6. Mainnet with small caps ✅ — twenty-one real fills, 25→1 USDG blast radius, receipts #0–#20
 7. `FeeCollector` ✅ — 15 bps, taking a real fee ← **done ahead of order**
 8. `ThesisRegistry` ✅ — deployed, loop closed on mainnet (receipt #2 → thesis #0)
 9. Simple mode — read layer ✅ (`src/track-record.ts`, `GET /api/theses`) and browse surface ✅

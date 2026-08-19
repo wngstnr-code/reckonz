@@ -611,7 +611,7 @@ left is not architecture; it is a video, a form, and a decision about who can re
 
 ## Suggested order
 
-Everything that was on this list as engineering is done: mainnet deploy, **twenty real fills**
+Everything that was on this list as engineering is done: mainnet deploy, **twenty-one real fills**
 including the first exit and the first placed from a browser, the fee, the thesis registry, the web
 app, the multisig, the Simple mode surface and the registry index. What is left is a calendar, not
 an architecture — the publish worker on its date, and the ASP/x402 registration, which is the only
@@ -699,7 +699,18 @@ reminder.
 
 ## Log
 
-**2026-08-19 (latest, thirty-first)** — **`/idea` rebuilt, after actually watching it run** (D100).
+**2026-08-19 (latest, thirty-second)** — **the loop closed in one sitting, entirely from the
+browser**. Thesis #4 published from `/idea` at 09:58:33Z, carried to `/trade` by the new handoff,
+filled 38 seconds later as receipt #20 stamped with `0xd728bde2…`. `idOf` resolves that hash back to
+thesis #4 and `publishedAt < timestamp` on chain, so the ordering claim is settled by the registries
+rather than asserted by us. wSPYx, 0.49925 USDG, 5 bps realised, 599,686 gas. Registry now 5 theses
+and 21 receipts; 16 of 21 carry evidence and all 16 verify.
+
+Trying it is what found the missing link: `Follow this basket` lived only on a receipt's detail page,
+so a thesis published a minute ago -- with no receipts, and an empty derived basket in the theses
+list (D50) -- was the one claim on the registry nobody could act on.
+
+**2026-08-19 (thirty-first)** — **`/idea` rebuilt, after actually watching it run** (D100).
 The old page answered a 503 by printing the provider's JSON across the screen after eighty-five
 silent seconds, with no retry. Now: a hero with measured figures, stage rows that say what each step
 is for, a human error state with a retry, the asked/executable/handed-back conclusion the page
