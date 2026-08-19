@@ -31,7 +31,7 @@ export function ReceiptFigures({ summary: s }: { summary: Summary }) {
       </Figure>
 
       <Figure label="Published first" value={`${s.withThesis} of ${s.receiptCount}`}>
-        the reasoning went up before the trade
+        reasoning on chain before the fill
       </Figure>
     </div>
   );

@@ -30,12 +30,22 @@ import { canonicalise } from './thesis';
 export interface EvidenceLeg {
   asset: Address;
   symbol: string;
-  /** Settlement currency in for an entry; asset units in for an exit. */
+  /** Settlement currency in for an entry; asset units in for an exit. Base units. */
   amountIn: string;
-  /** The floor the transaction carried. */
+  /** The floor the transaction carried, in the output token's **base units**. */
   minAmountOut: string;
   feeTier: number;
-  /** What the simulation said the leg would return. */
+  /**
+   * What the simulation said the leg would return, as a **decimal string** --
+   * `"0.002277759170473198"`, not base units.
+   *
+   * So this field and `minAmountOut` above describe the same quantity in two
+   * different representations, which is a wart and not a fixable one: the bundle
+   * layout is an input to `evidenceHash`, and changing it would make every hash
+   * already on chain unverifiable. Recorded here so the next reader compares
+   * them knowingly instead of dividing one by the other, which produces a
+   * plausible number that means nothing.
+   */
   simulatedOut: string;
   /** Price impact the planner measured, in basis points. */
   impactBps: number | null;
@@ -167,7 +177,8 @@ export function verifyEvidence(bundle: EvidenceBundle, claimed: Hex): boolean {
  */
 export type EvidenceCheck =
   | { kind: 'none' }
-  | { kind: 'verified'; source: 'file' | 'blob'; url: string | null }
+  /** The bundle travels with the verdict: whoever verified it wants to read it. */
+  | { kind: 'verified'; source: 'file' | 'blob'; url: string | null; bundle: EvidenceBundle }
   | { kind: 'mismatch'; source: 'file' | 'blob' }
   | { kind: 'unreachable' };
 
@@ -182,6 +193,12 @@ const ZERO_EVIDENCE = '0x0000000000000000000000000000000000000000000000000000000
  * a private record, and rendering it as a public one would be the loudest kind
  * of lie this page could tell.
  *
+ * A verified result carries the bundle itself. The caller has already paid for
+ * the fetch, and the bundle is the decision -- what the guard was asked before
+ * any gas was spent, how old the oracle was at that moment, the floor the
+ * transaction carried. Returning only a boolean made the page that exists to
+ * show the decision download it and throw it away.
+ *
  * Never throws: a page about twenty receipts must not fail because one bundle
  * is missing.
  */
@@ -193,7 +210,7 @@ export async function checkEvidence(claimed: string): Promise<EvidenceCheck> {
   try {
     const bundle = JSON.parse(await readFile(evidencePath(hash), 'utf8')) as EvidenceBundle;
     return verifyEvidence(bundle, hash)
-      ? { kind: 'verified', source: 'file', url: null }
+      ? { kind: 'verified', source: 'file', url: null, bundle }
       : { kind: 'mismatch', source: 'file' };
   } catch {
     /* not on this machine — the archive is the only other place it can be */
@@ -208,7 +225,7 @@ export async function checkEvidence(claimed: string): Promise<EvidenceCheck> {
     if (!response.ok) return { kind: 'unreachable' };
     const bundle = (await response.json()) as EvidenceBundle;
     return verifyEvidence(bundle, hash)
-      ? { kind: 'verified', source: 'blob', url }
+      ? { kind: 'verified', source: 'blob', url, bundle }
       : { kind: 'mismatch', source: 'blob' };
   } catch {
     return { kind: 'unreachable' };

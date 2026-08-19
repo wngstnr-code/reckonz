@@ -699,7 +699,16 @@ reminder.
 
 ## Log
 
-**2026-08-19 (latest, twenty-ninth)** — **`/receipts` rebuilt receipt-first** (D98). It was a list
+**2026-08-19 (latest, thirtieth)** — **the receipt detail now renders the decision it was already
+downloading** (D99). It fetched the evidence bundle, checked the hash, and discarded the guard's
+pre-gas verdict, the oracle's age at that moment, the floor and the D77 acknowledgement. Also put
+back five fields D98 dropped without noticing (`contentHash`, `author`, `agent`, `cid`, worst
+slippage and the fill window), derived the units an entry bought, linked each asset to its board
+page, and cut the two constant labels off every card. Two defects found on the way: the bundle
+stores `minAmountOut` in base units and `simulatedOut` as a decimal string, and `whitespace-nowrap`
+in the shared `Figure` pushed a caption out of the green frame at 110% zoom.
+
+**2026-08-19 (twenty-ninth)** — **`/receipts` rebuilt receipt-first** (D98). It was a list
 of theses on a page called Receipts: six of twenty receipts rendered in full, fourteen given one
 line holding a ticker and a timestamp. Now a card grid with filters and a table toggle in `/assets`'
 own shape, a `/receipts/[id]` detail that actually re-derives the evidence hash, a compact `Theses`

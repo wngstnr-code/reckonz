@@ -56,16 +56,24 @@ export function ReceiptCard({ receipt }: { receipt: ViewReceipt }) {
             : `across ${receipt.fills.length} legs`}
         </div>
 
-        <div className="mt-4 flex items-baseline justify-between gap-3 font-mono text-micro text-faint">
-          <span>{receipt.thesisId === null ? 'no thesis' : `thesis #${receipt.thesisId}`}</span>
-          {/* Stamped, not verified. Checking the bundle costs a fetch per
-              receipt and this grid renders twenty of them; the detail page does
-              the checking, and saying "stamped" here keeps the weaker claim
-              honest rather than borrowing the stronger one. */}
-          <span className={hasEvidence(receipt) ? undefined : 'text-refuse'}>
-            {hasEvidence(receipt) ? 'evidence stamped' : 'no evidence'}
-          </span>
-        </div>
+        {/* Only the departures.
+        
+            Every card carried "no thesis" and "evidence stamped", two labels
+            that are the same on most of them, and sixteen copies of a constant
+            is texture rather than information. What a reader needs to find at a
+            glance is the card that differs: the one with a thesis behind it, and
+            the one nothing can ever audit. A card with neither mark is the
+            ordinary case and says so by staying quiet.
+            
+            Stamped, not verified: checking the bundle costs a fetch per receipt
+            and this grid renders sixteen. The detail page does the checking, so
+            the weaker word is the honest one here. */}
+        {(receipt.thesisId !== null || !hasEvidence(receipt)) && (
+          <div className="mt-4 flex items-baseline justify-between gap-3 font-mono text-micro text-faint">
+            <span>{receipt.thesisId === null ? '' : `thesis #${receipt.thesisId}`}</span>
+            {!hasEvidence(receipt) && <span className="text-refuse">no evidence</span>}
+          </div>
+        )}
       </div>
 
       <div className="mt-3 font-mono text-micro tracking-normal text-faint normal-case">

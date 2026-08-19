@@ -74,6 +74,7 @@ export default async function ReceiptPage({ params }: { params: Params }) {
           thesis={found.thesis}
           evidence={evidence}
           explorer={MAINNET?.explorer ?? null}
+          registry={MAINNET?.contracts.ReceiptRegistry ?? null}
         />
       </div>
     </>

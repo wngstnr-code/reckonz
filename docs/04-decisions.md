@@ -5687,3 +5687,57 @@ about scale in this page's history and the first one actually looked at. The bou
 theses render no bar, five render `1-4 of 5` with two pages. **Which means the bar is invisible
 today and stays invisible until a fifth thesis is published**, and that is the design rather than a
 defect.
+
+## D99 — The page that shows a decision was downloading it and throwing it away
+
+`/receipts/[id]` fetched the evidence bundle to check the hash, used one bit of it — does it
+re-derive — and discarded the rest. The bundle *is* the decision: the guard's verdict asked before
+gas was spent, how old the oracle was at that moment, the floor the transaction carried, whether an
+unmeasured sale was acknowledged. The surface whose whole job is showing what was decided was the
+one surface not showing it, and the fetch had already been paid for.
+
+`checkEvidence` returns the bundle on a verified result, and a **The decision** section renders it.
+`dryRun` leads, because being asked before spending gas is the claim the product makes and this is
+the recording of it. `shortfall.acknowledged` is rendered too: the card can only say `unmeasured`,
+and this says whether the seller was told and went ahead anyway, which is the difference between a
+gap in the record and a choice (D77).
+
+### Five things dropped in D98 and put back
+
+`contentHash` — the value stamped into every fill claiming a thesis, and the artefact that binds a
+claim to a trade. `author`, and the `agent` that stamped the receipt. `cid`, with its own admission
+that there is nowhere to pin yet. `worstSlippageBps`, because the weighted figure alone flatters a
+basket with one bad leg among several good ones. And the fill window. D98 moved receipt facts into
+cards and a detail page; whatever had no new home vanished, and nobody compared the two.
+
+### The floor, measured three ways before one worked
+
+`minAmountOut` raw is base units of an unknown-decimals token, and printing it put
+`637158241607252` on the page. Dividing it by `simulatedOut` looked unit-free and is not:
+**`minAmountOut` is base units while `simulatedOut` is a decimal string**, in the same object.
+That is a real wart in the bundle layout and an unfixable one — the layout is an input to
+`evidenceHash`, so changing it would make every hash already on chain unverifiable. It is now
+documented on the interface instead.
+
+What works is the floor against the receipt's own `amountOut`: base units of the same token in both
+directions, so the division cancels the decimals whatever they are. It also answers a better
+question — how much headroom the trade had before it would have reverted.
+
+### Two more
+
+- **A receipt is one asset, and the page now says why where it matters.** Every receipt on this
+  chain carries exactly one fill because a Permit2 signature names one token, so a two-asset thesis
+  settles as two receipts. The line appears only on a receipt whose thesis names more than one,
+  which is the only place a reader would suspect something was missing. The `Decision` block was
+  written against `legs[0]` and would have silently dropped the rest of a multi-leg receipt —
+  `Fill[]` and `Leg[]` are both arrays and it is reachable — so it maps over legs, matching each to
+  its observation by asset rather than by position.
+- **`whitespace-nowrap` does not shrink a line that no longer fits, it pushes it out of the box.**
+  At 110% zoom the longest figure caption ran off the green frame entirely. Found by a user, not by
+  a check, and it was in the shared `Figure` so `/assets` had it too.
+
+**And one thing not built: a transaction hash.** `ReceiptRegistry.Receipt` records a block number
+and nothing finer, and recovering the hash needs a log scan `loadReceipts` deliberately avoids on
+this RPC. The registry read is the better link anyway: `get(id)` returns this exact struct, so the
+page offers *call get(15) on the registry yourself* and a reader checks the source rather than a
+transaction that merely contained it.

@@ -26,7 +26,11 @@ export function Figure({
       <div className="mt-1.5 font-mono text-[27px] leading-none font-semibold text-cta-ink">
         {value}
       </div>
-      <div className="mt-1.5 text-[12.5px] whitespace-nowrap text-cta-3">{children}</div>
+      {/* Wraps. It used to be `whitespace-nowrap`, which does not shrink a line
+          that no longer fits -- it pushes it out of the frame, and at 110% zoom
+          the longest caption ran off the green entirely. A caption on two lines
+          is worse than one; a caption outside the panel is broken. */}
+      <div className="mt-1.5 text-[12.5px] text-cta-3">{children}</div>
     </div>
   );
 }

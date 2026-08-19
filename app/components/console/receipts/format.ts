@@ -94,6 +94,22 @@ export function direction(fills: WireFill[]): string {
   return `${fills.length - exits} in · ${exits} out`;
 }
 
+/**
+ * How much of the asset an entry bought, derived rather than read.
+ *
+ * `amountOut` carries the asset's own decimals and nothing on the wire says what
+ * they are, so it cannot be formatted. But `Executor._priceE8` defines price as
+ * `amountIn / received`, which makes `received = amountIn / price` exactly --
+ * not an estimate, the same division run backwards. Dropping the field entirely
+ * meant the detail page never said how many shares a buy actually got.
+ */
+export function unitsBought(amountInUsdg: string, executionPriceE8: string): string | null {
+  const price = Number(BigInt(executionPriceE8)) / 1e8;
+  if (!Number.isFinite(price) || price <= 0) return null;
+  const units = Number(formatUnits(BigInt(amountInUsdg), 6)) / price;
+  return units.toFixed(8).replace(/0+$/, '').replace(/\.$/, '');
+}
+
 /** Total USDG the receipt moved, across every leg. */
 export const notionalOf = (receipt: ViewReceipt) =>
   receipt.fills.reduce((sum, f) => sum + BigInt(f.amountInUsdg), 0n).toString();
