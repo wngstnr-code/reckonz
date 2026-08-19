@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
+import { DrawnStroke } from './DrawnStroke';
 import { useInView } from './useInView';
 
 /**
@@ -134,9 +135,40 @@ export function HowItWorks() {
       </div>
 
       {ROWS.map((row, i) => (
-        <CardRow key={i} cards={row} armed={seen} first={i === 0} />
+        <CardRow key={i} cards={row} armed={seen} first={i === 0} stroke={i === ROWS.length - 1} />
       ))}
     </section>
+  );
+}
+
+/**
+ * The line that leaves this section and runs under the last one.
+ *
+ * Drawn on a 960 by 1600 sheet that stands for the page from the second row of
+ * cards down past the closing sentence — so where the ink starts, a little in
+ * from the right and a fifth of the way down, is beside `Trade`, and where it
+ * runs off the bottom-left is behind whatever ends the page.
+ *
+ * ## The layers, said out loud
+ *
+ * `z-0` and not a negative index. A positioned element with a negative one, in
+ * a parent that is positioned but has `z-index: auto`, does not go behind that
+ * parent — it goes behind `<main>`, whose `bg-ground` paints over it. That
+ * cost the other stroke on this page a week of running where nobody could see
+ * it.
+ *
+ * So it is at zero and the things that must sit over it say so: the cards and
+ * the closing heading are positioned with an index above it. Without that, a
+ * *positioned* stroke paints above ordinary block content — including content
+ * in the section below, which is what it spends most of its length crossing.
+ */
+function ClosingStroke() {
+  return (
+    <DrawnStroke
+      viewBox="0 0 960 1600"
+      d="M959.3 192.2C953.8 190.8 941 185.9 926.2 183.5C911.3 181.2 888.8 178.4 870.1 178.1C851.5 177.7 830.9 179.6 814.5 181.6C798 183.6 783.4 187.1 771.4 190.3C759.3 193.5 751.2 196.5 742.4 200.9C733.6 205.3 725.3 210.3 718.6 216.7C711.9 223 706.4 230.8 702.2 238.9C697.9 247 694.8 257.9 693.2 265.3C691.6 272.6 692 277.2 692.5 283C693.1 288.7 692.6 292.6 696.4 300C700.2 307.5 706 319.2 715.4 327.7C724.8 336.2 735.3 343.6 752.7 350.8C770.1 358.1 804 364.8 819.6 371.4C835.3 378 837.3 379.9 846.7 390.4C856 401 867.5 419.1 875.6 434.8C883.7 450.6 890.7 468.6 895.2 485C899.8 501.4 901.3 518.2 903 533.3C904.7 548.4 905.3 561.4 905.5 575.4C905.8 589.5 905.6 605.5 904.6 617.6C903.6 629.7 901.7 638.2 899.4 648.2C897.2 658.1 895.3 666.3 891.1 677.1C886.8 688 880.7 702 874 713.2C867.4 724.3 858.5 735.6 851.2 744.1C843.9 752.5 839.4 756.7 830.2 763.7C821.1 770.7 808.3 779.6 796.1 786.2C784 792.9 768.9 799.4 757.5 803.6C746.1 807.8 739.7 809.2 727.6 811.3C715.5 813.4 702.1 816.6 685.1 816.1C668.2 815.6 658.1 817 625.9 808.4C593.7 799.8 525.7 774.6 492.1 764.3C458.4 754 446.9 751.1 423.9 746.6C400.8 742.1 377.6 739.4 354 737.3C330.4 735.2 299.3 733.8 282.3 734.1C265.2 734.3 261.4 736.2 251.7 738.9C242 741.6 232.4 745.6 224 750.2C215.7 754.8 209.2 759.4 201.5 766.6C193.8 773.7 184.8 782.3 177.7 793C170.6 803.6 162.5 820.3 159 830.6C155.6 841 156.8 848.3 157.1 855.1C157.4 861.9 158.4 865 161 871.5C163.5 877.9 168.7 888 172.5 893.7C176.4 899.4 171.5 897.1 183.8 905.6C196.1 914.1 232.1 933.2 246.2 944.8C260.4 956.5 263.4 965.6 268.8 975.4C274.1 985.2 276.1 994 278.4 1003.4C280.8 1012.8 282.3 1022.6 282.9 1031.7C283.6 1040.8 283.2 1049.4 282.3 1058.1C281.3 1066.8 281.2 1072.8 277.1 1084.2C273 1095.5 266.2 1112.7 257.8 1126C249.5 1139.2 256.8 1139.2 226.9 1163.6C197.1 1188 108.6 1249.4 78.6 1272.4C48.6 1295.4 56.6 1291.8 47.1 1301.7C37.5 1311.5 29 1320.8 21.3 1331.6C13.6 1342.4 8.2 1350.2 1 1366.4C-6.1 1382.5 -15.4 1406.7 -21.5 1428.5C-27.5 1450.2 -32.7 1479.2 -35.3 1496.6C-37.8 1514.1 -36.6 1527 -36.9 1533"
+      className="pointer-events-none absolute top-0 left-0 z-0 h-auto w-full"
+    />
   );
 }
 
@@ -167,10 +199,12 @@ function CardRow({
   cards,
   armed,
   first,
+  stroke,
 }: {
   cards: { title: string; line: string; src?: string }[];
   armed: boolean;
   first: boolean;
+  stroke?: boolean;
 }) {
   /* A positive margin, so the row starts before it arrives.
    *
@@ -198,10 +232,20 @@ function CardRow({
       /* The rows are further apart than the columns are, because a column gap
          separates two frames and a row gap separates a caption from the frame
          under it. Equal numbers would read as unequal space. */
-      className={`grid gap-[clamp(1.5rem,2.6vw,2.75rem)] lg:grid-cols-2 ${
+      className={`relative grid gap-[clamp(1.5rem,2.6vw,2.75rem)] lg:grid-cols-2 ${
         first ? 'mt-[clamp(2.5rem,6vw,4.5rem)]' : 'mt-[clamp(2.5rem,4.5vw,4rem)]'
       } ${on ? 'cards-on' : ''}`}
     >
+      {/* The row carries it because the row's top edge is where the drawing
+          starts — the sheet was drawn as the page from here down, and hanging
+          the stroke off anything else would mean writing that distance out as a
+          number and re-deriving it whenever the copy above changed.
+
+          It is nearly three screens tall and is left to overflow. Nothing clips
+          it: the section sets no `overflow`, so the tail carries on down into
+          the closing section and, when there is one, the footer. */}
+      {stroke && <ClosingStroke />}
+
       {cards.map((card) => (
         <Card key={card.title} {...card} />
       ))}
@@ -262,7 +306,7 @@ function Letters({ text }: { text: string }) {
  */
 function Card({ title, line, src }: { title: string; line: string; src?: string }) {
   return (
-    <figure>
+    <figure className="relative z-10">
       {/* Dark in both themes, and a literal rather than a token, for the reason
           the hero's wall is: this is a ground that pictures are lit against,
           and a ground that turns white in light mode takes the light with it. */}

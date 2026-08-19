@@ -55,9 +55,14 @@ export function Closing() {
         seen ? 'reveal-on' : ''
       }`}
     >
+      {/* `relative z-10` for a reason that is not about this section: the
+          stroke that starts in `How It Works` is nearly three screens long and
+          spends most of it crossing this one. A positioned element paints above
+          ordinary block content, so type that says nothing about its layer ends
+          up *under* a decoration from the section before it. */}
       <h2
         aria-label={LINES.join(' ')}
-        className="text-[clamp(3rem,8.6vw,8.2rem)] leading-[1.02] font-medium tracking-[-0.03em] text-ink"
+        className="relative z-10 text-[clamp(3rem,8.6vw,8.2rem)] leading-[1.02] font-medium tracking-[-0.03em] text-ink"
       >
         {LINES.map((text, line) => {
           const words = text.split(' ');
