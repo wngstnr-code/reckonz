@@ -5045,3 +5045,29 @@ The general form of the mistake is worth keeping: **the first layout was ordered
 the object, and the second by the state the user is actually in.** The four stacked panels had the
 same fault at page scale, which is what the rest of D94 is about; this was the same fault surviving
 inside the fix.
+
+### D94, amended again — the create form was moved but never redrawn
+
+Moving the form was the layout fix; the form itself was still the old one, and Nabil said so. Five
+small inputs sharing a row read as a settings dialog. These are not settings. **Each field is a
+bound the chain will enforce inside a trade, and the number in it is the user's own choice** — the
+same kind of act as typing a size into the swap box, and it deserved the same proportions.
+
+So `Field` now borrows the swap box's: a box of its own, the label small and quiet above, **the
+value the largest thing in it**, the unit as a chip beside the number rather than loose text
+trailing the input, and `focus-within` on the container because the box is what the eye reads as
+the control. What each cap *means* moved inside its own box, where it is read at the moment of
+choosing, instead of into one paragraph under the row.
+
+Three smaller corrections in the same pass:
+
+- **The asset chips carry their mark.** Thirty bare tickers is a wall of text; the same thirty with
+  their logos is a list you can scan, and `AssetMark` already existed for exactly this.
+- **The primary button is full width**, matching the trade card's. Two buttons doing the same job on
+  one page should not be two different sizes.
+- **The button says why it is disabled** — *Pick at least one asset*, *Too many assets — the limit
+  is N* — rather than staying greyed with the reason parked in a hint beside it.
+
+The opening paragraph moved under the button, where the reference puts its disclaimer and where the
+trade card already puts the non-custodial claim. **Leading a form with a paragraph pushes the form
+below the fold**, and the sentence is read after the decision anyway.

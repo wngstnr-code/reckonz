@@ -717,6 +717,11 @@ case this is from the walk the manager already does. `Limits` is new and is the 
 Limits answered from measurement rather than policy: absorbable size per pool, and the one section
 that says anything to a visitor with no wallet.
 
+The create form itself was redrawn rather than only relocated: `Field` borrows the swap box's
+proportions — a box each, the value the largest thing in it, the unit as a chip — with what each cap
+means inside its own box, the asset chips carrying their marks, and a full-width button that says
+why it is disabled.
+
 `BasketRail` is the missing accounting for a followed thesis — one row per leg, its state, and the
 reason on any refusal. It deliberately carries **no** asked-versus-executable total; D94 says why,
 and it is D50's constraint, not an oversight.
