@@ -155,6 +155,19 @@ export function HowItWorks() {
  * the `d` was drawn against. An `absolute` box costs nothing where it holds
  * nothing.
  *
+ * ## It is wider than what holds it
+ *
+ * The row it hangs from is inset by the section's own padding, so a `w-full`
+ * stroke stopped short of both screen edges — and a clip is only invisible
+ * where it lands on an edge the reader already accepts as the end of the page.
+ * Two vertical cuts inside the margin read as a drawing that had been trimmed.
+ *
+ * The padding is given back on both sides: `left` is one of it negated, the
+ * width is the row plus two. The sheet was drawn as the full page width, so
+ * this restores the frame the line was drawn against — the ink begins hard
+ * against the right edge and leaves past the left, and both now happen where
+ * the screen ends rather than where the text column does.
+ *
  * ## The layers, said out loud
  *
  * `z-0` and not a negative index. A positioned element with a negative one, in
@@ -173,7 +186,7 @@ function ClosingStroke() {
     <DrawnStroke
       viewBox="0 0 960 1600"
       d="M959.3 279.1C935.3 279.2 845.5 279 815.1 279.7C784.7 280.4 789.6 281.3 776.8 283.3C764.1 285.3 749.8 288.4 738.5 291.6C727.3 294.9 718.6 298 709.6 302.6C700.6 307.2 690.6 314.2 684.5 319.3C678.4 324.5 676.3 327 672.9 333.5C669.5 340 665.6 351.2 663.9 358.3C662.2 365.3 662.1 368.3 662.9 375.6C663.7 383 665.8 393.9 668.7 402.3C671.7 410.8 676.7 420.2 680.6 426.5C684.5 432.7 684.4 433.4 692.2 439.7C700 445.9 706 453.8 727.3 463.8C748.5 473.8 797.8 489.9 819.6 499.5C841.5 509.2 847 512.7 858.2 521.7C869.4 530.7 877.8 538.8 886.9 553.6C896 568.3 906.7 592.6 912.9 610.2C919.2 627.8 921.5 642.4 924.2 659.4C926.9 676.5 928.7 694.8 929.4 712.5C930 730.3 929.8 749.6 928.4 765.9C926.9 782.3 924.2 795.9 920.7 810.7C917.1 825.5 912.5 841.3 907.1 854.7C901.8 868.1 895.9 880.4 888.8 891.1C881.7 901.8 873.8 910.4 864.4 919.1C854.9 927.8 842.5 936.8 832.2 943.5C821.9 950.3 813 954.9 802.6 959.6C792.2 964.4 784.4 968.5 769.8 972.2C755.1 975.9 728.9 980.1 714.7 981.8C700.5 983.6 698.6 983.3 684.5 982.5C670.4 981.7 648.4 980 630.1 977C611.8 974.1 589.5 968.8 574.8 964.8C560 960.8 556.5 959.9 541.6 952.9C526.8 945.9 500.9 932.3 485.6 923C470.3 913.6 468.8 912.2 449.9 896.6C431 881 393.1 845.9 372.4 829.3C351.7 812.8 339 805 325.7 797.1C312.5 789.3 305.8 786.9 292.9 782C280 777.1 267.3 771.8 248.5 767.9C229.7 763.9 195.9 759.7 179.9 758.2C164 756.8 162 758 152.9 759.2C143.8 760.3 135.5 761.4 125.2 765C115 768.6 100.9 775.5 91.1 780.7C81.4 786 76 789.7 66.7 796.5C57.4 803.3 46.1 811.2 35.2 821.3C24.2 831.4 11.7 844.1 1 857C-9.6 869.9 -21.9 888 -28.7 898.8C-35.5 909.7 -38 918.1 -39.8 922"
-      className="pointer-events-none absolute top-0 left-0 z-0 h-auto w-full"
+      className="pointer-events-none absolute top-0 left-[calc(max(2rem,5vw)*-1)] z-0 h-auto w-[calc(100%_+_max(2rem,5vw)*2)]"
     />
   );
 }
