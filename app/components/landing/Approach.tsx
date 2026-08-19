@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { type RefObject, useEffect, useRef, useState } from 'react';
 import { useInView } from './useInView';
 
 /**
@@ -71,6 +71,7 @@ const HEADING = ['You write the thesis.', 'The chain answers.'];
 
 export function Approach({ videoSrc }: { videoSrc?: string }) {
   const { ref, seen } = useInView<HTMLElement>();
+  const strokeRef = useRef<SVGPathElement | null>(null);
   const shellRef = useRef<HTMLDivElement | null>(null);
   const restRef = useRef<HTMLDivElement | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -104,8 +105,9 @@ export function Approach({ videoSrc }: { videoSrc?: string }) {
   useEffect(() => {
     const shell = shellRef.current;
     const rest = restRef.current;
+    const stroke = strokeRef.current;
     const section = ref.current;
-    if (!shell || !rest || !section) return;
+    if (!shell || !rest || !stroke || !section) return;
 
     const clamp = (n: number) => Math.max(0, Math.min(1, n));
 
@@ -119,6 +121,18 @@ export function Approach({ videoSrc }: { videoSrc?: string }) {
       setLanded(true);
       return;
     }
+
+    /* Where the stroke begins, as a fraction of its own box.
+     *
+     * Read off the path rather than written down: `getPointAtLength(0)` is the
+     * pen's first contact in user units, and the viewBox says how far down the
+     * drawing that is. The line currently starts a quarter of the way down, and
+     * measuring it means a different drawing does not need this number changed.
+     *
+     * Once, not per frame. It is a property of the `d`, and the `d` does not
+     * move. */
+    const viewBox = stroke.ownerSVGElement?.viewBox.baseVal;
+    const head = viewBox ? stroke.getPointAtLength(0).y / viewBox.height : 0;
 
     let ticking = 0;
 
@@ -151,10 +165,20 @@ export function Approach({ videoSrc }: { videoSrc?: string }) {
         rest.style.aspectRatio = ratio;
       }
 
-      /* The stroke's own clock. Zero when the section's top is still a viewport
-         away, one a little after it has left the top of the screen — so the
-         line finishes before the card lands on top of it. */
-      section.style.setProperty('--draw', clamp((H - top) / (H * 1.3)).toFixed(4));
+      /* The stroke's own clock, and it starts where the stroke does.
+       *
+       * It used to be read from the section's top edge, which is not where the
+       * drawing begins: the line starts a quarter of the way down its own box,
+       * so by the time the reader could see the first stroke about a fifth of
+       * the path was already down. The pen appeared to have been at work
+       * off-screen.
+       *
+       * Zero when that first point is at the bottom of the screen — the reader
+       * sees the pen touch down — and one a little after it has left the top,
+       * so the line finishes before the card lands on top of it. */
+      const svg = stroke.ownerSVGElement?.getBoundingClientRect();
+      const pen = svg ? svg.top + svg.height * head : top;
+      section.style.setProperty('--draw', clamp((H - pen) / (H * 1.05)).toFixed(4));
 
       /* `t` is the flight, and it is read from the gap rather than from the
          section: the card takes off when the place it is sitting reaches the
@@ -217,7 +241,7 @@ export function Approach({ videoSrc }: { videoSrc?: string }) {
         seen ? 'reveal-on' : ''
       }`}
     >
-      <Ornament />
+      <Ornament pathRef={strokeRef} />
 
       {/* Right-aligned, and the whole width is its measure: no cap, because the
           two lines are written to be two lines and a wrapper that decides to
@@ -384,8 +408,7 @@ export function Approach({ videoSrc }: { videoSrc?: string }) {
  *
  * It also has to go for the dash to work at all — see `Ornament` itself.
  */
-function Ornament() {
-  const path = useRef<SVGPathElement | null>(null);
+function Ornament({ pathRef }: { pathRef: RefObject<SVGPathElement | null> }) {
 
   /* The dash pattern has to be the path's own length, measured.
    *
@@ -403,9 +426,9 @@ function Ornament() {
    * `getTotalLength` measures the geometry rather than the box it is drawn in.
    */
   useEffect(() => {
-    const node = path.current;
+    const node = pathRef.current;
     if (node) node.style.setProperty('--len', String(node.getTotalLength()));
-  }, []);
+  }, [pathRef]);
 
   return (
     <svg
@@ -414,7 +437,7 @@ function Ornament() {
       className="pointer-events-none absolute top-0 left-0 z-10 h-auto w-full"
     >
       <path
-        ref={path}
+        ref={pathRef}
         d="M1.3 120.6C11.9 118.1 43.4 109.7 64.6 105.5C85.7 101.3 109.1 97.8 128 95.5C146.9 93.1 163.8 91.8 178 91.3C192.3 90.9 201.3 91.3 213.6 92.7C225.8 94.1 238.4 96 251.4 99.6C264.4 103.3 279.1 108.8 291.4 114.7C303.7 120.6 315.9 128 325.3 134.8C334.8 141.7 340.6 146.1 348 156C355.5 165.8 364.5 179.4 370.1 194C375.7 208.5 379.3 225.8 381.7 243.5C384 261.1 385.3 282.9 384.1 299.8C382.8 316.7 378.6 333.1 374 345C369.5 357 365.2 363 356.6 371.5C348.1 380 335.5 389.4 322.8 396.1C310.1 402.8 293.6 409 280.6 411.8C267.5 414.5 254.6 413.8 244.5 412.5C234.3 411.2 226.7 407.8 219.4 404.1C212.2 400.5 205.9 395.5 201 390.6C196.1 385.8 193.2 381.6 190.2 375.1C187.2 368.7 184.1 359.5 182.9 351.9C181.7 344.2 181.7 337.4 182.8 329.1C184 320.9 186.6 311.2 189.7 302.5C192.8 293.9 197.1 285.1 201.7 277.3C206.3 269.5 210 263.4 217.3 255.7C224.6 248 233 238.5 245.4 231.2C257.8 223.9 276.9 216.4 291.6 211.8C306.4 207.1 309.1 206.5 333.8 203.3C358.5 200.2 414.5 194.1 439.9 192.8C465.3 191.5 470.2 191.7 486 195.4C501.9 199.1 520 205.4 535.1 214.9C550.2 224.4 557 231.6 576.6 252.5C596.1 273.4 636.6 323 652.6 340.1C668.7 357.2 666.2 351.1 672.8 354.9C679.5 358.7 685.2 361.1 692.3 362.7C699.5 364.3 708 365.2 715.8 364.5C723.6 363.7 722.4 367.6 739.3 358.2C756.1 348.8 797.7 318.4 816.8 308C835.8 297.7 840.5 297.5 853.7 296.2C866.9 295 876.9 294.7 896.1 300.5C915.2 306.3 950 324.5 968.6 331.1C987.2 337.7 998.7 338.4 1007.6 340.1C1016.6 341.8 1013.3 342.3 1022.3 341.4C1031.3 340.6 1055.2 335.9 1061.8 334.8"
         fill="none"
         stroke="var(--color-cta-3)"
