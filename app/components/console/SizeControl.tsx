@@ -35,16 +35,20 @@ export function SizeControl({
   board,
   value,
   onChange,
+  className,
 }: {
   board: Board;
   value: number;
   onChange: (usdg: number) => void;
+  /** Spacing from whatever this sits under, owned by the caller. The control
+      knows how far its own parts stand apart and nothing about the page. */
+  className?: string;
 }) {
   const rungs = board.ladderUsdg;
   const index = Math.max(0, rungs.indexOf(value));
 
   return (
-    <section>
+    <section className={className}>
       <label htmlFor="size" className="font-mono text-micro text-faint uppercase">
         If you put in
       </label>

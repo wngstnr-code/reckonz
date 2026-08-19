@@ -1,6 +1,6 @@
-import Link from 'next/link';
 import type { Showcase } from '@/src/showcase';
-import { REFUSAL, freshness, usd, usdExact } from './board-format';
+import { Figure } from './Figure';
+import { freshness, usd, usdExact } from './board-format';
 
 /**
  * The board above, applied to one real idea, in the numbers that decide it.
@@ -29,117 +29,79 @@ import { REFUSAL, freshness, usd, usdExact } from './board-format';
  * notional, it is the market's answer rather than a shortfall, and a recording
  * that kept only the placed half would be marketing wearing a measurement's
  * clothes.
+ *
+ * ## The frame, and what it cost
+ *
+ * This was a bare section under a rule: an eyebrow, the quote, four figures, a
+ * paragraph explaining the guard's verdict, a metadata line and a warning. Six
+ * blocks of type for one recording, on a page whose argument is the board above
+ * it. It is the same green frame the page opens on now — one claim, the numbers
+ * that back it, nothing else — so the recording reads as a second exhibit
+ * rather than as an essay appended to the board.
+ *
+ * **The figures lost their colours, and that is the rule rather than a
+ * casualty.** `caution` on `--color-frame` measures under 2:1; D101 is exactly
+ * this mistake, found on a green panel three times. Inside the frame every
+ * number is `cta-ink` and the caption under it carries the meaning, which is
+ * what the shared `Figure` already does for the board's own three.
+ *
+ * **The quote sits above the figures rather than beside them.** The `Hero` puts
+ * its claim on the left and its numbers on the right, and that shape cannot
+ * hold this: a thesis runs to about 180 characters, so two lines of it needs
+ * roughly 90 characters of width, and there is no laptop wide enough to put
+ * that beside four figures. Stacked is the same frame in its own narrow-width
+ * arrangement, not a second design.
  */
 export function VerdictRibbon({ showcase, now }: { showcase: Showcase; now: number }) {
   const t = showcase.totals;
   const age = freshness(showcase.recordedAt, now);
-  const executable = showcase.verdicts.filter((v) => v.ok).length;
 
   // The whole reason to plan rather than send. Guarded because a run with
   // nothing placed has nothing to compare, and 0/0 is not a saving.
   const saved = t.naiveCostUsdg - t.plannedCostUsdg;
 
   return (
-    <section className="mt-14 border-t border-line pt-8">
-      <h2 className="font-mono text-micro text-faint uppercase">One real idea, priced</h2>
-
-      <p className="mt-3 max-w-[74ch] text-lead leading-relaxed text-ink">
+    <section className="mt-14 rounded-2xl bg-frame px-8 py-9 md:px-11 md:py-10">
+      {/* Held to two lines at reading width. The frame is a claim, and the
+          thesis is the claim here — so it takes the position and the size the
+          `Hero`'s title takes, rather than being introduced by a label. */}
+      <p className="max-w-[92ch] text-[21px] leading-tight font-semibold text-cta-ink">
         &ldquo;{showcase.thesis}&rdquo;
       </p>
 
-      <div className="mt-7 flex flex-wrap gap-x-14 gap-y-6">
+      <div className="mt-8 flex flex-wrap gap-x-11 gap-y-6 sm:flex-nowrap">
         <Figure label="Asked for" value={usd(t.askedUsdg)}>
           over {showcase.horizonDays} days
         </Figure>
 
-        <Figure label="Market could take" value={usd(t.placedUsdg)} tone="text-ink">
+        <Figure label="Market could take" value={usd(t.placedUsdg)}>
           {showcase.lines.map((l) => l.symbol).join(', ') || 'nothing'}
         </Figure>
 
-        <Figure label="Not placed" value={usd(t.unallocatedUsdg)} tone="text-caution">
+        <Figure label="Not placed" value={usd(t.unallocatedUsdg)}>
           refused rather than forced in
         </Figure>
 
         {saved > 0 && (
-          <Figure label="Impact avoided" value={usd(saved)} tone="text-signal">
+          <Figure label="Impact avoided" value={usd(saved)}>
             {usd(t.naiveCostUsdg)} at once, {usdExact(t.plannedCostUsdg)} planned
           </Figure>
         )}
       </div>
 
-      <div className="mt-6 border-t border-line pt-4">
-        {executable === showcase.verdicts.length && executable > 0 ? (
-          <p className="text-body text-dim">
-            The guard would have let{' '}
-            <b className="font-semibold text-signal">all {executable}</b> of these through at the
-            size the plan proposed.
-          </p>
-        ) : (
-          <p className="max-w-[74ch] text-body leading-relaxed text-dim">
-            The guard then refused{' '}
-            <b className="font-semibold text-caution">
-              {showcase.verdicts.length - executable} of {showcase.verdicts.length}
-            </b>{' '}
-            even at that size.{' '}
-            {showcase.verdicts
-              .filter((v) => !v.ok)
-              .map((v) => (
-                <span key={v.symbol}>
-                  {v.symbol} came in at {v.impactBps}bp against a {showcase.maxImpactBps}bp limit,{' '}
-                  {REFUSAL[v.reason ?? ''] ?? v.reason}.{' '}
-                </span>
-              ))}
-            The plan already sizes under the limit rather than up to it, so a refusal here means
-            this market moved further than that headroom between the sizing and the check. Nothing
-            off chain gets to overrule the guard.
-          </p>
-        )}
-      </div>
-
-      <p className="mt-4 flex flex-wrap items-center gap-x-2 font-mono text-meta text-faint">
-        <span>
-          recorded {age.label} ·{' '}
-          {new Date(showcase.recordedAt * 1000).toISOString().slice(0, 16).replace('T', ' ')}Z ·
-          compiled by {showcase.provider} · {showcase.maxImpactBps}bp impact limit
-        </span>
-
-        {/* The absolute stamp sits beside the relative one because this is a
-            server component: the label is correct when the page is built and
-            drifts while a tab stays open. The date does not. */}
-        <Link
-          href="/idea"
-          className="text-dim underline underline-offset-3 transition-colors duration-200 hover:text-ink"
-        >
-          price your own
-        </Link>
+      {/* One line, and the one piece of prose that could not go.
+       *
+       * `Market could take` is a capacity figure, and D84's rule is that a
+       * capacity figure is a measurement with a date — the same board went
+       * $17.5M to $22.9M in four days, and nine pools that `pnpm capacity`
+       * priced were empty hours later. An undated number here would read as a
+       * standing property of the market rather than as what this run found at
+       * that hour. The paragraph explaining that is gone; the date is not. */}
+      <p className="mt-8 font-mono text-fine text-cta-3">
+        recorded {age.label} ·{' '}
+        {new Date(showcase.recordedAt * 1000).toISOString().slice(0, 16).replace('T', ' ')}Z ·{' '}
+        {showcase.maxImpactBps}bp impact limit
       </p>
-
-      {age.level !== 'current' && (
-        <p className="mt-2 max-w-[62ch] text-data text-caution">
-          Depth moves within hours, so this run describes the market it was recorded against rather
-          than today&rsquo;s. Write your own on the Idea page to price it now.
-        </p>
-      )}
     </section>
-  );
-}
-
-function Figure({
-  label,
-  value,
-  tone = 'text-ink',
-  children,
-}: {
-  label: string;
-  value: string;
-  tone?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <div className="font-mono text-micro text-faint uppercase">{label}</div>
-      <div className={`mt-1 font-mono text-title font-semibold ${tone}`}>{value}</div>
-      <div className="mt-0.5 text-data text-dim">{children}</div>
-    </div>
   );
 }

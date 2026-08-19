@@ -85,7 +85,7 @@ export function Board({
           says at the size you picked, and how you change that size. Held
           together by proximity and separated from the frame above and the grid
           below by air, rather than by a box drawn around them. */}
-      <section className="mt-12 mb-14">
+      <section className="mt-16 mb-18">
         <BoardHeader
           board={board}
           sizeUsdg={size}
@@ -94,7 +94,7 @@ export function Board({
           refresh={refresh}
           onRefresh={check}
         />
-        <SizeControl board={board} value={size} onChange={setSizeUsdg} />
+        <SizeControl board={board} value={size} onChange={setSizeUsdg} className="mt-10" />
       </section>
 
       <BoardView board={board} sizeUsdg={size} />

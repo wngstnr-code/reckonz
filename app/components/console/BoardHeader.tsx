@@ -1,4 +1,5 @@
 import type { Board } from '@/src/board';
+import { Tooltip } from './Tooltip';
 import { REFUSAL, freshness, pricing, usd, verdictOf } from './board-format';
 import type { RefreshState } from './useBoardClock';
 
@@ -94,11 +95,28 @@ export function BoardHeader({
       </div>
 
       <div className="mt-4 flex flex-wrap items-center justify-end gap-x-5 gap-y-1.5 font-mono text-micro tracking-normal text-faint normal-case">
-        <span>measured {age.label}</span>
-        <span>
-          {new Date(board.measuredAt * 1000).toISOString().slice(0, 16).replace('T', ' ')}Z
-        </span>
-        {from === 'file' && <span>from the copy that shipped with this deployment</span>}
+        {/* The relative age is the judgement and it stays on screen; the stamp
+            it was derived from is what a reader checks only when they doubt it.
+            Both still ship — this page is not allowed to state a capacity
+            without saying when it was taken (D84) — but only one of them costs
+            a line.
+
+            The absolute stamp is also the one that stays true. This renders on
+            the server, so `21 min ago` is correct when the page is built and
+            drifts while a tab stays open. The UTC time does not. */}
+        <Tooltip
+          label={
+            <>
+              Measured{' '}
+              {new Date(board.measuredAt * 1000).toISOString().slice(0, 16).replace('T', ' ')}Z.{' '}
+              {from === 'file'
+                ? 'Read from the copy that shipped with this deployment rather than from the archive the worker keeps current.'
+                : 'Read from the archive the publish worker keeps current, hourly.'}
+            </>
+          }
+        >
+          measured {age.label}
+        </Tooltip>
 
         <button
           type="button"

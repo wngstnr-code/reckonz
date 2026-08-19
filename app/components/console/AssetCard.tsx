@@ -24,6 +24,14 @@ import { TONE, pct, usd, verdictOf } from './board-format';
  * **The tint follows the verdict, not the direction of a price.** Green-for-up
  * would be a fourth meaning for a colour that already has one here, and would
  * make a refusal look like a loss rather than like the product working.
+ *
+ * **The card itself is the page, held by a stroke.** It was `bg-panel`, which
+ * put a grey field behind every card and a second, tinted field inside it —
+ * three surfaces deep for one asset, and the tinted block is the only one of
+ * them carrying meaning. On the ground colour the stroke does the containing
+ * and the tint is the only fill on the card, so the verdict is what the eye
+ * finds first. `ReceiptCard` follows this, deliberately: the two grids are the
+ * same object in two subjects and a reader should not have to learn both.
  */
 export function AssetCard({ asset, sizeUsdg }: { asset: BoardAsset; sizeUsdg: number }) {
   const verdict = verdictOf(asset, sizeUsdg);
@@ -33,7 +41,7 @@ export function AssetCard({ asset, sizeUsdg }: { asset: BoardAsset; sizeUsdg: nu
   return (
     <Link
       href={`/assets/${asset.symbol}` as Route}
-      className="block rounded-2xl border border-line bg-panel p-4 transition-colors duration-200 hover:border-faint"
+      className="block rounded-2xl border border-line bg-ground p-4 transition-colors duration-200 hover:border-faint"
     >
       <header className="flex items-center gap-3">
         <AssetMark symbol={asset.symbol} />
@@ -49,13 +57,13 @@ export function AssetCard({ asset, sizeUsdg }: { asset: BoardAsset; sizeUsdg: nu
         <div className="font-mono text-title font-semibold text-ink">
           {capacity === null || capacity === undefined ? 'not read' : usd(capacity)}
         </div>
-        <div className={`mt-0.5 text-data ${tone.text}`}>
+        <div className={`mt-0.5 text-body ${tone.text}`}>
           {verdict.ok ? `allowed at ${usd(sizeUsdg)}` : verdict.text}
         </div>
 
         <DepthCurve asset={asset} className={`mt-4 h-14 w-full ${tone.curve}`} />
 
-        <div className="mt-2 flex items-baseline justify-between font-mono text-micro text-faint">
+        <div className="mt-2 flex items-baseline justify-between font-mono text-meta text-faint">
           {/* Never the number the oracle refused to publish. */}
           <span>
             {asset.publishable && asset.fairValue !== null

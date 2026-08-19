@@ -10,6 +10,14 @@
  * Each step is a claim this repo can be held to, which is why each one names the
  * thing that enforces it rather than describing an intention. "The guard reverts
  * in the same transaction" is checkable; "we take risk seriously" is not.
+ *
+ * **Not mounted anywhere right now, and that is deliberate.** It sat at the
+ * foot of `/assets`, which is a working surface: a reader who has reached the
+ * bottom of a thirty-row board has already decided to trust it or not, and four
+ * columns of explanation there is the product apologising for itself. It is
+ * kept whole because the landing page is where an explanation is the job rather
+ * than an interruption, and rewriting this from memory later would lose the
+ * precision in it.
  */
 const STEPS = [
   {

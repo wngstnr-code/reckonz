@@ -32,7 +32,7 @@ export function Hero({
   aside?: React.ReactNode;
 }) {
   return (
-    <header className="rounded-2xl bg-frame px-8 py-9 md:px-11 md:py-10">
+    <header className="rounded-2xl bg-frame px-8 py-9 md:px-11 md:py-10 mb-6">
       <div className="flex flex-col gap-x-24 gap-y-8 xl:flex-row xl:items-center xl:justify-between">
         {/* Held to two lines. The frame is a claim, and a claim that runs to a
             paragraph stops being one. */}

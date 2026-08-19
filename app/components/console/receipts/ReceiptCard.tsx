@@ -29,7 +29,7 @@ export function ReceiptCard({ receipt }: { receipt: ViewReceipt }) {
   return (
     <Link
       href={`/receipts/${receipt.id}` as Route}
-      className="block rounded-2xl border border-line bg-panel p-4 transition-colors duration-200 hover:border-faint"
+      className="block rounded-2xl border border-line bg-ground p-4 transition-colors duration-200 hover:border-faint"
     >
       <header className="flex items-center gap-3">
         {first ? <AssetMark symbol={first.symbol} /> : null}

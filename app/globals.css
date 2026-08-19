@@ -163,6 +163,21 @@
    * `display` exists for one job: the refused notional, which the brief puts at
    * the top of the page at display size because it is the most persuasive
    * number the product produces. */
+  /* One step below `micro`, and it exists for exactly one job: the grey caption
+   * under a figure in a dense table.
+   *
+   * The assets board is thirty rows carrying two lines each, and at `micro` the
+   * caption reads at nearly the weight of the number it is qualifying — which
+   * makes a table that is twice as tall as it needs to be and gives the eye no
+   * hierarchy to skim by. It is deliberately a *named* step rather than an
+   * arbitrary `text-[12px]`, for the reason the scale exists at all: a size
+   * typed at a call site drifts half a pixel at a time.
+   *
+   * No letter-spacing, unlike `micro`. That tracking is there because `micro`
+   * sets small capitals in column headings; this one sets sentences. */
+  --text-fine: 12px;
+  --text-fine--line-height: 1.4;
+
   --text-micro: 13.5px;
   --text-micro--line-height: 1.35;
   --text-micro--letter-spacing: 0.09em;

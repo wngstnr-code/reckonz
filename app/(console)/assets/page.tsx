@@ -1,7 +1,6 @@
 import { fetchBoard } from '@/src/board-store';
 import { readShowcase } from '@/src/showcase';
 import { Board } from '@/app/components/console/Board';
-import { HowItWorks } from '@/app/components/console/HowItWorks';
 import { VerdictRibbon } from '@/app/components/console/VerdictRibbon';
 import { BoardFigures } from '@/app/components/console/BoardFigures';
 import { Hero } from '@/app/components/console/Hero';
@@ -69,8 +68,6 @@ export default async function AssetsPage() {
       )}
 
       {showcase && <VerdictRibbon showcase={showcase} now={renderedAt} />}
-
-      <HowItWorks />
     </>
   );
 }
