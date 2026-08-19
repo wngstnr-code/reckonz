@@ -192,6 +192,12 @@ TARGET=mainnet pnpm fees [withdraw]    # what the fee earned, and sweep it to th
   Never inline a second copy in a script — the copy is what drifts. `src/abi.ts`,
   `src/deployments.ts` and `src/chain.ts` must stay importable from the browser: no `node:`
   import, no `process.env`, no RPC client. The FE's wallet UI imports all three.
+- **A shared component must not hardcode a foreground colour.** `text-ink` is only a foreground on
+  a light surface, and anything reusable ends up on `bg-frame` sooner or later: `Num` forced it and
+  rendered every number on the green panels at **2.35:1**, which is a dark shape on dark green. It
+  inherits now and uses weight for emphasis, measuring 8.04:1 in the same place. `tone` props stay
+  where the colour *is* the message. The same rule killed `caution` inside a green banner, and there
+  weight carries the warning instead.
 - Comments explain *why*, especially where a naive implementation would look correct.
 
 ## Workflow

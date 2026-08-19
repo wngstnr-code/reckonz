@@ -699,7 +699,13 @@ reminder.
 
 ## Log
 
-**2026-08-19 (latest, thirty-second)** — **the loop closed in one sitting, entirely from the
+**2026-08-19 (latest, thirty-third)** — **mandate #2 created from the browser, with its exit rules**
+(block 68365724 and 68365728, both success). Three assets allowed, two triggers installed and scoped
+to wMUx and wSKHYx exactly as the run compiled them. The panel announcing it is also what surfaced
+D101: `Num` forced `text-ink`, so every number on a green panel sat at 2.35:1. It inherits now,
+8.04:1, and the rule is in `CLAUDE.md`.
+
+**2026-08-19 (thirty-second)** — **the loop closed in one sitting, entirely from the
 browser**. Thesis #4 published from `/idea` at 09:58:33Z, carried to `/trade` by the new handoff,
 filled 38 seconds later as receipt #20 stamped with `0xd728bde2…`. `idOf` resolves that hash back to
 thesis #4 and `publishedAt < timestamp` on chain, so the ordering claim is settled by the registries

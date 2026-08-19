@@ -5846,3 +5846,24 @@ that names no thesis at all.
 **Two hand-offs, two identical bugs, both invisible until somebody pressed the button.** The
 pattern is worth naming: a sender that navigates away is the only place some facts exist, and
 whatever it does not put in the payload is gone by the time anyone notices something is missing.
+
+## D101 — A component that hardcodes a foreground cannot be put on an arbitrary surface
+
+`Num` forced `text-ink`. That is the page's near-black, and it is a foreground only on a light
+ground. On the green panels — a settled fill, a followed thesis, a created mandate — every number it
+wrapped measured **2.35:1** against `--color-frame`: a dark shape on dark green, technically present
+and effectively gone. The panel announcing *"Mandate #2 created, allowing 3 assets"* rendered both
+figures that way.
+
+It inherits its colour now and carries emphasis with weight instead, measuring **8.04:1** in the
+same place. `tone` survives for `caution` and `refuse`, where the colour is the message rather than
+the styling.
+
+This is the third instance of one mistake. The settled-fill amount hit it (fixed in place), the
+follow banner's caution line hit it (weight carries that warning now), and this is the shared
+component that caused all three. The rule is in `CLAUDE.md` rather than in one more local fix.
+
+**Checked rather than asserted.** A DOM probe walked every `.bg-frame` on `/assets`, `/receipts` and
+`/idea`, computing the WCAG ratio of each text node against its panel: 33 nodes, zero below 4.5.
+The transient panels — Filled, Exited, mandate created — cannot be summoned on demand, so the
+markup of the mandate one was reproduced in the page and measured directly.

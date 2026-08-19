@@ -105,8 +105,22 @@ export function Bar({ value, tone = 'signal' }: { value: number; tone?: 'signal'
   );
 }
 
-/** A number that should read as measured, not typeset. */
+/**
+ * A number that should read as measured, not typeset.
+ *
+ * **It inherits its colour.** It used to force `text-ink`, which is the page's
+ * near-black, and that is only a foreground on a light surface: on the green
+ * panels -- a settled fill, a created mandate, a followed thesis -- every number
+ * it wrapped went nearly invisible against the field it sat on. The panel that
+ * announced "Mandate #2 created, allowing 3 assets" rendered both figures as
+ * dark shapes on dark green.
+ *
+ * A component that hardcodes a foreground cannot be placed on an arbitrary
+ * surface, and this one is placed everywhere. So the surface decides the colour
+ * and the weight carries the emphasis that `text-ink` used to. `tone` stays for
+ * the two cases where the colour *is* the message.
+ */
 export function Num({ children, tone }: { children: ReactNode; tone?: 'caution' | 'refuse' }) {
-  const color = tone === 'caution' ? 'text-caution' : tone === 'refuse' ? 'text-refuse' : 'text-ink';
-  return <span className={`font-mono ${color}`}>{children}</span>;
+  const color = tone === 'caution' ? 'text-caution' : tone === 'refuse' ? 'text-refuse' : '';
+  return <span className={`font-mono font-semibold ${color}`}>{children}</span>;
 }
