@@ -1,10 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { Address, Hex } from 'viem';
 import { THESIS_REGISTRY_ABI } from '@/src/abi';
 import { thesisHash, type Thesis } from '@/src/thesis';
-import { OPEN_WALLET_EVENT } from '../../follow';
+import { FOLLOW_EVENT, OPEN_WALLET_EVENT, type FollowRequest } from '../../follow';
+import { stashHandoff } from '../../handoff';
 import { useWallet } from '../../useWallet';
 import { awaitReceipt } from '../../awaitReceipt';
 
@@ -40,8 +42,16 @@ type Phase =
   | { kind: 'done'; id: bigint; hash: Hex }
   | { kind: 'failed'; message: string };
 
-export function PublishThesis({ thesis }: { thesis: Thesis }) {
+export function PublishThesis({
+  thesis,
+  basket,
+}: {
+  thesis: Thesis;
+  /** The compiled legs, resolved to addresses. Empty when nothing mapped. */
+  basket: { asset: Address; symbol: string }[];
+}) {
   const { address, option, walletClient, publicClient } = useWallet();
+  const router = useRouter();
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
 
   const hash = thesisHash(thesis);
@@ -109,6 +119,32 @@ export function PublishThesis({ thesis }: { thesis: Thesis }) {
     }
   }
 
+  /**
+   * Arm a fill with this thesis, and go where fills happen.
+   *
+   * The link that was missing. `Follow this basket` lives on a receipt's detail
+   * page, and a thesis published a minute ago has no receipts -- so the newest
+   * claim on the registry was the one thing nobody could act on. Worse, the
+   * basket `/receipts` shows is derived from settled fills (D50), so a fresh
+   * thesis has an empty one there and adding a button would not have helped.
+   * The compiled legs are only known here, on the run that produced them.
+   *
+   * Offered only once an id exists. A fill stamping a hash no registry entry
+   * holds is exactly what `/receipts` counts as an orphaned hash and says should
+   * always be zero.
+   */
+  const go = (id: bigint) => {
+    const follow: FollowRequest = {
+      thesisId: Number(id),
+      contentHash: hash,
+      assets: basket.map((b) => b.asset),
+      symbols: basket.map((b) => b.symbol),
+    };
+    window.dispatchEvent(new CustomEvent(FOLLOW_EVENT, { detail: follow }));
+    stashHandoff({ kind: 'follow', payload: follow });
+    router.push('/trade');
+  };
+
   return (
     <>
       <p className="font-mono text-micro tracking-normal break-all text-faint normal-case">
@@ -139,30 +175,28 @@ export function PublishThesis({ thesis }: { thesis: Thesis }) {
             this one was made by{' '}
             <span className="font-mono text-meta [overflow-wrap:anywhere]">{phase.author}</span>.
           </p>
-          <a
-            href="/receipts"
-            className="mt-2 inline-block text-meta text-dim underline decoration-dotted hover:text-ink"
-          >
-            See what has executed against it
-          </a>
+          <TakeToTrade id={phase.id} onGo={go} basket={basket} />
         </div>
       ) : phase.kind === 'done' ? (
-        <div className="mt-4 rounded-xl bg-frame px-4 py-3.5">
-          <p className="text-meta text-cta-ink">
-            Published as thesis{' '}
-            <span className="font-mono font-semibold">#{phase.id.toString()}</span>. Any fill you
-            place from now on can carry this hash, and the timestamps prove which came first.
-          </p>
-          {explorer && (
-            <a
-              href={`${explorer}/tx/${phase.hash}`}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-1.5 block font-mono text-meta break-all text-cta-3 hover:text-cta-ink"
-            >
-              {phase.hash}
-            </a>
-          )}
+        <div className="mt-4">
+          <div className="rounded-xl bg-frame px-4 py-3.5">
+            <p className="text-meta text-cta-ink">
+              Published as thesis{' '}
+              <span className="font-mono font-semibold">#{phase.id.toString()}</span>. Any fill you
+              place from now on can carry this hash, and the timestamps prove which came first.
+            </p>
+            {explorer && (
+              <a
+                href={`${explorer}/tx/${phase.hash}`}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-1.5 block font-mono text-meta break-all text-cta-3 hover:text-cta-ink"
+              >
+                {phase.hash}
+              </a>
+            )}
+          </div>
+          <TakeToTrade id={phase.id} onGo={go} basket={basket} />
         </div>
       ) : (
         <>
@@ -189,5 +223,41 @@ export function PublishThesis({ thesis }: { thesis: Thesis }) {
         </>
       )}
     </>
+  );
+}
+
+/** The step after publishing: take the claim to the page that can act on it. */
+function TakeToTrade({
+  id,
+  onGo,
+  basket,
+}: {
+  id: bigint;
+  onGo: (id: bigint) => void;
+  basket: { asset: Address; symbol: string }[];
+}) {
+  if (basket.length === 0) {
+    return (
+      <p className="mt-3 max-w-[68ch] text-meta leading-relaxed text-caution">
+        Nothing in this thesis mapped onto an asset that trades here, so there is no fill to arm.
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-4">
+      <button
+        type="button"
+        onClick={() => onGo(id)}
+        className="rounded-xl bg-ink px-5 py-3 text-data font-semibold whitespace-nowrap text-ground transition-opacity duration-200 hover:opacity-90"
+      >
+        Take it to the trade page
+      </button>
+      <p className="mt-3 max-w-[68ch] text-meta leading-relaxed text-dim">
+        Loads {basket.map((b) => b.symbol).join(', ')} and arms the fill with this hash, so the
+        receipt can be matched back to the claim. Your mandate still has to allow the asset, and you
+        still size it yourself.
+      </p>
+    </div>
   );
 }

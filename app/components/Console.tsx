@@ -41,6 +41,19 @@ export function Console() {
   const { state, start, stop } = useRun();
 
   const run = () => start(thesis.trim(), notional, maxImpact);
+
+  /**
+   * The compiled legs, resolved to addresses.
+   *
+   * `Allocation` names symbols and the universe knows where they live, and the
+   * two are only in the same place during a run. `/receipts` cannot rebuild
+   * this: the basket it shows is derived from settled fills (D50), so a thesis
+   * published a minute ago has an empty one there.
+   */
+  const basket = (state.allocate?.legs ?? []).flatMap((leg) => {
+    const found = state.universe?.find((u) => u.symbol === leg.symbol);
+    return found ? [{ asset: found.address, symbol: found.symbol }] : [];
+  });
   const started = state.running || state.error !== null || state.compile !== null;
 
   return (
@@ -88,7 +101,7 @@ export function Console() {
           proving. */}
       {state.compile && (
         <Section title="Publish it">
-          <PublishThesis thesis={state.compile.thesis} />
+          <PublishThesis thesis={state.compile.thesis} basket={basket} />
         </Section>
       )}
     </>
