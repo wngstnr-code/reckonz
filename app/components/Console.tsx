@@ -2,158 +2,95 @@
 
 import { useState } from 'react';
 import { AllocationPanel, MandatePanel, OraclePanel, PlanPanel, ThesisPanel } from './panels';
-import { Card } from './ui';
-import { STAGES, useRun } from './useRun';
+import { Section } from './console/trade/Section';
+import { Composer, EXAMPLES } from './console/idea/Composer';
+import { PublishThesis } from './console/idea/PublishThesis';
+import { RunError, RunTimeline } from './console/idea/RunTimeline';
+import { RunResult } from './console/idea/RunResult';
+import { useRun } from './useRun';
 
-const EXAMPLES = [
-  'I think HBM memory supply stays tight for two more quarters, and the beneficiaries are wider than NVIDIA alone.',
-  'Stablecoin issuance keeps compounding and the fee take is underpriced, but the equity is a rate bet in disguise.',
-  'US large-cap index exposure, held through the weekend, exited if the on-chain price stops tracking the reference.',
-];
+/**
+ * The run, from a sentence to a verdict.
+ *
+ * Everything used to sit in bordered `Card`s at eleven hardcoded type sizes,
+ * with the six stages as grey pills and no conclusion at the end. It is the same
+ * pipeline; what changed is that the page now says what happened.
+ *
+ * `Section` throughout, like the other three console pages. The stages are rows
+ * because a two-minute wait needs more than a dot. And the result leads with
+ * asked, executable and handed back -- the sentence the whole run exists to
+ * produce, which the page computed and never printed.
+ */
+
+/**
+ * $25,000, not $250,000.
+ *
+ * The old default asked for roughly six times what the single deepest market can
+ * absorb, so a first run refused nearly everything and a visitor's only
+ * impression was a page saying no. Refusals are the product and they still
+ * appear at this size -- most of these pools stop well under it -- but alongside
+ * legs that go through, which is what shows the thing working rather than only
+ * declining.
+ */
+const DEFAULT_NOTIONAL = 25_000;
 
 export function Console() {
-  const [thesis, setThesis] = useState(EXAMPLES[0]!);
-  const [notional, setNotional] = useState(250_000);
+  const [thesis, setThesis] = useState(EXAMPLES[0]!.text);
+  const [notional, setNotional] = useState(DEFAULT_NOTIONAL);
   const [maxImpact, setMaxImpact] = useState(50);
   const { state, start, stop } = useRun();
 
+  const run = () => start(thesis.trim(), notional, maxImpact);
+  const started = state.running || state.error !== null || state.compile !== null;
+
   return (
     <>
-      <Card>
-        <label htmlFor="thesis" className="mb-2 block text-[12px] text-dim">
-          Your thesis, in your own words
-        </label>
-        <textarea
-          id="thesis"
-          rows={3}
-          spellCheck={false}
-          value={thesis}
-          onChange={(e) => setThesis(e.target.value)}
-          className="w-full resize-y rounded-lg border border-line px-3.5 py-2.5 text-[15px] outline-none focus:border-signal-deep"
+      <Section title="Your thesis">
+        <Composer
+          thesis={thesis}
+          onThesis={setThesis}
+          notional={notional}
+          onNotional={setNotional}
+          maxImpact={maxImpact}
+          onMaxImpact={setMaxImpact}
+          running={state.running}
+          onStart={run}
+          onStop={stop}
         />
+      </Section>
 
-        <div className="mt-2 flex flex-wrap gap-2">
-          {EXAMPLES.map((e, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => setThesis(e)}
-              className="rounded-full border border-line px-3 py-1 text-left font-mono text-[10.5px] text-faint hover:border-signal-deep hover:text-dim"
-            >
-              example {i + 1}
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-4 flex flex-wrap items-end gap-4">
-          <Field
-            label="Notional"
-            unit="USDG"
-            value={notional}
-            step={1000}
-            onChange={setNotional}
-          />
-          <Field
-            label="Impact limit"
-            unit="bps / leg"
-            value={maxImpact}
-            step={5}
-            onChange={setMaxImpact}
-          />
-          <button
-            type="button"
-            disabled={state.running || thesis.trim().length === 0}
-            onClick={() => start(thesis.trim(), notional, maxImpact)}
-            className="ml-auto rounded-lg bg-signal px-6 py-3 text-[14px] font-semibold text-ground disabled:bg-signal-deep disabled:text-ground/70"
-          >
-            {state.running ? 'Running…' : 'Compile & size'}
-          </button>
-          {state.running && (
-            <button
-              type="button"
-              onClick={stop}
-              className="rounded-lg border border-line px-4 py-3 text-[13px] text-dim hover:text-ink"
-            >
-              Stop
-            </button>
+      {started && (
+        <Section title="The run">
+          <RunTimeline state={state} />
+          {state.error && (
+            <div className="mt-6">
+              <RunError message={state.error} onRetry={run} />
+            </div>
           )}
-        </div>
-      </Card>
+        </Section>
+      )}
 
-      <ol className="mb-4 flex flex-wrap gap-2">
-        {STAGES.map((s) => {
-          const status = state.status[s.id];
-          return (
-            <li
-              key={s.id}
-              className={`flex items-center gap-2 rounded-lg border bg-panel px-3 py-1.5 font-mono text-[11px] ${
-                status === 'active'
-                  ? 'border-signal-deep text-ink'
-                  : status === 'done'
-                    ? 'border-line text-dim'
-                    : 'border-line text-faint'
-              }`}
-            >
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${
-                  status === 'active'
-                    ? 'animate-breathe bg-caution'
-                    : status === 'done'
-                      ? 'bg-signal'
-                      : 'bg-faint'
-                }`}
-              />
-              {s.title}
-              {state.label[s.id] && status === 'done' && (
-                <span className="text-faint">· {state.label[s.id]}</span>
-              )}
-            </li>
-          );
-        })}
-      </ol>
-
-      {state.error && (
-        <div className="mb-4 rounded-xl border border-refuse/40 bg-panel px-6 py-4 font-mono text-[13px] text-refuse">
-          {state.error}
+      {state.plan && (
+        <div className="mt-11">
+          <RunResult state={state} />
         </div>
       )}
 
       {state.compile && <ThesisPanel data={state.compile} />}
-      {state.allocate && (
-        <AllocationPanel allocation={state.allocate} universe={state.universe} />
-      )}
+      {state.allocate && <AllocationPanel allocation={state.allocate} universe={state.universe} />}
       {state.mandate && <MandatePanel mandate={state.mandate} />}
       {state.plan && <PlanPanel plan={state.plan} />}
       {state.oracle && <OraclePanel oracle={state.oracle} />}
-    </>
-  );
-}
 
-function Field({
-  label,
-  unit,
-  value,
-  step,
-  onChange,
-}: {
-  label: string;
-  unit: string;
-  value: number;
-  step: number;
-  onChange: (n: number) => void;
-}) {
-  return (
-    <label className="block w-[170px] text-[12px] text-dim">
-      {label}
-      <span className="ml-1.5 font-mono text-[10.5px] text-faint">{unit}</span>
-      <input
-        type="number"
-        value={value}
-        step={step}
-        min={1}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="mt-2 w-full rounded-lg border border-line px-3 py-2.5 font-mono outline-none focus:border-signal-deep"
-      />
-    </label>
+      {/* Last, because it is the step taken once the reader believes the rest.
+          Publishing binds the claim to a timestamp before anything trades
+          against it, which is the ordering `/receipts` spends its whole surface
+          proving. */}
+      {state.compile && (
+        <Section title="Publish it">
+          <PublishThesis thesis={state.compile.thesis} />
+        </Section>
+      )}
+    </>
   );
 }

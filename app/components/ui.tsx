@@ -53,14 +53,14 @@ export function Card({
 
 export function Legend({ children }: { children: ReactNode }) {
   return (
-    <h3 className="mt-5 mb-2 text-[10.5px] font-semibold tracking-[0.09em] text-faint uppercase">
+    <h3 className="mt-5 mb-2 text-micro font-semibold text-faint uppercase">
       {children}
     </h3>
   );
 }
 
 export function Note({ children }: { children: ReactNode }) {
-  return <p className="mb-4 text-[13px] leading-relaxed text-dim">{children}</p>;
+  return <p className="mb-4 max-w-[68ch] text-meta leading-relaxed text-dim">{children}</p>;
 }
 
 export function Pill({ tone, children }: { tone: 'ok' | 'no' | 'warn'; children: ReactNode }) {
@@ -71,7 +71,7 @@ export function Pill({ tone, children }: { tone: 'ok' | 'no' | 'warn'; children:
   } as const;
   return (
     <span
-      className={`rounded-full border px-3 py-0.5 font-mono text-[11px] whitespace-nowrap ${tones[tone]}`}
+      className={`rounded-full border px-3 py-0.5 font-mono text-micro tracking-normal whitespace-nowrap normal-case ${tones[tone]}`}
     >
       {children}
     </span>

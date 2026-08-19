@@ -4,18 +4,19 @@ import { useRouter } from 'next/navigation';
 import { INSTALL_TRIGGERS_EVENT, type TriggerInstallRequest } from './follow';
 import { stashHandoff } from './handoff';
 import type { RunState } from './useRun';
-import { Bar, Card, Legend, Note, Num, Pill, pct, usd } from './ui';
+import { Bar, Legend, Note, Num, Pill, pct, usd } from './ui';
+import { Section } from './console/trade/Section';
 
 /* ------------------------------------------------- 1 · the compiled thesis */
 
 export function ThesisPanel({ data }: { data: NonNullable<RunState['compile']> }) {
   const { thesis } = data;
   return (
-    <Card step={1} title="The claim, made falsifiable">
-      <blockquote className="rounded-r-lg border-l-2 border-signal-deep bg-raised px-5 py-3.5 text-[15.5px]">
+    <Section title="The claim, made falsifiable">
+      <blockquote className="rounded-r-lg border-l-2 border-signal-deep bg-raised px-5 py-3.5 text-data">
         {thesis.claim}
       </blockquote>
-      <p className="mt-2 font-mono text-[11px] text-faint">
+      <p className="mt-2 font-mono text-meta text-faint">
         horizon {thesis.horizonDays} days · compiled by {data.provider}
         {!data.live && ' · recorded fixture, input text ignored'}
       </p>
@@ -23,7 +24,7 @@ export function ThesisPanel({ data }: { data: NonNullable<RunState['compile']> }
       <div className="grid gap-7 md:grid-cols-[1.1fr_1fr]">
         <div>
           <Legend>Causal chain</Legend>
-          <ol className="list-decimal space-y-1.5 pl-5 text-[13.5px] text-dim">
+          <ol className="list-decimal space-y-1.5 pl-5 text-meta text-dim">
             {thesis.causalChain.map((step, i) => (
               <li key={i}>{step}</li>
             ))}
@@ -31,7 +32,7 @@ export function ThesisPanel({ data }: { data: NonNullable<RunState['compile']> }
         </div>
         <div>
           <Legend>Unstated assumptions</Legend>
-          <ul className="list-disc space-y-1.5 pl-5 text-[13.5px] text-dim">
+          <ul className="list-disc space-y-1.5 pl-5 text-meta text-dim">
             {thesis.unstatedAssumptions.map((a, i) => (
               <li key={i}>{a}</li>
             ))}
@@ -44,21 +45,21 @@ export function ThesisPanel({ data }: { data: NonNullable<RunState['compile']> }
         {thesis.beneficiaries.map((b) => (
           <div key={b.entity} className="rounded-lg border border-line bg-raised px-4 py-3">
             <div className="flex flex-wrap items-center gap-2.5">
-              <b className="text-[14px]">{b.entity}</b>
-              <span className="rounded border border-line px-1.5 py-px font-mono text-[10px] tracking-wider text-faint uppercase">
+              <b className="text-data">{b.entity}</b>
+              <span className="rounded border border-line px-1.5 py-px font-mono text-micro tracking-wider text-faint uppercase">
                 {b.order}
               </span>
-              <span className="ml-auto flex items-center gap-2 font-mono text-[11px] text-dim">
+              <span className="ml-auto flex items-center gap-2 font-mono text-meta text-dim">
                 <Bar value={b.confidence} />
                 {b.confidence.toFixed(2)}
               </span>
             </div>
-            <p className="mt-1.5 text-[13px] text-dim">{b.rationale}</p>
-            <p className="mt-1 text-[12px] text-faint italic">evidence: {b.evidence}</p>
+            <p className="mt-1.5 text-meta text-dim">{b.rationale}</p>
+            <p className="mt-1 text-meta text-faint italic">evidence: {b.evidence}</p>
           </div>
         ))}
       </div>
-    </Card>
+    </Section>
   );
 }
 
@@ -72,7 +73,7 @@ export function AllocationPanel({
   universe: RunState['universe'];
 }) {
   return (
-    <Card step={2} title="Mapped onto what actually trades on X Layer">
+    <Section title="Mapped onto what actually trades on X Layer">
       {universe && (
         <Note>
           The investable universe was read from the chain, not assumed:{' '}
@@ -82,9 +83,9 @@ export function AllocationPanel({
           .
         </Note>
       )}
-      <table className="w-full border-collapse text-[13.5px]">
+      <table className="w-full border-collapse text-meta">
         <thead>
-          <tr className="border-b border-line text-[10.5px] tracking-[0.08em] text-faint uppercase">
+          <tr className="border-b border-line text-micro text-faint uppercase">
             <th className="px-2.5 pb-2 text-left font-semibold">Asset</th>
             <th className="px-2.5 pb-2 text-right font-semibold">Weight</th>
             <th className="px-2.5 pb-2 text-left font-semibold">Expresses</th>
@@ -107,25 +108,25 @@ export function AllocationPanel({
 
       {allocation.invented.length > 0 && (
         <div className="mt-5 border-l-2 border-refuse pl-4">
-          <h3 className="mb-1.5 text-[10.5px] font-semibold tracking-[0.09em] text-refuse uppercase">
+          <h3 className="mb-1.5 text-micro font-semibold tracking-[0.09em] text-refuse uppercase">
             Named an asset that does not exist
           </h3>
           {/* Distinct from "refused to substitute" below, and the distinction is
               the point: that one is the model being honest about an entity with
               no tradable asset, this one is the model inventing a token. Before
               D75 these legs were filtered out silently and their share of the
-              notional reappeared as capacity the market refused — a
+              notional reappeared as capacity the market refused: a
               hallucination reported as a fact about liquidity. */}
-          <ul className="list-disc space-y-1 pl-5 text-[13px] text-dim">
+          <ul className="list-disc space-y-1 pl-5 text-meta text-dim">
             {allocation.invented.map((l) => (
               <li key={l.symbol}>
-                <span className="font-mono text-ink">{l.symbol}</span> — not in the universe read
+                <span className="font-mono text-ink">{l.symbol}</span>, not in the universe read
                 from the chain. Its {(l.weightBps / 100).toFixed(0)}% was not planned, and is not
                 counted as capacity the market refused.
               </li>
             ))}
           </ul>
-          <p className="mt-1.5 font-mono text-[11.5px] text-faint">
+          <p className="mt-1.5 font-mono text-meta text-faint">
             {(allocation.weightBpsTotal / 100).toFixed(0)}% of the basket survived validation
           </p>
         </div>
@@ -133,19 +134,19 @@ export function AllocationPanel({
 
       {allocation.unmapped.length > 0 && (
         <div className="mt-5 border-l-2 border-caution pl-4">
-          <h3 className="mb-1.5 text-[10.5px] font-semibold tracking-[0.09em] text-caution uppercase">
+          <h3 className="mb-1.5 text-micro font-semibold tracking-[0.09em] text-caution uppercase">
             Refused to substitute
           </h3>
-          <ul className="list-disc space-y-1 pl-5 text-[13px] text-dim">
+          <ul className="list-disc space-y-1 pl-5 text-meta text-dim">
             {allocation.unmapped.map((u) => (
               <li key={u.entity}>
-                <span className="text-ink">{u.entity}</span> — {u.reason}
+                <span className="text-ink">{u.entity}</span>: {u.reason}
               </li>
             ))}
           </ul>
         </div>
       )}
-    </Card>
+    </Section>
   );
 }
 
@@ -154,7 +155,7 @@ export function AllocationPanel({
 export function MandatePanel({ mandate }: { mandate: NonNullable<RunState['mandate']> }) {
   const router = useRouter();
   return (
-    <Card step={3} title="Exit triggers, from the same compilation">
+    <Section title="Exit triggers, from the same compilation">
       <Note>
         Each disconfirming condition is mapped to a quantity this system can measure at execution
         time and <strong className="text-ink">PolicyGuard enforces on chain</strong>. Conditions no
@@ -169,15 +170,15 @@ export function MandatePanel({ mandate }: { mandate: NonNullable<RunState['manda
               t.unresolved.length ? 'border-l-caution' : 'border-l-signal-deep'
             }`}
           >
-            <code className="font-mono text-[12.5px] text-ink">{t.text}</code>
-            <p className="mt-1.5 text-[12.5px] text-dim">
+            <code className="font-mono text-meta text-ink">{t.text}</code>
+            <p className="mt-1.5 text-meta text-dim">
               {mandate.exitTriggers[i]?.trigger.appliesTo.length
                 ? `named: ${mandate.exitTriggers[i]!.trigger.appliesTo.join(', ')}`
                 : 'applies to the whole basket'}
             </p>
             {t.unresolved.length > 0 && (
-              <p className="mt-1 text-[12.5px] text-caution">
-                does not cover — no leg expresses {t.unresolved.join(', ')}
+              <p className="mt-1 text-meta text-caution">
+                does not cover: no leg expresses {t.unresolved.join(', ')}
               </p>
             )}
           </li>
@@ -187,7 +188,7 @@ export function MandatePanel({ mandate }: { mandate: NonNullable<RunState['manda
       {mandate.manualWatch.length > 0 && (
         <>
           <Legend>Not measurable by this system</Legend>
-          <ul className="list-disc space-y-1 pl-5 text-[13px] text-dim">
+          <ul className="list-disc space-y-1 pl-5 text-meta text-dim">
             {mandate.manualWatch.map((m, i) => (
               <li key={i}>{m}</li>
             ))}
@@ -196,7 +197,7 @@ export function MandatePanel({ mandate }: { mandate: NonNullable<RunState['manda
       )}
 
       {mandate.maxGapRisk !== undefined && (
-        <p className="mt-4 font-mono text-[11.5px] text-faint">
+        <p className="mt-4 font-mono text-meta text-faint">
           implied mandate ceiling: maxGapRisk {mandate.maxGapRisk}
         </p>
       )}
@@ -217,17 +218,17 @@ export function MandatePanel({ mandate }: { mandate: NonNullable<RunState['manda
               stashHandoff({ kind: 'triggers', payload: detail });
               router.push('/trade');
             }}
-            className="rounded-full border border-signal-deep bg-signal/6 px-4 py-1 font-mono text-[12px] text-signal hover:bg-signal/12"
+            className="rounded-xl bg-ink px-5 py-3 text-data font-semibold whitespace-nowrap text-ground transition-opacity duration-200 hover:opacity-90"
           >
             install these as a mandate&apos;s exit rules
           </button>
-          <span className="text-[12px] text-faint">
+          <span className="text-meta text-faint">
             Takes you to the mandate form with these filled in. Nothing is signed until you create
             the mandate.
           </span>
         </div>
       )}
-    </Card>
+    </Section>
   );
 }
 
@@ -238,15 +239,15 @@ export function PlanPanel({ plan }: { plan: NonNullable<RunState['plan']> }) {
   const saved = plan.naiveCost - plan.plannedCost;
 
   return (
-    <Card step={4} title="What the chain can actually absorb">
+    <Section title="What the chain can actually absorb">
       <Note>
         Sized against live Uniswap V3 depth on X Layer, capped at {pct(plan.maxImpactBps)} price
         impact per leg. Capital the market cannot take is reported back, not forced into it.
       </Note>
 
-      <table className="w-full border-collapse text-[13.5px]">
+      <table className="w-full border-collapse text-meta">
         <thead>
-          <tr className="border-b border-line text-[10.5px] tracking-[0.08em] text-faint uppercase">
+          <tr className="border-b border-line text-micro text-faint uppercase">
             <th className="px-2.5 pb-2 text-left font-semibold">Asset</th>
             <th className="px-2.5 pb-2 text-right font-semibold">Thesis size</th>
             <th className="px-2.5 pb-2 text-right font-semibold">Naive impact</th>
@@ -281,13 +282,13 @@ export function PlanPanel({ plan }: { plan: NonNullable<RunState['plan']> }) {
         </tbody>
       </table>
 
-      <div className="mt-4 rounded-lg border border-line bg-raised px-4 py-3.5 text-[13.5px] text-dim">
+      <div className="mt-4 rounded-lg border border-line bg-raised px-4 py-3.5 text-meta text-dim">
         The thesis is coherent at <Num>{usd(plan.totalUsdg)}</Num> USDG. X Layer can express{' '}
         <Num>{usd(executable)}</Num> of it
         {plan.unallocated > 0 && (
           <>
             {' '}
-            — <Num tone="caution">{usd(plan.unallocated)}</Num> is refused rather than forced into a
+            . <Num tone="caution">{usd(plan.unallocated)}</Num> is refused rather than forced into a
             market that cannot take it
           </>
         )}
@@ -300,7 +301,7 @@ export function PlanPanel({ plan }: { plan: NonNullable<RunState['plan']> }) {
           </>
         )}
       </div>
-    </Card>
+    </Section>
   );
 }
 
@@ -308,10 +309,10 @@ export function PlanPanel({ plan }: { plan: NonNullable<RunState['plan']> }) {
 
 export function OraclePanel({ oracle }: { oracle: NonNullable<RunState['oracle']> }) {
   return (
-    <Card step={5} title="Fair value, gap risk, and the guard's verdict">
+    <Section title="Fair value, gap risk, and the guard's verdict">
       <Note>
         Each leg is priced at the single fill the planner actually proposed for it. This is the
-        same decision the on-chain <strong className="text-ink">PolicyGuard</strong> makes — a
+        same decision the on-chain <strong className="text-ink">PolicyGuard</strong> makes: a
         rejection here is a reverted transaction there, in the trade&apos;s own transaction.
       </Note>
 
@@ -322,8 +323,10 @@ export function OraclePanel({ oracle }: { oracle: NonNullable<RunState['oracle']
           return (
             <div key={v.symbol} className="rounded-lg border border-line bg-raised px-4 py-3.5">
               <div className="flex flex-wrap items-center gap-3">
-                <span className="font-mono text-[14px] text-ink">{v.symbol}</span>
-                <span className="font-mono text-[10.5px] tracking-wider text-faint">
+                <span className="font-mono text-data text-ink">{v.symbol}</span>
+                {/* `text-micro` carries uppercase tracking and this is a
+                    sentence, so it takes the sentence size. */}
+                <span className="font-mono text-meta text-faint">
                   {r.reference ?? 'no reference market'} · {r.state} · fill {usd(v.fillSizeUsdg)}{' '}
                   USDG
                 </span>
@@ -369,7 +372,7 @@ export function OraclePanel({ oracle }: { oracle: NonNullable<RunState['oracle']
                                        it stays in the score even when the price
                                        is perfect.
               */}
-              <p className="mt-2.5 font-mono text-[11px] text-faint">
+              <p className="mt-2.5 font-mono text-meta text-faint">
                 gap risk = not quoting {parts.staleness.toFixed(2)} / open gap{' '}
                 {parts.displacement.toFixed(2)} / band {parts.uncertainty.toFixed(2)} / basis{' '}
                 {parts.basis.toFixed(2)}
@@ -377,13 +380,13 @@ export function OraclePanel({ oracle }: { oracle: NonNullable<RunState['oracle']
 
               {v.decision.detail && (
                 <p
-                  className={`mt-2 font-mono text-[12px] ${v.decision.ok ? 'text-dim' : 'text-refuse'}`}
+                  className={`mt-2 font-mono text-meta ${v.decision.ok ? 'text-dim' : 'text-refuse'}`}
                 >
                   {v.decision.detail}
                 </p>
               )}
               {v.decision.ok && v.impactBps != null && (
-                <p className="mt-2 font-mono text-[12px] text-dim">
+                <p className="mt-2 font-mono text-meta text-dim">
                   fill {v.effectivePrice?.toFixed(2)} at {pct(v.impactBps)} impact
                 </p>
               )}
@@ -392,22 +395,22 @@ export function OraclePanel({ oracle }: { oracle: NonNullable<RunState['oracle']
               {(() => {
                 const rest = r.notes.filter((n) => n !== v.decision.detail);
                 return rest.length > 0 ? (
-                  <p className="mt-1 text-[12px] text-faint italic">{rest.join(' · ')}</p>
+                  <p className="mt-1 text-meta text-faint italic">{rest.join(' · ')}</p>
                 ) : null;
               })()}
             </div>
           );
         })}
       </div>
-    </Card>
+    </Section>
   );
 }
 
 function Metric({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="border-t border-line pt-1.5">
-      <span className="block text-[10px] tracking-[0.07em] text-faint uppercase">{label}</span>
-      <b className="font-mono text-[14px] font-medium">{children}</b>
+      <span className="block text-micro text-faint uppercase">{label}</span>
+      <b className="font-mono text-data font-medium">{children}</b>
     </div>
   );
 }

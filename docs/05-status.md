@@ -699,7 +699,16 @@ reminder.
 
 ## Log
 
-**2026-08-19 (latest, thirtieth)** — **the receipt detail now renders the decision it was already
+**2026-08-19 (latest, thirty-first)** — **`/idea` rebuilt, after actually watching it run** (D100).
+The old page answered a 503 by printing the provider's JSON across the screen after eighty-five
+silent seconds, with no retry. Now: a hero with measured figures, stage rows that say what each step
+is for, a human error state with a retry, the asked/executable/handed-back conclusion the page
+computed and never printed, `Section` and the type scale throughout, `bg-ink` primaries at 48px, a
+25,000 default notional, and on-chain thesis publishing from the page rather than only from the CLI.
+One real bug found by printing that conclusion: `BasketPlan.totalUsdg` is the *ask*, not the
+executable amount, and reading it wrongly reported 25,000 as placeable when 3,049 was.
+
+**2026-08-19 (thirtieth)** — **the receipt detail now renders the decision it was already
 downloading** (D99). It fetched the evidence bundle, checked the hash, and discarded the guard's
 pre-gas verdict, the oracle's age at that moment, the floor and the D77 acknowledgement. Also put
 back five fields D98 dropped without noticing (`contentHash`, `author`, `agent`, `cid`, worst

@@ -5741,3 +5741,63 @@ and nothing finer, and recovering the hash needs a log scan `loadReceipts` delib
 this RPC. The registry read is the better link anyway: `get(id)` returns this exact struct, so the
 page offers *call get(15) on the registry yourself* and a reader checks the source rather than a
 transaction that merely contained it.
+
+## D100 — `/idea` was the page nobody had watched run
+
+Driving it once explained the redesign better than reading it did. Pressing **Compile & size** gave
+eighty-five seconds of a `Running…` label and six grey pills, then this, across the page:
+
+```
+{"error":{"code":503,"message":"This model is currently experiencing high demand.
+Spikes in demand are usually temporary. Please try again later.","status":"UNAVAILABLE"}}
+```
+
+A raw provider payload is not an error message. It does not say whether the fault was the user's,
+whether anything was charged, or whether trying again is worth it, and there was no way to try.
+`RunError` reads the payload, says one sentence in our own words, states that nothing was signed,
+and offers a retry when the failure is transient. The provider's text stays as a caption, because
+it is the part that helps when the failure is not one we recognise.
+
+**The stages are rows.** Six pills had room for a name and nothing else. A two-minute wait needs to
+say what is happening and what each step is for, and the description is what turns a progress
+indicator into an explanation of the product.
+
+**The conclusion is printed.** Asked, executable, handed back: the page computed all three and
+showed none of them, leaving a reader to total a capacity table. `BasketRail` refuses the same trio
+on `/trade` and that is not a contradiction — there it would describe somebody else's trade (D50),
+here the run is the reader's own at the size they typed.
+
+### The bug that trio found
+
+`BasketPlan.totalUsdg` is **what was asked for**, not what fits: `planBasket` takes it as an
+argument and returns it unchanged. Read as the executable figure, a $25,000 run announced *asked
+46,951, executable 25,000* when the true answer was *asked 25,000, executable 3,049, handed back
+21,951*. Reporting capital a market cannot absorb as placeable is the one failure this product's
+own non-negotiables name first, and it was on screen for about ten minutes. Caught by cross-checking
+the headline against `PlanPanel`'s own sentence and the sum of its rows: 726 + 2,323 = 3,049.
+
+### Consistency
+
+Eleven hardcoded type sizes across `panels.tsx` mapped onto the scale, and `Legend`, `Note` and
+`Pill` in `ui.tsx` with them — the last off-scale pieces reachable from any console page. `Card`
+became `Section`. Buttons are 40px chips and 48px primaries, matching the other three pages, and the
+lone 30px pill that installed triggers became a real button.
+
+**The primary is `bg-ink`, not `bg-signal`.** Green means a guard verdict here. Spending it on
+"press this" as well, on the page whose entire output is a verdict, made one colour mean two things.
+
+**The default notional is 25,000, not 250,000.** The old default asked for roughly six times what
+the single deepest market absorbs, so a first run refused nearly everything and a visitor's only
+impression was a page saying no. At 25,000 the refusal is still the story — this run handed back
+88% of it — but alongside legs that go through.
+
+### Publishing, added on the owner's call
+
+`thesis:publish` was a CLI script, so the ordering claim `/receipts` is built on depended on
+somebody remembering to run it. `PublishThesis` does it from the page: `thesisHash` of the compiled
+object (not the prose, which is why two people writing the same sentence can get different hashes),
+`idOf` checked before gas so the "already claimed" answer arrives with its author attached, and an
+empty CID because there is nowhere to pin yet and a CID resolving to nothing is worse than none.
+
+I recommended deferring this two days from the deadline. Wangsit chose to include it, and it is
+built.
