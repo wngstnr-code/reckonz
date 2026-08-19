@@ -772,7 +772,11 @@ export function Exit() {
             <div className="mt-4 rounded-xl bg-frame px-4 py-3.5">
               {phase.received > 0n ? (
                 <p className="text-meta text-cta-ink">
-                  Exited. <Num>{formatUnits(phase.received, phase.decimals)}</Num> USDG landed in
+                  Exited.{' '}
+                  <span className="font-mono font-semibold text-cta-ink">
+                    {formatUnits(phase.received, phase.decimals)}
+                  </span>{' '}
+                  USDG landed in
                   your own wallet, net of the execution fee. The executor held it only long enough
                   to split that fee off.
                 </p>

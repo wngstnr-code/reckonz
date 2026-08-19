@@ -114,7 +114,7 @@ A table, not cards — cross-asset comparison is the entire point. Compact densi
 
 ### 4. Provenance
 
-Nineteen receipts on mainnet. Still small in number and large in meaning, so give them room.
+Twenty receipts on mainnet. Still small in number and large in meaning, so give them room.
 
 - Each receipt links to the explorer and to Sourcify. The affordance is boring on purpose;
   "verified" is a claim someone should be able to check in one click.

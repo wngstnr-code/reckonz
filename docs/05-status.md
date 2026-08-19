@@ -611,7 +611,7 @@ left is not architecture; it is a video, a form, and a decision about who can re
 
 ## Suggested order
 
-Everything that was on this list as engineering is done: mainnet deploy, **nineteen real fills**
+Everything that was on this list as engineering is done: mainnet deploy, **twenty real fills**
 including the first exit and the first placed from a browser, the fee, the thesis registry, the web
 app, the multisig, the Simple mode surface and the registry index. What is left is a calendar, not
 an architecture — the publish worker on its date, and the ASP/x402 registration, which is the only
@@ -699,7 +699,16 @@ reminder.
 
 ## Log
 
-**2026-08-19 (latest, twenty-seventh)** — **three facts on `/trade` that never reached the
+**2026-08-19 (latest, twenty-eighth)** — **the exit path driven through the rebuilt card, for the
+first time**. Everything about Sell was a "logic untouched" claim until now. Receipt **#19**, block
+68358800, `status: success`, 570,299 gas: the whole wNVDAx position, 0.002288687254507964 units, out
+for 0.505138 USDG net of the fee, against a floor of 0.500807. Oracle 7s old, shortfall **2 bps
+measured** — so this exercised the normal path and *not* D77's unmeasured one, which still has no
+mainnet run behind it. Evidence `0x17a26f1c…f98f074` verifies; 15 of 20 receipts carry a hash and all
+15 verify. One defect found by running it: the amount in the green panel used `Num`, which paints
+`text-ink`, the page's darkest colour, on the darkest background it has. Fixed to `cta-ink` and bold.
+
+**2026-08-19 (twenty-seventh)** — **three facts on `/trade` that never reached the
 reader** (D97). A wallet with no mandate was told the create form was "at the foot of this page"
 rather than given a button to it; a settled fill ended at the hash with no route to the position it
 moved or the evidence bundle it commits to; and `Limits` measured the market while the card two

@@ -773,7 +773,11 @@ export function Fill({ active = true }: { active?: boolean } = {}) {
             <div className="mt-4 rounded-xl bg-frame px-4 py-3.5">
               {phase.received > 0n ? (
                 <p className="text-meta text-cta-ink">
-                  Filled. <Num>{formatUnits(phase.received, phase.decimals)}</Num> {phase.symbol}{' '}
+                  Filled.{' '}
+                  <span className="font-mono font-semibold text-cta-ink">
+                    {formatUnits(phase.received, phase.decimals)}
+                  </span>{' '}
+                  {phase.symbol}{' '}
                   landed in your own wallet. The executor never held it.
                 </p>
               ) : (
