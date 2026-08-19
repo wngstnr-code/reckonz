@@ -670,7 +670,7 @@ export function Exit() {
             <button
               onClick={() => void check()}
               disabled={busy || !asset || !validUnits || shortOfAsset}
-              className="mt-4 w-full rounded-xl bg-ink px-4 py-3.5 text-data font-semibold text-ground hover:opacity-90 disabled:opacity-30"
+              className="mt-4 w-full rounded-xl bg-ink px-5 py-3 text-data font-semibold text-ground hover:opacity-90 disabled:opacity-30"
             >
               {phase.kind === 'quoting' ? 'quoting…' : 'Quote & check'}
             </button>
@@ -744,7 +744,7 @@ export function Exit() {
               <button
                 onClick={sell}
                 disabled={busy}
-                className="mt-4 w-full rounded-xl bg-ink px-4 py-3.5 text-data font-semibold text-ground hover:opacity-90 disabled:opacity-30"
+                className="mt-4 w-full rounded-xl bg-ink px-5 py-3 text-data font-semibold text-ground hover:opacity-90 disabled:opacity-30"
               >
                 {phase.kind === 'approving'
                   ? `approving Permit2 for ${plan.symbol} in your wallet…`

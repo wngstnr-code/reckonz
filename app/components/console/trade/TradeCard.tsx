@@ -95,7 +95,7 @@ function Disconnected() {
 
       <button
         onClick={() => window.dispatchEvent(new Event(OPEN_WALLET_EVENT))}
-        className="mt-4 w-full rounded-xl bg-ink px-4 py-3.5 text-data font-semibold text-ground hover:opacity-90"
+        className="mt-4 w-full rounded-xl bg-ink px-5 py-3 text-data font-semibold text-ground hover:opacity-90"
       >
         Connect wallet
       </button>

@@ -698,7 +698,7 @@ export function Fill({ active = true }: { active?: boolean } = {}) {
             <button
               onClick={check}
               disabled={busy || !asset || !validAmount}
-              className="mt-4 w-full rounded-xl bg-ink px-4 py-3.5 text-data font-semibold text-ground hover:opacity-90 disabled:opacity-30"
+              className="mt-4 w-full rounded-xl bg-ink px-5 py-3 text-data font-semibold text-ground hover:opacity-90 disabled:opacity-30"
             >
               {phase.kind === 'quoting' ? 'quoting…' : 'Quote & check'}
             </button>
@@ -745,7 +745,7 @@ export function Fill({ active = true }: { active?: boolean } = {}) {
               <button
                 onClick={fill}
                 disabled={busy || shortOfCash}
-                className="mt-4 w-full rounded-xl bg-ink px-4 py-3.5 text-data font-semibold text-ground hover:opacity-90 disabled:opacity-30"
+                className="mt-4 w-full rounded-xl bg-ink px-5 py-3 text-data font-semibold text-ground hover:opacity-90 disabled:opacity-30"
               >
                 {phase.kind === 'approving'
                   ? 'approving Permit2 in your wallet…'

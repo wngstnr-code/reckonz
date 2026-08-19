@@ -93,7 +93,7 @@ export function BoardHeader({
         )}
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center justify-end gap-x-5 gap-y-1.5 font-mono text-[12px] text-faint">
+      <div className="mt-4 flex flex-wrap items-center justify-end gap-x-5 gap-y-1.5 font-mono text-micro tracking-normal text-faint normal-case">
         <span>measured {age.label}</span>
         <span>
           {new Date(board.measuredAt * 1000).toISOString().slice(0, 16).replace('T', ' ')}Z
