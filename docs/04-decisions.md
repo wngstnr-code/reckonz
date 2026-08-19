@@ -5012,3 +5012,36 @@ mounts is one it never hears. So arriving at `/trade` from a published thesis �
 produces a follow — the fill panel's follow banner was **invisible**, and the thesis hash rode
 along on the fill while nothing on screen said it would. The store keeps the value for whatever
 mounts next.
+
+### D94, amended the same day — the create form has two right places, so it has both
+
+Nabil read the first version and asked why creating a mandate was at the bottom. The answer given
+above — a mandate is made once and filled against daily, so the daily act should not sit below a
+setup step — is true and is only half the question.
+
+**It holds for a wallet that already owns one. For a wallet that owns none it is exactly backwards.**
+With no mandate the entire page is inert: the rail can quote nothing, Positions is empty, Triggers
+is empty, and the one control that unblocks all of it was under a thirty-row capacity table. That
+is every first visit, and it is every judge.
+
+So the position is not a fixed choice, and it did not have to be: the state that decides it is
+readable. `CreateMandateSlot` is mounted in both places and renders in whichever one matches —
+first in the left column when the count is zero, last on the page otherwise. It moves exactly once,
+when the first mandate is created, and the draft it costs at that moment has just been submitted.
+
+The count comes from `mandate-presence.ts`, published by `MandateManage`, which already walks
+`nextMandateId` — a third serial walk on a throttled RPC to answer a layout question would be a
+worse fix than the mistake. **It has three states, not two.** `null` is *not yet read*,
+`'unreadable'` is *asked and failed*, and both differ from `0`:
+
+- unknown with a wallet connected → **neither slot renders**. A second of absence beats drawing the
+  form in one place and moving it once the chain answers.
+- `'unreadable'` → **bottom**, and the manager prints the error. A page that cannot see your
+  mandates must not conclude you have none and put a create form above the three you own.
+- no wallet → **bottom**. The rail's connect button is the action then, and a form whose only
+  sentence is "connect a wallet" is not worth the top of the page.
+
+The general form of the mistake is worth keeping: **the first layout was ordered by the lifecycle of
+the object, and the second by the state the user is actually in.** The four stacked panels had the
+same fault at page scale, which is what the rest of D94 is about; this was the same fault surviving
+inside the fix.

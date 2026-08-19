@@ -8,6 +8,7 @@ import { USDG } from '@/src/chain';
 import type { UniverseEntry } from '@/src/pipeline';
 import { describeOnchainTrigger, scaleThreshold, type OnchainTrigger } from '@/src/triggers';
 import { awaitReceipt } from './awaitReceipt';
+import { publishMandateCount } from './mandate-presence';
 import {
   FILLED_EVENT,
   MANDATES_CHANGED_EVENT,
@@ -185,15 +186,26 @@ export function MandateManage() {
         });
       }
       setMandates(found);
+      publishMandateCount(found.length);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setMandates([]);
+      // Not zero, and not "still loading" either. A throttled read is not an
+      // empty account, and reporting it as one would move the create form under
+      // a user who owns three mandates.
+      publishMandateCount('unreadable');
     }
   }, [publicClient, option, address, universe.length]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Disconnecting is not the same as owning nothing, and the layout that reads
+  // this has to be told the difference the moment the wallet goes away.
+  useEffect(() => {
+    if (!address) publishMandateCount(null);
+  }, [address]);
 
   // A mandate created above, or a fill placed below, changes what this panel is
   // describing — a new mandate, or a position that just moved. Re-read rather
@@ -267,20 +279,11 @@ export function MandateManage() {
     return <p className="text-meta text-dim">Reading your mandates from the chain…</p>;
   }
 
+  // Nothing, rather than an empty-state block: with no mandate the create form
+  // has already taken this column's first position, and a panel saying "you have
+  // none" directly under the form that makes one is the same sentence twice.
   if (mandates.length === 0) {
-    return (
-      <>
-        {error && <WriteError message={error} />}
-        <div className="max-w-[62ch] rounded-xl border border-line bg-panel p-5">
-          <h2 className="text-title font-semibold tracking-tight">No mandate yet</h2>
-          <p className="mt-2 text-meta leading-relaxed text-dim">
-            A mandate is the rule set the chain enforces inside the trade itself — the most it may
-            spend, how far off fair value it may pay, which assets it may hold. Nothing can be
-            signed without one. Create it at the bottom of this page.
-          </p>
-        </div>
-      </>
-    );
+    return error ? <WriteError message={error} /> : null;
   }
 
   // The newest by default. A user with several is nearly always working on the

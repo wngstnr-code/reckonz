@@ -711,7 +711,9 @@ box, which is honest about what a fill is, since Permit2 scopes a signature to o
 amount. The mandate became the document you read beside the trade — Mandate, Positions, Triggers,
 Allowlist, Controls, as plain sections rather than one panel — headed by *spendable this epoch*,
 derived as `maxNotionalPerTrade x fills remaining` from chain state. Creating a mandate dropped to
-the bottom, where a once-per-mandate step belongs. `Limits` is new and is the reference's Session
+the bottom **only for a wallet that already owns one** — with none it is the first thing in the left
+column, because the whole page is inert until it is used, and `mandate-presence.ts` reads which
+case this is from the walk the manager already does. `Limits` is new and is the reference's Session
 Limits answered from measurement rather than policy: absorbable size per pool, and the one section
 that says anything to a visitor with no wallet.
 
