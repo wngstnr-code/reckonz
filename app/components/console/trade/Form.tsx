@@ -179,6 +179,11 @@ export function Primary({
  * `whitespace-nowrap` because that promise breaks the moment a label wraps: two
  * lines of type inside the same padding is a taller button, and the pair stops
  * being a pair. Keep the labels to a word or two and this never comes up.
+ *
+ * A floor on the width for the same reason one step out: two secondaries in
+ * different forms, sized only by their labels, come out visibly different
+ * widths, and `Cancel` next to `Already here` read as two kinds of control
+ * rather than one. The floor is the longer of them, so nothing is stretched.
  */
 export function Secondary({
   onClick,
@@ -193,7 +198,7 @@ export function Secondary({
     <button
       onClick={onClick}
       disabled={disabled}
-      className="rounded-xl bg-inset px-5 py-3 text-[15px] font-semibold whitespace-nowrap text-ink hover:bg-line disabled:opacity-30"
+      className="min-w-[9.5rem] rounded-xl bg-inset px-5 py-3 text-[15px] font-semibold whitespace-nowrap text-ink hover:bg-line disabled:opacity-30"
     >
       {children}
     </button>

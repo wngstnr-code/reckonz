@@ -5269,3 +5269,33 @@ lines inside the same padding is a taller button, and the pair stopped being a p
 `Use default` now. The sentence it was carrying is already in the paragraph above the form, and the
 constraint is worth keeping as a rule: **a button label that needs a second line is a label, not a
 button.** All seven actions on the page measure 47px.
+
+### D94, amended an eighth time — the cursor, and two controls that got their colour back
+
+**Every control has a pointer again.** Tailwind v4 stopped giving `button` a `cursor: pointer`, on
+the reasoning that a native button's browser default is an arrow. That is true of a form submit in a
+document and wrong for an application, where nearly everything here is a thing you click rather than
+a thing you fill in: without it, a page of tabs, chips, menus and toggles gives the pointer no
+feedback at all and none of them read as pressable. One rule in `@layer base` rather than a
+`cursor-pointer` on sixty call sites, **because the one that gets forgotten is the one nobody
+clicks.** Disabled says so with the cursor too.
+
+**`live` lost its badge and is now a green word.** A mandate being live is the expected reading and
+does not need chrome to announce it. A tripped breaker keeps its pill, because that is the one that
+has to interrupt. Same rule as the palette: emphasis is spent where the news is.
+
+**Trip breaker and close mandate are filled amber and filled red.** These are the two controls that
+change what the system may do, and one of them is permanent. Worth being clear about the line this
+does *not* cross: `09-design.md` reserves red for *the run itself broke* and forbids painting
+refusals with it. **A destructive control is neither.** It is not a verdict about a market, it is a
+button whose consequence is irreversible, and the trading-UI semantics the palette is protecting
+have nothing to say about it.
+
+The label is `text-ground`, not `text-white`, and the difference is the whole point: `caution` is a
+dark ochre on light and a bright amber on dark, so a fixed white label is unreadable in one of the
+two themes. `ground` inverts with the theme and lands on the readable side of both — white on
+`#9a6400`, black on `#f0b429`. Checked in both.
+
+**`Secondary` takes a width floor.** Two secondaries in different forms, sized only by their labels,
+come out visibly different widths, and `Cancel` beside `Already here` read as two kinds of control
+rather than one. The floor is the longer of them, so nothing is stretched. Both measure 152×47.

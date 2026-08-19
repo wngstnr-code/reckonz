@@ -358,10 +358,15 @@ export function MandateManage() {
               USDG each. Resets every {Math.round(m.policy.epochDuration / 3600)}h.
             </p>
           </div>
+          {/* The normal state is a word, the abnormal one keeps its chrome. A
+              mandate being live is the expected reading and does not need a
+              badge to announce it; a tripped breaker is the one that has to
+              interrupt. Same rule as the palette: emphasis is spent where the
+              news is. */}
           {m.breaker ? (
             <Pill tone="no">breaker tripped, exits included</Pill>
           ) : (
-            <Pill tone="ok">live</Pill>
+            <span className="font-mono text-[12.5px] text-signal">live</span>
           )}
         </div>
 
@@ -638,10 +643,15 @@ export function MandateManage() {
               )
             }
             disabled={busy !== null}
-            className={`rounded-full px-3.5 py-1.5 text-[13px] disabled:opacity-40 ${
+            // `text-ground` rather than `text-white`, and the difference is
+            // the whole point: `caution` is a dark ochre on light and a bright
+            // amber on dark, so a fixed white label is unreadable in one of the
+            // two themes. `ground` inverts with the theme and lands on the
+            // readable side of both.
+            className={`rounded-full px-3.5 py-1.5 text-[13px] font-semibold disabled:opacity-40 ${
               m.breaker
-                ? 'bg-signal/12 text-signal hover:bg-signal/20'
-                : 'bg-caution/12 text-caution hover:bg-caution/20'
+                ? 'bg-signal text-ground hover:opacity-90'
+                : 'bg-caution text-ground hover:opacity-90'
             }`}
           >
             {m.breaker ? 'Release breaker' : 'Trip breaker'}
@@ -661,7 +671,7 @@ export function MandateManage() {
               )
             }
             disabled={busy !== null}
-            className="rounded-full bg-refuse/10 px-3.5 py-1.5 text-[13px] text-refuse hover:bg-refuse/16 disabled:opacity-40"
+            className="rounded-full bg-refuse px-3.5 py-1.5 text-[13px] font-semibold text-ground hover:opacity-90 disabled:opacity-40"
           >
             Close mandate
           </button>

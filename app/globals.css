@@ -239,6 +239,28 @@
   .font-mono {
     font-variant-numeric: tabular-nums;
   }
+
+  /* Tailwind v4 stopped giving buttons `cursor: pointer`, on the reasoning that
+     the browser default for a native button is an arrow. That is true of a form
+     submit inside a document and wrong for an application, where nearly every
+     control here is a thing you click rather than a thing you fill in: without
+     it, a page of tabs, chips, menus and toggles gives the pointer no feedback
+     at all and none of them read as pressable.
+
+     Put here once rather than as a `cursor-pointer` on each of the sixty-odd
+     call sites, because the one that gets forgotten is the one nobody clicks.
+     Disabled says so with the cursor as well as the opacity. */
+  button:not(:disabled),
+  summary,
+  [role='tab'],
+  [role='option'],
+  label:has(input[type='checkbox']),
+  label:has(select) {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
 }
 
 @keyframes breathe {
