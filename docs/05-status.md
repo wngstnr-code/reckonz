@@ -611,7 +611,7 @@ left is not architecture; it is a video, a form, and a decision about who can re
 
 ## Suggested order
 
-Everything that was on this list as engineering is done: mainnet deploy, **sixteen real fills**
+Everything that was on this list as engineering is done: mainnet deploy, **nineteen real fills**
 including the first exit and the first placed from a browser, the fee, the thesis registry, the web
 app, the multisig, the Simple mode surface and the registry index. What is left is a calendar, not
 an architecture — the publish worker on its date, and the ASP/x402 registration, which is the only
@@ -866,7 +866,7 @@ overstated by 87%, slippage understated by a third, on the same chain at the sam
 construction since the first exit settled.
 
 **Corrected two hours later, by sweeping this same work:** `receiptsOf` is keyed by **id**, and the
-registry is kept across guard redeploys that restart ids — so three of those sixteen receipts belong
+registry is kept across guard redeploys that restart ids — so three of those nineteen receipts belong
 to a *previous* guard's mandate #1, and two more sit under a mandate #3 no deployed guard has ever
 had. The 17bp figure is right; the number beside it was not this mandate's. Its own entries are
 **2.046925 USDG over 6 fills at 11bp**. `mandate:show` now proves the one direction that can be
