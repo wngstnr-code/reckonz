@@ -83,6 +83,10 @@ export function Approach({ videoSrc }: { videoSrc?: string }) {
    * took clicks the whole way would be swallowing them on behalf of a video
    * the reader cannot see yet — and it covers the heading while it does it.
    *
+   * It goes on the card rather than on the shell around it. The shell is the
+   * measuring box and never moves; the card is what the reader can actually
+   * point at.
+   *
    * This is the one thing in the section that has to be React state rather than
    * a custom property: `pointer-events` decides whether an event reaches a
    * handler, and a handler is not something CSS owns. It flips twice in the
@@ -284,11 +288,22 @@ export function Approach({ videoSrc }: { videoSrc?: string }) {
        * or filter that would take that over. */}
       <div
         ref={shellRef}
-        className={`fixed inset-x-[max(2rem,5vw)] top-[7rem] bottom-[2rem] z-30 ${
-          landed ? '' : 'pointer-events-none'
-        }`}
+        className="pointer-events-none fixed inset-x-[max(2rem,5vw)] top-[7rem] bottom-[2rem] z-30"
       >
-        <div className="card-zoom h-full w-full">
+        {/* **The events belong on the thing that moves.**
+         *
+         * They were on the shell, and the shell never moves — it is the box the
+         * card is measured against, pinned over the viewport from the first
+         * paint to the last. So once the card had ridden away it left behind an
+         * invisible rectangle, still covering most of the screen, still taking
+         * every click. Everything below this section stopped being clickable,
+         * and nothing looked wrong.
+         *
+         * The card is the transformed element, so its hit area travels with it.
+         * When it is a third of the size and off in the corner, that corner is
+         * the only part of the screen that answers; when it has left over the
+         * top, nothing does. */}
+        <div className={`card-zoom h-full w-full ${landed ? 'pointer-events-auto' : ''}`}>
           <DemoFrame
             src={videoSrc}
             playing={playing}
@@ -397,7 +412,7 @@ function DemoFrame({
       {/* Nothing over the video once it is running. */}
       {!playing &&
         (src ? (
-          /* `disabled` rather than only `pointer-events-none` on the shell: a
+          /* `disabled` rather than only `pointer-events-none` on the card: a
              pointer can be told to pass through an element, a keyboard cannot,
              and a control the page has not offered yet should not be reachable
              by tab either. */
