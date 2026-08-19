@@ -213,15 +213,32 @@ export function Exit() {
         ) {
           continue;
         }
-        const assets = await publicClient.readContract({
+        const listed = await publicClient.readContract({
           address: guard,
           abi: POLICY_GUARD_ABI,
           functionName: 'allowedAssets',
           args: [id],
         });
+
+        // The same trap as the entry path, and it bites harder here: an exit is
+        // a fill, so the guard checks this list too, and a position in an asset
+        // that has since been disallowed cannot be sold through this system at
+        // all. Listing it as sellable would promise a way out that does not
+        // exist. See the note on `allowedAssets` in `abi.ts`.
+        const assets: Address[] = [];
+        for (const asset of listed) {
+          const live = await publicClient.readContract({
+            address: guard,
+            abi: POLICY_GUARD_ABI,
+            functionName: 'isAllowedAsset',
+            args: [id, asset],
+          });
+          if (live) assets.push(asset);
+        }
+
         found.push({
           id,
-          assets: [...assets],
+          assets,
           breaker: m.circuitBreaker,
           fillsThisEpoch: Number(m.fillsThisEpoch),
           maxFillsPerEpoch: Number(m.policy.maxFillsPerEpoch),

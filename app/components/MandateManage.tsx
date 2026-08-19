@@ -67,7 +67,7 @@ interface Loaded {
   fillsThisEpoch: number;
   maxFillsPerEpoch: number;
   policy: Policy;
-  allowed: { address: Address; units: bigint; decimals: number }[];
+  allowed: { address: Address; units: bigint; decimals: number; live: boolean }[];
   triggers: OnchainTrigger[];
   firing: number[];
 }
@@ -130,7 +130,13 @@ export function MandateManage() {
 
         const allowed: Loaded['allowed'] = [];
         for (const asset of list) {
-          const [position, decimals] = await Promise.all([
+          // `list` is `allowedAssets`, which is append-only history. Whether the
+          // guard will accept a fill in this asset is a different question with
+          // a different answer, and both belong on screen: the allowlist shows
+          // what is live, the positions table has to keep showing a holding in
+          // an asset that has been disallowed, because that holding is stranded
+          // and hiding it would be the kinder-looking of two lies.
+          const [position, decimals, live] = await Promise.all([
             publicClient.readContract({
               address: guard,
               abi: POLICY_GUARD_ABI,
@@ -138,6 +144,12 @@ export function MandateManage() {
               args: [id, asset],
             }),
             publicClient.readContract({ address: asset, abi: erc20Abi, functionName: 'decimals' }),
+            publicClient.readContract({
+              address: guard,
+              abi: POLICY_GUARD_ABI,
+              functionName: 'isAllowedAsset',
+              args: [id, asset],
+            }),
           ]);
           // No symbol here on purpose. It is a label, not chain state, and
           // baking it in tied it to the moment the walk ran: `/api/universe`
@@ -150,6 +162,7 @@ export function MandateManage() {
             address: asset,
             units: position.units,
             decimals: Number(decimals),
+            live,
           });
         }
 
@@ -421,6 +434,9 @@ export function MandateManage() {
                     <span className="flex items-center gap-2.5">
                       <AssetMark symbol={label(a.address)} size={22} />
                       <span className="font-mono text-meta text-ink">{label(a.address)}</span>
+                      {!a.live && (
+                        <span className="text-meta text-caution">disallowed</span>
+                      )}
                     </span>
                   </td>
                   <td className="py-2.5 text-right font-mono text-meta tabular-nums text-dim">
@@ -442,6 +458,15 @@ export function MandateManage() {
         <p className="mt-3 max-w-[68ch] text-meta leading-relaxed text-dim">
           Can differ from your wallet balance when an asset was traded under a different mandate.
         </p>
+        {m.allowed.some((a) => !a.live && a.units > 0n) && (
+          // Not a footnote. An exit is a fill and the guard checks the same
+          // list, so this position cannot leave through this system at all
+          // until the asset is allowed again.
+          <p className="mt-2 max-w-[68ch] text-meta leading-relaxed text-caution">
+            A position marked disallowed cannot be sold here: an exit is a fill and the guard checks
+            the same list. Allow the asset again to exit it.
+          </p>
+        )}
       </Section>
 
       <Section
@@ -477,7 +502,9 @@ export function MandateManage() {
         )}
 
         <TriggerForm
-          assets={m.allowed.map((a) => ({ address: a.address, symbol: label(a.address) }))}
+          assets={m.allowed
+            .filter((a) => a.live)
+            .map((a) => ({ address: a.address, symbol: label(a.address) }))}
           disabled={busy !== null}
           onAdd={(added) =>
             write(m.id, 'installing a trigger', (guard) =>
@@ -499,7 +526,7 @@ export function MandateManage() {
 
       <Section title="Allowlist">
         <div className="mb-2 flex flex-wrap items-center gap-1.5">
-          {m.allowed.map((a) => (
+          {m.allowed.filter((a) => a.live).map((a) => (
             <span
               key={a.address}
               className="flex items-center gap-2 rounded-full bg-inset py-1 pr-2.5 pl-1.5 text-meta text-ink"

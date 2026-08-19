@@ -15,6 +15,13 @@ import { BasketRail } from './BasketRail';
  * made the second one a scroll away from the first. They are one decision with a
  * direction, so they are one card with a direction control.
  *
+ * **The card scrolls inside itself.** Sticky and unbounded, it grows past the
+ * viewport once a quote is on screen — the plan adds a quote, an oracle read, a
+ * verdict and an evidence block — and the first thing to fall off the bottom is
+ * its own commit button. Found by driving a real fill to the point of signing
+ * and having nothing to press. A height cap and `overflow-y-auto` keep the
+ * button reachable at any window size.
+ *
  * **Both stay mounted; the inactive one is hidden.** Each holds a quote, a
  * plan, an evidence hash and a wallet phase, and unmounting to switch tabs would
  * throw all of that away — a user who quotes a buy, glances at the sell side and
@@ -37,7 +44,7 @@ export function TradeCard() {
   }, []);
 
   return (
-    <aside className="rounded-2xl bg-card lg:sticky lg:top-6">
+    <aside className="rounded-2xl bg-card lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
       {/* Across the top, on the card's own hairline. The two split the width
           rather than sitting together on the left: with one card and exactly two
           directions, a tab that stops halfway leaves the rule looking unfinished

@@ -166,7 +166,7 @@ export function describePermit(
   const minutes = Math.round((Number(deadline) - Math.floor(Date.now() / 1000)) / 60);
   return [
     `at most ${amount} ${symbol}, and not a unit more`,
-    `only ${req.spender} can use it — no other contract, ever`,
+    `only ${req.spender} can use it, no other contract, ever`,
     `expires in ~${minutes} minutes, after which it is worthless`,
     'it is a permission to pull once, not a standing allowance',
   ];

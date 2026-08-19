@@ -223,15 +223,32 @@ export function Fill() {
         ) {
           continue;
         }
-        const assets = await publicClient.readContract({
+        const listed = await publicClient.readContract({
           address: guard,
           abi: POLICY_GUARD_ABI,
           functionName: 'allowedAssets',
           args: [id],
         });
+
+        // `allowedAssets` is append-only history, not the current allowlist:
+        // disallowing flips `isAllowedAsset` and leaves the address in the
+        // array. Offering the difference is offering a fill the guard refuses,
+        // which is exactly what this panel did until it was caught by a real
+        // quote coming back ASSET_NOT_ALLOWED for an asset the page had drawn
+        // as allowed. Serial, like every other read here.
+        const assets: Address[] = [];
+        for (const asset of listed) {
+          const live = await publicClient.readContract({
+            address: guard,
+            abi: POLICY_GUARD_ABI,
+            functionName: 'isAllowedAsset',
+            args: [id, asset],
+          });
+          if (live) assets.push(asset);
+        }
         found.push({
           id,
-          assets: [...assets],
+          assets,
           maxNotionalPerTrade: m.policy.maxNotionalPerTrade,
           fillsThisEpoch: Number(m.fillsThisEpoch),
           maxFillsPerEpoch: Number(m.policy.maxFillsPerEpoch),

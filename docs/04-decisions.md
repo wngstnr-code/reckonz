@@ -5383,3 +5383,61 @@ from the moment the form moved.
 
 **A hundred lines of state machinery replaced by knowing where something is.** Worth remembering the
 next time a layout question looks like it needs to be computed.
+
+---
+
+## D95 — `allowedAssets` is a history, and the trade page read it as a permission
+
+Found on 2026-08-19 by driving a real fill through the rebuilt trade page: mandate #1, 0.5 USDG into
+wTSLAx, an asset the page drew in its allowlist, offered in its dropdown and showed a position in.
+The guard answered **`REJECT · ASSET_NOT_ALLOWED`**.
+
+The guard was right.
+
+```
+allowedAssets(1) — what the page rendered
+  0xc3FdBe…1171  wTSLAx   isAllowedAsset = false
+  0xa8ddb5…50D5  wNVDAx   isAllowedAsset = true
+  0x4C1AE2…01f7  wQQQx    isAllowedAsset = true
+  0xE7E553…B540  wSPYx    isAllowedAsset = true
+```
+
+`_allowAsset` in `PolicyGuard` pushes to `_assetList` on the way in and **never removes**:
+`setAssetAllowed(id, asset, false)` flips `isAllowedAsset` and leaves the address in the array.
+`allowedAssets()` returns that array, so it is the set of assets a mandate has *ever* held, and
+`checkExecution` reads `isAllowedAsset`. Two different questions, and the browser only had the ABI
+for the wrong one — `isAllowedAsset` was never exported in `src/abi.ts`, so every consumer used the
+list because the list was all there was.
+
+**The contract is not wrong.** The array is what makes the positions of a disallowed asset
+enumerable, which is the only reason a stranded holding can be shown at all. What was wrong is a
+page that read a history as a permission.
+
+Fixed by exporting `isAllowedAsset` and asking it per asset, serially, wherever the answer decides
+something:
+
+- **`Fill`** offers only live assets. Offering the difference is offering a fill the guard refuses.
+- **`Exit`** the same, and it bites harder: an exit is a fill, so a position in a disallowed asset
+  **cannot be sold through this system at all**. Listing it as sellable promises a way out that does
+  not exist.
+- **`MandateManage`** keeps both facts on screen, because both are true. The allowlist shows what is
+  live. The positions table still shows a holding in a disallowed asset, marked `disallowed`, with a
+  line saying it cannot be exited until the asset is allowed again. **Hiding it would be the
+  kinder-looking of two lies** — the position exists, the money is real, and the user needs to know
+  it is stuck.
+- Trigger scopes only offer assets a rule could ever fire on.
+
+The general shape, and it is the same one D94's ticker bug had: **a name that reads like the answer
+is not the answer.** `allowedAssets` sounds like the allowlist. It is the ledger of what has been
+allowed. The only defence is that anything gating an action reads the thing the contract gates on.
+
+### And the card could not be signed even when it allowed
+
+While confirming the fix, the plan came back `ALLOW` and there was nothing to press: the rail is
+`sticky` with no height cap, so once a quote is on screen — quote, oracle, verdict, evidence, permit
+description — the card grows past the viewport and **its own commit button falls off the bottom**.
+Fixed with `max-h-[calc(100vh-3rem)]` and `overflow-y-auto`, so the card scrolls inside itself.
+
+Worth naming: a sticky element that can outgrow the viewport has to be scrollable, or it is a panel
+whose most important control is the one you cannot reach. It took a real fill to notice, because
+every screenshot until then was of a card with no quote in it.

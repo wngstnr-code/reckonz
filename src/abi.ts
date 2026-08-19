@@ -117,7 +117,19 @@ export const POLICY_GUARD_ABI = parseAbi([
   'function getMandate(uint256 mandateId) view returns (Mandate)',
   'function getTriggers(uint256 mandateId) view returns (Trigger[])',
   'function getPosition(uint256 mandateId, address asset) view returns (Position)',
+  /**
+   * The assets a mandate has *ever* been given, not the ones it may trade now.
+   *
+   * `_assetList` in `PolicyGuard` is append-only: `setAssetAllowed(id, asset,
+   * false)` flips the mapping and leaves the address in the array, so this
+   * returns the history. `checkExecution` reads `isAllowedAsset`, so anything
+   * deciding whether a fill can happen has to read that too — reading only this
+   * one offers the user an asset the guard will refuse, which is what the trade
+   * page did until 2026-08-19.
+   */
   'function allowedAssets(uint256 mandateId) view returns (address[])',
+  /** The authority. `allowedAssets` is the list; this is the answer. */
+  'function isAllowedAsset(uint256 mandateId, address asset) view returns (bool)',
   'function isAllowedAsset(uint256 mandateId, address asset) view returns (bool)',
   'function nextMandateId() view returns (uint256)',
   'function oracle() view returns (address)',

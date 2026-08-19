@@ -699,7 +699,20 @@ reminder.
 
 ## Log
 
-**2026-08-19 (latest, twenty-fifth)** — **`/trade` rebuilt to the reference's shape** (D94), at
+**2026-08-19 (latest, twenty-sixth)** — **the trade page offered fills the guard refuses** (D95).
+Driving a real fill through the rebuilt page returned `REJECT · ASSET_NOT_ALLOWED` for wTSLAx, an
+asset the page had drawn as allowed. `allowedAssets()` returns `_assetList`, which is append-only:
+disallowing flips `isAllowedAsset` and leaves the address in the array. The browser had the ABI for
+the list and not for the mapping, so every consumer used the list. `isAllowedAsset` is exported now
+and asked per asset in `Fill`, `Exit`, the allowlist and the trigger scopes. A stranded position
+stays visible and marked, because an exit is a fill and it cannot be sold until the asset is allowed
+again.
+
+Also: the sticky trade card had no height cap, so a card holding a quote grew past the viewport and
+its own `sign & fill` button fell off the bottom. Found by reaching the point of signing and having
+nothing to press.
+
+**2026-08-19 (twenty-fifth)** — **`/trade` rebuilt to the reference's shape** (D94), at
 Nabil's request. Ondo Finance's app was looked at again rather than recalled: an asset page there is
 context down the left and a sticky action card on the right, and the card holds a tab row, a
 selector, one spend-over-receive box with the direction drawn on the seam, a full-width button, and
