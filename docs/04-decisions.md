@@ -5662,3 +5662,16 @@ basket. It collapses to the stack below `lg`, where four columns would be four w
 **And one misread colour.** A receipt with no evidence hash painted its shortfall note red, so a
 card reading `0 bps · against fair value` said the number was bad. The number is fine; the record of
 it is missing. The red belongs on `no evidence` alone, which is where it now is.
+
+**Amended again: theses moved above the grid, and capped rather than paginated.** The list is what
+the page claims and the grid is what backs it up, so it goes first — a reader who meets twenty
+receipts before anything explains what they were for has to hold them in mind until it does. Both
+blocks are named sections now, since the grid stopped being the page's opening content.
+
+Pagination was considered for the theses and rejected. Receipts are evidence that gets browsed;
+theses are narrative that gets read, and cutting reading into numbered chunks to be navigated serves
+neither. They also grow far more slowly — every fill makes a receipt, only a published idea makes a
+thesis, and the ratio is already 20:3 and widening. What the move *did* create is a real problem at
+scale: an unbounded list above the grid pushes the page's main content off the screen. So five rows,
+newest first, and a disclosure for the rest. One click, no route, and the cap hides the oldest rather
+than the latest thinking.

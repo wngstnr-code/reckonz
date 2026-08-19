@@ -1,3 +1,6 @@
+'use client';
+
+import { useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import type { WireThesis } from '@/src/receipts-view';
@@ -24,15 +27,36 @@ import { usdg, when } from './format';
  * held, what it did, where the proof is -- are independent, so they sit in four
  * columns and the row is as tall as its tallest basket. It collapses back to the
  * stack below `lg`, where four columns would be four words wide.
+ *
+ * **Capped rather than paginated.** Sitting above the receipts grid, an
+ * unbounded list would push the page's main content off the screen. Pages would
+ * be the wrong answer to that: receipts are evidence that gets browsed and
+ * theses are narrative that gets read, and cutting reading into numbered chunks
+ * to be navigated serves neither. A disclosure keeps the whole list one click
+ * away and costs no route. Theses also grow far more slowly than receipts --
+ * every fill makes one of those, only a published idea makes one of these -- so
+ * the cap will bind rarely.
  */
+
+/** Five rows: enough to show the shape of the record, short enough to scroll past. */
+const MAX_SHOWN = 5;
+
 export function Theses({ theses }: { theses: WireThesis[] }) {
+  const [all, setAll] = useState(false);
+
   if (theses.length === 0) {
     return <p className="text-data text-dim">No thesis has been published yet.</p>;
   }
 
+  // Newest first, so the cap hides the oldest rather than the latest thinking.
+  const ordered = [...theses].sort((a, b) => b.publishedAt - a.publishedAt);
+  const shown = all ? ordered : ordered.slice(0, MAX_SHOWN);
+  const hidden = ordered.length - shown.length;
+
   return (
+    <>
     <ul className="grid">
-      {theses.map((t) => (
+      {shown.map((t) => (
         <li
           key={t.id}
           className="grid gap-x-10 gap-y-4 border-b border-line/60 py-5 first:pt-0 last:border-b-0 lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_minmax(0,13rem)_auto]"
@@ -107,5 +131,16 @@ export function Theses({ theses }: { theses: WireThesis[] }) {
         </li>
       ))}
     </ul>
+
+    {(hidden > 0 || all) && (
+      <button
+        type="button"
+        onClick={() => setAll(!all)}
+        className="mt-5 text-meta text-dim underline decoration-dotted transition-colors duration-200 hover:text-ink"
+      >
+        {all ? 'Show the latest five' : `Show ${hidden} older thes${hidden === 1 ? 'is' : 'es'}`}
+      </button>
+    )}
+    </>
   );
 }

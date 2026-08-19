@@ -26,7 +26,7 @@ export const maxDuration = 60;
  * with ninety seconds and no wallet should get numbers rather than a loading
  * line. The route still earns its place as the surface an agent can ask.
  *
- * **Receipts are the grid; theses are a list under it.** Twenty receipts exist
+ * **Receipts are the grid; theses are a list above it.** Twenty receipts exist
  * and six carry a thesis. Built around theses, the page rendered those six in
  * full and gave the other fourteen one line each holding a symbol and a
  * timestamp — no price, no shortfall, no evidence, no link. A page whose header
@@ -50,12 +50,26 @@ export default async function ReceiptsPage() {
         receipt. Losses stay on this page as long as the wins do.
       </Hero>
 
-      <div className="mt-11">
-        <ReceiptsView receipts={receipts} />
-      </div>
-
-      <Section title="Theses" aside={<span className="text-meta text-dim">{snapshot.theses.length} published</span>}>
+      {/* Above the grid, because it is what the page claims and the grid is what
+          backs it up. A reader who meets twenty receipts first has to hold them
+          in mind until something explains what they were for. */}
+      <Section
+        title="Theses"
+        aside={
+          <span className="text-meta text-dim">
+            {snapshot.theses.length} published, {summary.withThesis} of {summary.receiptCount}{' '}
+            receipts carry one
+          </span>
+        }
+      >
         <Theses theses={snapshot.theses} />
+      </Section>
+
+      <Section
+        title="Receipts"
+        aside={<span className="text-meta text-dim">{summary.receiptCount} settled</span>}
+      >
+        <ReceiptsView receipts={receipts} />
       </Section>
 
       <Section title="Integrity">
