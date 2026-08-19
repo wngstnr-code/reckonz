@@ -44,22 +44,29 @@ export default async function TradePage() {
 
   return (
     <>
-      <header className="mb-9">
-        <h1 className="text-title font-semibold tracking-tight">Trade</h1>
-        <p className="mt-2.5 max-w-[68ch] text-body text-dim">
-          You write the rules. The chain enforces them inside the trade itself, and no key of ours
-          can move your money.
-        </p>
-      </header>
+      {/* Three cells, so the card's top edge lines up with the page title
+          rather than starting a block below it. The heading takes column one on
+          its own, the rail takes column two across both rows, and the reading
+          column sits under the heading.
 
-      <div className="grid gap-x-14 gap-y-11 lg:grid-cols-[minmax(0,1fr)_400px]">
-        {/* First in the document and second in the grid: on a narrow screen the
-            thing you came to do should not be below everything describing it. */}
-        <div className="lg:order-2">
+          The document order is heading, rail, content, which is also the right
+          order stacked: on a narrow screen the title comes first, then the thing
+          you came to do, then everything describing it. Doing this with a header
+          above the grid could only get one of the two right. */}
+      <div className="grid gap-x-14 lg:grid-cols-[minmax(0,1fr)_400px]">
+        <header className="mb-9 lg:col-start-1 lg:row-start-1">
+          <h1 className="text-title font-semibold tracking-tight">Trade</h1>
+          <p className="mt-2.5 max-w-[68ch] text-body text-dim">
+            You write the rules. The chain enforces them inside the trade itself, and no key of ours
+            can move your money.
+          </p>
+        </header>
+
+        <div className="mb-11 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:mb-0">
           <TradeCard />
         </div>
 
-        <div className="min-w-0 lg:order-1">
+        <div className="min-w-0 lg:col-start-1 lg:row-start-2">
           {/* Above the mandate it creates, and only while there is none to
               describe. See `CreateMandateSlot`. */}
           <CreateMandateSlot position="top" />

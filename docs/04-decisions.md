@@ -5342,3 +5342,19 @@ including `'…'`, which can run across an apostrophe in prose and swallow a who
 exactly one wrong result — a `text-micro` on a sentence, caught by grepping for `text-micro` without
 `uppercase` beside it. The diff being symmetric at 134 insertions and 134 deletions is what proved
 nothing else had been eaten.
+
+### D94, amended a tenth time — the card starts where the page does
+
+Nabil: the buy/sell card should line up with the `Trade` heading. It should, and the reason is that
+a rail beginning one block below the title reads as having fallen rather than as the second column
+of a two-column page.
+
+The header was above the grid, so it pushed both columns down. It is a grid cell now: **the heading
+takes column one row one, the rail takes column two across both rows, and the reading column sits
+under the heading.**
+
+The document order is heading, rail, content, which is also the right order stacked. On a narrow
+screen the title comes first, then the thing you came to do, then everything describing it. A header
+above the grid could only ever get one of the two right: aligned on desktop meant the card below the
+whole header on mobile, or action-first on mobile meant the title below the card. Explicit cell
+placement gets both from one DOM order.
