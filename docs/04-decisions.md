@@ -5189,3 +5189,42 @@ second choice looking like an afterthought.
 because that is where token artwork lives. It is round and unclipped: `AssetMark` draws everything
 inside the xStock notch, and the notch says *xStock*, which USDG is not. It is what they settle
 against. A bare `img` rather than `next/image` for one 24px file out of our own `public/`.
+
+### D94, amended a sixth time — a form should look like a form
+
+Nabil, on the sections below the fold: Triggers, Allowlist and Controls were still the old shape,
+the sell button in Positions was still a hairline pill, and the create form did not read as a form.
+The last of those is the one with a rule in it.
+
+**The page is mostly reading.** Sections of measurements on the page's own ground, separated by
+space. A form is the exception, and it has to look like one *before* it is read, or the reader meets
+a row of inputs with no warning that this part of the page writes to the chain. So every form now
+takes the trade card's surface: `card` for the field, `well` for each control raised out of it.
+**That makes "grey block" mean *you can act here* everywhere on the page**, which is worth more than
+any label.
+
+`Form.tsx` holds the pieces: `FormCard`, `FormRow`, `Field`, `SelectField` (on the drawn `Menu`),
+`Primary`, `Ghost`, `Toggle`. Six places were building these out of raw markup with six slightly
+different paddings; they are one set now, and `Mandate`'s private `Field` is gone in favour of it.
+
+The `19 of 30 tradable` pill is removed from the header. It was a good number in the wrong place:
+the Limits table below says the same thing per market, with the date on it.
+
+### The bug under the redesign
+
+Screenshotting the result showed every asset as `0xc3FdBe` instead of `wTSLAx`. `/api/universe`
+answered 200 in 2ms every time, eight times a page load, so it was not the route.
+
+**`MandateManage` was baking the ticker into its chain read.** `load()` walks `nextMandateId`,
+every mandate, every allowed asset's position and decimals, serially, because the public RPC
+throttles. It also wrote `symbol: symbolOf.get(...) ?? asset.slice(0, 8)` into that result — and
+`/api/universe` almost always answers *after* the walk has started. So the first walk produced
+truncated addresses, and the fix was a `universe.length` dependency that ran **the entire serial
+walk a second time** to replace a label.
+
+A ticker is not chain state. It is resolved at render now, the labels correct themselves the moment
+the universe lands, and `universe.length` is out of the dependency list — which deletes a full
+redundant RPC walk from every page load on a chain whose public endpoint throttles hard.
+
+The general form: **anything derived from data that arrives on a different clock should be derived
+where it is used, not frozen into the slower one.**

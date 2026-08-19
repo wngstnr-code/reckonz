@@ -18,6 +18,7 @@ import {
 import { takeHandoff } from './handoff';
 import { AssetMark } from './console/AssetMark';
 import { Legend, Num } from './ui';
+import { Field, FormCard, Primary, Toggle } from './console/trade/Form';
 import { useWallet } from './useWallet';
 
 /**
@@ -403,6 +404,7 @@ export function Mandate() {
 
   return (
     <section ref={panel}>
+      <FormCard>
       {follow && (
         <div className="mb-4 rounded-lg border border-signal-deep bg-signal/6 px-4 py-2.5">
           <p className="text-[12.5px] leading-relaxed text-ink">
@@ -508,34 +510,34 @@ export function Mandate() {
               where it has the space to say why. */}
           <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 lg:grid-cols-5">
             <Field
-              label="max per trade"
+              label="Max per trade"
               suffix="USDG"
               hint="small on purpose"
               value={draft.maxNotionalUsdg}
               onChange={(v) => setDraft({ ...draft, maxNotionalUsdg: v })}
             />
             <Field
-              label="fills per 24h"
+              label="Fills per 24h"
               hint="an exit spends one too"
               value={draft.maxFillsPerEpoch}
               onChange={(v) => setDraft({ ...draft, maxFillsPerEpoch: v })}
             />
             <Field
-              label="max slippage"
+              label="Max slippage"
               suffix="bps"
               hint="off the size quoted"
               value={draft.maxSlippageBps}
               onChange={(v) => setDraft({ ...draft, maxSlippageBps: v })}
             />
             <Field
-              label="max off fair value"
+              label="Max off fair value"
               suffix="bps"
               hint="off the oracle's price"
               value={draft.maxDeviationBps}
               onChange={(v) => setDraft({ ...draft, maxDeviationBps: v })}
             />
             <Field
-              label="max gap risk"
+              label="Max gap risk"
               hint="overnight, 0-100"
               value={draft.maxGapRisk}
               onChange={(v) => setDraft({ ...draft, maxGapRisk: v })}
@@ -564,29 +566,22 @@ export function Mandate() {
               {universe.map((entry) => {
                 const on = picked.includes(entry.address);
                 return (
-                  <button
+                  <Toggle
                     key={entry.address}
+                    on={on}
                     onClick={() => toggle(entry.address)}
                     title={entry.name ?? entry.address}
-                    className={`flex items-center gap-1.5 rounded-full border py-1 pr-3 pl-1 font-mono text-[12.5px] transition-colors ${
-                      on
-                        ? 'border-signal-deep bg-signal/8 text-signal'
-                        : 'border-line bg-raised text-dim hover:border-edge hover:text-ink'
-                    }`}
                   >
-                    <AssetMark symbol={entry.symbol} size={18} />
+                    <AssetMark symbol={entry.symbol} size={20} />
                     {entry.symbol}
-                  </button>
+                  </Toggle>
                 );
               })}
             </div>
           )}
 
-          <button
-            onClick={create}
-            disabled={busy || picked.length === 0 || tooMany}
-            className="mt-7 w-full rounded-xl bg-ink px-4 py-3.5 text-[15px] font-semibold text-ground hover:opacity-90 disabled:opacity-30"
-          >
+          <div className="mt-7">
+            <Primary onClick={create} disabled={busy || picked.length === 0 || tooMany} full>
             {phase.kind === 'signing'
               ? 'confirm in your wallet…'
               : phase.kind === 'mining'
@@ -598,7 +593,8 @@ export function Mandate() {
                     : tooMany
                       ? `Too many assets, the limit is ${MAX_ASSETS_FALLBACK}`
                       : 'Create mandate'}
-          </button>
+            </Primary>
+          </div>
 
           {phase.kind === 'confirming' && (
             <p className="mt-3 text-[12px] leading-relaxed text-faint">
@@ -676,55 +672,8 @@ export function Mandate() {
           </p>
         </>
       )}
+      </FormCard>
     </section>
   );
 }
 
-/**
- * One cap, in a box of its own.
- *
- * Five small inputs on a shared row read as a settings dialog, and these are not
- * settings — each one is a bound the chain will enforce inside a trade, and the
- * user is choosing the number. So the field borrows the swap box's proportions:
- * the label small and quiet above, the value the largest thing in the box, the
- * unit as a chip beside it rather than as loose text trailing the input.
- *
- * `focus-within` on the container rather than `focus` on the input, because the
- * box is what the eye reads as the control.
- */
-function Field({
-  label,
-  value,
-  suffix,
-  hint,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  suffix?: string;
-  /** What the number means, in the box, where it is read. */
-  hint?: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <label className="block rounded-xl border border-line bg-raised px-4 py-3 focus-within:border-signal-deep">
-      <span className="block text-[11px] font-semibold tracking-[0.09em] text-faint uppercase">
-        {label}
-      </span>
-      <span className="mt-1.5 flex items-baseline gap-2">
-        <input
-          value={value}
-          inputMode="decimal"
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full min-w-0 bg-transparent font-mono text-[20px] tabular-nums text-ink outline-none"
-        />
-        {suffix && (
-          <span className="shrink-0 rounded-full border border-line bg-panel px-2 py-0.5 font-mono text-[11px] text-dim">
-            {suffix}
-          </span>
-        )}
-      </span>
-      {hint && <span className="mt-1.5 block text-[12px] leading-snug text-faint">{hint}</span>}
-    </label>
-  );
-}

@@ -722,6 +722,18 @@ proportions — a box each, the value the largest thing in it, the unit as a chi
 means inside its own box, the asset chips carrying their marks, and a full-width button that says
 why it is disabled.
 
+Every form on the page now takes the trade card's surface, so a grey block means *you can act here*
+wherever it appears: `Form.tsx` holds `FormCard`, `Field`, `SelectField`, `Primary`, `Ghost` and
+`Toggle`, and six places that had been building these from raw markup use them. The `19 of 30
+tradable` pill is gone from the header, since Limits says the same thing per market with a date on
+it.
+
+Screenshotting that turned up a real bug: `MandateManage` baked the ticker into its serial chain
+walk, which almost always finishes before `/api/universe` answers, so every asset rendered as a
+truncated address until a `universe.length` dependency ran **the whole walk again** to fix a label.
+A ticker is not chain state. Resolved at render now, and a full redundant RPC walk is gone from
+every page load.
+
 Direction sits back at the top of the card as an underlined tab row, the card's small type is `ink`
 rather than grey, and both dropdowns are drawn rather than native: `Menu.tsx` holds `useMenu`,
 `MenuList` and `Chevron`, and the outside-click-and-Escape pattern `Wallet.tsx` already had is now

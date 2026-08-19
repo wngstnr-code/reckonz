@@ -17,6 +17,8 @@ import {
 } from './follow';
 import { Legend, Pill, tokenAmount } from './ui';
 import { Fact, Facts, Section } from './console/trade/Section';
+import { Field, FormCard, FormRow, Ghost, Primary, SelectField, Toggle } from './console/trade/Form';
+import { AssetMark } from './console/AssetMark';
 import { useWallet } from './useWallet';
 
 /**
@@ -61,7 +63,7 @@ interface Loaded {
   fillsThisEpoch: number;
   maxFillsPerEpoch: number;
   policy: Policy;
-  allowed: { address: Address; symbol: string; units: bigint; decimals: number }[];
+  allowed: { address: Address; units: bigint; decimals: number }[];
   triggers: OnchainTrigger[];
   firing: number[];
 }
@@ -86,6 +88,9 @@ export function MandateManage() {
   }, []);
 
   const symbolOf = new Map(universe.map((u) => [u.address.toLowerCase(), u.symbol]));
+  /** The ticker if the universe has arrived, a short address until it does. */
+  const label = (asset: Address) =>
+    symbolOf.get(asset.toLowerCase()) ?? `${asset.slice(0, 6)}…${asset.slice(-4)}`;
 
   const load = useCallback(async () => {
     if (!publicClient || !option || !address) return;
@@ -130,9 +135,15 @@ export function MandateManage() {
             }),
             publicClient.readContract({ address: asset, abi: erc20Abi, functionName: 'decimals' }),
           ]);
+          // No symbol here on purpose. It is a label, not chain state, and
+          // baking it in tied it to the moment the walk ran: `/api/universe`
+          // usually answers *after* this serial walk starts, so every asset
+          // rendered as a truncated address until a second full walk replaced
+          // it, twenty seconds later, on an RPC that throttles. Resolved at
+          // render instead, the labels correct themselves the moment the
+          // universe lands and the second walk is not needed at all.
           allowed.push({
             address: asset,
-            symbol: symbolOf.get(asset.toLowerCase()) ?? asset.slice(0, 8),
             units: position.units,
             decimals: Number(decimals),
           });
@@ -195,7 +206,7 @@ export function MandateManage() {
       // a user who owns three mandates.
       publishMandateCount('unreadable');
     }
-  }, [publicClient, option, address, universe.length]);
+  }, [publicClient, option, address]);
 
   useEffect(() => {
     void load();
@@ -402,7 +413,12 @@ export function MandateManage() {
             <tbody>
               {m.allowed.map((a) => (
                 <tr key={a.address} className="border-b border-line/60 last:border-b-0">
-                  <td className="py-2.5 pr-4 font-mono text-meta text-ink">{a.symbol}</td>
+                  <td className="py-2.5 pr-4">
+                    <span className="flex items-center gap-2.5">
+                      <AssetMark symbol={label(a.address)} size={22} />
+                      <span className="font-mono text-meta text-ink">{label(a.address)}</span>
+                    </span>
+                  </td>
                   <td className="py-2.5 pr-4 text-right font-mono text-meta tabular-nums text-dim">
                     {a.units === 0n ? (
                       <span className="text-faint">no recorded position</span>
@@ -426,9 +442,9 @@ export function MandateManage() {
                             }),
                           )
                         }
-                        className="rounded-full border border-line bg-raised px-3 py-0.5 font-mono text-[11.5px] text-dim hover:border-edge hover:text-ink"
+                        className="rounded-full bg-inset px-3.5 py-1.5 text-[13px] text-ink hover:bg-line"
                       >
-                        sell
+                        Sell
                       </button>
                     )}
                   </td>
@@ -475,7 +491,7 @@ export function MandateManage() {
         )}
 
         <TriggerForm
-          assets={m.allowed}
+          assets={m.allowed.map((a) => ({ address: a.address, symbol: label(a.address) }))}
           disabled={busy !== null}
           onAdd={(added) =>
             write(m.id, 'installing a trigger', (guard) =>
@@ -500,12 +516,13 @@ export function MandateManage() {
           {m.allowed.map((a) => (
             <span
               key={a.address}
-              className="flex items-center gap-1.5 rounded-full border border-line bg-raised px-3 py-0.5 font-mono text-[12px] text-dim"
+              className="flex items-center gap-2 rounded-full bg-inset py-1 pr-2.5 pl-1.5 text-[13px] text-ink"
             >
-              {a.symbol}
+              <AssetMark symbol={label(a.address)} size={20} />
+              {label(a.address)}
               <button
                 onClick={() =>
-                  write(m.id, `disallowing ${a.symbol}`, (guard) =>
+                  write(m.id, `disallowing ${label(a.address)}`, (guard) =>
                     walletClient!.writeContract({
                       address: guard,
                       abi: POLICY_GUARD_ABI,
@@ -517,8 +534,8 @@ export function MandateManage() {
                   )
                 }
                 disabled={busy !== null}
-                className="text-refuse hover:text-refuse disabled:opacity-40"
-                title={`disallow ${a.symbol}`}
+                className="text-faint hover:text-refuse disabled:opacity-40"
+                title={`disallow ${label(a.address)}`}
               >
                 ×
               </button>
@@ -580,7 +597,7 @@ export function MandateManage() {
         <AddressForm
           current={m.agent}
           disabled={busy !== null}
-          submitLabel="rotate agent"
+          submitLabel="Rotate agent"
           onSubmit={(next) =>
             write(m.id, 'rotating the agent', (guard) =>
               walletClient!.writeContract({
@@ -603,9 +620,9 @@ export function MandateManage() {
         <AddressForm
           current={m.executor}
           disabled={busy !== null}
-          submitLabel="point at executor"
+          submitLabel="Point at executor"
           defaultAddress={option.deployment.contracts.Executor as Address | undefined}
-          defaultLabel="use this deployment's Executor"
+          defaultLabel="Use this deployment's Executor"
           onSubmit={(next) =>
             write(m.id, 'pointing at a new executor', (guard) =>
               walletClient!.writeContract({
@@ -635,13 +652,13 @@ export function MandateManage() {
               )
             }
             disabled={busy !== null}
-            className={`rounded-full border px-3 py-1 font-mono text-[12px] disabled:opacity-40 ${
+            className={`rounded-full px-3.5 py-1.5 text-[13px] disabled:opacity-40 ${
               m.breaker
-                ? 'border-signal-deep bg-signal/6 text-signal hover:bg-signal/12'
-                : 'border-caution/40 bg-caution/6 text-caution hover:bg-caution/12'
+                ? 'bg-signal/12 text-signal hover:bg-signal/20'
+                : 'bg-caution/12 text-caution hover:bg-caution/20'
             }`}
           >
-            {m.breaker ? 'release breaker' : 'trip breaker'}
+            {m.breaker ? 'Release breaker' : 'Trip breaker'}
           </button>
 
           <button
@@ -658,13 +675,13 @@ export function MandateManage() {
               )
             }
             disabled={busy !== null}
-            className="rounded-full border border-refuse/40 bg-refuse/6 px-3 py-1 font-mono text-[12px] text-refuse hover:bg-refuse/12 disabled:opacity-40"
+            className="rounded-full bg-refuse/10 px-3.5 py-1.5 text-[13px] text-refuse hover:bg-refuse/16 disabled:opacity-40"
           >
-            close mandate
+            Close mandate
           </button>
 
           {busy?.id === m.id && (
-            <span className="font-mono text-[11.5px] text-faint">{busy.what}…</span>
+            <span className="text-[13px] text-dim">{busy.what}…</span>
           )}
         </div>
 
@@ -702,48 +719,57 @@ function TriggerForm({
   const valid = Number.isFinite(Number(threshold)) && threshold.trim() !== '';
 
   return (
-    <div className="mt-3 rounded-lg border border-line bg-raised/40 px-3 py-2.5">
-      <div className="flex flex-wrap items-end gap-2">
-        <label className="flex flex-col gap-1">
-          <span className="text-[10px] tracking-[0.09em] text-faint uppercase">metric</span>
-          <select
-            value={metric}
-            onChange={(e) => setMetric(e.target.value as TriggerMetric)}
-            className="rounded-md border border-line bg-raised px-2 py-1 font-mono text-[11px] text-ink outline-none focus:border-signal-deep"
-          >
-            {TRIGGER_METRICS.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-          </select>
-        </label>
+    <FormCard>
+      <FormRow>
+        <SelectField
+          label="Metric"
+          value={metric}
+          onChange={(next) => setMetric(next as TriggerMetric)}
+          options={TRIGGER_METRICS.map((m) => ({ value: m, label: m }))}
+        />
+        <SelectField
+          label="Is"
+          value={comparator}
+          onChange={(next) => setComparator(next as TriggerComparator)}
+          options={[
+            { value: 'gt', label: 'above' },
+            { value: 'lt', label: 'below' },
+          ]}
+        />
+        <Field
+          label="Threshold"
+          suffix={metric === 'capacityUsdg' ? 'USDG' : undefined}
+          value={threshold}
+          onChange={setThreshold}
+        />
+      </FormRow>
 
-        <label className="flex flex-col gap-1">
-          <span className="text-[10px] tracking-[0.09em] text-faint uppercase">is</span>
-          <select
-            value={comparator}
-            onChange={(e) => setComparator(e.target.value as TriggerComparator)}
-            className="rounded-md border border-line bg-raised px-2 py-1 font-mono text-[11px] text-ink outline-none focus:border-signal-deep"
-          >
-            <option value="gt">above</option>
-            <option value="lt">below</option>
-          </select>
-        </label>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <span className="text-[12.5px] text-dim">Applies to</span>
+        <Toggle on={scope.length === 0} onClick={() => setScope([])}>
+          <span className="pl-1.5">Whole basket</span>
+        </Toggle>
+        {assets.map((a) => {
+          const on = scope.includes(a.address);
+          return (
+            <Toggle
+              key={a.address}
+              on={on}
+              onClick={() =>
+                setScope((prev) =>
+                  on ? prev.filter((x) => x !== a.address) : [...prev, a.address],
+                )
+              }
+            >
+              <AssetMark symbol={a.symbol} size={20} />
+              {a.symbol}
+            </Toggle>
+          );
+        })}
+      </div>
 
-        <label className="flex flex-col gap-1">
-          <span className="text-[10px] tracking-[0.09em] text-faint uppercase">
-            threshold{metric === 'capacityUsdg' ? ' (USDG)' : ''}
-          </span>
-          <input
-            value={threshold}
-            inputMode="decimal"
-            onChange={(e) => setThreshold(e.target.value)}
-            className="w-24 rounded-md border border-line bg-raised px-2 py-1 font-mono text-[11px] text-ink outline-none focus:border-signal-deep"
-          />
-        </label>
-
-        <button
+      <div className="mt-4">
+        <Primary
           onClick={() =>
             onAdd({
               metric: metricIndex(metric),
@@ -756,46 +782,11 @@ function TriggerForm({
             })
           }
           disabled={disabled || !valid}
-          className="rounded-full border border-signal-deep bg-signal/6 px-3 py-1 font-mono text-[11px] text-signal hover:bg-signal/12 disabled:opacity-40"
         >
-          add trigger
-        </button>
+          Add trigger
+        </Primary>
       </div>
-
-      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        <span className="font-mono text-[10.5px] text-faint">applies to</span>
-        <button
-          onClick={() => setScope([])}
-          className={`rounded-full border px-2 py-0.5 font-mono text-[10.5px] ${
-            scope.length === 0
-              ? 'border-signal-deep bg-signal/6 text-signal'
-              : 'border-line bg-raised text-faint hover:text-ink'
-          }`}
-        >
-          whole basket
-        </button>
-        {assets.map((a) => {
-          const on = scope.includes(a.address);
-          return (
-            <button
-              key={a.address}
-              onClick={() =>
-                setScope((prev) =>
-                  on ? prev.filter((x) => x !== a.address) : [...prev, a.address],
-                )
-              }
-              className={`rounded-full border px-2 py-0.5 font-mono text-[10.5px] ${
-                on
-                  ? 'border-signal-deep bg-signal/6 text-signal'
-                  : 'border-line bg-raised text-faint hover:text-ink'
-              }`}
-            >
-              {a.symbol}
-            </button>
-          );
-        })}
-      </div>
-    </div>
+    </FormCard>
   );
 }
 
@@ -817,27 +808,26 @@ function AssetAllowlistForm({
   );
 
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-2">
-      <select
-        value={picked}
-        onChange={(e) => setPicked(e.target.value as Address | '')}
-        className="rounded-md border border-line bg-raised px-2 py-1 font-mono text-[11px] text-ink outline-none focus:border-signal-deep"
-      >
-        <option value="">allow an asset…</option>
-        {options.map((u) => (
-          <option key={u.address} value={u.address}>
-            {u.symbol}
-          </option>
-        ))}
-      </select>
-      <button
-        onClick={() => picked && onAllow(picked)}
-        disabled={disabled || !picked}
-        className="rounded-full border border-signal-deep bg-signal/6 px-3 py-0.5 font-mono text-[11px] text-signal hover:bg-signal/12 disabled:opacity-40"
-      >
-        allow
-      </button>
-    </div>
+    <FormCard>
+      <FormRow>
+        <SelectField
+          label="Asset"
+          value={picked}
+          placeholder="choose one"
+          onChange={(next) => setPicked(next as Address)}
+          options={options.map((u) => ({
+            value: u.address,
+            label: u.symbol,
+            icon: <AssetMark symbol={u.symbol} size={22} />,
+          }))}
+        />
+        <div className="flex items-end">
+          <Primary onClick={() => picked && onAllow(picked)} disabled={disabled || !picked}>
+            Allow
+          </Primary>
+        </div>
+      </FormRow>
+    </FormCard>
   );
 }
 
@@ -931,125 +921,100 @@ function PolicyForm({
 
   if (!open) {
     return (
-      <button
-        onClick={() => setOpen(true)}
-        disabled={disabled}
-        className="mb-3 rounded-full border border-line bg-raised px-3 py-0.5 font-mono text-[11px] text-faint hover:text-ink disabled:opacity-40"
-      >
-        edit policy
-      </button>
+      <Ghost onClick={() => setOpen(true)}>Edit policy</Ghost>
     );
   }
 
   return (
-    <div className="mb-3 rounded-lg border border-line bg-raised/40 px-3 py-2.5">
-      <div className="flex flex-wrap gap-3">
-        <PField label="max weight" suffix="bps" value={draft.maxWeightBps} onChange={set('maxWeightBps')} />
-        <PField
-          label="min cash buffer"
+    <FormCard>
+      <FormRow>
+        <Field label="Max weight" suffix="bps" value={draft.maxWeightBps} onChange={set('maxWeightBps')} />
+        <Field
+          label="Min cash buffer"
           suffix="bps"
           value={draft.minCashBufferBps}
           onChange={set('minCashBufferBps')}
         />
-        <PField
-          label="max slippage"
+        <Field
+          label="Max slippage"
           suffix="bps"
           value={draft.maxSlippageBps}
           onChange={set('maxSlippageBps')}
         />
-        <PField
-          label="max off fair value"
+        <Field
+          label="Max off fair value"
           suffix="bps"
           value={draft.maxDeviationBps}
           onChange={set('maxDeviationBps')}
         />
-        <PField label="max gap risk" value={draft.maxGapRisk} onChange={set('maxGapRisk')} />
-        <PField
-          label="max per trade"
-          suffix="USDG"
-          value={draft.maxNotionalUsdg}
-          onChange={set('maxNotionalUsdg')}
-        />
-        <PField
-          label="max fills / epoch"
-          value={draft.maxFillsPerEpoch}
-          onChange={set('maxFillsPerEpoch')}
-        />
-        <PField
-          label="epoch duration"
-          suffix="sec"
-          value={draft.epochDuration}
-          onChange={set('epochDuration')}
-        />
-        <PField
-          label="min rebalance interval"
-          suffix="sec"
-          value={draft.minRebalanceInterval}
-          onChange={set('minRebalanceInterval')}
-        />
-        <label className="flex flex-col gap-1">
-          <span className="text-[10px] tracking-[0.09em] text-faint uppercase">enforce weights</span>
-          <input
-            type="checkbox"
-            checked={draft.enforceWeights}
-            onChange={(e) => setDraft((d) => ({ ...d, enforceWeights: e.target.checked }))}
-            className="mt-1 h-4 w-4 accent-signal-deep"
+      </FormRow>
+
+      <div className="mt-2.5">
+        <FormRow>
+          <Field label="Max gap risk" value={draft.maxGapRisk} onChange={set('maxGapRisk')} />
+          <Field
+            label="Max per trade"
+            suffix="USDG"
+            value={draft.maxNotionalUsdg}
+            onChange={set('maxNotionalUsdg')}
           />
-        </label>
+          <Field
+            label="Max fills / epoch"
+            value={draft.maxFillsPerEpoch}
+            onChange={set('maxFillsPerEpoch')}
+          />
+          <Field
+            label="Epoch duration"
+            suffix="sec"
+            value={draft.epochDuration}
+            onChange={set('epochDuration')}
+          />
+        </FormRow>
       </div>
 
-      {err && <p className="mt-2 text-[12px] leading-relaxed text-refuse">{err}</p>}
+      <div className="mt-2.5">
+        <FormRow>
+          <Field
+            label="Min rebalance interval"
+            suffix="sec"
+            value={draft.minRebalanceInterval}
+            onChange={set('minRebalanceInterval')}
+          />
+          <label className="flex min-w-[8rem] flex-1 flex-col rounded-xl bg-well px-3.5 py-2.5">
+            <span className="text-[12px] leading-tight text-dim">Enforce weights</span>
+            <span className="mt-1.5 flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={draft.enforceWeights}
+                onChange={(e) => setDraft((d) => ({ ...d, enforceWeights: e.target.checked }))}
+                className="h-4 w-4 accent-ink"
+              />
+              <span className="text-[15px] text-ink">{draft.enforceWeights ? 'on' : 'off'}</span>
+            </span>
+          </label>
+        </FormRow>
+      </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <button
-          onClick={submit}
-          disabled={disabled}
-          className="rounded-full border border-signal-deep bg-signal/6 px-3 py-1 font-mono text-[11px] text-signal hover:bg-signal/12 disabled:opacity-40"
-        >
-          update policy
-        </button>
-        <button
+      {err && <p className="mt-3 text-[12.5px] leading-relaxed text-refuse">{err}</p>}
+
+      <div className="mt-4 flex flex-wrap items-center gap-2.5">
+        <Primary onClick={submit} disabled={disabled}>
+          Update policy
+        </Primary>
+        <Ghost
           onClick={() => {
             setDraft(draftFromPolicy(policy));
             setErr(null);
             setOpen(false);
           }}
-          className="rounded-full border border-line bg-raised px-3 py-1 font-mono text-[11px] text-faint hover:text-ink"
         >
-          cancel
-        </button>
-        <span className="font-mono text-[10.5px] text-faint">
-          every field not changed above is sent back unchanged
+          Cancel
+        </Ghost>
+        <span className="text-[12.5px] text-dim">
+          Every field not changed above is sent back unchanged.
         </span>
       </div>
-    </div>
-  );
-}
-
-function PField({
-  label,
-  value,
-  suffix,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  suffix?: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <label className="flex flex-col gap-1">
-      <span className="text-[10px] tracking-[0.09em] text-faint uppercase">{label}</span>
-      <span className="flex items-baseline gap-1.5">
-        <input
-          value={value}
-          inputMode="decimal"
-          onChange={(e) => onChange(e.target.value)}
-          className="w-20 rounded-md border border-line bg-raised px-2 py-1 font-mono text-[11px] text-ink outline-none focus:border-signal-deep"
-        />
-        {suffix && <span className="font-mono text-[10.5px] text-faint">{suffix}</span>}
-      </span>
-    </label>
+    </FormCard>
   );
 }
 
@@ -1084,30 +1049,32 @@ function AddressForm({
   };
 
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-2">
-      <span className="font-mono text-[11px] text-faint">{current}</span>
+    <FormCard>
+      <p className="mb-2.5 font-mono text-[12.5px] break-all text-dim">{current}</p>
+      <FormRow>
+        <Field
+          label="New address"
+          value={value}
+          onChange={setValue}
+          placeholder="0x…"
+          width="flex-[3]"
+        />
+        <div className="flex items-end">
+          <Primary onClick={submit} disabled={disabled || !isAddress(value)}>
+            {submitLabel}
+          </Primary>
+        </div>
+      </FormRow>
       {defaultAddress && (
-        <button
-          onClick={() => setValue(defaultAddress)}
-          disabled={disabled || pointsAtDefault}
-          className="rounded-full border border-line bg-raised px-2 py-0.5 font-mono text-[10.5px] text-faint hover:text-ink disabled:opacity-40"
-        >
-          {pointsAtDefault ? 'already here' : (defaultLabel ?? 'use default')}
-        </button>
+        <div className="mt-2.5">
+          <Ghost
+            onClick={() => setValue(defaultAddress)}
+            disabled={disabled || pointsAtDefault}
+          >
+            {pointsAtDefault ? 'Already here' : (defaultLabel ?? 'Use default')}
+          </Ghost>
+        </div>
       )}
-      <input
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        placeholder="0x…"
-        className="w-[22ch] rounded-md border border-line bg-raised px-2 py-1 font-mono text-[11px] text-ink outline-none focus:border-signal-deep"
-      />
-      <button
-        onClick={submit}
-        disabled={disabled || !isAddress(value)}
-        className="rounded-full border border-signal-deep bg-signal/6 px-3 py-0.5 font-mono text-[11px] text-signal hover:bg-signal/12 disabled:opacity-40"
-      >
-        {submitLabel}
-      </button>
-    </div>
+    </FormCard>
   );
 }

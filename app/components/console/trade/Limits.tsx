@@ -37,7 +37,7 @@ export function Limits({ board, now }: { board: Board; now: number }) {
   return (
     <>
       <p className="mb-4 max-w-[68ch] text-meta leading-relaxed text-dim">
-        The largest trade each pool can take before it moves the price past the limit. Measured
+        The largest trade each pool can take before it moves the price past the limit. Measured{' '}
         {age.label}, not estimated.{' '}
         {age.warning && <span className="text-caution">{age.warning}</span>}
       </p>

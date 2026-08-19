@@ -42,38 +42,14 @@ export default async function TradePage() {
   const found = await fetchBoard();
   const now = Date.now();
 
-  // Depth and a defensible price, both. Either alone overstates it: a market
-  // with liquidity and no price refuses on `NO_REFERENCE`, and a price with no
-  // pool has nothing to fill against.
-  const tradable = found
-    ? found.board.assets.filter((a) => a.depth === 'ok' && a.publishable).length
-    : null;
-
   return (
     <>
-      <header className="mb-9 flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
-        <div>
-          <h1 className="text-title font-semibold tracking-tight">Trade</h1>
-          <p className="mt-2.5 max-w-[68ch] text-body text-dim">
-            You write the rules. The chain enforces them inside the trade itself, and no key of ours
-            can move your money.
-          </p>
-        </div>
-
-        {/* The reference marks the asset open or closed here. Ours marks how much
-            of the board could actually be filled — a truer version of the same
-            claim, and one this page can defend from a measurement. */}
-        {found && (
-          <span className="flex items-center gap-2 rounded-full border border-line bg-panel px-3.5 py-1">
-            <span
-              className={`h-1.5 w-1.5 rounded-full ${tradable ? 'bg-signal' : 'bg-caution'}`}
-              aria-hidden
-            />
-            <span className="font-mono text-[12.5px] whitespace-nowrap text-dim">
-              {tradable} of {found.board.assets.length} tradable
-            </span>
-          </span>
-        )}
+      <header className="mb-9">
+        <h1 className="text-title font-semibold tracking-tight">Trade</h1>
+        <p className="mt-2.5 max-w-[68ch] text-body text-dim">
+          You write the rules. The chain enforces them inside the trade itself, and no key of ours
+          can move your money.
+        </p>
       </header>
 
       <div className="grid gap-x-14 gap-y-11 lg:grid-cols-[minmax(0,1fr)_400px]">
