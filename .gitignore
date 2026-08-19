@@ -31,3 +31,9 @@ tsconfig.tsbuildinfo
 .claude/settings.local.json
 .vercel
 .env*.local
+
+# Design references. Screenshots of other people's sites, kept beside the work
+# while it is being matched. They are not assets: nothing on the page loads them,
+# `public/` would serve them from our own domain, and they are three megabytes of
+# somebody else's art in a public repo.
+public/Landing reference/
