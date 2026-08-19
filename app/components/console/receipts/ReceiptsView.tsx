@@ -5,6 +5,7 @@ import { shortfallMeasured } from '@/src/abi';
 import type { ViewReceipt } from '@/src/receipts-view';
 import { hasEvidence } from '@/src/receipts-view';
 import { ChevronMark, GridMark, RowsMark, SearchMark } from '../marks';
+import { Pagination } from '../Pagination';
 import { ReceiptCard } from './ReceiptCard';
 import { ReceiptsTable } from './ReceiptsTable';
 import { notionalOf } from './format';
@@ -40,11 +41,19 @@ const SORTS: { id: Sort; label: string }[] = [
   { id: 'notional', label: 'Largest first' },
 ];
 
+/**
+ * Sixteen: four rows of four at the widest breakpoint, and a whole screen at
+ * every narrower one. Chosen against the grid rather than as a round number, so
+ * a page never ends on a row of one.
+ */
+const PAGE_SIZE = 16;
+
 export function ReceiptsView({ receipts }: { receipts: ViewReceipt[] }) {
   const [view, setView] = useState<View>('grid');
   const [filter, setFilter] = useState<Filter>('all');
   const [sort, setSort] = useState<Sort>('recent');
   const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
 
   const shown = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -80,6 +89,18 @@ export function ReceiptsView({ receipts }: { receipts: ViewReceipt[] }) {
     });
   }, [receipts, filter, query, sort]);
 
+  // Any change to what is being shown puts the reader back at the start of it.
+  // Staying on page three of a list that just became one page long renders an
+  // empty grid over a filter that matched things.
+  const pages = Math.max(1, Math.ceil(shown.length / PAGE_SIZE));
+  const current = Math.min(page, pages);
+  const visible = shown.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
+
+  const change = <T,>(set: (v: T) => void) => (value: T) => {
+    set(value);
+    setPage(1);
+  };
+
   return (
     <>
       <div className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-3">
@@ -88,7 +109,7 @@ export function ReceiptsView({ receipts }: { receipts: ViewReceipt[] }) {
           <SearchMark className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-faint" />
           <input
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => change(setQuery)(e.target.value)}
             placeholder="Search ticker, receipt or hash"
             spellCheck={false}
             className="w-[19rem] rounded-lg border border-line py-2 pr-3 pl-9 text-data outline-none placeholder:text-faint focus:border-signal-deep"
@@ -100,7 +121,7 @@ export function ReceiptsView({ receipts }: { receipts: ViewReceipt[] }) {
             <button
               key={f.id}
               type="button"
-              onClick={() => setFilter(f.id)}
+              onClick={() => change(setFilter)(f.id)}
               aria-pressed={filter === f.id}
               className={`rounded-lg px-3 py-2 text-data transition-colors duration-200 ${
                 filter === f.id ? 'bg-raised font-semibold text-ink' : 'text-dim hover:text-ink'
@@ -129,7 +150,7 @@ export function ReceiptsView({ receipts }: { receipts: ViewReceipt[] }) {
             <span className="sr-only">Sort</span>
             <select
               value={sort}
-              onChange={(e) => setSort(e.target.value as Sort)}
+              onChange={(e) => change(setSort)(e.target.value as Sort)}
               className="appearance-none rounded-lg border border-line bg-ground py-2 pr-8 pl-3 text-data text-ink outline-none focus:border-signal-deep"
             >
               {SORTS.map((s) => (
@@ -149,14 +170,26 @@ export function ReceiptsView({ receipts }: { receipts: ViewReceipt[] }) {
         <p className="rounded-xl border border-line bg-panel px-4 py-6 text-data text-dim">
           No receipt matches that. {receipts.length} have settled.
         </p>
-      ) : view === 'grid' ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-          {shown.map((r) => (
-            <ReceiptCard key={r.id} receipt={r} />
-          ))}
-        </div>
       ) : (
-        <ReceiptsTable receipts={shown} />
+        <>
+          {view === 'grid' ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+              {visible.map((r) => (
+                <ReceiptCard key={r.id} receipt={r} />
+              ))}
+            </div>
+          ) : (
+            <ReceiptsTable receipts={visible} />
+          )}
+
+          <Pagination
+            page={current}
+            pageSize={PAGE_SIZE}
+            total={shown.length}
+            onPage={setPage}
+            noun="receipts"
+          />
+        </>
       )}
     </>
   );

@@ -5638,3 +5638,27 @@ A thesis has no page of its own. Everything it can say fits on its row in the `T
 its one action — following the basket — lives on the detail of any receipt that executed it, where
 the fill that proves it sits beside it. A third route would have been a page whose whole content
 was a link to another page.
+
+**Amended the same day, on two counts of preparing for a size we have not reached.**
+
+**Sixteen per page, with a real page bar.** Twenty receipts fit on one screen and four hundred do
+not, and the version that scrolls forever is pleasant only while the number is small.
+`app/components/console/Pagination.tsx` is generic so `/assets` can take it later. Sixteen is four
+rows of four at the widest breakpoint, chosen against the grid rather than as a round number, so a
+page never ends on a row of one. Any change to the filter, the sort or the query resets to page one:
+staying on page three of a list that just became one page long renders an empty grid over a filter
+that matched things.
+
+The sequence is unit-tested rather than eyeballed, because the case it exists for cannot be seen on
+screen today. Those tests immediately caught a defect the current data never could: at eight pages
+the bar drew an ellipsis over page **7 alone**, hiding one number behind a mark nobody can click. A
+gap of exactly one is now drawn as that number.
+
+**A thesis is a row across, not a block down.** Three theses already ran most of a screen stacked;
+thirty would run ten. The four things a thesis says — who and when, what it held, what it did, where
+the proof is — are independent, so they sit in four columns and the row is as tall as its tallest
+basket. It collapses to the stack below `lg`, where four columns would be four words wide.
+
+**And one misread colour.** A receipt with no evidence hash painted its shortfall note red, so a
+card reading `0 bps · against fair value` said the number was bad. The number is fine; the record of
+it is missing. The red belongs on `no evidence` alone, which is where it now is.

@@ -56,7 +56,11 @@ export const TONE: Record<Tone, { tint: string; text: string }> = {
   clean: { tint: 'bg-signal/6', text: 'text-signal' },
   wide: { tint: 'bg-caution/6', text: 'text-caution' },
   unmeasured: { tint: 'bg-caution/6', text: 'text-caution' },
-  unaudited: { tint: 'bg-refuse/6', text: 'text-refuse' },
+  // The note describes the shortfall, and on an unaudited receipt the shortfall
+  // is not what is wrong with it. Painting "against fair value" red said the
+  // number was bad when the number is fine and the record of it is missing --
+  // the red belongs on "no evidence" alone, which is where it now is.
+  unaudited: { tint: 'bg-refuse/6', text: 'text-dim' },
 };
 
 /**

@@ -16,7 +16,7 @@ colliding. `06-assessment.md` is the honest read on whether this is a business.
 ```bash
 cd /Users/mac/Desktop/okxai
 set -a && source .env && set +a     # PRIVATE_KEY, GEMINI_API_KEY, CASH
-pnpm typecheck && pnpm test         # expect: clean, 287 unit tests, then 106 passed
+pnpm typecheck && pnpm test         # expect: clean, 293 unit tests, then 106 passed
 git status --short                  # expect: clean; docs/ is tracked now, not ignored
 pnpm dev                            # the web app, port 3000 (falls back if taken)
 ```
@@ -798,7 +798,7 @@ the `sessionStorage` hand-off, so arriving at `/trade` from a published thesis �
 produces a follow — the fill panel's follow banner never rendered, while the thesis hash still rode
 along on the fill.
 
-`pnpm typecheck` clean, 287 unit tests pass, `pnpm build` clean, `/trade` now server-rendered per
+`pnpm typecheck` clean, 293 unit tests pass, `pnpm build` clean, `/trade` now server-rendered per
 request. Nav and footer untouched.
 
 **2026-08-18 (twenty-fourth)** — **the worker's price history is in the repo, and the
