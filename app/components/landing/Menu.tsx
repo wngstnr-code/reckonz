@@ -17,6 +17,14 @@ import { RollingLabel } from './RollingLabel';
  * meant to arrive. Building a section is then one line here rather than a
  * search for wherever the menu lives.
  *
+ * ## And it holds only what the bar does not
+ *
+ * `Launch app` was in here as well as in the pill beside this button, which is
+ * a page offering the same door twice within an inch of itself. The bar's is
+ * the one that stays: it is visible without being opened, and it is the only
+ * entry on the landing page that leaves the landing page. What is left in here
+ * is the page's own sections — which is what a reader opens a menu for.
+ *
  * ## The dots
  *
  * They turn a quarter on hover. The reference's do the same, and it is a better
@@ -55,13 +63,12 @@ interface Section {
 const SECTIONS: Section[] = [
   { href: '/landing' as Route, label: 'Home' },
   { href: '#what-it-does' as Route, label: 'What it does' },
-  { href: '/assets' as Route, label: 'Launch app' },
+  { href: '#how-it-works' as Route, label: 'How it works' },
 
-  /* Waiting on their sections, in the order they are planned. Each becomes one
-     line above the moment the anchor it names exists on the page:
+  /* Waiting on its section, and it becomes one line above the moment the
+     anchor it names exists on the page:
 
-       { href: '#how-it-works' as Route, label: 'How it works' },
-       { href: '#the-record'   as Route, label: 'The record' },
+       { href: '#the-record' as Route, label: 'The record' },
   */
 ];
 
