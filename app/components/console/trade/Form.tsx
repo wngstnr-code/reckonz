@@ -41,6 +41,7 @@ export function Field({
   hint,
   placeholder,
   width = 'flex-1',
+  onGround = false,
 }: {
   label: string;
   value: string;
@@ -50,10 +51,21 @@ export function Field({
   placeholder?: string;
   /** A Tailwind width class. Addresses want more room than a basis-point cap. */
   width?: string;
+  /**
+   * Set when the field sits on the page rather than inside a card.
+   *
+   * `well` is white on light, which is the point inside a grey card and
+   * invisible on the page's own white: the fields on `/idea` read as text
+   * sitting in space, with nothing to say they could be typed into. A border
+   * gives the edge the surface cannot.
+   */
+  onGround?: boolean;
 }) {
   return (
     <label
-      className={`flex min-w-[8rem] flex-col rounded-xl bg-well px-3.5 py-2.5 focus-within:ring-1 focus-within:ring-ink/25 ${width}`}
+      className={`flex min-w-[8rem] flex-col rounded-xl px-3.5 py-2.5 focus-within:ring-1 focus-within:ring-ink/25 ${
+        onGround ? 'border border-line bg-panel' : 'bg-well'
+      } ${width}`}
     >
       <span className="text-meta leading-tight text-dim">{label}</span>
       <span className="mt-1.5 flex items-baseline gap-1.5">

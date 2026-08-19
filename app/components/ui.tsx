@@ -63,9 +63,25 @@ export function Note({ children }: { children: ReactNode }) {
   return <p className="mb-4 max-w-[68ch] text-meta leading-relaxed text-dim">{children}</p>;
 }
 
+/**
+ * A verdict, and only a refusal wears a box.
+ *
+ * `ok` is the ordinary answer and the one most rows carry, so a tinted pill on
+ * every one of them becomes a texture rather than a mark. Bare green text says
+ * the same thing and lets the exceptions be the things that stand out, which is
+ * what `docs/09-design.md` asks of this palette. The same call was made on the
+ * trade card's ALLOW before this was shared.
+ */
 export function Pill({ tone, children }: { tone: 'ok' | 'no' | 'warn'; children: ReactNode }) {
+  if (tone === 'ok') {
+    return (
+      <span className="font-mono text-micro tracking-normal whitespace-nowrap normal-case text-signal">
+        {children}
+      </span>
+    );
+  }
+
   const tones = {
-    ok: 'text-signal border-signal-deep bg-signal/6',
     no: 'text-refuse border-refuse/40 bg-refuse/6',
     warn: 'text-caution border-caution/40 bg-caution/6',
   } as const;

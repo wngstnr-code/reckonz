@@ -36,22 +36,19 @@ export function RunTimeline({ state }: { state: RunState }) {
         return (
           <li
             key={s.id}
-            className="flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-line/60 py-3 last:border-b-0"
+            className={`-mx-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border-b border-line/60 px-3 py-3 transition-colors duration-300 last:border-b-0 ${
+              status === 'active' ? 'border-transparent bg-panel' : ''
+            }`}
           >
-            <span className="flex w-32 shrink-0 items-baseline gap-2.5">
-              <span
-                className={`h-1.5 w-1.5 shrink-0 translate-y-[-1px] rounded-full ${
-                  status === 'active'
-                    ? 'animate-breathe bg-caution'
-                    : status === 'done'
-                      ? 'bg-signal'
-                      : 'bg-faint'
-                }`}
-                aria-hidden
-              />
+            <span className="flex w-32 shrink-0 items-center gap-2.5">
+              <Mark status={status} />
               <span
                 className={`font-mono text-meta ${
-                  status === 'idle' ? 'text-faint' : 'text-ink'
+                  status === 'idle'
+                    ? 'text-faint'
+                    : status === 'active'
+                      ? 'font-semibold text-ink'
+                      : 'text-ink'
                 }`}
               >
                 {s.title}
@@ -147,4 +144,55 @@ function read(message: string): { headline: string; transient: boolean } {
     };
   }
   return { headline: 'The run did not finish. What came back is below.', transient: true };
+}
+
+/**
+ * Three states, three shapes.
+ *
+ * They were one 6px dot in three colours, and a breathing ochre pip is not
+ * enough to find on a page during a two-minute wait -- the reader has to hunt
+ * for which row is moving. Shape carries it now and colour only reinforces:
+ * an empty ring has not started, a turning arc is working, a tick is finished.
+ * That also survives being looked at by someone who cannot separate the greens
+ * and ambers, which the dot never did.
+ */
+function Mark({ status }: { status: 'idle' | 'active' | 'done' }) {
+  if (status === 'done') {
+    return (
+      <svg viewBox="0 0 16 16" className="h-4 w-4 shrink-0 text-signal" aria-hidden>
+        <path
+          d="M3.5 8.5l3 3 6-6.5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+
+  if (status === 'active') {
+    return (
+      <svg viewBox="0 0 16 16" className="h-4 w-4 shrink-0 animate-spin text-caution" aria-hidden>
+        <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeWidth={2} opacity={0.25} />
+        {/* A quarter turn of the same ring, so the motion is unmistakable at
+            this size where a pulse is not. */}
+        <path
+          d="M8 2a6 6 0 016 6"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+        />
+      </svg>
+    );
+  }
+
+  return (
+    <span
+      className="h-4 w-4 shrink-0 rounded-full border-2 border-line"
+      aria-hidden
+    />
+  );
 }

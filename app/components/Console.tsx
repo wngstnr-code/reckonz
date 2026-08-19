@@ -7,7 +7,7 @@ import { Composer, EXAMPLES } from './console/idea/Composer';
 import { PublishThesis } from './console/idea/PublishThesis';
 import { RunError, RunTimeline } from './console/idea/RunTimeline';
 import { RunResult } from './console/idea/RunResult';
-import { useRun } from './useRun';
+import { STAGES, useRun } from './useRun';
 
 /**
  * The run, from a sentence to a verdict.
@@ -73,7 +73,16 @@ export function Console() {
       </Section>
 
       {started && (
-        <Section title="The run">
+        <Section
+          title="The run"
+          aside={
+            // Readable without checking six rows, which is the thing a wait
+            // most wants to know and the thing the rows are worst at saying.
+            <span className="font-mono text-meta tabular-nums text-dim">
+              {STAGES.filter((s) => state.status[s.id] === 'done').length} of {STAGES.length}
+            </span>
+          }
+        >
           <RunTimeline state={state} />
           {state.error && (
             <div className="mt-6">

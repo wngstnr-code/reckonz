@@ -13,7 +13,7 @@ export function ThesisPanel({ data }: { data: NonNullable<RunState['compile']> }
   const { thesis } = data;
   return (
     <Section title="The claim, made falsifiable">
-      <blockquote className="rounded-r-lg border-l-2 border-signal-deep bg-raised px-5 py-3.5 text-data">
+      <blockquote className="rounded-lg bg-raised px-5 py-3.5 text-data">
         {thesis.claim}
       </blockquote>
       <p className="mt-2 font-mono text-meta text-faint">
@@ -166,8 +166,12 @@ export function MandatePanel({ mandate }: { mandate: NonNullable<RunState['manda
         {mandate.described.map((t, i) => (
           <li
             key={i}
-            className={`rounded-r-lg border border-l-2 border-line bg-raised px-4 py-3 ${
-              t.unresolved.length ? 'border-l-caution' : 'border-l-signal-deep'
+            // A green edge on every trigger that resolved is decoration: it
+            // marks the ordinary case, which is most of them, so the colour
+            // carries no information and the row reads as generated. The
+            // caution edge stays, because that one marks the exception.
+            className={`rounded-lg border border-line bg-raised px-4 py-3 ${
+              t.unresolved.length ? 'border-l-2 border-l-caution' : ''
             }`}
           >
             <code className="font-mono text-meta text-ink">{t.text}</code>

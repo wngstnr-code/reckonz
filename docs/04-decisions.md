@@ -5801,3 +5801,28 @@ empty CID because there is nowhere to pin yet and a CID resolving to nothing is 
 
 I recommended deferring this two days from the deadline. Wangsit chose to include it, and it is
 built.
+
+**Amended after looking at it: four things that read as decoration or as nothing at all.**
+
+**The fields did not look like fields.** `Field` paints `bg-well`, which is white on light — the
+point inside a grey card on `/trade`, and invisible on the page's own white. Notional and Impact
+limit read as text sitting in space. They take a border and `bg-panel` on `/idea` via `onGround`,
+because the surface cannot carry the edge when it is the same colour as the ground.
+
+**The active stage was a 6px pip.** Three states in three colours, one of them a breathing ochre
+dot, and finding the moving row during a two-minute wait meant hunting for it. Three *shapes* now:
+an empty ring has not started, a turning arc is working, a tick is done. The active row is also a
+filled surface rather than a colour difference, and the section heading counts `n of 6` so progress
+is readable without checking six rows. It survives being read by someone who cannot separate the
+greens and ambers, which the dot never did.
+
+**`ALLOW` lost its box.** It is the ordinary answer that most rows carry, so a tinted pill on every
+one of them was texture rather than a mark. Bare green text says the same and lets the refusals be
+what stands out. `no` and `warn` keep their box: those are the exceptions and the box is the point.
+The same call was made on the trade card's verdict first, so this brings the shared `Pill` in line
+with it.
+
+**And the green edge came off the trigger cards and the claim quote.** A coloured rule down the side
+of every trigger that resolved marks the ordinary case, which is most of them, so the colour carried
+no information and the row read as generated. The caution edge stays, because that one marks the
+exception it is there for.

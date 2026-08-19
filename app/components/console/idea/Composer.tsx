@@ -88,6 +88,7 @@ export function Composer({
           value={String(notional)}
           onChange={(v) => onNotional(Number(v))}
           width="w-[11rem]"
+          onGround
         />
         <Field
           label="Impact limit"
@@ -95,6 +96,7 @@ export function Composer({
           value={String(maxImpact)}
           onChange={(v) => onMaxImpact(Number(v))}
           width="w-[11rem]"
+          onGround
         />
 
         <div className="ml-auto flex items-center gap-3">
