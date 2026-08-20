@@ -88,7 +88,7 @@ const ROWS = [
     {
       title: 'Idea',
       line: 'Write it in plain words; the chain answers with what it will refuse.',
-      src: undefined as string | undefined,
+      src: '/landing/idea.jpeg' as string | undefined,
     },
   ],
   [
