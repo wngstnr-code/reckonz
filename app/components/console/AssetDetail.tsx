@@ -303,7 +303,9 @@ export function AssetDetail({
           more than one you have to trust.
         </p>
 
-        <div className="mt-5 grid max-w-[46rem] gap-3">
+        {/* Wider than the prose above it on purpose: four columns and a
+            sentence do not fit in a measure set for reading paragraphs. */}
+        <div className="mt-5 grid max-w-[58rem] gap-3">
           <Part
             label="Staleness"
             value={asset.gapRiskParts.staleness}
@@ -446,7 +448,13 @@ function Part({ label, value, explain }: { label: string; value: number; explain
       <div className="w-14 shrink-0 text-right font-mono text-micro text-dim">
         {value === 0 ? 'none' : value.toFixed(2)}
       </div>
-      <div className="text-data text-faint">{explain}</div>
+      {/* `flex-1 min-w-0` is what keeps this beside the bar rather than under
+          it. The row wraps, and with the sentence at its natural width it was
+          the piece that did not fit and went to a line of its own. Allowed to
+          shrink below its content it stays on the row and wraps inside itself
+          instead, which is the same behaviour at every width rather than a
+          layout that changes shape at one particular one. */}
+      <div className="min-w-0 flex-1 text-data text-faint">{explain}</div>
     </div>
   );
 }
