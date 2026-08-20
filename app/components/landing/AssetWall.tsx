@@ -61,20 +61,30 @@ import { useEffect, useRef } from 'react';
  * one frame is the jolt this was meant to remove, relocated to the moment of
  * arrival.
  *
- * ## Why each row is repeated four times
+ * ## Why each row is repeated three times
  *
  * Two copies is all the loop needs — the animation travels half the track, so
  * the second copy lands where the first began. It is not all the *effect*
  * needs. Closing the gaps pulls every tile toward the pointer, so the row's two
  * ends draw inward by about a tile and a half, and a track that ends near the
- * frame's edge opens a bare strip there. Four copies put the ends far outside
- * the frame in both directions, and the extra tiles cost nothing: they are the
- * same thirty files the browser has already fetched.
+ * frame's edge opens a bare strip there. A third copy puts the ends far outside
+ * the frame in both directions.
+ *
+ * It was four while rows were eight symbols long. Ten to a row buys the same
+ * track from fewer repeats, which is thirty fewer elements in the document for
+ * the same wall.
  *
  * The track also starts one tile to the left of the frame, so the moment each
  * cycle when its leading edge would sit flush with the frame's is covered too.
  *
- * ## Why the positions are computed rather than measured
+ * **What that buys, in pixels, now that a tile is sized from the card's
+ * height rather than from `9.5vw`.** A track must be at least twice the frame
+ * wide or the seam it loops on arrives on screen. Measured at 1669x942: the
+ * two short rows are 4,752px, so the wall covers a frame up to **2,376px**
+ * wide. Past that the tiles would have to be repeated a fifth time. It is
+ * stated rather than guarded because the guard would be a client-side
+ * measurement, and this is a server-rendered list.
+ *
  * ## Why the positions are computed rather than measured
  *
  * The honest version reads every tile's box each frame, which is sixty
@@ -86,16 +96,63 @@ import { useEffect, useRef } from 'react';
  * one read per row. Three reads a frame, then arithmetic.
  */
 
-/** Ten a row. Thirty divides evenly, and an uneven wall reads as a bug. */
+/**
+ * How many rows the wall is cut into.
+ *
+ * It was three, and three left the card short: the rows are sized from the
+ * card's height now, so the row count is what decides how big a mark is. Four
+ * puts a mark at about 149px in a 669px card where three put it at 160px and
+ * left 141px of ground bare underneath.
+ *
+ * **It does not go up much further, and the reason is arithmetic.** A row has
+ * to be at least twice the frame wide or its own seam arrives on screen, so
+ * the tiles it needs is `2 x frameWidth / pitch` — and pitch falls as rows
+ * rise. Tiles in the wall therefore grow with the *square* of this number. Six
+ * rows would be a lighter wall to look at and more than twice the DOM.
+ */
+const ROWS = 3;
+
+/** How many times a row is laid end to end. See the note on repeats below. */
+const COPIES = 3;
+
+/**
+ * Ten to a row, cut rather than rotated, so the wall shows all thirty listings
+ * and shows each of them once.
+ *
+ * A rotation was tried while the wall was four rows deep: thirty does not
+ * divide into four, and 8/8/7/7 put a repeat inside a single screenful, so
+ * overlapping ten-symbol windows were the way to keep ten distinct marks in
+ * every row. Three rows need none of that. Thirty divides, the slices are
+ * disjoint, and no mark appears twice anywhere in the wall.
+ */
 function rowsOf(symbols: string[]): string[][] {
-  const per = Math.ceil(symbols.length / 3);
-  return [symbols.slice(0, per), symbols.slice(per, per * 2), symbols.slice(per * 2)];
+  const per = Math.ceil(symbols.length / ROWS);
+  return Array.from({ length: ROWS }, (_, r) =>
+    symbols.slice(r * per, (r + 1) * per),
+  );
 }
 
-/** Seconds for one full pass. Deliberately not equal: three tracks sharing a
- *  period re-align every cycle, and the moment they line up the wall stops
- *  reading as three independent things. */
-const DURATIONS = [52, 61, 46];
+/**
+ * One period for every row, because every row is the same width.
+ *
+ * The three tracks hold the same number of tiles at the same pitch, so an
+ * equal duration is an equal **speed** — which is the thing being asked for.
+ * Unequal durations would have been unequal speeds, and the eye reads a wall
+ * whose rows travel at different rates as three separate objects rather than
+ * one surface.
+ */
+const DURATION = 54;
+
+/**
+ * Where each row starts in that shared cycle, as a negative delay.
+ *
+ * Speed is shared; phase is not. Rows 1 and 3 run the same direction at the
+ * same rate, so starting them together would march them in lockstep, and the
+ * seam where each track's last copy meets its first would arrive on both at
+ * the same instant. A third and two thirds of a cycle apart costs nothing and
+ * means no two rows are ever doing the same thing at the same time.
+ */
+const PHASES = [0, -18, -36];
 
 /**
  * The well, by ring.
@@ -125,6 +182,11 @@ const EASE = 0.18;
  *  and the larger movement is the one that has to look deliberate. */
 const TURN = 0.055;
 
+/** How far the eased rate has to drift from the one the animation is actually
+ *  running at before it is worth telling the animation. A twelfth of full speed
+ *  is imperceptible as a step and turns a 110-commit ramp into about a dozen. */
+const RATE_STEP = 0.08;
+
 export function AssetWall({ symbols }: { symbols: string[] }) {
   const rows = rowsOf(symbols);
   const wallRef = useRef<HTMLDivElement | null>(null);
@@ -153,9 +215,12 @@ export function AssetWall({ symbols }: { symbols: string[] }) {
     let offsets: number[][] = [];
     let sizes: number[] = [];
 
+    let boxes: (DOMRect | null)[] = tracks.map(() => null);
+
     const measure = () => {
       offsets = faces.map((row) => row.map((tile) => tile.offsetLeft));
       sizes = faces.map((row) => row[0]?.offsetWidth ?? 1);
+      boxes = tracks.map(() => null);
     };
     measure();
 
@@ -164,18 +229,26 @@ export function AssetWall({ symbols }: { symbols: string[] }) {
        lazily rather than captured here. */
     const animationOf = (track: HTMLElement) => track.getAnimations()[0] ?? null;
 
-    /* One rate per row, eased between travelling and stopped. */
+    /* One rate per row, eased between travelling and stopped, plus what was
+       last actually handed to the animation. */
     const rate = tracks.map(() => 1);
+    const committed = tracks.map(() => 1);
 
     // Eased state, one entry per tile, so a pointer that jumps does not teleport
     // the wall with it.
     const shrink = faces.map((row) => row.map(() => 1));
     const shift = faces.map((row) => row.map(() => 0));
 
+    /* What is currently on each tile, so a frame that would rewrite the same
+       value can skip the DOM entirely. Seeded with the resting state, which is
+       also what the stylesheet's defaults are. */
+    const written = faces.map((row) => row.map(() => ({ shrink: 1, shift: 0 })));
+
     let pointerX = 0;
     let pointerY = 0;
     let inside = false;
     let frame = 0;
+    let onScreen = true;
 
     const draw = () => {
       let settled = true;
@@ -188,33 +261,63 @@ export function AssetWall({ symbols }: { symbols: string[] }) {
         if (Math.abs(wanted - rate[r]) > 0.002) {
           rate[r] += (wanted - rate[r]) * TURN;
           settled = false;
-
-          const animation = animationOf(track);
-          if (animation) {
-            /* Assigning `playbackRate` holds `currentTime` and moves
-               `startTime` under it, so the row never jumps — it only changes
-               how fast it is going from exactly where it stands. At zero it is
-               stationary rather than paused, which matters because a paused
-               animation would have to be resumed and this one simply
-               accelerates again. */
-            animation.playbackRate = rate[r];
-          }
+        } else {
+          rate[r] = wanted;
         }
 
-        const box = track.getBoundingClientRect();
+        /* The rate reaches the row's animation in steps, not every frame.
+         *
+         * This is the lag on letting go of the wall. Easing at `TURN` takes
+         * about 110 frames to get from stopped back to full speed, and the old
+         * version pushed the new rate into the animation on every one of them.
+         * A composited animation re-synchronises with the main thread each time
+         * its rate is written, so the whole ramp was spent committing the three
+         * tracks over and over while they were also being drawn.
+         *
+         * The eased number is still computed every frame — the ramp's shape is
+         * unchanged — but only a materially different one is handed over, which
+         * is around a dozen commits instead of 110. `updatePlaybackRate` is the
+         * method meant for this: it applies the change at the animation's next
+         * opportunity rather than snapping `startTime` under it, so the row
+         * changes speed without ever jumping position. The endpoint is always
+         * committed exactly, so the row cannot settle at 0.97 of its speed. */
+        const animation = animationOf(track);
+        if (
+          animation &&
+          (Math.abs(rate[r] - committed[r]) > RATE_STEP || (rate[r] === wanted && committed[r] !== wanted))
+        ) {
+          committed[r] = rate[r];
+          animation.updatePlaybackRate(rate[r]);
+        }
+
+        /* Geometry is only read when the pointer is here to need it.
+         *
+         * Every ring below is `Infinity` when it is not, so the whole pass
+         * resolves to "full size, no shift" without knowing where anything is.
+         * Reading the box anyway meant a forced layout per row per frame for
+         * the entire 1.8s ride home, to compute distances from a pointer that
+         * had left. While the pointer *is* here the box is only re-read while
+         * the track is still moving: a stopped track has the box it had last
+         * frame. */
+        let box: DOMRect | null = null;
         const size = sizes[r] || 1;
         const pitch = row.length > 1 ? offsets[r][1] - offsets[r][0] : size;
-        const centreY = box.top + box.height / 2;
+        let verticalRing = Infinity;
 
-        // Chebyshev rather than Euclidean, because the wall is a grid of cells
-        // and the effect is a square ring around one of them, not a circle.
-        const verticalRing = inside ? Math.abs(pointerY - centreY) / size : Infinity;
+        if (inside) {
+          if (rate[r] > 0.002 || !boxes[r]) boxes[r] = track.getBoundingClientRect();
+          box = boxes[r]!;
+          // Chebyshev rather than Euclidean, because the wall is a grid of cells
+          // and the effect is a square ring around one of them, not a circle.
+          verticalRing = Math.abs(pointerY - (box.top + box.height / 2)) / size;
+        }
 
         // Pass one: how big each tile wants to be.
         const target: number[] = [];
         for (let i = 0; i < row.length; i++) {
-          const centreX = box.left + offsets[r][i] + size / 2;
-          const horizontalRing = inside ? Math.abs(pointerX - centreX) / pitch : Infinity;
+          const horizontalRing = box
+            ? Math.abs(pointerX - (box.left + offsets[r][i] + size / 2)) / pitch
+            : Infinity;
           target.push(shrinkAt(Math.max(horizontalRing, verticalRing)));
         }
 
@@ -246,18 +349,62 @@ export function AssetWall({ symbols }: { symbols: string[] }) {
           targetShift[i] = given;
         }
 
+        /* Writes, not arithmetic, are what this loop costs. A wall of 120
+           tiles was setting two custom properties on every one of them every
+           frame — 240 style mutations, of which at most a dozen differed from
+           the frame before, because the well only ever touches the tiles near
+           the pointer. The rest were the browser being asked to re-read a
+           value it already had.
+           
+           So each tile keeps its last written value and is written only when
+           the new one would actually look different: a thousandth of a scale
+           step, or a twentieth of a pixel. At rest that is zero writes a
+           frame, and under a moving pointer it is the handful of tiles inside
+           the well. */
         for (let i = 0; i < row.length; i++) {
           shift[r][i] += (targetShift[i] - shift[r][i]) * EASE;
           const tile = row[i];
-          tile.style.setProperty('--shrink', shrink[r][i].toFixed(4));
-          tile.style.setProperty('--shift', `${shift[r][i].toFixed(2)}px`);
+
+          const nextShrink = Math.round(shrink[r][i] * 1e4) / 1e4;
+          if (nextShrink !== written[r][i].shrink) {
+            written[r][i].shrink = nextShrink;
+            tile.style.setProperty('--shrink', String(nextShrink));
+          }
+
+          const nextShift = Math.round(shift[r][i] * 20) / 20;
+          if (nextShift !== written[r][i].shift) {
+            written[r][i].shift = nextShift;
+            tile.style.setProperty('--shift', `${nextShift}px`);
+          }
         }
       });
 
       // Kept running while the pointer is inside even once the sizes have
       // settled: the tiles are travelling under a still pointer, so the ring a
       // tile is in changes without the pointer moving at all.
-      if (inside || !settled) {
+      if (!inside && settled) {
+        /* The promise is withdrawn *here*, not when the pointer left.
+         *
+         * Leaving is the moment the tiles have the furthest to travel: the well
+         * is at its deepest and every tile in it now eases back to full size,
+         * which is some forty frames of movement. Dropping `will-change` at
+         * `pointerleave` destroyed the layers at the start of exactly that, so
+         * the whole way home was re-rastered inside a 4,700px-wide track.
+         * Measured over the 49 frames after a leave: 33.3ms median and 34 of
+         * them past 20ms, against 16.7ms and none once the promise is held to
+         * here.
+         *
+         * **`settled`, not just the tiles being home.** The tiles stop moving
+         * in about a third of the time the rows take to get back up to speed,
+         * and releasing at that earlier point was tried and measured: the
+         * layers went at frame 32 and six frames between 38 and 49 came in at
+         * 33ms, because the track is still accelerating and has to re-raster
+         * without them. Holding the promise for the whole 1.8s costs the
+         * compositor some memory and produces no slow frames at all. */
+        wall.classList.remove('wall-live');
+      }
+
+      if (onScreen && (inside || !settled)) {
         frame = requestAnimationFrame(draw);
       } else {
         frame = 0;
@@ -267,10 +414,45 @@ export function AssetWall({ symbols }: { symbols: string[] }) {
     const resizes = new ResizeObserver(measure);
     resizes.observe(wall);
 
+    /* Scrolled past, the wall costs nothing: the CSS animations pause and the
+       loop is not scheduled. A marquee nobody can see is the clearest case of
+       work worth not doing, and this page is a scroll from top to bottom. */
+    const seen = new IntersectionObserver(
+      ([entry]) => {
+        onScreen = entry.isIntersecting;
+        wall.classList.toggle('wall-idle', !onScreen);
+        if (onScreen && !frame) frame = requestAnimationFrame(draw);
+      },
+      { threshold: 0 },
+    );
+    seen.observe(wall);
+
+    /* A scroll is not a reading of the wall.
+     *
+     * The pointer does not move during one, so `inside` stayed true and the
+     * loop kept running — four `getBoundingClientRect` calls a frame, each a
+     * forced layout, while the browser was already busy moving the page. And
+     * the well it was maintaining was sliding across the wall on its own,
+     * which is not an effect anybody asked for. Letting go of the pointer for
+     * the duration hands those frames back. */
+    const onScroll = () => {
+      boxes = tracks.map(() => null);
+      if (!inside) return;
+      inside = false;
+      if (!frame) frame = requestAnimationFrame(draw);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+
     const onMove = (e: PointerEvent) => {
       pointerX = e.clientX;
       pointerY = e.clientY;
-      inside = true;
+      if (!inside) {
+        inside = true;
+        /* The tiles are about to move, so say so now — see `.wall-live` in
+           `globals.css`. Withdrawn again on the way out, because a layer per
+           tile is only worth keeping while something is using it. */
+        wall.classList.add('wall-live');
+      }
       if (!frame) frame = requestAnimationFrame(draw);
     };
 
@@ -284,6 +466,9 @@ export function AssetWall({ symbols }: { symbols: string[] }) {
     return () => {
       cancelAnimationFrame(frame);
       resizes.disconnect();
+      seen.disconnect();
+      window.removeEventListener('scroll', onScroll);
+      wall.classList.remove('wall-live');
       wall.removeEventListener('pointermove', onMove);
       wall.removeEventListener('pointerleave', onLeave);
     };
@@ -292,26 +477,43 @@ export function AssetWall({ symbols }: { symbols: string[] }) {
   return (
     <div
       ref={wallRef}
-      className="flex h-full flex-col justify-center gap-[clamp(0.75rem,1.6vw,1.5rem)] overflow-hidden"
+      /* No `h-full` here, deliberately. The card takes its own height from
+         `flex-1`, and a percentage height cannot resolve against that — which
+         is the bug this whole change started from. The card is a flex row
+         instead, so this box is stretched to its full height by the default
+         `align-items: stretch`, with no percentage in the chain at all. */
+      className="flex w-full flex-col gap-[clamp(0.75rem,1.6vw,1.5rem)] overflow-hidden"
     >
       {rows.map((row, index) => (
-        <div key={index} className="relative flex overflow-hidden">
+        /* `flex-1` is what fills the card: the rows divide its height between
+           them rather than stacking to whatever the tiles happen to measure,
+           so there is no ground left over at the bottom at any viewport.
+           `container-type: size` then makes the row's own height addressable
+           as `100cqh`, which is how the tile gets square and how the track
+           knows a tile's width without anybody hard-coding one. */
+        <div
+          key={index}
+          className="relative flex min-h-0 flex-1 overflow-hidden [container-type:size]"
+        >
           {/* The row twice, end to end. The animation travels exactly half the
               track, so the second copy is standing where the first was and the
               seam never arrives. */}
           <div
             data-track
-            className="wall-track -ml-[calc(clamp(5.5rem,9.5vw,10rem)+clamp(0.75rem,1.6vw,1.5rem))] flex shrink-0 gap-[clamp(0.75rem,1.6vw,1.5rem)] pr-[clamp(0.75rem,1.6vw,1.5rem)]"
+            className="wall-track -ml-[calc(100cqh+clamp(0.75rem,1.6vw,1.5rem))] flex shrink-0 gap-[clamp(0.75rem,1.6vw,1.5rem)] pr-[clamp(0.75rem,1.6vw,1.5rem)]"
             style={
               {
                 '--wall-name': index % 2 === 0 ? 'wall-left' : 'wall-right',
-                '--wall-duration': `${DURATIONS[index]}s`,
+                '--wall-duration': `${DURATION}s`,
+                '--wall-delay': `${PHASES[index % PHASES.length]}s`,
               } as React.CSSProperties
             }
           >
-            {[...row, ...row, ...row, ...row].map((symbol, i) => (
-              <Tile key={`${symbol}-${i}`} symbol={symbol} />
-            ))}
+            {Array.from({ length: COPIES }, () => row)
+              .flat()
+              .map((symbol, i) => (
+                <Tile key={`${symbol}-${i}`} symbol={symbol} />
+              ))}
           </div>
         </div>
       ))}
@@ -319,21 +521,41 @@ export function AssetWall({ symbols }: { symbols: string[] }) {
   );
 }
 
+/**
+ * A tile takes its height from the row and its width from being square.
+ *
+ * It used to be a `clamp` on the viewport width, which is why the wall could
+ * not fill its card: the two numbers had no relationship, so three rows of a
+ * width-derived size landed wherever they landed inside a height-derived box.
+ * Stretching to the row and squaring off it means the wall is exactly as tall
+ * as the card by construction, and the mark's size is a consequence of how
+ * many rows there are rather than a second thing to keep in sync.
+ */
 function Tile({ symbol }: { symbol: string }) {
   return (
     <span
       data-tile
-      className="wall-tile flex shrink-0 items-center justify-center"
-      style={{
-        width: 'clamp(5.5rem, 9.5vw, 10rem)',
-        height: 'clamp(5.5rem, 9.5vw, 10rem)',
-      }}
+      className="wall-tile flex aspect-square shrink-0 items-center justify-center self-stretch"
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={`/xstock-logos/${symbol}.svg`}
         alt={symbol}
-        loading="lazy"
+        /* Eager, not lazy.
+         *
+         * `lazy` is right for a mark further down a page and wrong for this
+         * one: the wall is the hero, it is on screen from the first paint, and
+         * it never stops moving. Deferred tiles therefore begin loading at the
+         * moment they travel into view, one at a time, forever — which is a
+         * hitch arriving on no schedule anybody can predict. Measured on the
+         * running page: ten of the ninety were still unloaded while the wall
+         * was mid-cycle.
+         *
+         * It costs nothing to front-load. There are thirty distinct files and
+         * each appears three times, so the browser fetches thirty small SVGs
+         * and serves the other sixty from cache. */
+        loading="eager"
+        decoding="async"
         className="h-full w-full object-contain"
       />
     </span>

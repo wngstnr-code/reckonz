@@ -30,7 +30,14 @@ export function Hero({ symbols }: { symbols: string[] }) {
           actually produced: at `34ch` this face fitted about 48 characters to a
           line, so `ch` here buys roughly 1.4 characters — and three lines of a
           110-character sentence needs 37 of them, which lands at 28. */}
-      <p className="ml-[calc(16rem+4vw)] max-w-[28ch] text-[clamp(1.6rem,2.5vw,2.6rem)] leading-[1.18] font-medium tracking-[-0.015em] text-ink">
+      {/* `data-hero-claim` is what `TopBar` watches. The bar takes a background
+          only once this sentence has left the window, so the mark is the one
+          finding the element rather than either component knowing the other's
+          layout. */}
+      <p
+        data-hero-claim
+        className="ml-[calc(16rem+4vw)] max-w-[28ch] text-[clamp(1.6rem,2.5vw,2.6rem)] leading-[1.18] font-medium tracking-[-0.015em] text-ink"
+      >
         Thirty stocks are tokenised on X Layer. We measure what each market can
         take at your size, and refuse the rest.
       </p>
@@ -39,7 +46,14 @@ export function Hero({ symbols }: { symbols: string[] }) {
           this surface is not part of the light/dark ladder. It is the ground the
           tiles are lit against, and a ground that turns white in light mode
           takes the light with it. */}
-      <div className="mt-[clamp(2rem,5vh,3.5rem)] min-h-[22rem] flex-1 overflow-hidden rounded-[2rem] bg-[#0b0d10]">
+      {/* `flex` is load-bearing. This box takes its height from `flex-1`, and a
+          block box computed that way does not give a percentage-height child
+          anything to resolve against: `AssetWall`'s `h-full` fell back to auto
+          and the wall sat at its content height, leaving 141px of dead ground
+          under the last row at 1710x957. As a flex container it stretches the
+          wall to the full card instead, and the wall divides that height
+          between its rows. */}
+      <div className="mt-[clamp(2rem,5vh,3.5rem)] flex min-h-[22rem] flex-1 overflow-hidden rounded-[2rem] bg-[#0b0d10]">
         <AssetWall symbols={symbols} />
       </div>
 
