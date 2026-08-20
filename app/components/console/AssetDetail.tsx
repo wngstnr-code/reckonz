@@ -6,11 +6,15 @@ import { TONE, freshness, pct, usd, verdictOf } from './board-format';
 /**
  * Everything the board knows about one asset, in the order a reader needs it.
  *
- * **The ladder is the centrepiece, as a table.** The card draws it as a curve
- * because a shape is quicker to read than eight rows; here the eight rows are
- * the point. A curve says "it gets worse"; the table says at which dollar it
- * stops being allowed and by how many basis points it missed, which is the only
- * form of that fact anyone can act on.
+ * **The page opens on the curve and the four readings, side by side.** They
+ * were stacked — figures across the top, curve buried a screen down inside the
+ * ladder — which put the only picture below the fold and left the numbers with
+ * nothing to be read against. Each answers the other now.
+ *
+ * **The ladder is still the centrepiece, as a table.** A curve says "it gets
+ * worse"; the table says at which dollar it stops being allowed and by how many
+ * basis points it missed, which is the only form of that fact anyone can act
+ * on. So the shape opens the page and the rows carry it.
  *
  * **Capacity is shown at all four limits, not just the mandate's.** How much
  * this market can take is not one number, it is a function of how much slippage
@@ -45,6 +49,13 @@ export function AssetDetail({
   const foundTheEdge = Boolean(lastAllowed && finalRung && lastAllowed !== finalRung);
   const measuredCapacity = asset.capacityUsdg[limit];
 
+  /* The curve takes its colour from the verdict on the smallest size quoted:
+     if this market refuses even that, the shape should say so before anybody
+     reads a row. Guarded because the ladder can be empty, and it now sits above
+     the section that used to prove it was not. */
+  const firstRung = asset.ladder[0];
+  const curveTone = firstRung ? TONE[verdictOf(asset, firstRung.sizeUsdg).kind].curve : '';
+
   return (
     <article className="mt-6">
       <header className="flex flex-wrap items-center gap-4">
@@ -71,37 +82,76 @@ export function AssetDetail({
         </div>
       </header>
 
-      {/* ---------------------------------------------------------- price */}
+      {/* ------------------------------------------------- depth, and price */}
 
-      <section className="mt-9 flex flex-wrap gap-x-14 gap-y-6 border-t border-line pt-7">
-        {asset.publishable && asset.fairValue !== null ? (
-          <Figure label="Fair value" value={`$${asset.fairValue.toFixed(2)}`}>
-            from {asset.reference ?? 'the issuer'}, ±{pct(asset.confidenceBps)}
+      {/* Two panels on one row: the shape on the left, the readings on the right.
+       *
+       * The four used to run across the top as a rule of figures, with the
+       * curve buried a screen further down inside the ladder. That put the
+       * page's only picture below the fold and left the numbers with nothing to
+       * be read against. Side by side each one answers the other — the curve is
+       * what those readings look like as a size grows, and the readings are the
+       * scale the curve has no room to print.
+       *
+       * The prose that explains the ladder stays underneath both, because it is
+       * about the table rather than about either of these.
+       *
+       * A grid rather than flex: the left column has to be able to shrink
+       * without the right one giving up its two columns, and `minmax(0,…)` is
+       * what stops a wide curve from refusing to.
+       */}
+      <section className="mt-9 grid gap-5 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+        <div className="rounded-2xl border border-line bg-panel p-6">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+            <h2 className="font-mono text-micro text-faint uppercase">Price impact against size</h2>
+            <span className="font-mono text-micro text-faint">limit {limit}bp</span>
+          </div>
+
+          {/* Tall enough to be looked at rather than glanced past. It was 96px,
+              which is a sparkline's height — right in a table row and wrong for
+              the one drawing on the page. `DepthCurve` handles a ladder too
+              short to draw, so nothing here has to. */}
+          <DepthCurve
+            asset={asset}
+            limitBps={limit}
+            interactive
+            className={`mt-6 h-[clamp(10rem,24vw,16rem)] w-full ${curveTone}`}
+          />
+        </div>
+
+        {/* Two by two, and `content-start` so the pairs sit against the top of
+            the panel rather than spreading to match the curve beside them. Four
+            figures stretched down a tall box read as a list with gaps in it. */}
+        <div className="grid grid-cols-2 content-start gap-x-8 gap-y-7 rounded-2xl border border-line bg-panel p-6">
+          {asset.publishable && asset.fairValue !== null ? (
+            <Figure label="Fair value" value={`${asset.fairValue.toFixed(2)}`}>
+              from {asset.reference ?? 'the issuer'}, ±{pct(asset.confidenceBps)}
+            </Figure>
+          ) : (
+            <Figure label="Fair value" value="withheld" tone="text-caution">
+              no number we can defend
+            </Figure>
+          )}
+
+          <Figure
+            label="On chain"
+            value={asset.onchainPrice === null ? 'not read' : `${asset.onchainPrice.toFixed(2)}`}
+          >
+            {asset.basisBps === null
+              ? 'nothing to compare'
+              : `${pct(asset.basisBps)} from fair value`}
           </Figure>
-        ) : (
-          <Figure label="Fair value" value="withheld" tone="text-caution">
-            no number we can defend
+
+          <Figure label="Gap risk" value={String(asset.gapRisk)} tone={gapTone(asset.gapRisk)}>
+            out of 100, while the market is shut
           </Figure>
-        )}
 
-        <Figure
-          label="On chain"
-          value={asset.onchainPrice === null ? 'not read' : `$${asset.onchainPrice.toFixed(2)}`}
-        >
-          {asset.basisBps === null
-            ? 'nothing to compare'
-            : `${pct(asset.basisBps)} from fair value`}
-        </Figure>
-
-        <Figure label="Gap risk" value={String(asset.gapRisk)} tone={gapTone(asset.gapRisk)}>
-          out of 100, while the market is shut
-        </Figure>
-
-        <Figure label="Session" value={asset.state}>
-          {asset.sharesPerToken === 1
-            ? 'one share per token'
-            : `${asset.sharesPerToken} shares per token`}
-        </Figure>
+          <Figure label="Session" value={asset.state}>
+            {asset.sharesPerToken === 1
+              ? 'one share per token'
+              : `${asset.sharesPerToken} shares per token`}
+          </Figure>
+        </div>
       </section>
 
       {/* --------------------------------------------------------- ladder */}
@@ -120,13 +170,6 @@ export function AssetDetail({
           </p>
         ) : (
           <>
-            <DepthCurve
-              asset={asset}
-              limitBps={limit}
-              interactive
-              className={`mt-5 h-24 w-full ${TONE[verdictOf(asset, asset.ladder[0].sizeUsdg).kind].curve}`}
-            />
-
             <div className="mt-5 overflow-x-auto">
               <table className="w-full min-w-[34rem] border-collapse text-left">
                 <thead>
