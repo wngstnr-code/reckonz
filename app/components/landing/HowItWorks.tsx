@@ -83,7 +83,7 @@ const ROWS = [
     {
       title: 'Assets',
       line: 'Thirty tokenised stocks, each sized against the depth that has to absorb it.',
-      src: undefined as string | undefined,
+      src: '/landing/assets.jpeg' as string | undefined,
     },
     {
       title: 'Idea',
