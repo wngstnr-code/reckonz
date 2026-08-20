@@ -141,7 +141,7 @@ export function BoardView({ board, sizeUsdg }: { board: Board; sizeUsdg: number 
           ))}
         </div>
       ) : (
-        <BoardTable assets={shown} sizeUsdg={sizeUsdg} />
+        <BoardTable assets={shown} sizeUsdg={sizeUsdg} gapRiskLimit={board.mandate.maxGapRisk} />
       )}
     </>
   );
