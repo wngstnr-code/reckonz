@@ -138,17 +138,21 @@ video, dan ketiganya harus sama.
 
 ### Gas dan dana
 
-Adegan fill menghabiskan uang sungguhan. Anggarannya:
+Video ini menulis ke mainnet **dua kali**, bukan sekali: `publishThesis` di adegan 5 dan `execute`
+di adegan 6. Anggarannya:
 
 - **0.5 USDG** untuk belinya, ukuran yang dipakai semua fill sungguhan sebelumnya.
-- **OKB mainnet** untuk gas di deployer, plus margin untuk satu retry. Baca saldonya dari chain,
-  jangan dari `05-status.md`, yang basi begitu ditulis.
+- **OKB mainnet** untuk gas di deployer, untuk dua transaksi, plus margin untuk satu retry di
+  masing-masing. Baca saldonya dari chain, jangan dari `05-status.md`, yang basi begitu ditulis.
+- Publish tesisnya murah tapi tidak gratis, dan dia ada di jalur kritis: tanpa id, tombol **Take it
+  to the trade page** tidak pernah muncul dan adegan 6 tidak punya jalan masuk.
 - Jangan sentuh publisher. Jangan menjalankan publish untuk video; gas publisher itu sumber daya
   yang langka dan worker membutuhkannya.
 
 Kalau USDG kurang, rekam adegan fill di **testnet** dan katakan itu di layar. Testnet tidak bisa
-swap (factory v3 tidak punya kode di sana), jadi yang jujur bisa direkam di 1952 adalah mandate,
-trigger, dan breaker, bukan fill-nya. Satu fill mainnet sungguhan lebih baik daripada tiga layar
+swap (factory v3 tidak punya kode di sana), jadi yang jujur bisa direkam di 1952 adalah publish
+tesis, mandate, trigger, dan breaker, bukan fill-nya. `ThesisRegistry` ada di 1952, jadi separuh
+serah terima itu tetap nyata di sana. Satu fill mainnet sungguhan lebih baik daripada tiga layar
 testnet.
 
 ### Desktop
@@ -176,12 +180,21 @@ wordmark dan tombol di top bar dua-duanya menuju ke sana. Itu juga urutan berarg
 baik. Papan itu menegakkan dulu pasarnya dan betapa sedikit isinya, lalu tiap klaim sesudahnya
 mendarat di atas angka yang sudah dilihat penonton.
 
-**Perpindahannya lewat nav console, dan itu satu-satunya yang ada.** Nav-nya berisi Assets, Idea,
-Receipts, Trade dan muncul di keempat halaman, jadi paruh console video ini satu sesi menerus,
-bukan montase empat screenshot. Yang **tidak** ada: CTA khusus dari `/idea` ke `/trade`, dan tautan
-dari hasil fill ke `/receipts`. Hasil fill menaut ke explorer. Jangan menaskahkan tombol yang tidak
-ada di layar; kalau kita mau serah terima yang lebih tegas dari run ke trade, itu tiket FE, bukan
-editan video.
+**Perpindahan Idea ke Trade adalah serah terima sungguhan, bukan sekadar klik nav.** Setelah run
+selesai, `PublishThesis` muncul di bawah hasilnya dengan dua tombol berurutan. **Publish this
+thesis** menandatangani dan menaruh hash klaimnya di `ThesisRegistry`. Baru setelah id-nya ada,
+**Take it to the trade page** muncul: dia memuat simbol basketnya, mempersenjatai fill dengan hash
+itu, lalu `router.push('/trade')`.
+
+Itu bukan navigasi, itu argumennya sendiri berjalan di depan kamera. Klaimnya naik ke chain
+**sebelum** ada yang ditandatangani untuk ditukar, dan hash yang dibawanya itulah yang nanti
+membuat receipt bisa dicocokkan balik ke penalarannya. Adegan `/receipts` di akhir video menagih
+janji yang dibuat di sini.
+
+Dua perpindahan lain lewat nav console, yang berisi Assets, Idea, Receipts, Trade dan muncul di
+keempat halaman: landing ke `/assets` lewat tombol di top bar, lalu `/trade` ke `/receipts`. Yang
+memang **tidak** ada adalah tautan dari hasil fill ke `/receipts`; fill yang settle menaut ke
+explorer. Jadi langkah terakhir itu nav bar, dan jangan menaskahkannya sebagai tombol.
 
 **`/assets/[symbol]` sengaja tidak masuk.** Halaman itu bagus dan membuktikan verdict di papan
 memang diukur, tapi masuk ke sana berarti turun satu level lalu naik lagi, satu-satunya gerakan
@@ -267,7 +280,7 @@ penonton tidak yakin apakah sisa videonya masih situs yang sama.]
 
 ---
 
-### Adegan 4. Papannya, dan keruntuhannya (0:46 sampai 1:14)
+### Adegan 4. Papannya, dan keruntuhannya (0:46 sampai 1:08)
 
 **Layar.** `/assets` waktu termuat, membawa angka bukan spinner. Tampilan tabel. Lalu geser slider
 ukuran melewati anak tangga terukurnya: $25, $1,000, $5,000, $10,000. Biarkan kolom verdict runtuh
@@ -285,11 +298,10 @@ di nav.
 
 ---
 
-### Adegan 5. Tesisnya, dan enam stage (1:14 sampai 1:50)
+### Adegan 5. Tesisnya, enam stage, dan klaim yang naik ke chain (1:08 sampai 1:52)
 
-**Layar.** `/idea` termuat dari klik di adegan sebelumnya. Ketik tesisnya dengan tangan,
-kecepatan normal. Pakai yang sudah
-terekam di `observations/showcase.json` supaya run-nya bisa direproduksi:
+**Layar.** `/idea` termuat dari klik di adegan sebelumnya. Ketik tesisnya dengan tangan, kecepatan
+normal. Pakai yang sudah terekam di `observations/showcase.json` supaya run-nya bisa direproduksi:
 
 > Stablecoin settlement volume keeps compounding onchain, so the issuers and the exchanges that
 > clear it capture more of the payments margin than the incumbent card networks do.
@@ -297,7 +309,19 @@ terekam di `observations/showcase.json` supaya run-nya bisa direproduksi:
 Tekan run. Enam stage muncul kelabu sebelum berjalan: compile, universe, allocate, triggers,
 capacity, guard. Biarkan compile dan universe berjalan real time, percepat bagian tengahnya 4x
 dengan badge menyala, lalu mendarat di stage capacity yang terbuka dengan notional yang ditolak di
-ukuran display. Lalu klik **Trade** di nav.
+ukuran display.
+
+Lalu turun ke `PublishThesis` di bawah hasilnya. **Publish this thesis**, tanda tangan di wallet,
+tunggu sampai id-nya kembali. Percepat penambangannya dengan badge. Begitu id-nya ada, **Take it to
+the trade page** muncul di bawah satu kalimat yang menyebut simbol apa saja yang akan dimuatnya.
+Klik tombol itu.
+
+**Sebelum merekam, cek tesisnya belum pernah dipublikasikan.** Hash-nya menutup basket yang
+dikompilasi, bukan kalimatnya, jadi tesis showcase kemungkinan besar sudah ada di registry dan
+panel akan menjawab *Already published as thesis #N*. Tombol Take it to the trade page tetap muncul
+di keadaan itu dan alurnya tetap jalan, tapi publish yang segar adalah frame yang lebih kuat. Kalau
+kamu memilih membiarkan keadaan itu, narasikan apa adanya: sebuah klaim hanya bisa dibuat sekali,
+dan itu memang intinya.
 
 **Narasi.**
 
@@ -310,15 +334,20 @@ ukuran display. Lalu klik **Trade** di nav.
 > And here is the cost of not doing that. Pushing the whole amount through in one shot would have
 > paid about a hundred and fifty three thousand dollars in price impact. The part that fits pays
 > under eight.
+> Now the claim goes on chain, before anything is traded against it. That is the order that matters.
+> Nobody can rewrite what they said they believed once the trade has gone badly.
+> And this hands the whole thing to the trade page, carrying that hash.
 
 [Keempat angka dari satu run. Lower third mengulanginya dalam teks, rata kanan, mono.]
 
 ---
 
-### Adegan 6. Fill-nya, dan tanda tangannya (1:50 sampai 2:30)
+### Adegan 6. Fill-nya, dan tanda tangannya (1:52 sampai 2:28)
 
-**Layar.** `/trade` termuat dari klik di adegan sebelumnya. Sambungkan wallet. Mandate-nya sudah
-hidup: satu dolar per trade, dua belas fill per dua puluh empat jam, empat aset yang diizinkan. Lalu kartu fill: quote, verdict guard,
+**Layar.** `/trade` termuat dari **Take it to the trade page**, sudah membawa basket tesisnya dan
+sudah dipersenjatai dengan hash-nya. Tunjukkan itu dulu, sebentar saja: halaman ini tidak dibuka
+kosong. Wallet-nya sudah tersambung dari publish di adegan sebelumnya. Mandate-nya sudah hidup:
+satu dolar per trade, dua belas fill per dua puluh empat jam, empat aset yang diizinkan. Lalu kartu fill: quote, verdict guard,
 approval Permit2, dialog tanda tangan, transaksinya. Potong waktu tunggu konfirmasi dan beri badge.
 Mendarat di receipt-nya dengan tautan explorer, lalu klik **Receipts** di nav.
 
@@ -340,7 +369,7 @@ sebenarnya, dan itu satu-satunya frame yang membuktikannya.
 
 ---
 
-### Adegan 7. Bukti yang bisa diturunkan ulang siapa saja (2:30 sampai 2:52)
+### Adegan 7. Bukti yang bisa diturunkan ulang siapa saja (2:28 sampai 2:50)
 
 **Layar.** `/receipts` termuat dari klik di adegan sebelumnya, receipt baru di paling atas dengan
 hash evidence-nya. Lalu cut ke terminal,
@@ -355,15 +384,17 @@ dan sudah pendek dari sananya.
 
 **Narasi.**
 
-> Every fill leaves a receipt, and the receipt carries a hash of the exact quote, the oracle
-> reading and the guard verdict it was decided on. The hash goes on chain before anything is
-> signed, and the bundle is archived where anyone can fetch it.
+> There is the fill, sitting under the thesis it was made for. That is the hash from two minutes
+> ago, and it is what ties the trade back to the reasoning that produced it.
+> The receipt also carries a hash of the exact quote, the oracle reading and the guard verdict it
+> was decided on. That one goes on chain before anything is signed, and the bundle is archived
+> where anyone can fetch it.
 > So this is not us showing you a log. This is the bundle being pulled back down and the hash being
 > derived again from it, and matching. Losses stay on that page as long as the wins do.
 
 ---
 
-### Adegan 8. Penutup (2:52 sampai 3:00)
+### Adegan 8. Penutup (2:50 sampai 3:00)
 
 **Layar.** Tetap di terminal, jalankan `pnpm capacity`, biarkan angka universe-nya mendarat dengan
 tanggal hari itu. Lalu satu frame diam: wordmark, `reckonz.xyz`, `@reckonz_xyz`, URL GitHub,
@@ -386,11 +417,16 @@ tanggal hari itu. Lalu satu frame diam: wordmark, `reckonz.xyz`, `@reckonz_xyz`,
 Rekam tiap adegan sebagai take-nya sendiri. Jangan mencoba satu pass menerus. Adegan fill pasti
 butuh beberapa percobaan dan kamu tidak mau mengulang landing gara-gara itu.
 
-**Empat klik navigasi, dan semuanya direkam di akhir adegan pemiliknya.** Landing masuk ke
-`/assets` lewat tombol di top bar, lalu Assets ke Idea, Idea ke Trade, Trade ke Receipts lewat nav
-console. Merekamnya di akhir adegan asal, bukan di awal adegan tujuan, berarti rekam ulang adegan
-berikutnya tidak ikut membuang kliknya. Sisakan setengah detik setelah tiap klik supaya editor
-punya bahan untuk memotong ke halaman yang termuat.
+**Empat perpindahan, dan semuanya direkam di akhir adegan pemiliknya.** Landing ke `/assets` lewat
+tombol di top bar, Assets ke Idea lewat nav, Idea ke Trade lewat **Take it to the trade page**,
+Trade ke Receipts lewat nav. Merekamnya di akhir adegan asal, bukan di awal adegan tujuan, berarti
+rekam ulang adegan berikutnya tidak ikut membuang kliknya. Sisakan setengah detik setelah tiap
+perpindahan supaya editor punya bahan untuk memotong ke halaman yang termuat.
+
+**Yang ketiga tidak bisa direkam ulang sendirian.** Take it to the trade page baru ada setelah
+tesisnya punya id, dan id itu lahir dari transaksi. Kalau adegan 6 harus diulang, kamu masuk ke
+`/trade` lagi lewat nav dan kehilangan status bersenjatanya, atau kamu publish tesis kedua. Jadi
+rekam adegan 5 sampai tuntas, lalu berhenti dan cek hasilnya sebelum menyentuh adegan 6.
 
 | Adegan | URL atau perintah | Yang harus dijaga |
 |---|---|---|
@@ -398,15 +434,14 @@ punya bahan untuk memotong ke halaman yang termuat.
 | 2 | landing, `Approach` | Atur waktu scroll supaya kartunya mendarat di kamera. Gerakan wheel kecil dan disengaja; Lenis meluncur sekitar sedetik setelah tiap satu |
 | 3 | landing, `HowItWorks` | Diamkan sekitar delapan detik supaya satu kartu terlihat berganti. Akhiri dengan klik masuk ke app |
 | 4 | `/assets`, tampilan tabel | Geser slider pelan, satu anak tangga per ketukan. Akhiri dengan klik **Idea** |
-| 5 | `/idea` | Ketik dengan kecepatan manusia. `/api/run` dibatasi 3 burst dan 6 per menit (D78), jadi jangan memberondong take ulang. Akhiri dengan klik **Trade** |
-| 6 | `/trade` | Health check dulu. Wallet di chain 196. Tampilkan saldo demo, jangan mengaburkan saldo asli. Akhiri dengan klik **Receipts** |
+| 5 | `/idea` | Ketik dengan kecepatan manusia. `/api/run` dibatasi 3 burst dan 6 per menit (D78), jadi jangan memberondong take ulang. Cek dulu tesisnya belum ada di registry. Akhiri dengan **Take it to the trade page** |
+| 6 | `/trade` | Health check dulu. Wallet di chain 196. Tampilkan saldo demo, jangan mengaburkan saldo asli. Akhiri dengan klik **Receipts** di nav |
 | 7 | `/receipts`, lalu `pnpm evidence <hash>` | Riwayat scroll bersih di atas prompt |
 | 8 | `pnpm capacity` | Butuh waktu. Biarkan jalan dan pakai bagian ekornya |
 
-**Nav-nya berurutan Assets, Idea, Receipts, Trade,** jadi lompatan Idea ke Trade melewati Receipts
-lalu kembali lagi. Itu tidak terlihat oleh penonton dan bukan sesuatu yang perlu dihindari: nav
-adalah nav, bukan wizard. Yang terlihat adalah tab aktifnya berpindah, dan itu justru yang
-membuktikan ini satu app.
+**Tab aktif di nav berpindah di tiap perpindahan,** termasuk yang lewat Take it to the trade page,
+karena itu `router.push` biasa. Itu yang membuktikan ini satu app dan bukan empat screenshot, jadi
+biarkan nav-nya terlihat di frame; jangan crop ke area kontennya saja.
 
 **Landing direkam paling akhir, atau paling tidak setelah `/idea`.** Adegan 1 mengucapkan angka
 penolakan, dan angka itu keluar dari run di adegan 5. Merekam pembukanya duluan berarti merekamnya
