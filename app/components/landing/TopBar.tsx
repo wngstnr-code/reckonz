@@ -74,10 +74,27 @@ export function TopBar() {
 
   return (
     <div
-      className={`pointer-events-none fixed inset-x-0 top-0 z-40 flex items-start justify-between gap-x-8 border-b px-[max(2rem,5vw)] pt-10 pb-5 transition-[background-color,border-color,backdrop-filter] duration-300 ease-out ${
-        past
-          ? 'border-line bg-ground/70 backdrop-blur-xl'
-          : 'border-transparent bg-transparent'
+      /* No `backdrop-filter` here, and the reason is what sits underneath it.
+       *
+       * The strip arrives exactly when the wall has scrolled up behind it, so
+       * from that moment on the bar is a full-width blur over the one thing on
+       * this page that never stops moving. A backdrop blur has to resample and
+       * re-blur its whole strip every frame its backdrop changes, and it also
+       * flattens what is behind it into one backdrop image, which is the
+       * opposite of what `.wall-track`'s promotion is for. Under the pointer
+       * the wall is already rewriting ninety transforms a frame; the bar was
+       * then charging a Gaussian pass for each of those frames, and that is the
+       * hover feeling heavy only once the page has moved.
+       *
+       * `92%` of the ground rather than `70%` and a blur. The ground is the
+       * page's own extreme at both ends of the theme, so at that opacity the
+       * marks behind the bar are already down to a suggestion — which is all
+       * the blur was buying. What it costs is one composited rectangle.
+       *
+       * If this ever needs the blur back, it needs the wall to stop being what
+       * is under it, not a smaller radius. */
+      className={`pointer-events-none fixed inset-x-0 top-0 z-40 flex items-start justify-between gap-x-8 border-b px-[max(2rem,5vw)] pt-10 pb-5 transition-[background-color,border-color] duration-300 ease-out ${
+        past ? 'border-line bg-ground/92' : 'border-transparent bg-transparent'
       }`}
     >
       <Link href="/" className="pointer-events-auto flex shrink-0 items-center gap-3">

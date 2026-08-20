@@ -38,8 +38,8 @@ import { useEffect, useRef } from 'react';
  *
  * **It has to work while the wall is running.** That rules out changing widths:
  * a width is layout, layout changes the track's own width, and the marquee
- * loops by translating exactly `-50%` *of that width* — so a wall that resized
- * its tiles would drift off its own seam every time the pointer moved. Scale
+ * loops by translating exactly one copy *of that width* — so a wall that
+ * resized its tiles would drift off its own seam every time the pointer moved. Scale
  * and translate are transforms. They compose with the animation instead of
  * fighting it, and nothing about the track's geometry changes at all.
  *
@@ -63,8 +63,8 @@ import { useEffect, useRef } from 'react';
  *
  * ## Why each row is repeated three times
  *
- * Two copies is all the loop needs — the animation travels half the track, so
- * the second copy lands where the first began. It is not all the *effect*
+ * Two copies is all the loop needs — the animation travels one copy, so the one
+ * behind lands where the one in front began. It is not all the *effect*
  * needs. Closing the gaps pulls every tile toward the pointer, so the row's two
  * ends draw inward by about a tile and a half, and a track that ends near the
  * frame's edge opens a bare strip there. A third copy puts the ends far outside
@@ -78,12 +78,17 @@ import { useEffect, useRef } from 'react';
  * cycle when its leading edge would sit flush with the frame's is covered too.
  *
  * **What that buys, in pixels, now that a tile is sized from the card's
- * height rather than from `9.5vw`.** A track must be at least twice the frame
- * wide or the seam it loops on arrives on screen. Measured at 1669x942: the
- * two short rows are 4,752px, so the wall covers a frame up to **2,376px**
- * wide. Past that the tiles would have to be repeated a fifth time. It is
- * stated rather than guarded because the guard would be a client-side
- * measurement, and this is a server-rendered list.
+ * height rather than from `9.5vw`.** Over a cycle the track's trailing edge
+ * comes in by one copy, so what is guaranteed to be covered is `COPIES - 1`
+ * copies, less the tile the track starts left of the frame. Measured at
+ * 1669x942: the three copies are 4,752px, a copy is 1,584px, and the wall
+ * therefore covers a frame up to about **3,010px** wide. Past that the row
+ * needs a fourth copy. It is stated rather than guarded because the guard would
+ * be a client-side measurement, and this is a server-rendered list.
+ *
+ * The figure was 2,376px while the animation travelled half the track, which
+ * was also the bug: half of three copies is a copy and a half, and the loop has
+ * to land on a whole one.
  *
  * ## Why the positions are computed rather than measured
  *
@@ -140,8 +145,20 @@ function rowsOf(symbols: string[]): string[][] {
  * Unequal durations would have been unequal speeds, and the eye reads a wall
  * whose rows travel at different rates as three separate objects rather than
  * one surface.
+ *
+ * **This is now a period per copy, not per cycle, and that changed what the
+ * number means.** While the animation travelled a copy and a half, 54s bought a
+ * copy every 36s; fixing the loop to land on a whole copy left the same 54
+ * describing a third less ground, so the wall quietly lost a third of its
+ * speed. 30 is a notch above where it was before that, at about 53px a second
+ * on a 1,584px copy, which is a tile crossing in three seconds.
+ *
+ * The ceiling is the effect rather than taste: the well under the pointer eases
+ * over about forty frames, so a wall travelling fast enough to carry a tile
+ * through it inside that time reads as tiles flicking rather than as a surface
+ * opening. That is the wrong side of about 20s.
  */
-const DURATION = 54;
+const DURATION = 30;
 
 /**
  * Where each row starts in that shared cycle, as a negative delay.
@@ -149,10 +166,15 @@ const DURATION = 54;
  * Speed is shared; phase is not. Rows 1 and 3 run the same direction at the
  * same rate, so starting them together would march them in lockstep, and the
  * seam where each track's last copy meets its first would arrive on both at
- * the same instant. A third and two thirds of a cycle apart costs nothing and
- * means no two rows are ever doing the same thing at the same time.
+ * the same instant. An equal slice of a cycle apart costs nothing and means no
+ * two rows are ever doing the same thing at the same time.
+ *
+ * Derived rather than typed, for the reason the loop distance now is: this was
+ * three numbers that were thirds of 54, and nothing tied them to 54. Changing
+ * the speed would have left the rows bunched at phases belonging to the old
+ * one.
  */
-const PHASES = [0, -18, -36];
+const PHASES = Array.from({ length: ROWS }, (_, r) => -(DURATION / ROWS) * r);
 
 /**
  * The well, by ring.
@@ -181,6 +203,29 @@ const EASE = 0.18;
  *  resize, deliberately: a whole row halting is the larger movement of the two,
  *  and the larger movement is the one that has to look deliberate. */
 const TURN = 0.055;
+
+/**
+ * How long after the last scroll event the wall waits before it will read the
+ * pointer again.
+ *
+ * The wall lets go of the pointer while the page is moving, and it has to,
+ * because the well would otherwise slide across the wall on its own. What it
+ * cannot do is decide that once per scroll event: Lenis glides for the better
+ * part of a second after the wheel stops, firing `scroll` on every frame of
+ * it, and the browser dispatches `pointermove` on a stationary cursor whenever
+ * the element under it changes — which during a scroll is constantly. Those two
+ * were setting the same flag against each other sixty times a second, so the
+ * rows spent the whole glide easing toward a stop and being told to start
+ * again, and every reversal committed a new `playbackRate` to three composited
+ * animations. That is the lag felt when hovering just after a scroll.
+ *
+ * A single idle window settles it. The pointer's own state is kept separately
+ * and never touched by the scroll; the wall simply refuses to act on it until
+ * the page has been still this long. 140ms is comfortably longer than the gap
+ * between two frames of a glide and short enough that the well opens as soon as
+ * the reader would call the page stopped.
+ */
+const SCROLL_IDLE = 140;
 
 /** How far the eased rate has to drift from the one the animation is actually
  *  running at before it is worth telling the animation. A twelfth of full speed
@@ -262,6 +307,14 @@ export function AssetWall({ symbols }: { symbols: string[] }) {
 
     let pointerX = 0;
     let pointerY = 0;
+    /* Three flags, and only the last one the draw loop reads.
+     *
+     * `pointerIn` is a fact about the cursor and is written by the pointer
+     * events alone. `scrolling` is a fact about the page and is written by the
+     * scroll alone. `inside` is the wall's answer to both, and it changes only
+     * when that answer changes — see `SCROLL_IDLE`. */
+    let pointerIn = false;
+    let scrolling = false;
     let inside = false;
     let frame = 0;
     let onScreen = true;
@@ -475,6 +528,8 @@ export function AssetWall({ symbols }: { symbols: string[] }) {
            alive for a page nobody was looking at until the wall came back.
            The state is dropped on the way out instead, and the boxes with it,
            because they describe where the tracks were a scroll ago. */
+        pointerIn = false;
+        scrolling = false;
         inside = false;
         wall.classList.remove('wall-live');
         forgetBoxes();
@@ -495,30 +550,51 @@ export function AssetWall({ symbols }: { symbols: string[] }) {
        a glide, so this fires around sixty times a second for the second or so
        after each wheel. It allocated a fresh array of nulls on every one of
        them; it clears the one it has now. */
+    /* The one place `inside` is written, so the two inputs cannot fight over it.
+     *
+     * Nothing here schedules work unless the answer actually changed. A glide
+     * fires sixty scrolls and sixty pointer moves a second, and all but the
+     * first of each leave this a no-op — where before, each one of them flipped
+     * the flag and queued a frame. While `inside` holds, the loop reschedules
+     * itself, so a move that changes nothing but the coordinates does not need
+     * to ask for anything. */
+    const sync = () => {
+      const next = pointerIn && !scrolling;
+      if (next === inside) return;
+      inside = next;
+      /* The tiles are about to move, so say so now — see `.wall-live` in
+         `globals.css`. Withdrawn in the loop rather than here, because leaving
+         is when they have the furthest left to travel. */
+      if (inside) wall.classList.add('wall-live');
+      if (!frame) frame = requestAnimationFrame(draw);
+    };
+
+    let idle = 0;
+    const stopped = () => {
+      idle = 0;
+      scrolling = false;
+      sync();
+    };
+
     const onScroll = () => {
       forgetBoxes();
-      if (!inside) return;
-      inside = false;
-      if (!frame) frame = requestAnimationFrame(draw);
+      scrolling = true;
+      if (idle) clearTimeout(idle);
+      idle = window.setTimeout(stopped, SCROLL_IDLE);
+      sync();
     };
     window.addEventListener('scroll', onScroll, { passive: true });
 
     const onMove = (e: PointerEvent) => {
       pointerX = e.clientX;
       pointerY = e.clientY;
-      if (!inside) {
-        inside = true;
-        /* The tiles are about to move, so say so now — see `.wall-live` in
-           `globals.css`. Withdrawn again on the way out, because a layer per
-           tile is only worth keeping while something is using it. */
-        wall.classList.add('wall-live');
-      }
-      if (!frame) frame = requestAnimationFrame(draw);
+      pointerIn = true;
+      sync();
     };
 
     const onLeave = () => {
-      inside = false;
-      if (!frame) frame = requestAnimationFrame(draw);
+      pointerIn = false;
+      sync();
     };
 
     wall.addEventListener('pointermove', onMove);
@@ -526,6 +602,7 @@ export function AssetWall({ symbols }: { symbols: string[] }) {
     return () => {
       cancelAnimationFrame(frame);
       if (pendingMeasure) cancelAnimationFrame(pendingMeasure);
+      if (idle) clearTimeout(idle);
       resizes.disconnect();
       seen.disconnect();
       window.removeEventListener('scroll', onScroll);
@@ -564,15 +641,18 @@ export function AssetWall({ symbols }: { symbols: string[] }) {
           key={index}
           className="relative flex min-h-0 flex-1 overflow-hidden [container-type:size]"
         >
-          {/* The row twice, end to end. The animation travels exactly half the
-              track, so the second copy is standing where the first was and the
-              seam never arrives. */}
+          {/* The row `COPIES` times, end to end. The animation travels exactly
+              one of them, so the copy behind is standing where the one in front
+              was and the seam never arrives. */}
           <div
             data-track
             className="wall-track -ml-[calc(100cqh+clamp(0.75rem,1.6vw,1.5rem))] flex shrink-0 gap-[clamp(0.75rem,1.6vw,1.5rem)] pr-[clamp(0.75rem,1.6vw,1.5rem)]"
             style={
               {
                 '--wall-name': index % 2 === 0 ? 'wall-left' : 'wall-right',
+                /* One copy, derived rather than written. See `@keyframes
+                   wall-left` in `globals.css` for why this is not a literal. */
+                '--wall-loop': `calc(-100% / ${COPIES})`,
                 '--wall-duration': `${DURATION}s`,
                 '--wall-delay': `${PHASES[index % PHASES.length]}s`,
               } as React.CSSProperties

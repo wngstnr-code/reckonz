@@ -424,19 +424,32 @@
  * animation also reverses the easing — irrelevant at `linear`, and exactly the
  * kind of thing that stops being irrelevant the moment somebody eases it.
  *
- * Each track holds its row twice and travels half its own width, so the copy
- * lands where the original started and the loop has no seam to hide. `%` of the
+ * A track travels **exactly one copy of its row**, so the copy behind lands
+ * where the one in front started and the loop has no seam to hide. `%` of the
  * element, not of the viewport, which is why the row can be any length.
+ *
+ * **The distance is handed in, never written here.** It was `-50%`, which is one
+ * copy only while a track holds two of them. `COPIES` went to three and this was
+ * not touched, so every cycle the row shifted by a copy and a half and landed
+ * half a copy out of phase: the wall jumped, roughly every eighteen seconds
+ * across the three rows, and read as the marquee losing its place rather than
+ * looping. `--wall-loop` is `calc(-100% / COPIES)` computed from the same
+ * constant that lays the copies out, so the two cannot drift apart again.
+ *
+ * That the percentage is exact is the `pr` on the track. A flex row of `3N`
+ * tiles has `3N - 1` gaps, and the trailing padding makes it `3N` of them, so
+ * the width is `3N x (tile + gap)` and a third of it is a whole copy to the
+ * pixel. Remove that padding and this goes back to jumping, by one gap.
  */
 @keyframes wall-left {
   to {
-    transform: translateX(-50%);
+    transform: translateX(var(--wall-loop));
   }
 }
 
 @keyframes wall-right {
   from {
-    transform: translateX(-50%);
+    transform: translateX(var(--wall-loop));
   }
 }
 
@@ -496,7 +509,7 @@
   filter: drop-shadow(0 10px 12px rgb(0 0 0 / 0.55));
   /* Position and size, both as `transform` and nothing else, which is the whole
    * reason this can run against a marquee: layout never changes, so the track's
-   * own width stays constant and its `translateX(-50%)` loop keeps landing
+   * own width stays constant and its `--wall-loop` translation keeps landing
    * exactly on its seam. A version that shrank tiles by changing their `width`
    * would reflow the track under the animation every frame.
    *
