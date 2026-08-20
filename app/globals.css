@@ -1139,3 +1139,48 @@
     scrollbar-color: var(--color-ink) var(--color-line);
   }
 }
+
+/* The scroll hint's arrow.
+ *
+ * Down and back, never up: the arrow is asking for one direction and an
+ * animation that returns through the same path in reverse would spend half its
+ * time asking for the opposite one. It sinks over most of the cycle and is
+ * carried back up while it is at its faintest, so the return is the part you do
+ * not read.
+ *
+ * `transform` and `opacity` only, so it composites and costs the hero nothing
+ * while the wall beside it is already asking for frames. */
+@keyframes scroll-hint {
+  0% {
+    transform: translateY(-2px);
+    opacity: 0.35;
+  }
+  55% {
+    transform: translateY(4px);
+    opacity: 1;
+  }
+  85% {
+    transform: translateY(4px);
+    opacity: 0;
+  }
+  86% {
+    transform: translateY(-2px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(-2px);
+    opacity: 0.35;
+  }
+}
+
+.scroll-hint {
+  animation: scroll-hint 2.5s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-hint {
+    animation: none;
+    opacity: 0.7;
+  }
+}

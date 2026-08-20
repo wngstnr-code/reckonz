@@ -57,8 +57,36 @@ export function Hero({ symbols }: { symbols: string[] }) {
         <AssetWall symbols={symbols} />
       </div>
 
+      {/* The arrow is the half of this that carries the instruction.
+       *
+       * `inline-flex` inside the centred paragraph rather than a flex row on
+       * the paragraph itself, because the line is centred by `text-center` and
+       * a flex container would have to be told how to centre itself again.
+       *
+       * It drifts down and back rather than pulsing or spinning: the gesture
+       * being asked for is downward, so the movement is the same gesture at a
+       * smaller size. Two and a half seconds is slow enough to read as a hint
+       * rather than as something demanding attention, and the opacity moves
+       * with it so the arrow is faintest at the top of its travel, which reads
+       * as a beat rather than a loop with a seam. */}
       <p className="mt-4 text-center font-mono text-fine tracking-[0.12em] text-faint uppercase">
-        Scroll to explore
+        <span className="inline-flex items-center gap-2.5">
+          Scroll to explore
+          <svg
+            aria-hidden
+            viewBox="0 0 12 14"
+            className="scroll-hint h-3 w-3"
+            fill="none"
+          >
+            <path
+              d="M6 1v11M1.5 8l4.5 4.5L10.5 8"
+              stroke="currentColor"
+              strokeWidth="1.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </span>
       </p>
     </section>
   );
