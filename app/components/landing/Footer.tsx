@@ -1,7 +1,7 @@
-import Link from 'next/link';
-
 import { MAINNET } from '@/src/deployments';
 import { Wordmark } from '../console/Wordmark';
+import { GitHubMark, XMark } from '../social-marks';
+import { AppLink } from './AppLink';
 
 /**
  * The slab the landing page ends on.
@@ -40,9 +40,13 @@ import { Wordmark } from '../console/Wordmark';
  * resolves to something that works today, and a footer full of dead links is
  * the cheapest possible way to look unfinished.
  *
- * X and GitHub are text here rather than marks. In the console they are marks
- * in the bottom bar precisely so they are not also a column; at this size a
- * 16px glyph would be the one thing on the page that had not grown.
+ * X and GitHub are the same marks the console uses, from `../social-marks`, so
+ * the two footers cannot end up drawing slightly different logos. They are
+ * drawn larger here: a 16px glyph would be the one thing on the page that had
+ * not grown, and the bottom row it sits in runs a clamp of its own. GitHub
+ * stays a touch bigger than X for the reason it does in the console — the
+ * octocat carries more empty space, so matched boxes read as mismatched
+ * marks.
  *
  * ## `relative z-10`
  *
@@ -60,11 +64,14 @@ export function Footer() {
   return (
     <footer className="relative z-10 bg-[#0b0d10] px-[max(2rem,5vw)] pt-[clamp(4rem,11vh,8rem)] pb-[clamp(2.5rem,6vh,4rem)] text-white">
       <div className="flex flex-wrap gap-x-[clamp(3rem,7vw,9rem)] gap-y-[clamp(2.5rem,5vw,4rem)]">
+        {/* The console, which may be on another host — `AppLink` is what
+            decides, and on two hosts these open in a new tab like the launch
+            button does. */}
         <Column title="Product">
-          <Internal href="/assets">Assets</Internal>
-          <Internal href="/idea">Idea</Internal>
-          <Internal href="/receipts">Receipts</Internal>
-          <Internal href="/trade">Trade</Internal>
+          <AppLink path="/assets" className={linkClass}>Assets</AppLink>
+          <AppLink path="/idea" className={linkClass}>Idea</AppLink>
+          <AppLink path="/receipts" className={linkClass}>Receipts</AppLink>
+          <AppLink path="/trade" className={linkClass}>Trade</AppLink>
         </Column>
 
         <Column title="On chain">
@@ -118,9 +125,13 @@ export function Footer() {
       <div className="mt-[clamp(1.75rem,4vh,2.75rem)] flex flex-wrap items-center gap-x-[clamp(1.5rem,4vw,4rem)] gap-y-3 text-[clamp(0.9rem,1vw,1.05rem)]">
         <span className="text-white/55">Reckonz © 2026</span>
         <span className="whitespace-nowrap text-white/55">X Layer</span>
-        <div className="ml-auto flex items-center gap-x-[clamp(1.5rem,3vw,3rem)]">
-          <External href="https://x.com/reckonz_xyz">X</External>
-          <External href={REPO_URL}>GitHub</External>
+        <div className="ml-auto flex items-center gap-x-[clamp(1.25rem,2.5vw,2.5rem)]">
+          <IconLink href="https://x.com/reckonz_xyz" label="Reckonz on X">
+            <XMark className="h-[clamp(1.1rem,1.4vw,1.5rem)] w-[clamp(1.1rem,1.4vw,1.5rem)]" />
+          </IconLink>
+          <IconLink href={REPO_URL} label="Reckonz on GitHub">
+            <GitHubMark className="h-[clamp(1.25rem,1.6vw,1.7rem)] w-[clamp(1.25rem,1.6vw,1.7rem)]" />
+          </IconLink>
         </div>
       </div>
     </footer>
@@ -139,24 +150,31 @@ function Column({ title, children }: { title: string; children: React.ReactNode 
 const linkClass =
   'text-[clamp(0.95rem,1.05vw,1.1rem)] text-white/55 transition-colors duration-200 hover:text-white';
 
-/** Typed routes are on, so the href type comes from `Link` rather than `string`. */
-function Internal({
-  href,
-  children,
-}: {
-  href: React.ComponentProps<typeof Link>['href'];
-  children: React.ReactNode;
-}) {
-  return (
-    <Link href={href} className={linkClass}>
-      {children}
-    </Link>
-  );
-}
-
 function External({ href, children }: { href: string; children: React.ReactNode }) {
   return (
     <a href={href} target="_blank" rel="noreferrer" className={linkClass}>
+      {children}
+    </a>
+  );
+}
+
+function IconLink({
+  href,
+  label,
+  children,
+}: {
+  href: string;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      aria-label={label}
+      className="text-white/55 transition-colors duration-200 hover:text-white"
+    >
       {children}
     </a>
   );
