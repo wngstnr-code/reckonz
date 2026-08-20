@@ -1089,15 +1089,25 @@
   }
 }
 
-/* The landing page's scrollbar.
+/* The scrollbar, everywhere.
  *
- * A real scrollbar, styled, not a drawn stand-in. Lenis moves the document's
- * own scroll position rather than transforming a container, so the browser's
- * bar is still the honest indicator of where the page is, and it still drags.
+ * A real scrollbar, styled, not a drawn stand-in. On the landing, Lenis moves
+ * the document's own scroll position rather than transforming a container, so
+ * the browser's bar is still the honest indicator of where the page is and it
+ * still drags. The console scrolls the document too: its layout is a column
+ * with no inner overflow, so the same bar is the same indicator there.
  *
- * Scoped by a class on <html> because that is the only element the document
- * scrollbar can be styled from, and the console must not inherit it: a working
- * surface keeps the scrollbar the operating system gave it.
+ * ~~Scoped by a class on <html>, and the console must not inherit it: a working
+ * surface keeps the scrollbar the operating system gave it.~~ Reversed. The
+ * argument was that a tool should not restyle the chrome its user knows, and
+ * the argument lost to a simpler fact: the two surfaces are one product, a
+ * reader crosses from `/` into `/assets` in one click, and the scrollbar
+ * changing shape under them at that moment is the seam showing. Only the bar
+ * moved. Lenis stays on the landing alone, for the reason it always did: a
+ * trade page that glides away from the pointer is harder to read a number on.
+ *
+ * It is on `html` rather than on a class now, because there is nothing left to
+ * scope it to.
  *
  * The shape is two pills, one inside the other. `background-clip: padding-box`
  * with a transparent border is what insets them from the gutter's edges, and
@@ -1108,7 +1118,7 @@
  * near-black thumb on a light rail today, and a light thumb on a dark rail the
  * moment `data-theme="dark"` is set. A hardcoded black would have disappeared
  * into the dark ground entirely. */
-.landing-scroll::-webkit-scrollbar {
+html::-webkit-scrollbar {
   width: 11px;
 }
 
@@ -1122,7 +1132,7 @@
  * 32vh top and bottom leaves a rail of 36vh, near enough a third of the window.
  * Half was tried first and still read as an edge-to-edge bar with gaps at the
  * ends rather than as a short marker sitting in the middle. */
-.landing-scroll::-webkit-scrollbar-track {
+html::-webkit-scrollbar-track {
   margin: 32vh 0;
   background-color: var(--color-line);
   background-clip: padding-box;
@@ -1130,7 +1140,7 @@
   border-radius: 999px;
 }
 
-.landing-scroll::-webkit-scrollbar-thumb {
+html::-webkit-scrollbar-thumb {
   background-color: var(--color-ink);
   background-clip: padding-box;
   border: 3px solid transparent;
@@ -1147,7 +1157,7 @@
    saying it kept its own overlay bar. So the standard properties are served
    only to engines that have no webkit pseudo-elements to lose. */
 @supports not selector(::-webkit-scrollbar) {
-  .landing-scroll {
+  html {
     scrollbar-width: thin;
     scrollbar-color: var(--color-ink) var(--color-line);
   }

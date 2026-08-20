@@ -40,16 +40,19 @@ import Lenis from 'lenis';
  * that listener still works. It is also why the scrollbar in `globals.css` is a
  * real scrollbar being styled rather than a drawn substitute: the page really
  * does scroll.
+ *
+ * That bar is no longer this component's business. It was scoped to a class
+ * added here, on the argument that the console should keep the scrollbar its
+ * operating system gave it; it is on `html` now and both surfaces share it.
+ * Only the smoothing is still scoped to `/`.
  */
 export function SmoothScroll() {
   useEffect(() => {
-    /* The scrollbar skin is scoped to this page by a class on <html>, because
-       that is the only element the document's own scrollbar can be styled
-       from. It goes on whether or not the smoothing does: how the bar looks is
-       not a motion preference. */
-    const root = document.documentElement;
-    root.classList.add('landing-scroll');
-
+    /* This used to also put `landing-scroll` on <html>, which is what the
+       scrollbar skin was scoped to. The skin is on `html` in `globals.css` now
+       and the console wears it too, so there is nothing to scope and nothing to
+       add. What is left here is the smoothing, which is still the landing's
+       alone. */
     // Someone who has asked the system for less motion has asked for this too.
     // Skipping the smoothing leaves the browser's own scrolling in place, which
     // is the correct behaviour rather than a degraded one.
@@ -68,7 +71,6 @@ export function SmoothScroll() {
     }
 
     return () => {
-      root.classList.remove('landing-scroll');
       if (frame) cancelAnimationFrame(frame);
       lenis?.destroy();
     };
