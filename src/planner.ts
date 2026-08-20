@@ -78,13 +78,35 @@ export function bestQuote(venues: Venue[], usdgAmount: bigint): Quote | null {
   return quotes.reduce((a, b) => (b.out > a.out ? b : a));
 }
 
+export interface Capacity {
+  /** largest USDG notional whose price impact stays within the limit */
+  size: bigint;
+  /**
+   * True when the search stopped because the venue ran out of liquidity rather
+   * than because impact reached the limit. `size` is then a **venue depth**,
+   * not an impact measurement, and asking for a wider limit will not move it.
+   *
+   * D103: this is why `pnpm capacity` printed 22,475 for wTSLAx in both the 2%
+   * and the 5% column. Both were the pool emptying, and the table read as if
+   * the market could absorb no more. Measured the same day: the USDG pool held
+   * 104.69 wTSLAx, while a USDC pool this module never looks at held twice its
+   * depth. Reporting a venue's floor as the chain's ceiling is the same class
+   * of error as D34, one level up.
+   */
+  poolLimited: boolean;
+}
+
 /**
- * Largest single-shot USDG notional whose price impact stays within `maxBps`.
- * This is the number that should govern position sizing — and the number no
- * other allocator computes.
+ * Largest single-shot USDG notional whose price impact stays within `maxBps`,
+ * plus whether that number is an impact limit or a depth limit.
+ *
+ * `capacity()` below is this without the second half, kept because most callers
+ * only size a leg and every one of them predates the distinction.
  */
-export function capacity(venues: Venue[], maxBps: number): bigint {
+export function capacityDetail(venues: Venue[], maxBps: number): Capacity {
   const unit = 10n ** BigInt(USDG.decimals);
+
+  if (venues.length === 0) return { size: 0n, poolLimited: false };
 
   const impactAt = (n: bigint): number => {
     const q = bestQuote(venues, n);
@@ -125,7 +147,24 @@ export function capacity(venues: Venue[], maxBps: number): bigint {
     if (impactAt(mid) <= maxBps) lo = mid;
     else hi = mid;
   }
-  return lo;
+
+  // `hi` is the smallest size the search rejected. *Why* it was rejected is the
+  // whole distinction: a quote that came back exhausted was never measured, so
+  // the ceiling above `lo` is the venue running dry. A quote that came back
+  // whole was measured and simply cost too much, which is a real impact limit.
+  const atHi = bestQuote(venues, hi);
+  const poolLimited = atHi === null || atHi.result.exhaustedWindow;
+
+  return { size: lo, poolLimited };
+}
+
+/**
+ * Largest single-shot USDG notional whose price impact stays within `maxBps`.
+ * This is the number that should govern position sizing — and the number no
+ * other allocator computes.
+ */
+export function capacity(venues: Venue[], maxBps: number): bigint {
+  return capacityDetail(venues, maxBps).size;
 }
 
 export interface Schedule {

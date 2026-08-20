@@ -20,6 +20,7 @@ import {
   quote,
   bestQuote,
   capacity,
+  capacityDetail,
   schedule,
   planningLimitBps,
   PLAN_HEADROOM,
@@ -178,6 +179,34 @@ test('capacity search is not capped at the old fixed 1,000,000 USDG guess (D34 r
 
   const beyondCap = quote(venue, cap + cap / 10n);
   assert.ok(beyondCap.impactBps > maxBps, 'a size clearly past capacity must breach the impact limit');
+});
+
+test('D103: a capacity bounded by an impact limit is not marked pool-limited', () => {
+  // Deep pool, wide window: the search rejects sizes because they cost too
+  // much, which is a measurement and must read as one.
+  const venue = makeVenue(10n ** 15n, 30, 3000);
+
+  const detail = capacityDetail([venue], 50);
+  assert.equal(detail.poolLimited, false);
+  assert.equal(detail.size, capacity([venue], 50));
+  assert.ok(quote(venue, detail.size).impactBps <= 50);
+});
+
+test('D103: a capacity bounded by the venue running dry is marked pool-limited', () => {
+  // The D34 fixture: every quote past the single prefetched word comes back
+  // exhausted, so nothing above the returned size was ever measured. Widening
+  // the limit cannot move that number, which is exactly what the marker says.
+  const venue = makeVenue(10n ** 15n, 0, 3000, 0);
+
+  const tight = capacityDetail([venue], 50);
+  const loose = capacityDetail([venue], 500);
+  assert.equal(tight.poolLimited, true);
+  assert.equal(loose.poolLimited, true);
+  assert.equal(tight.size, loose.size);
+});
+
+test('D103: no venue is an absence, not a depth limit', () => {
+  assert.deepEqual(capacityDetail([], 50), { size: 0n, poolLimited: false });
 });
 
 // ------------------------------------------------------------ plan headroom
