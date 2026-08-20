@@ -88,7 +88,7 @@ jujur yang bisa ada di video ini.
 | **Pendek** | 0:60 | Diposting dari `@reckonz_xyz`, lihat `docs/11-social.md` |
 | **Loop diam** | 0:20 | Slider capacity yang runtuh dan verdict guard, tanpa suara, untuk hero situs |
 
-Cut pendek bukan cut utama yang dipangkas. Itu adegan 4, 6 dan 7 disusun ulang dengan tiga kalimat
+Cut pendek bukan cut utama yang dipangkas. Itu adegan 4, 5 dan 6 disusun ulang dengan tiga kalimat
 narasi, dan landing-nya dibuang sama sekali: penonton yang sudah ada di dalam sebuah post tidak
 perlu diantar ke pintu depan. Memangkas cut utama menghasilkan video yang membuka di halaman
 marketing dan tidak pernah sampai ke satu angka pun.
@@ -96,7 +96,7 @@ marketing dan tidak pernah sampai ke satu angka pun.
 **Ada rumah keempat untuk rekaman, dan sudah dibangun.** `Approach` di landing menerima `videoSrc`
 dan kartu yang terbang masuk itu player yang menunggu isi, dengan caption *the recorded run lands
 here*. `app/page.tsx` belum mengopernya. Yang pantas masuk ke kartu itu adalah rekaman **satu run**,
-adegan 6 berdiri sendiri tanpa narasi, bukan video ini: halaman yang membuka dengan memutar tur
+adegan 5 berdiri sendiri tanpa narasi, bukan video ini: halaman yang membuka dengan memutar tur
 tentang dirinya sendiri sedang berdebat dengan layar pertamanya. Itu milik FE, jadi tiket, bukan
 editan.
 
@@ -166,15 +166,28 @@ testnet.
 
 ## Shot list dan naskah
 
-**Satu jalur maju, dan mulainya dari tempat pengunjung mulai.** Landing, lalu `/assets`, lalu satu
-aset secara detail, lalu `/idea`, lalu `/trade`, lalu `/receipts`. Tidak ada yang dikunjungi dua
-kali dan video tidak pernah naik level lagi, karena penonton yang harus diberi tahu dia sedang di
-mana sudah berhenti mendengarkan argumennya.
+**Golden flow, dan tiap perpindahannya klik sungguhan.** Landing, `/assets`, `/idea`, `/trade`,
+`/receipts`. Tidak ada yang dikunjungi dua kali, tidak ada cut ke halaman baru, dan video tidak
+pernah naik level lagi. Penonton yang harus diberi tahu dia sedang di mana sudah berhenti
+mendengarkan argumennya.
 
 `/assets` jadi pintu masuknya, bukan `/idea`, dan itu pilihan produknya sendiri bukan selera:
 wordmark dan tombol di top bar dua-duanya menuju ke sana. Itu juga urutan berargumen yang lebih
 baik. Papan itu menegakkan dulu pasarnya dan betapa sedikit isinya, lalu tiap klaim sesudahnya
 mendarat di atas angka yang sudah dilihat penonton.
+
+**Perpindahannya lewat nav console, dan itu satu-satunya yang ada.** Nav-nya berisi Assets, Idea,
+Receipts, Trade dan muncul di keempat halaman, jadi paruh console video ini satu sesi menerus,
+bukan montase empat screenshot. Yang **tidak** ada: CTA khusus dari `/idea` ke `/trade`, dan tautan
+dari hasil fill ke `/receipts`. Hasil fill menaut ke explorer. Jangan menaskahkan tombol yang tidak
+ada di layar; kalau kita mau serah terima yang lebih tegas dari run ke trade, itu tiket FE, bukan
+editan video.
+
+**`/assets/[symbol]` sengaja tidak masuk.** Halaman itu bagus dan membuktikan verdict di papan
+memang diukur, tapi masuk ke sana berarti turun satu level lalu naik lagi, satu-satunya gerakan
+mundur di seluruh video. Poin ketelitian yang sama dibuat lebih kuat oleh `pnpm evidence` di
+adegan 7, jadi dua belas detiknya lebih baik diberikan ke `/trade`, adegan dengan paling banyak
+yang harus ditunjukkan dan paling sedikit ruang.
 
 **Harga memulai dari landing, dan cara membayarnya.** Video yang benar-benar berurutan tidak bisa
 membuka di frame terkuat proyek ini, yaitu notional yang ditolak. Jadi urutan layarnya tetap
@@ -254,11 +267,12 @@ penonton tidak yakin apakah sisa videonya masih situs yang sama.]
 
 ---
 
-### Adegan 4. Papannya, dan keruntuhannya (0:46 sampai 1:10)
+### Adegan 4. Papannya, dan keruntuhannya (0:46 sampai 1:14)
 
 **Layar.** `/assets` waktu termuat, membawa angka bukan spinner. Tampilan tabel. Lalu geser slider
 ukuran melewati anak tangga terukurnya: $25, $1,000, $5,000, $10,000. Biarkan kolom verdict runtuh
-dari allowed ke refused sepanjang jalan. Tahan sedetik di anak tangga terakhir.
+dari allowed ke refused sepanjang jalan. Tahan sedetik di anak tangga terakhir, lalu klik **Idea**
+di nav.
 
 **Narasi.**
 
@@ -271,27 +285,10 @@ dari allowed ke refused sepanjang jalan. Tahan sedetik di anak tangga terakhir.
 
 ---
 
-### Adegan 5. Satu pasar, sampai ke dasarnya (1:10 sampai 1:22)
+### Adegan 5. Tesisnya, dan enam stage (1:14 sampai 1:50)
 
-**Layar.** Klik satu ticker untuk membuka `/assets/[symbol]`. Tangga sepuluh anak sebagai tabel:
-size, impact, effective price, verdict. Lalu gap risk yang dipecah jadi staleness, displacement,
-uncertainty dan basis.
-
-**Narasi.**
-
-> And any one of them opens all the way up. This is the ladder the verdict came from, rung by
-> rung, with what a real quote costs at each size.
-> The risk score is not a number we assert either. It is four measurements, and you can see which
-> one is driving it.
-
-[Dua belas detik cukup. Adegan ini ada untuk membuktikan adegan sebelumnya memang diukur, bukan
-untuk dibaca.]
-
----
-
-### Adegan 6. Tesisnya, dan enam stage (1:22 sampai 1:54)
-
-**Layar.** Pindah ke `/idea`. Ketik tesisnya dengan tangan, kecepatan normal. Pakai yang sudah
+**Layar.** `/idea` termuat dari klik di adegan sebelumnya. Ketik tesisnya dengan tangan,
+kecepatan normal. Pakai yang sudah
 terekam di `observations/showcase.json` supaya run-nya bisa direproduksi:
 
 > Stablecoin settlement volume keeps compounding onchain, so the issuers and the exchanges that
@@ -300,7 +297,7 @@ terekam di `observations/showcase.json` supaya run-nya bisa direproduksi:
 Tekan run. Enam stage muncul kelabu sebelum berjalan: compile, universe, allocate, triggers,
 capacity, guard. Biarkan compile dan universe berjalan real time, percepat bagian tengahnya 4x
 dengan badge menyala, lalu mendarat di stage capacity yang terbuka dengan notional yang ditolak di
-ukuran display.
+ukuran display. Lalu klik **Trade** di nav.
 
 **Narasi.**
 
@@ -318,12 +315,16 @@ ukuran display.
 
 ---
 
-### Adegan 7. Fill-nya, dan tanda tangannya (1:54 sampai 2:26)
+### Adegan 6. Fill-nya, dan tanda tangannya (1:50 sampai 2:30)
 
-**Layar.** `/trade`. Sambungkan wallet. Mandate-nya sudah hidup: satu dolar per trade, dua belas
-fill per dua puluh empat jam, empat aset yang diizinkan. Lalu kartu fill: quote, verdict guard,
+**Layar.** `/trade` termuat dari klik di adegan sebelumnya. Sambungkan wallet. Mandate-nya sudah
+hidup: satu dolar per trade, dua belas fill per dua puluh empat jam, empat aset yang diizinkan. Lalu kartu fill: quote, verdict guard,
 approval Permit2, dialog tanda tangan, transaksinya. Potong waktu tunggu konfirmasi dan beri badge.
-Mendarat di receipt-nya dengan tautan explorer.
+Mendarat di receipt-nya dengan tautan explorer, lalu klik **Receipts** di nav.
+
+Dua belas detik yang dibebaskan dari halaman detail aset masuk ke sini. Pakai untuk menahan dialog
+tanda tangan lebih lama: jumlah, token, dan masa berlakunya adalah klaim non-custodial yang
+sebenarnya, dan itu satu-satunya frame yang membuktikannya.
 
 **Narasi.**
 
@@ -339,9 +340,10 @@ Mendarat di receipt-nya dengan tautan explorer.
 
 ---
 
-### Adegan 8. Bukti yang bisa diturunkan ulang siapa saja (2:26 sampai 2:48)
+### Adegan 7. Bukti yang bisa diturunkan ulang siapa saja (2:30 sampai 2:52)
 
-**Layar.** `/receipts`, receipt baru di paling atas dengan hash evidence-nya. Lalu cut ke terminal,
+**Layar.** `/receipts` termuat dari klik di adegan sebelumnya, receipt baru di paling atas dengan
+hash evidence-nya. Lalu cut ke terminal,
 layar penuh, dan jalankan:
 
 ```bash
@@ -361,7 +363,7 @@ dan sudah pendek dari sananya.
 
 ---
 
-### Adegan 9. Penutup (2:48 sampai 3:00)
+### Adegan 8. Penutup (2:52 sampai 3:00)
 
 **Layar.** Tetap di terminal, jalankan `pnpm capacity`, biarkan angka universe-nya mendarat dengan
 tanggal hari itu. Lalu satu frame diam: wordmark, `reckonz.xyz`, `@reckonz_xyz`, URL GitHub,
@@ -382,27 +384,35 @@ tanggal hari itu. Lalu satu frame diam: wordmark, `reckonz.xyz`, `@reckonz_xyz`,
 ## Panduan pengambilan, adegan per adegan
 
 Rekam tiap adegan sebagai take-nya sendiri. Jangan mencoba satu pass menerus. Adegan fill pasti
-butuh beberapa percobaan dan kamu tidak mau mengulang landing gara-gara itu. Dua klik navigasi,
-adegan 3 masuk ke `/assets` dan adegan 4 masuk ke satu ticker, direkam di **akhir** adegan
-pemiliknya, supaya rekam ulang adegan berikutnya tidak ikut membuang kliknya.
+butuh beberapa percobaan dan kamu tidak mau mengulang landing gara-gara itu.
+
+**Empat klik navigasi, dan semuanya direkam di akhir adegan pemiliknya.** Landing masuk ke
+`/assets` lewat tombol di top bar, lalu Assets ke Idea, Idea ke Trade, Trade ke Receipts lewat nav
+console. Merekamnya di akhir adegan asal, bukan di awal adegan tujuan, berarti rekam ulang adegan
+berikutnya tidak ikut membuang kliknya. Sisakan setengah detik setelah tiap klik supaya editor
+punya bahan untuk memotong ke halaman yang termuat.
 
 | Adegan | URL atau perintah | Yang harus dijaga |
 |---|---|---|
 | 1 | `reckonz.xyz`, paling atas | Gerakkan pointer menyeberang wall pelan-pelan. Barisnya mengerem berhenti di bawahnya dan itulah shot-nya |
 | 2 | landing, `Approach` | Atur waktu scroll supaya kartunya mendarat di kamera. Gerakan wheel kecil dan disengaja; Lenis meluncur sekitar sedetik setelah tiap satu |
 | 3 | landing, `HowItWorks` | Diamkan sekitar delapan detik supaya satu kartu terlihat berganti. Akhiri dengan klik masuk ke app |
-| 4 | `/assets`, tampilan tabel | Geser slider pelan, satu anak tangga per ketukan |
-| 5 | `/assets/[symbol]` | Pilih aset yang hari itu memang berharga, bukan yang board-nya withheld |
-| 6 | `/idea` | Ketik dengan kecepatan manusia. `/api/run` dibatasi 3 burst dan 6 per menit (D78), jadi jangan memberondong take ulang |
-| 7 | `/trade` | Health check dulu. Wallet di chain 196. Tampilkan saldo demo, jangan mengaburkan saldo asli |
-| 8 | `/receipts`, lalu `pnpm evidence <hash>` | Riwayat scroll bersih di atas prompt |
-| 9 | `pnpm capacity` | Butuh waktu. Biarkan jalan dan pakai bagian ekornya |
+| 4 | `/assets`, tampilan tabel | Geser slider pelan, satu anak tangga per ketukan. Akhiri dengan klik **Idea** |
+| 5 | `/idea` | Ketik dengan kecepatan manusia. `/api/run` dibatasi 3 burst dan 6 per menit (D78), jadi jangan memberondong take ulang. Akhiri dengan klik **Trade** |
+| 6 | `/trade` | Health check dulu. Wallet di chain 196. Tampilkan saldo demo, jangan mengaburkan saldo asli. Akhiri dengan klik **Receipts** |
+| 7 | `/receipts`, lalu `pnpm evidence <hash>` | Riwayat scroll bersih di atas prompt |
+| 8 | `pnpm capacity` | Butuh waktu. Biarkan jalan dan pakai bagian ekornya |
+
+**Nav-nya berurutan Assets, Idea, Receipts, Trade,** jadi lompatan Idea ke Trade melewati Receipts
+lalu kembali lagi. Itu tidak terlihat oleh penonton dan bukan sesuatu yang perlu dihindari: nav
+adalah nav, bukan wizard. Yang terlihat adalah tab aktifnya berpindah, dan itu justru yang
+membuktikan ini satu app.
 
 **Landing direkam paling akhir, atau paling tidak setelah `/idea`.** Adegan 1 mengucapkan angka
-penolakan, dan angka itu keluar dari run di adegan 6. Merekam pembukanya duluan berarti merekamnya
+penolakan, dan angka itu keluar dari run di adegan 5. Merekam pembukanya duluan berarti merekamnya
 melawan angka yang belum kamu ukur.
 
-**Selalu dua take ekstra.** Rekam slider adegan 4 dua kali dan terminal adegan 8 dua kali. Itu dua
+**Selalu dua take ekstra.** Rekam slider adegan 4 dua kali dan terminal adegan 7 dua kali. Itu dua
 shot yang paling mungkin dirusak notifikasi nyasar, dan dua yang paling sulit direproduksi
 belakangan karena angka di bawahnya bergerak.
 
@@ -423,8 +433,8 @@ rapat itu.
 
 ### Urutan perakitan
 
-1. **Taruh narasinya dulu.** Rekam suara kesembilan adegan dalam satu duduk, satu file, dengan
-   tepukan atau penanda di antara adegan. Potong jadi sembilan klip dan tata jaraknya di timeline
+1. **Taruh narasinya dulu.** Rekam suara kedelapan adegan dalam satu duduk, satu file, dengan
+   tepukan atau penanda di antara adegan. Potong jadi delapan klip dan tata jaraknya di timeline
    sebelum satu gambar pun turun. Video ini sebuah argumen, dan argumennya hidup di suara.
 2. **Turunkan gambarnya di bawahnya.** Gambar tiap adegan dipangkas mengikuti narasi, bukan
    sebaliknya. Kalau shot-nya terlalu pendek, tahan frame terakhirnya, jangan melambatkan seluruh
@@ -449,8 +459,8 @@ Console-nya padat, jadi kebanyakan angka butuh bantuan.
 - Pakai **punch-in**, skala statis sekitar 130% yang ditahan selama durasinya, bukan zoom yang
   bergerak. Merekam di lebar 2560 itulah yang membuat ini tetap tajam di 1080p.
 - Punch-in tepat di empat tempat: kolom verdict yang runtuh (adegan 4), baris notional yang ditolak
-  (adegan 6), jumlah dan masa berlaku di dialog tanda tangan (adegan 7), dan hash yang cocok
-  (adegan 8). Empat punch-in dalam tiga menit. Yang kelima mulai terasa seperti video jualan.
+  (adegan 5), jumlah dan masa berlaku di dialog tanda tangan (adegan 6), dan hash yang cocok
+  (adegan 7). Empat punch-in dalam tiga menit. Yang kelima mulai terasa seperti video jualan.
 - **Tidak satu pun di landing.** Adegan 1 sampai 3 adalah satu-satunya bentangan video ini yang
   tidak punya angka untuk dibaca, dan itulah yang membuatnya pembuka dan bukan tur. Punch-in di
   sana adalah penekanan atas ketiadaan.
@@ -473,8 +483,8 @@ Ikuti `docs/09-design.md`, karena video ini akan duduk bersebelahan dengan produ
 
 ### Badge kecepatan
 
-Tiga ramp, dan hanya tiga: stage tengah dari run (adegan 6), tunggu konfirmasi (adegan 7), dan
-jalannya `pnpm capacity` (adegan 9). Masing-masing membawa badge di kanan bawah:
+Tiga ramp, dan hanya tiga: stage tengah dari run (adegan 5), tunggu konfirmasi (adegan 6), dan
+jalannya `pnpm capacity` (adegan 8). Masing-masing membawa badge di kanan bawah:
 `4x, real time 38s`. Tipografi sama dengan lower third, tanpa kotak, opasitas 60%. Badge muncul
 bersama ramp-nya dan pergi bersamanya.
 
