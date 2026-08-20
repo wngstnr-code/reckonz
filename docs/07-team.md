@@ -436,10 +436,16 @@ change is a decision rather than a guess.
 Two places to land it:
 
 - `app/page.tsx:24` — replace `<span className="text-[26px] leading-none text-signal">◇</span>`.
-- `app/icon.png` — the favicon. Verified against `node_modules/next/dist/docs` for **this** Next
+- `app/icon.svg` — the favicon. Verified against `node_modules/next/dist/docs` for **this** Next
   (16.3): `app/icon.(ico|jpg|jpeg|png|svg)` is picked up automatically, and `apple-icon.png` too.
-  `favicon` must be `.ico` and only at the top level of `app/`. The PNG works as `app/icon.png`
-  as-is — a dark square is correct for a tab icon.
+  `favicon` must be `.ico` and only at the top level of `app/`. **It is an SVG since 2026-08-20,
+  and the PNG is gone**: the PNG baked in `#0b0d10`, which is a dark tile rather than a mark in a
+  light tab strip, and left the mark filling about half the tile. The SVG is transparent, cropped
+  to the mark's own bounding box, and switches between the two `color-signal` values on
+  `prefers-color-scheme` — neither one reads on both tab strips alone. Two traps if you edit it:
+  an XML comment cannot contain two hyphens in a row (spelling the CSS custom property in full
+  makes the file unparseable and the favicon simply absent), and `currentColor` does not work in a
+  standalone favicon.
 
 ### 5. Demo video
 

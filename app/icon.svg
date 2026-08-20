@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="253.9 218 580 580" role="img" aria-label="Reckonz">
+  <title>Reckonz</title>
+  <!--
+    The browser tab icon. Same five strokes as public/logo-reckonz.svg on the
+    same 1024 grid — the geometry is copied there, not re-traced, so read that
+    file's comment before touching a coordinate. In particular the tick is a
+    separate path and must never be joined to the fourth bar.
+
+    ## Two things are different here, and both are the point
+
+    **No background.** The PNG this replaced baked in #0b0d10, which is a dark
+    tile in a light tab strip rather than a mark. Transparent means the tab's
+    own surface shows through and the mark is the only thing drawn.
+
+    **Cropped to the mark.** The shared 0 0 1024 1024 canvas leaves the mark
+    filling about half the tile, which at 16px is a small shape floating in
+    empty space. This viewBox is the mark's own bounding box — x 350 to 737.8
+    (the tick's butt cap reaches past its 725 endpoint), y 254.5 to 761.5 —
+    squared off around its centre with roughly 7% of breathing room. The mark
+    now fills about 87% of the tile.
+
+    That crop is also what makes it legible small. The gaps between the bars are
+    35 units: on the old canvas that was 3.4% of the tile, half a pixel at 16px,
+    and the four bars smeared into one block. Here they are 6%, about a whole
+    pixel, which is the difference between a mark and a smudge.
+
+    ## Why the colour is a media query rather than currentColor
+
+    A favicon is rendered standalone. There is no inherited text colour, so
+    `currentColor` — right for the in-page logo — resolves to black here and the
+    mark stops being ours.
+
+    So the two values are stated, and they are exactly the two values the
+    `color-signal` custom property takes in app/globals.css: #0d9668 on light
+    and #6ee7b7 on dark. (Written without its leading dashes on purpose: an XML
+    comment cannot contain two hyphens in a row, and the first draft of this
+    file spelled the token in full and would not parse at all.) Neither works
+    alone once the background is transparent, which is the same rule the repo
+    already has about components that hardcode a foreground: the mint is a light
+    shape and vanishes on a white tab strip, the deep green is a dark one and
+    sinks into a black one. If globals.css ever changes those values, change
+    them here too — this file cannot import them.
+  -->
+  <style>
+    .mark { stroke: #0d9668; }
+    @media (prefers-color-scheme: dark) {
+      .mark { stroke: #6ee7b7; }
+    }
+  </style>
+  <g class="mark" fill="none" stroke-width="31" stroke-linecap="butt">
+    <path d="M365.5 254.5V761.5" />
+    <path d="M431.5 254.5V761.5" />
+    <path d="M497.5 254.5V761.5" />
+    <path d="M563.5 254.5V761.5" />
+    <path d="M563.5 752.5L725 515" />
+  </g>
+</svg>
