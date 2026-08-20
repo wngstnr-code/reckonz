@@ -3,6 +3,10 @@
 A speaking script, and nothing else. `docs/12-demo.md` stays the authority on what is on screen,
 what order it happens in, and how it is cut. If the two ever disagree about a shot, that one wins.
 
+The eight scenes are the same eight, in the same order, numbered the same. Each heading names the
+page as well as what happens on it — `12-demo.md` numbers them by screen and this file used to
+number them by event, which is one gap too many between two documents read side by side.
+
 This exists because the script inside `12-demo.md` is written to be *read*, and this one is written
 to be *said*. Short sentences. Common words. Nothing that needs a run-up.
 
@@ -42,7 +46,7 @@ than the exact figure, and it is more honest anyway — it is a reading, not a p
 
 ---
 
-## 1. Landing
+## 1. Landing — the top of the page
 
 > Thirty US stocks are tokenised on X Layer.
 > Apple, Nvidia, Tesla, and twenty-seven more.
@@ -63,7 +67,7 @@ Same length, same rhythm, so you can decide after you see the number rather than
 
 ---
 
-## 2. What it does
+## 2. What it does — scrolling into `Approach`
 
 > You write what you think, in plain words.
 > It maps that onto the tokens that really trade here, checks how deep each pool is,
@@ -73,7 +77,7 @@ Same length, same rhythm, so you can decide after you see the number rather than
 
 ---
 
-## 3. The four pages
+## 3. The four pages — `How It Works`, then click into the app
 
 > Four pages. What the market can take. The sentence you write.
 > What the chain kept. And the part that needs your wallet.
@@ -82,7 +86,7 @@ Same length, same rhythm, so you can decide after you see the number rather than
 
 ---
 
-## 4. The board
+## 4. The board — `/assets`
 
 > Every market we track. A price we can defend, how risky the overnight gap is,
 > and how much each one can take.
@@ -98,7 +102,7 @@ Do not call it depth if the screen is calling it something else.*
 
 ---
 
-## 5. The thesis
+## 5. The thesis — `/idea`
 
 > Now the thesis. No form, no tickers. Just a sentence.
 >
@@ -116,9 +120,17 @@ Do not call it depth if the screen is calling it something else.*
 >
 > And this hands it to the trade page.
 
+*The four figures are on screen in two places. **[3]** is the `Guard` figure, printed as `N of M`
+under "legs it will let through right now" — say only the first number. **[4]** is `Handed back`,
+which the ribbon above calls `Not placed`; either is the same amount. **[5]** and **[6]** are both
+in the small line under `Impact avoided`, which reads like `$152,963 at once, $7.66 planned`.*
+
+*Do not read the large figure above that line. `Impact avoided` is the difference between the two,
+a third number, and reading it would make "it would have paid about" false.*
+
 ---
 
-## 6. The fill
+## 6. The fill — `/trade`
 
 > The mandate lives on chain. A cap per trade, a cap per day,
 > and the assets it is allowed to touch.
@@ -134,7 +146,7 @@ Do not call it depth if the screen is calling it something else.*
 
 ---
 
-## 7. The proof
+## 7. The proof — `/receipts`, then the terminal
 
 > There is the fill, under the thesis it was made for.
 >
@@ -147,7 +159,7 @@ Do not call it depth if the screen is calling it something else.*
 
 ---
 
-## 8. The close
+## 8. The close — the terminal, then the last frame
 
 > One last number, and it is our weakest.
 > Today the whole universe takes about **[7: what it takes today]** at half a percent.
