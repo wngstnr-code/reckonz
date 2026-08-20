@@ -61,7 +61,7 @@ interface Section {
 }
 
 const SECTIONS: Section[] = [
-  { href: '/landing' as Route, label: 'Home' },
+  { href: '/' as Route, label: 'Home' },
   { href: '#what-it-does' as Route, label: 'What it does' },
   { href: '#how-it-works' as Route, label: 'How it works' },
 

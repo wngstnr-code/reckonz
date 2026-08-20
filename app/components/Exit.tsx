@@ -532,15 +532,18 @@ export function Exit() {
     }
   }
 
+  // `TradeCard` is the only thing that mounts this, and it renders its own
+  // `Disconnected` with a real Connect button rather than a sentence, so a
+  // disconnected branch here would be unreachable UI. The one that used to sit
+  // in the render was reachable only from the prototype surface at `/`, which
+  // is gone. Returning null also narrows `address` for everything below, which
+  // is why this is a guard rather than a deleted branch. See the
+  // disconnected-state rule in `docs/09-design.md`.
+  if (!address) return null;
+
   return (
     <>
-      {!address ? (
-        // Only reachable from the prototype surface at `/`. In the console
-        // `TradeCard` renders its own `Disconnected` instead of mounting this,
-        // so the wallet gate lives there with a real button. See the
-        // disconnected-state rule in `docs/09-design.md`.
-        <p className="text-meta text-dim">Connect a wallet to sell one.</p>
-      ) : !option ? (
+      {!option ? (
         <p className="text-meta text-caution">
           This wallet is on a chain with no deployment. Switch to X&nbsp;Layer using the control in
           the header.
