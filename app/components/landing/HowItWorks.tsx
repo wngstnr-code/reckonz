@@ -100,7 +100,7 @@ const ROWS = [
     {
       title: 'Trade',
       line: 'You set the bounds, the chain enforces them, and no key of ours moves money.',
-      src: undefined as string | undefined,
+      src: '/landing/trade.jpeg' as string | undefined,
     },
   ],
 ];
