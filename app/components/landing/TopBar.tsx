@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Logo } from '../console/Logo';
+import { AppLink } from './AppLink';
 import { Menu } from './Menu';
 
 /**
@@ -105,8 +106,8 @@ export function TopBar() {
          * decision D101 keeps re-teaching: white on `signal` is about 3.4:1 and
          * this label is 13.5px, while `--color-frame` is the green this palette
          * derived specifically to carry white copy — 8.04:1, and the same hue. */}
-        <Link
-          href="/assets"
+        <AppLink
+          path="/assets"
           className="group relative flex h-11 items-center overflow-hidden rounded-full bg-ink pr-7 pl-7 text-[13.5px] font-semibold tracking-[0.06em] text-ground uppercase transition-colors duration-300 hover:bg-frame"
         >
           <span
@@ -127,7 +128,7 @@ export function TopBar() {
           <span className="transition-transform duration-300 ease-out group-hover:translate-x-3.5">
             Launch app
           </span>
-        </Link>
+        </AppLink>
 
         <Menu />
       </div>

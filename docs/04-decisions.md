@@ -6030,3 +6030,49 @@ post rather than a stale number. That is a writing decision, not a find-and-repl
 
 The conclusion under all four readings is unchanged, which is the part that matters: 15 bps of
 $37,756 is **$57** per full turnover, and an AUM product still has nowhere to put money.
+
+---
+
+## D104 — The landing page and the console get separate domains, from one deployment
+
+`reckonz.xyz` serves the landing page; `app.reckonz.xyz` serves the console. Not a second Vercel
+project: the build, the traced `observations/` store and the API handlers are all one, and a second
+project would mean a second copy of every one of them drifting on its own schedule.
+
+`proxy.ts` does the split by `Host` — `middleware.ts` is deprecated in Next 16 and `proxy` is its
+replacement, same behaviour under a different name. Two rules: `/` on the app host has nothing to
+serve, because the console has no index page, so it goes to `/assets`; and a console path on the
+site host leaves for the app host. The second rule is the one that matters — without it every
+console page answers on both domains, and two live URLs for one page is how the link someone shares
+stops matching the link someone else has.
+
+**Both origins or neither.** `app/origins.ts` returns null unless `NEXT_PUBLIC_SITE_ORIGIN` and
+`NEXT_PUBLIC_APP_ORIGIN` are both set, and the proxy returns `next()` immediately when it does. So
+dev and every preview deployment behave exactly as the single-host site does today, which is what
+makes this safe to merge before the DNS record exists. One of the two set alone would give the
+links a destination nothing routes, or routing with nothing pointing at it.
+
+**307, not 308.** These are permanent redirects semantically, and a permanent redirect is cached by
+the browser essentially forever — including a wrong one. Until this has run against the real domain
+a mistake has to be fixable by redeploying rather than by asking people to clear their cache.
+
+**Crossing into the app opens a new tab**, by the design owner's call. Same-tab is the usual choice
+for moving inside one product; across this boundary the two really are different things — the
+landing page is a document you were reading, the console is a session you connect a wallet to. It
+also avoids returning from a wallet flow via the back button to a page that has lost its scroll
+position and its scroll-driven animations. `AppLink` is what decides: an ordinary `<Link>` on one
+origin, a `target="_blank" rel="noopener"` anchor on two. It cannot be a `<Link>` in the second case
+regardless — the router does not navigate across hosts. Nothing points the other way in a new tab; a
+console that spawned a third one would be the same courtesy turned into litter.
+
+**A bug the first version had, found by measuring rather than by reading.** The app host's `/`
+redirect was built with `new URL('/assets', request.url)`, and `request.url` is the URL the server
+was reached on, not the domain the visitor typed. Against a local two-host run it sent
+`app.localhost/` to `localhost/assets` — the front door of the app domain bouncing people onto the
+wrong origin. Both redirects are built from `APP_ORIGIN` now. Verified across both hosts: site `/`
+200, site `/assets` and `/trade?x=1` 307 to the app host with the query intact, app `/` 307 to
+`app/assets`, app `/assets` 200, unknown host untouched, and with the variables unset every path
+200s on one origin as before.
+
+The API is deliberately left answering on both hosts. The console calls it same-origin from the app
+domain, and redirecting a POST across hosts drops its body.
