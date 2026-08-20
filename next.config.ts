@@ -20,6 +20,17 @@ const config: NextConfig = {
   // and the page is empty rather than merely slow.
   outputFileTracingIncludes: {
     '/api/theses': ['./observations/registry.jsonl'],
+    // The receipts pages read `loadRegistry()` directly, for the same reason
+    // `/assets` does: a server asking itself a question over HTTP is a round
+    // trip that buys nothing. That change moved them onto this list and nobody
+    // moved them, so the store shipped only under `/api/theses` and both pages
+    // fell through to enumerating the whole registry from the chain on every
+    // request. Serial reads over a throttled public RPC, measured in production
+    // at 8 to 13 seconds to first receipt, against 0.4s to first byte. Exactly
+    // the regression the note above predicts: correct, and only visible as
+    // latency.
+    '/receipts': ['./observations/registry.jsonl'],
+    '/receipts/[id]': ['./observations/registry.jsonl'],
     '/api/board': ['./observations/board.json'],
     // `/assets` reads the store directly rather than asking our own route over
     // HTTP, so it needs the file traced under its own path. Without this the

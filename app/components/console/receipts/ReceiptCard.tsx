@@ -4,6 +4,7 @@ import type { ViewReceipt } from '@/src/receipts-view';
 import { hasEvidence } from '@/src/receipts-view';
 import { AssetMark } from '../AssetMark';
 import { TONE, direction, e8, headline, notionalOf, toneOf, usdg, when } from './format';
+import { Opening } from './Opening';
 
 /**
  * One settled receipt, in the shape `AssetCard` uses.
@@ -37,8 +38,14 @@ export function ReceiptCard({ receipt }: { receipt: ViewReceipt }) {
           <div className="truncate font-mono text-data font-semibold text-ink">
             {many ? `${receipt.fills.length} assets` : (first?.symbol ?? 'n/a')}
           </div>
-          <div className="truncate text-micro tracking-normal text-faint normal-case">
-            receipt #{receipt.id} · {direction(receipt.fills)}
+          <div className="flex items-center gap-1.5 text-micro tracking-normal text-faint normal-case">
+            <span className="truncate">
+              receipt #{receipt.id} · {direction(receipt.fills)}
+            </span>
+            {/* Beside the receipt number rather than in a corner: the number is
+                what a reader aims at, so it is where they are already looking
+                when they want to know whether the aim landed. */}
+            <Opening />
           </div>
         </div>
       </header>

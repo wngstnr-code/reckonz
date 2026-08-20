@@ -4,6 +4,7 @@ import { shortfallMeasured } from '@/src/abi';
 import type { ViewReceipt } from '@/src/receipts-view';
 import { hasEvidence } from '@/src/receipts-view';
 import { AssetMark } from '../AssetMark';
+import { Opening } from './Opening';
 import { direction, e8, notionalOf, short, usdg, when } from './format';
 
 /**
@@ -74,9 +75,10 @@ export function ReceiptsTable({ receipts }: { receipts: ViewReceipt[] }) {
                       gets. */}
                   <Link
                     href={`/receipts/${r.id}` as Route}
-                    className="font-mono text-meta text-ink after:absolute after:inset-0 hover:text-signal focus-visible:outline-none"
+                    className="inline-flex items-center gap-1.5 font-mono text-meta text-ink after:absolute after:inset-0 hover:text-signal focus-visible:outline-none"
                   >
                     #{r.id}
+                    <Opening />
                   </Link>
                   <div className="font-mono text-micro tracking-normal text-faint normal-case">
                     {when(r.timestamp)}
