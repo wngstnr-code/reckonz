@@ -208,30 +208,62 @@ that has not built it.
 > We will not show you a comforting zero. It says the measurement failed, and you have to
 > acknowledge that before anything continues.
 
-## Day 7, 21 Aug: the submission post, required
+## Day 7, 21 Aug: the submission post, required, and it carries the demo video
 
-`@XLayerOfficial` must be mentioned. Post it before the deadline rather than at it.
+Two things happen on the 21st and the order matters. **Post this first, then submit the form.**
+The form has an `X post URL` field and this thread is what goes in it, so a submission sent before
+the post is a submission with that field blank or pointing at the wrong day.
 
-> Reckonz is live on @XLayerOfficial mainnet.
+`@XLayerOfficial` must be mentioned, and it is mentioned in the opening post rather than a reply.
+The mention is what notifies the judges, and a reply reaches a fraction of what the opening post
+does. **The hashtags sit on the same line**, for the same reason: `#AISeason` is how the organisers
+collect the week's entries, and a tag buried in the fourth post of a thread is a tag on a post most
+readers never load. They repeat on the closing reply, which is the only post in the whole week that
+carries them twice, and that is the one post where being findable beats reading clean.
+
+**The video goes on the opening post.** The form has no video field, so this thread is one of only
+two places the video can reach a judge at all, the other being the site itself. X distributes a
+post with video on the video, so attaching it to a reply wastes it. Everything the opening post
+claims has to be visible in the first frames, because most of the reach is people who watch a few
+seconds with the sound off.
+
+Three rules for the video itself, all of them the same rule the rest of this file follows: it shows
+real mainnet, every figure in it is one we have measured, and nothing in it is a mockup of
+something unbuilt. A demo that shows a screen we have not shipped fails the one criterion this
+whole account exists to demonstrate.
+
+> Reckonz is live on @XLayerOfficial mainnet. #AISeason #XLayer
 >
-> It turns an investment thesis into real positions in tokenised stocks, sized to what the market
-> can actually absorb, and into the rules that close them.
+> You write an investment thesis. It turns that into real positions in tokenised stocks, sized to
+> what the market can actually absorb, and into the rules that close them.
+>
+> The whole thing, end to end:
 
-> You write the idea, and the conditions you would exit on. The AI turns those into rules a
-> contract enforces inside the trade itself, not a reminder that arrives afterwards.
-
-> Ask it for $250k and it tells you $20,361 fits, then hands the rest back rather than force it
+> Ask it for $250,000 and it tells you $20,361 fits, then hands the rest back rather than force it
 > into a market that cannot take it.
+>
+> The refusal is the product. We are paid 0.15% of a trade that goes through, and nothing at all
+> for one we stop.
 
-**Re-measure this one on the 21st before posting.** It is the same figure as Day 2 and it changed
-by 3x between the 15th and the 16th. Five days out, treat the number above as a placeholder.
+**Re-measure the $20,361 on the 21st before posting.** It is the same figure as Day 2 and it moved
+3x between the 15th and the 16th. Treat it as a placeholder until `pnpm plan 250000` has been run
+that morning, and if it has moved, the video has to agree with the post.
 
-> 18 trades on mainnet, each one auditable by anyone. Every contract published and verified. 322
+> The AI never holds a key that can move money. It writes the exit conditions, and only ones the
+> chain can genuinely measure.
+>
+> A contract enforces those inside the trade itself, not a reminder that arrives afterwards.
+
+> 21 trades on mainnet, each one auditable by anyone. Every contract published and verified. 399
 > tests on every change.
 >
 > reckonz.xyz
 >
 > #AISeason #XLayer
+
+**Both numbers in that last post are checkable and both drift.** The receipt count comes from the
+chain, not from `05-status.md`, and 399 is 293 unit plus 106 Foundry, which `pnpm check:tests`
+confirms. Posting a stale count on the one post the judges are guaranteed to read undoes Day 4.
 
 ## Images, one per thread
 
@@ -453,6 +485,9 @@ does look like a failure.
 
 ### Day 7, the submission
 
+**This one goes on the closing reply, not the opening post.** The video has the opening post on
+the 21st, and the squares are a picture of the receipt count, which is what that reply states.
+
 ```
 Editorial infographic poster, pure black #000000 background, entirely greyscale except for
 one accent colour. 16:9.
@@ -468,19 +503,20 @@ Behind everything, an enormous ghosted display word "LIVE" in heavy condensed sa
 as a fine dithered ASCII halftone texture in dark grey, barely visible against the black.
 Fine diagonal dithered streaks drift across the upper right.
 
-Foreground: exactly eighteen small solid mint green #6ee7b7 squares, all identical in
-size, arranged in a precisely even grid of six columns and three rows, centred, with equal
+Foreground: exactly twenty-one small solid mint green #6ee7b7 squares, all identical in
+size, arranged in a precisely even grid of seven columns and three rows, centred, with equal
 generous gutters and a wide empty margin. No highlight, no variation, no connecting lines.
-Each square clearly separated so all eighteen can be counted at a glance.
+Each square clearly separated so all twenty-one can be counted at a glance.
 
-Along the bottom edge, very small uppercase monospace in dark grey: "EIGHTEEN RECEIPTS.
+Along the bottom edge, very small uppercase monospace in dark grey: "TWENTY-ONE RECEIPTS.
 COUNT THEM".
 
 No other text. No drop shadows, no glow, no 3D, no perspective, no icons, no people.
 ```
 
 **If the receipt count has moved by the 21st**, change the number of squares, the grid and the
-footnote to match. That is the only edit any of these prompts should ever need.
+footnote to match, and the figure in the post with them. That is the only edit any of these
+prompts should ever need.
 
 ## The profile banner
 
