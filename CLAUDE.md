@@ -48,6 +48,11 @@ Chat, explanations, questions — Bahasa Indonesia. Code, comments, commit messa
 directory names, docs, UI copy, error strings — English. The split is deliberate: the repo is
 read by hackathon judges and a teammate, and a codebase in two languages reads as unfinished.
 
+**One exception, and it is bounded.** `docs/12-demo.md` is written in Indonesian: it is a
+production guide for the two of us and it is not a deliverable anyone else reads. Everything in it
+that ends up in the video stays English, and the file says so at the top. A second file does not
+get to claim this exception by pointing at the first one.
+
 ## Commands
 
 ```bash

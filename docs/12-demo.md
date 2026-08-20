@@ -1,245 +1,269 @@
-# The demo video
+# Video demo
 
-Written 2026-08-20. Not a submission requirement: the Google Form has eight fields and none of
-them is a video (`00-hackathon.md`, read 2026-08-14). It is worth making anyway, because the
-description links out and a judge who watches ninety seconds of a real fill has seen something no
-paragraph can assert.
+Ditulis 2026-08-20. Bukan syarat submission: Google Form-nya delapan field dan tidak satu pun
+video (`00-hackathon.md`, dibaca 2026-08-14). Tetap layak dibuat, karena deskripsi submission bisa
+menaut ke luar, dan juri yang menonton sembilan puluh detik fill sungguhan sudah melihat sesuatu
+yang tidak bisa diklaim paragraf mana pun.
 
-Two rules that override anything below.
+> **Catatan bahasa.** Panduan di file ini berbahasa Indonesia, karena ini dokumen kerja untuk kami
+> berdua dan bukan barang yang dibaca juri. **Semua yang masuk ke video tetap bahasa Inggris**:
+> naskah narasi, teks di layar, caption, judul, dan deskripsi. Blockquote di bawah adalah naskah,
+> jadi jangan diterjemahkan.
 
-**No em-dashes.** Not in the narration, not in the on-screen text, not in the captions, not in the
-video description. Same house voice as `docs/10-submission.md`.
+Dua aturan yang mengalahkan apa pun di bawah ini.
 
-**Nothing staged.** Every number on screen is measured the day it is recorded, every command runs
-for real, and the one fill in the video settles on mainnet. If a run refuses something, keep it.
-The product is the refusal, and a demo that only ever shows green is arguing against itself.
+**Tanpa em-dash.** Tidak di narasi, tidak di teks layar, tidak di caption, tidak di deskripsi
+video. Suara rumah yang sama dengan `docs/10-submission.md`.
 
----
-
-## The argument, before any shot list
-
-The video makes one argument in four moves. Everything else is decoration and can be cut.
-
-1. **There is a live tokenised-equity market on X Layer with no application layer on it.** Thirty
-   xStocks trading as ERC-20s, and nothing above them that sizes, prices or refuses.
-2. **We size against what the pools can actually absorb, and hand the rest back.** Ask for
-   $250,000, get a few thousand, and the number you did not get is stated out loud.
-3. **The refusal is enforced by a contract, in the trade's own transaction.** Not a warning
-   afterwards. `PolicyGuard` reverts, and it bounds on market condition rather than only on
-   destination and size.
-4. **The chain is the evidence.** Receipts in an append-only registry, each carrying a hash of the
-   exact quote, oracle reading and guard verdict, published before anything is signed, and
-   re-derivable by anyone from the archived bundle.
-
-### Say these
-
-- Tokenised real world assets, in the first ten seconds. It is the only thing that puts this in
-  the AI-RWA track (see the note at the top of `10-submission.md`).
-- Non-custodial. Funds never leave the viewer's wallet, at any point.
-- The capacity figure with its date, and with the previous reading beside it. The number moves in
-  both directions and saying so is the demonstration.
-
-### Do not say these
-
-Three claims are dead and repeating them costs credibility with anyone who knows the space (D49):
-
-- "Nobody publishes a fair value with uncertainty." Pyth does, with Nasdaq data behind it.
-- "Bounded agent execution is novel." Giza has processed billions under it.
-- "The market-hours gap is an industry problem." It is a condition of this venue.
-
-Also do not say "AI trading agent", do not call it an assistant, and do not claim any agent uses
-the API. None does yet.
+**Tidak ada yang dipanggungkan.** Setiap angka di layar diukur pada hari perekaman, setiap perintah
+benar-benar dijalankan, dan satu fill di video itu settle di mainnet. Kalau ada run yang menolak
+sesuatu, biarkan. Penolakan itu produknya, dan demo yang isinya hijau semua sedang berdebat dengan
+dirinya sendiri.
 
 ---
 
-## Format decisions
+## Argumennya dulu, sebelum shot list
 
-| Decision | Value | Why |
+Video ini membuat satu argumen dalam empat langkah. Selebihnya hiasan dan boleh dipotong.
+
+1. **Ada pasar ekuitas tertokenisasi yang hidup di X Layer tanpa lapisan aplikasi di atasnya.**
+   Tiga puluh xStock diperdagangkan sebagai ERC-20, dan tidak ada apa pun di atasnya yang
+   menakar, memberi harga, atau menolak.
+2. **Kami menakar ke apa yang benar-benar sanggup ditelan pool, dan sisanya dikembalikan.** Minta
+   $250,000, dapat beberapa ribu, dan angka yang tidak kamu dapat diucapkan terang-terangan.
+3. **Penolakan itu ditegakkan kontrak, di dalam transaksi trade-nya sendiri.** Bukan peringatan
+   sesudahnya. `PolicyGuard` revert, dan dia membatasi berdasarkan kondisi pasar, bukan cuma
+   tujuan dan ukuran.
+4. **Chain-nya adalah buktinya.** Receipt di registry append-only, masing-masing membawa hash dari
+   quote, pembacaan oracle, dan verdict guard yang persis dipakai, dipublikasikan sebelum apa pun
+   ditandatangani, dan bisa diturunkan ulang siapa saja dari bundle yang diarsipkan.
+
+### Yang harus disebut
+
+- Tokenised real world assets, di sepuluh detik pertama. Cuma itu yang menempatkan ini di track
+  AI-RWA (lihat catatan di kepala `10-submission.md`).
+- Non-custodial. Dana tidak pernah keluar dari dompet penonton, di titik mana pun.
+- Angka capacity beserta tanggalnya, dan pembacaan sebelumnya di sebelahnya. Angka itu bergerak ke
+  dua arah, dan mengatakannya adalah demonstrasinya.
+
+### Yang jangan disebut
+
+Tiga klaim sudah mati dan mengulanginya memakan kredibilitas di depan siapa pun yang paham ruang
+ini (D49):
+
+- "Tidak ada yang mempublikasikan fair value dengan uncertainty." Pyth melakukannya, dengan data
+  Nasdaq di belakangnya.
+- "Eksekusi agent yang dibatasi itu baru." Giza sudah memproses miliaran di bawah pola itu.
+- "Market-hours gap itu masalah industri." Itu kondisi venue ini.
+
+Jangan juga bilang "AI trading agent", jangan menyebutnya assistant, dan jangan mengklaim ada agent
+yang memakai API-nya. Belum ada.
+
+---
+
+## Keputusan format
+
+| Keputusan | Nilai | Alasan |
 |---|---|---|
-| Length | **2:45 to 3:10**, target 3:00 | Long enough for one real fill, short enough that a judge finishes it |
-| Aspect | 16:9, 1920x1080, 60fps | Record at 2560x1440 and downscale, so the dense type stays crisp |
-| Voice | One narrator, unscripted-sounding, no music bed under speech | The UI is an instrument, and a music bed reads as a product ad |
-| Captions | Burned in, always on | Most judges watch muted the first time |
-| Cursor | Visible, no click ripples, no keystroke overlay | The interface is dense enough |
-| Speed | Real time, except where marked, with a visible speed badge | Honest about latency, see below |
+| Durasi | **2:45 sampai 3:10**, target 3:00 | Cukup panjang untuk satu fill sungguhan, cukup pendek untuk diselesaikan juri |
+| Rasio | 16:9, 1920x1080, 60fps | Rekam di 2560x1440 lalu turunkan, supaya tipografi rapatnya tetap tajam |
+| Suara | Satu narator, terdengar tidak dibacakan, tanpa musik di bawah suara | UI-nya instrumen, dan bed musik terbaca sebagai iklan produk |
+| Caption | Burned in, selalu tampil | Kebanyakan juri menonton tanpa suara di kali pertama |
+| Kursor | Terlihat, tanpa efek klik, tanpa overlay ketikan | Antarmukanya sudah cukup padat |
+| Kecepatan | Real time kecuali yang ditandai, dengan badge kecepatan yang terlihat | Jujur soal latensi, lihat di bawah |
 
-**On speeding things up.** The pipeline is slow for real reasons: an LLM call, a throttled public
-RPC, thirty reference markets. Three places in the cut run faster than life. Every one of them
-carries a small badge in the corner that says what the multiplier is and how long it really took,
-for example `4x, real time 38s`. Cutting latency out silently would be the one dishonest thing in
-the video.
+**Soal mempercepat.** Pipeline-nya lambat karena alasan nyata: panggilan LLM, RPC publik yang
+di-throttle, tiga puluh pasar referensi. Ada tiga tempat di cut ini yang berjalan lebih cepat dari
+aslinya. Setiap satunya membawa badge kecil di pojok yang menyebut pengalinya dan berapa lama
+sebenarnya, misalnya `4x, real time 38s`. Memotong latensi diam-diam adalah satu-satunya hal tidak
+jujur yang bisa ada di video ini.
 
 ---
 
-## Cuts to produce
+## Cut yang perlu dibuat
 
-| Cut | Length | Where it goes |
+| Cut | Durasi | Untuk di mana |
 |---|---|---|
-| **Main** | 3:00 | Linked from the site and from the submission description |
-| **Short** | 0:60 | Posted from `@reckonz_xyz`, see `docs/11-social.md` |
-| **Silent loop** | 0:20 | The refusal number and the capacity slider collapse, no voice, for the site hero |
+| **Utama** | 3:00 | Ditaut dari situs dan dari deskripsi submission |
+| **Pendek** | 0:60 | Diposting dari `@reckonz_xyz`, lihat `docs/11-social.md` |
+| **Loop diam** | 0:20 | Slider capacity yang runtuh dan verdict guard, tanpa suara, untuk hero situs |
 
-The short is not the main cut trimmed. It is scenes 1, 4 and 6 recut with three sentences of
-narration. Trimming the main cut leaves a video that starts mid-argument.
+Cut pendek bukan cut utama yang dipangkas. Itu adegan 4, 6 dan 7 disusun ulang dengan tiga kalimat
+narasi, dan landing-nya dibuang sama sekali: penonton yang sudah ada di dalam sebuah post tidak
+perlu diantar ke pintu depan. Memangkas cut utama menghasilkan video yang membuka di halaman
+marketing dan tidak pernah sampai ke satu angka pun.
+
+**Ada rumah keempat untuk rekaman, dan sudah dibangun.** `Approach` di landing menerima `videoSrc`
+dan kartu yang terbang masuk itu player yang menunggu isi, dengan caption *the recorded run lands
+here*. `app/page.tsx` belum mengopernya. Yang pantas masuk ke kartu itu adalah rekaman **satu run**,
+adegan 6 berdiri sendiri tanpa narasi, bukan video ini: halaman yang membuka dengan memutar tur
+tentang dirinya sendiri sedang berdebat dengan layar pertamanya. Itu milik FE, jadi tiket, bukan
+editan.
 
 ---
 
-## Pre-flight, on the day of recording
+## Pre-flight, di hari perekaman
 
-Do all of this. The most likely way this video goes wrong is a stale oracle refusing the fill on
-camera, and that is a twenty second check.
+Kerjakan semuanya. Cara paling mungkin video ini gagal adalah oracle yang basi menolak fill di
+depan kamera, dan itu cuma pengecekan dua puluh detik.
 
 ```bash
 cd /Users/mac/Desktop/okxai
 set -a && source .env && set +a
-git status --short                      # clean tree; a dirty diff on camera is a question you do not want
-pnpm typecheck && pnpm test             # expect clean, then 296 unit and 106 Foundry
-curl -s https://reckonz.xyz/api/health | jq   # must not be `down`, see below
+git status --short                      # tree bersih; diff kotor di kamera itu pertanyaan yang tidak kamu mau
+pnpm typecheck && pnpm test             # harapkan bersih, lalu 296 unit dan 106 Foundry
+curl -s https://reckonz.xyz/api/health | jq   # jangan sampai `down`, lihat di bawah
 ```
 
-**`GET /api/health` is the gate.** If it answers `down`, nothing can execute and the fill scene
-will fail on camera. `degraded` is usually fine and answers 200 by design, but read the body and
-find out which asset is stale before you point the fill at it. This route is the operational truth
-(D81), not the fact that the site loads.
+**`GET /api/health` adalah gerbangnya.** Kalau jawabannya `down`, tidak ada yang bisa dieksekusi
+dan adegan fill akan gagal di depan kamera. `degraded` biasanya masih aman dan memang menjawab 200,
+tapi baca body-nya dan cari tahu aset mana yang basi sebelum kamu mengarahkan fill ke sana. Route
+ini kebenaran operasionalnya (D81), bukan fakta bahwa situsnya terbuka.
 
-Then refresh every number the video will state:
+Lalu segarkan setiap angka yang akan disebut video:
 
 ```bash
-pnpm capacity                  # the universe figure, at 0.5%, and today's date
-pnpm plan 250000               # the asked / placed / refused / avoided-impact set, all four from ONE run
-pnpm check:tests               # the two test counts, checked against the docs
-pnpm index                     # bring observations/registry.jsonl current before reading receipt counts
+pnpm capacity                  # angka universe, di 0.5%, dan tanggal hari ini
+pnpm plan 250000               # set asked / placed / refused / avoided-impact, keempatnya dari SATU run
+pnpm check:tests               # dua angka test, diadu dengan dokumennya
+pnpm index                     # bikin observations/registry.jsonl current sebelum membaca jumlah receipt
 ```
 
-Take all four plan figures from a single `pnpm plan 250000`. `pnpm showcase` sizes a slightly
-different basket and has answered a different number to the same question minutes apart. Both are
-honest; a sentence mixing them is not.
+Ambil keempat angka plan dari satu `pnpm plan 250000` yang sama. `pnpm showcase` menakar basket
+yang sedikit berbeda dan pernah menjawab angka lain untuk pertanyaan yang sama dalam selang
+menit. Keduanya jujur; kalimat yang mencampur keduanya tidak.
 
-Write the four numbers on a sticky note. They go into the narration, the lower thirds, and the
-video description, and they must agree in all three places.
+Tulis keempat angka itu di sticky note. Angka itu masuk ke narasi, ke lower third, dan ke deskripsi
+video, dan ketiganya harus sama.
 
-### Gas and funds
+### Gas dan dana
 
-The fill scene spends real money. Budget:
+Adegan fill menghabiskan uang sungguhan. Anggarannya:
 
-- **0.5 USDG** for the buy, which is the size every previous real fill used.
-- **Mainnet OKB** for gas on the deployer, plus a margin for a retry. Read the balance from the
-  chain, never from `05-status.md`, which is stale the moment it is written.
-- Nothing on the publisher. Do not run a publish for the video; the publisher's gas is the scarce
-  resource and the worker needs it.
+- **0.5 USDG** untuk belinya, ukuran yang dipakai semua fill sungguhan sebelumnya.
+- **OKB mainnet** untuk gas di deployer, plus margin untuk satu retry. Baca saldonya dari chain,
+  jangan dari `05-status.md`, yang basi begitu ditulis.
+- Jangan sentuh publisher. Jangan menjalankan publish untuk video; gas publisher itu sumber daya
+  yang langka dan worker membutuhkannya.
 
-If USDG is short, record the fill scene against **testnet** and say so on screen. Testnet cannot
-swap (the v3 factory has no code there), so what you can honestly record on 1952 is the mandate,
-the triggers, and the breaker, not the fill. Prefer one real mainnet fill over three testnet
-screens.
+Kalau USDG kurang, rekam adegan fill di **testnet** dan katakan itu di layar. Testnet tidak bisa
+swap (factory v3 tidak punya kode di sana), jadi yang jujur bisa direkam di 1952 adalah mandate,
+trigger, dan breaker, bukan fill-nya. Satu fill mainnet sungguhan lebih baik daripada tiga layar
+testnet.
 
-### The desktop
+### Desktop
 
-- New browser profile, no bookmarks bar, no extensions visible except the wallet.
-- The wallet holds demo funds only. Never show a seed phrase, a private key, a `.env`, or the full
-  `~/.zsh_history`. Pause before every terminal scene and check what is scrolled above the prompt.
-- Do Not Disturb on. Notifications in frame mean a re-record.
-- Terminal at a large font, dark, no username or hostname in the prompt if it carries anything
-  personal.
-- Browser at 1440 logical width. The console is dense by design and the tables need the room.
-
----
-
-## Shot list and script
-
-Two columns: what the viewer sees, and what the narrator says. Narration is written to be spoken,
-not read. Around 140 words a minute, so roughly 420 words total. Read it out loud once before
-recording; anything that trips you up is a sentence to rewrite, not to practise.
-
-Bracketed notes are direction and are never spoken.
+- Profil browser baru, tanpa bookmark bar, tanpa extension yang terlihat selain wallet.
+- Wallet hanya berisi dana demo. Jangan pernah menampilkan seed phrase, private key, `.env`, atau
+  `~/.zsh_history` utuh. Berhenti sejenak sebelum tiap adegan terminal dan cek apa yang ada di atas
+  prompt.
+- Do Not Disturb menyala. Notifikasi yang masuk frame berarti rekam ulang.
+- Terminal dengan font besar, gelap, tanpa username atau hostname di prompt kalau itu membawa
+  sesuatu yang pribadi.
+- Browser di lebar logis 1440. Console-nya memang padat dan tabelnya butuh ruang.
 
 ---
 
-### Scene 1. Cold open, the refusal (0:00 to 0:14)
+## Shot list dan naskah
 
-**Screen.** Start already inside `/idea` on a finished run, scrolled to the capacity stage, with
-the refused-notional line at display size. Hold it still for two seconds before the first word.
-No logo card, no title card, no intro animation.
+**Satu jalur maju, dan mulainya dari tempat pengunjung mulai.** Landing, lalu `/assets`, lalu satu
+aset secara detail, lalu `/idea`, lalu `/trade`, lalu `/receipts`. Tidak ada yang dikunjungi dua
+kali dan video tidak pernah naik level lagi, karena penonton yang harus diberi tahu dia sedang di
+mana sudah berhenti mendengarkan argumennya.
 
-**Narration.**
+`/assets` jadi pintu masuknya, bukan `/idea`, dan itu pilihan produknya sendiri bukan selera:
+wordmark dan tombol di top bar dua-duanya menuju ke sana. Itu juga urutan berargumen yang lebih
+baik. Papan itu menegakkan dulu pasarnya dan betapa sedikit isinya, lalu tiap klaim sesudahnya
+mendarat di atas angka yang sudah dilihat penonton.
 
-> This is a request for two hundred and fifty thousand dollars of an investment thesis, on X Layer.
-> And this is the system telling the person who asked that only about seventeen hundred of it fits.
-> The rest goes back to their wallet. That refusal is the whole product.
+**Harga memulai dari landing, dan cara membayarnya.** Video yang benar-benar berurutan tidak bisa
+membuka di frame terkuat proyek ini, yaitu notional yang ditolak. Jadi urutan layarnya tetap
+berurutan dan **suaranya** yang memimpin: angkanya diucapkan di sepuluh detik pertama, di atas
+hero, dan satu lower third menaruhnya di layar di situ juga. Overlay bukan perpindahan layar, jadi
+tidak ada urutan yang dibengkokkan.
 
-[Say the real placed figure from today's `pnpm plan 250000`, not seventeen hundred, if it has
-moved. It will have moved.]
+**Landing dijatah 46 detik dan tidak lebih sedetik pun.** Ini pembuka, bukan tur. Tiga beat, lalu
+klik masuk ke app. Mode gagal setiap video demo yang pernah dibuat adalah menghabiskan menit
+pertama menggulir halaman marketing, dan halaman ini punya glide Lenis yang masih bergerak hampir
+sedetik setelah tiap wheel, jadi satu pass santai menuruninya sendiri sudah lewat semenit.
 
----
+Dua kolom di bawah: apa yang dilihat penonton, dan apa yang diucapkan narator. **Naskahnya bahasa
+Inggris dan ditulis untuk diucapkan, bukan dibaca.** Sekitar 140 kata semenit, jadi kira-kira 420
+kata total. Baca keras sekali sebelum merekam; kalimat yang bikin kamu tersandung itu kalimat yang
+harus ditulis ulang, bukan dilatih.
 
-### Scene 2. What it is, and where (0:14 to 0:32)
-
-**Screen.** Cut to `reckonz.xyz`, the landing hero, with the thirty ticker wall visible. Slow
-scroll, one screen height, no faster.
-
-**Narration.**
-
-> Reckonz is execution and risk tooling for tokenised real world assets. The assets are xStocks:
-> tokenised Apple, Nvidia, Tesla and twenty seven more, trading as ERC-20 tokens on X Layer.
-> They are real, they are live, and there is almost nothing built on top of them. Your funds never
-> leave your wallet, at any point in this video.
-
----
-
-### Scene 3. The thesis goes in (0:32 to 1:08)
-
-**Screen.** `/idea`. Type the thesis by hand, at normal speed, into the box. Use the one already
-recorded in `observations/showcase.json` so the run is reproducible:
-
-> Stablecoin settlement volume keeps compounding onchain, so the issuers and the exchanges that
-> clear it capture more of the payments margin than the incumbent card networks do.
-
-Press run. The six stages appear greyed before they run: compile, universe, allocate, triggers,
-capacity, guard. Let compile and universe play at real speed. Speed-ramp the middle at 4x with the
-badge on.
-
-**Narration.**
-
-> You write what you think, in plain words. No form, no tickers, no allocation.
-> The model turns that into a falsifiable claim, and into the conditions you said would change
-> your mind. Then six stages run, and you can watch each one.
-> It resolves the companies to tokens that actually exist here, and when one does not, it says so
-> instead of substituting something close.
-> The conditions you named become triggers a contract enforces. The ones nothing on chain can
-> measure are handed back to you as things to watch yourself, rather than quietly becoming a rule
-> that can never fire.
+Catatan dalam kurung siku adalah arahan dan tidak pernah diucapkan.
 
 ---
 
-### Scene 4. Capacity, and the number that is refused (1:08 to 1:32)
+### Adegan 1. Landing, dan klaimnya (0:00 sampai 0:20)
 
-**Screen.** The capacity stage expanded. The refused-notional line first, then the per-leg table:
-symbol, target weight, planned size, naive impact, planned impact, slices.
+**Layar.** `reckonz.xyz` di posisi paling atas, sudah termuat, wall sudah berjalan. Tanpa title
+card, tanpa logo sting. Tahan dua detik sebelum kata pertama, lalu gerakkan pointer pelan
+menyeberang wall supaya sumurnya membuka di bawahnya dan barisnya mengerem berhenti.
 
-**Narration.**
+Di 0:06 satu lower third membawa angka penolakan dalam teks, selagi pointer masih di atas wall.
 
-> Here is where it stops being a demo. Every leg is sized against live Uniswap V3 depth, not
-> against the amount that was asked for.
-> Two legs fit. Together they take about seventeen hundred dollars. Two hundred and forty eight
-> thousand goes back.
-> And this is the cost of not doing that: pushing the whole amount through in one shot would have
-> paid about a hundred and fifty three thousand dollars in price impact. The part that fits pays
-> under eight.
+**Narasi.**
 
-[All four figures from the same run. Lower third repeats them in text, right-aligned, mono.]
+> Thirty US stocks are tokenised on X Layer, and they trade as ordinary ERC-20 tokens. Apple,
+> Nvidia, Tesla, and twenty seven more.
+> Ask this system for two hundred and fifty thousand dollars of them and it will tell you that
+> about seventeen hundred fits, and hand the rest back.
+> That refusal is the product. Everything after this is how it arrives at the number.
+
+[Pakai angka placed sungguhan dari `pnpm plan 250000` hari itu. Pasti sudah bergeser.]
+
+[Wall adalah benda terkuat di halaman ini dan juga satu-satunya shot yang tidak butuh penjelasan,
+jadi biarkan berjalan di bawah kalimatnya alih-alih memotong ke tempat lain untuk berbicara di atas
+sesuatu yang lain.]
 
 ---
 
-### Scene 5. The board, and the collapse (1:32 to 1:56)
+### Adegan 2. Apa yang dilakukannya, dalam satu paragraf (0:20 sampai 0:34)
 
-**Screen.** `/assets`. Table view. Then drag the size slider through its measured rungs: $25,
-$1,000, $5,000, $10,000. Let the verdict column collapse from allowed to refused as it goes. Hold
-one second at the last rung.
+**Layar.** Scroll masuk ke `Approach`. Paragrafnya datang, stroke-nya menggambar dirinya sendiri di
+bawah heading, dan kartunya terbang dari celah di samping prosa lalu mendarat jadi panel. Atur
+waktu scroll supaya pendaratan kartunya terjadi di kamera; itu satu-satunya gerakan di halaman ini
+yang layak dapat shot sendiri.
 
-**Narration.**
+**Narasi.**
 
-> All thirty markets, with a price we can defend, how risky the overnight gap is, and how much each
-> one can really take.
+> You type a thesis in plain language. It gets mapped onto the thirty tokens that actually trade
+> here, every leg is sized by walking real pool depth, and whatever the market cannot take is
+> refused.
+> Your funds never leave your wallet, at any point in this video.
+
+---
+
+### Adegan 3. Empat permukaan, lalu masuk (0:34 sampai 0:46)
+
+**Layar.** Scroll ke `HowItWorks`. Empat kartu, masing-masing memutar dua screenshot asli dengan
+jamnya sendiri. Diamkan sekitar delapan detik supaya paling tidak satu kartu terlihat berganti.
+Lalu naik ke top bar dan klik masuk ke app. **Jangan cut ke `/assets`. Klik tombolnya dan biarkan
+halamannya termuat.**
+
+**Narasi.**
+
+> Four surfaces, in the order you would use them: what the market can take, the sentence you write
+> against it, what the chain kept afterwards, and the part that needs your wallet.
+> Those are real screens, so let us open the real thing.
+
+[Klik itu sambungan antara pitch dan produk dan harus terlihat. Cut di sini akan meninggalkan
+penonton tidak yakin apakah sisa videonya masih situs yang sama.]
+
+---
+
+### Adegan 4. Papannya, dan keruntuhannya (0:46 sampai 1:10)
+
+**Layar.** `/assets` waktu termuat, membawa angka bukan spinner. Tampilan tabel. Lalu geser slider
+ukuran melewati anak tangga terukurnya: $25, $1,000, $5,000, $10,000. Biarkan kolom verdict runtuh
+dari allowed ke refused sepanjang jalan. Tahan sedetik di anak tangga terakhir.
+
+**Narasi.**
+
+> All thirty markets, with a price we can defend, how risky the overnight gap is, and how much
+> each one can actually absorb.
 > The slider is not a model. Those are ten measured rungs of real depth. At twenty five dollars
 > nearly every market with liquidity is fine. By five thousand, four are. Past ten thousand, one.
 > That collapse is the thing nobody else on this chain is measuring, and it is why the whole
@@ -247,224 +271,294 @@ one second at the last rung.
 
 ---
 
-### Scene 6. The fill, and the signature (1:56 to 2:28)
+### Adegan 5. Satu pasar, sampai ke dasarnya (1:10 sampai 1:22)
 
-**Screen.** `/trade`. Connect the wallet. Show the mandate already live: one dollar per trade,
-twelve fills per twenty four hours, four allowed assets. Then the fill card: quote, guard verdict,
-Permit2 approval, the signature dialog, and the transaction. Cut the confirmation wait, badge it.
-Land on the receipt with its explorer link.
+**Layar.** Klik satu ticker untuk membuka `/assets/[symbol]`. Tangga sepuluh anak sebagai tabel:
+size, impact, effective price, verdict. Lalu gap risk yang dipecah jadi staleness, displacement,
+uncertainty dan basis.
 
-**Narration.**
+**Narasi.**
 
-> Now the part that needs a wallet. The mandate is the blast radius, and it lives on chain: a cap
-> per trade, a cap per day, and the assets it is allowed to touch.
+> And any one of them opens all the way up. This is the ladder the verdict came from, rung by
+> rung, with what a real quote costs at each size.
+> The risk score is not a number we assert either. It is four measurements, and you can see which
+> one is driving it.
+
+[Dua belas detik cukup. Adegan ini ada untuk membuktikan adegan sebelumnya memang diukur, bukan
+untuk dibaca.]
+
+---
+
+### Adegan 6. Tesisnya, dan enam stage (1:22 sampai 1:54)
+
+**Layar.** Pindah ke `/idea`. Ketik tesisnya dengan tangan, kecepatan normal. Pakai yang sudah
+terekam di `observations/showcase.json` supaya run-nya bisa direproduksi:
+
+> Stablecoin settlement volume keeps compounding onchain, so the issuers and the exchanges that
+> clear it capture more of the payments margin than the incumbent card networks do.
+
+Tekan run. Enam stage muncul kelabu sebelum berjalan: compile, universe, allocate, triggers,
+capacity, guard. Biarkan compile dan universe berjalan real time, percepat bagian tengahnya 4x
+dengan badge menyala, lalu mendarat di stage capacity yang terbuka dengan notional yang ditolak di
+ukuran display.
+
+**Narasi.**
+
+> Now the thesis. No form, no tickers, no allocation, just a sentence.
+> The model turns that into a falsifiable claim and into the conditions you said would change your
+> mind. Those become triggers a contract enforces, and the ones nothing on chain can measure are
+> handed back to you to watch yourself instead of quietly becoming a rule that can never fire.
+> Then it sizes against the depth you just saw. Two legs fit. Two hundred and forty eight thousand
+> goes back.
+> And here is the cost of not doing that. Pushing the whole amount through in one shot would have
+> paid about a hundred and fifty three thousand dollars in price impact. The part that fits pays
+> under eight.
+
+[Keempat angka dari satu run. Lower third mengulanginya dalam teks, rata kanan, mono.]
+
+---
+
+### Adegan 7. Fill-nya, dan tanda tangannya (1:54 sampai 2:26)
+
+**Layar.** `/trade`. Sambungkan wallet. Mandate-nya sudah hidup: satu dolar per trade, dua belas
+fill per dua puluh empat jam, empat aset yang diizinkan. Lalu kartu fill: quote, verdict guard,
+approval Permit2, dialog tanda tangan, transaksinya. Potong waktu tunggu konfirmasi dan beri badge.
+Mendarat di receipt-nya dengan tautan explorer.
+
+**Narasi.**
+
+> The mandate is the blast radius, and it lives on chain: a cap per trade, a cap per day, and the
+> assets it is allowed to touch.
 > The server quotes, checks the guard, and hands back a plan that cannot do anything on its own.
 > It only moves when you sign, and what you are signing is narrow: one token, a capped amount,
 > twenty minutes.
-> No key on our side can move your money. There is no function anywhere in this system that lets
-> the model rebalance you.
+> No key on our side can move your money, and there is no function anywhere in this system that
+> lets the model rebalance you.
 > That is a real fill, on X Layer mainnet, and the guard checked it inside the same transaction
 > that moved the funds.
 
 ---
 
-### Scene 7. Evidence anyone can re-derive (2:28 to 2:50)
+### Adegan 8. Bukti yang bisa diturunkan ulang siapa saja (2:26 sampai 2:48)
 
-**Screen.** `/receipts`, the new receipt at the top with its evidence hash. Then cut to the
-terminal, full screen, and run:
+**Layar.** `/receipts`, receipt baru di paling atas dengan hash evidence-nya. Lalu cut ke terminal,
+layar penuh, dan jalankan:
 
 ```bash
 pnpm evidence <hash>
 ```
 
-Let it print. Do not speed this one up; it is the most persuasive twenty seconds in the video and
-it is short.
+Biarkan mencetak. Jangan percepat yang ini. Ini dua puluh detik paling meyakinkan di seluruh video
+dan sudah pendek dari sananya.
 
-**Narration.**
+**Narasi.**
 
 > Every fill leaves a receipt, and the receipt carries a hash of the exact quote, the oracle
 > reading and the guard verdict it was decided on. The hash goes on chain before anything is
 > signed, and the bundle is archived where anyone can fetch it.
-> So this is not us showing you a log. This is the bundle being pulled down and the hash being
+> So this is not us showing you a log. This is the bundle being pulled back down and the hash being
 > derived again from it, and matching. Losses stay on that page as long as the wins do.
 
 ---
 
-### Scene 8. Close (2:50 to 3:00)
+### Adegan 9. Penutup (2:48 sampai 3:00)
 
-**Screen.** Terminal, `pnpm capacity`, the universe figure landing with today's date. Then a still
-frame: wordmark, `reckonz.xyz`, `@reckonz_xyz`, the GitHub URL, `Built on X Layer`.
+**Layar.** Tetap di terminal, jalankan `pnpm capacity`, biarkan angka universe-nya mendarat dengan
+tanggal hari itu. Lalu satu frame diam: wordmark, `reckonz.xyz`, `@reckonz_xyz`, URL GitHub,
+`Built on X Layer`.
 
-**Narration.**
+**Narasi.**
 
-> One last number, and it is the weakest one we have. The entire xStock universe on X Layer
-> absorbs about thirty eight thousand dollars today at half a percent of impact. It was ninety
-> seven thousand five days ago.
-> We publish that with the date because it is a reading of the pools, not a property of them.
-> Thin, moving depth is exactly why this refuses size, and exactly why it never takes custody.
+> One last number, and it is the weakest one we have. The whole xStock universe on X Layer absorbs
+> about thirty eight thousand dollars today at half a percent of impact. It was ninety seven
+> thousand five days ago.
+> We publish it with the date because it is a reading of the pools, not a property of them. Thin,
+> moving depth is exactly why this refuses size, and exactly why it never takes custody.
 
-[Replace both figures with the day's `pnpm capacity` output and the previous recorded reading.]
+[Ganti kedua angkanya dengan keluaran `pnpm capacity` hari itu dan pembacaan sebelumnya.]
 
 ---
 
-## Capture guide, scene by scene
+## Panduan pengambilan, adegan per adegan
 
-Record each scene as its own take. Do not attempt one continuous run; the fill scene will need
-retries and you do not want to redo the narration for it.
+Rekam tiap adegan sebagai take-nya sendiri. Jangan mencoba satu pass menerus. Adegan fill pasti
+butuh beberapa percobaan dan kamu tidak mau mengulang landing gara-gara itu. Dua klik navigasi,
+adegan 3 masuk ke `/assets` dan adegan 4 masuk ke satu ticker, direkam di **akhir** adegan
+pemiliknya, supaya rekam ulang adegan berikutnya tidak ikut membuang kliknya.
 
-| Scene | URL or command | Watch for |
+| Adegan | URL atau perintah | Yang harus dijaga |
 |---|---|---|
-| 1 | `/idea`, run finished beforehand | Refused figure must match scene 4's run |
-| 2 | `reckonz.xyz` | Let the ticker wall settle before scrolling |
-| 3 | `/idea` | Type at human speed. `/api/run` is rate limited to 3 burst, 6 a minute (D78), so do not spam retakes |
-| 4 | same run as scene 3 | Expand capacity, collapse the rest |
-| 5 | `/assets`, table view | Drag the slider slowly, one rung per beat |
-| 6 | `/trade` | Health check first. Wallet on chain 196. Blur nothing; show a demo balance instead |
-| 7 | `/receipts`, then `pnpm evidence <hash>` | Scroll history clear above the prompt |
-| 8 | `pnpm capacity` | Takes a while; let it run and use the tail |
+| 1 | `reckonz.xyz`, paling atas | Gerakkan pointer menyeberang wall pelan-pelan. Barisnya mengerem berhenti di bawahnya dan itulah shot-nya |
+| 2 | landing, `Approach` | Atur waktu scroll supaya kartunya mendarat di kamera. Gerakan wheel kecil dan disengaja; Lenis meluncur sekitar sedetik setelah tiap satu |
+| 3 | landing, `HowItWorks` | Diamkan sekitar delapan detik supaya satu kartu terlihat berganti. Akhiri dengan klik masuk ke app |
+| 4 | `/assets`, tampilan tabel | Geser slider pelan, satu anak tangga per ketukan |
+| 5 | `/assets/[symbol]` | Pilih aset yang hari itu memang berharga, bukan yang board-nya withheld |
+| 6 | `/idea` | Ketik dengan kecepatan manusia. `/api/run` dibatasi 3 burst dan 6 per menit (D78), jadi jangan memberondong take ulang |
+| 7 | `/trade` | Health check dulu. Wallet di chain 196. Tampilkan saldo demo, jangan mengaburkan saldo asli |
+| 8 | `/receipts`, lalu `pnpm evidence <hash>` | Riwayat scroll bersih di atas prompt |
+| 9 | `pnpm capacity` | Butuh waktu. Biarkan jalan dan pakai bagian ekornya |
 
-**Two extra takes, always.** Record scene 5's slider twice, and scene 7's terminal twice. They are
-the two shots most likely to be spoiled by a stray notification or a mistyped hash, and they are
-the two hardest to reproduce later because the underlying numbers move.
+**Landing direkam paling akhir, atau paling tidak setelah `/idea`.** Adegan 1 mengucapkan angka
+penolakan, dan angka itu keluar dari run di adegan 6. Merekam pembukanya duluan berarti merekamnya
+melawan angka yang belum kamu ukur.
+
+**Selalu dua take ekstra.** Rekam slider adegan 4 dua kali dan terminal adegan 8 dua kali. Itu dua
+shot yang paling mungkin dirusak notifikasi nyasar, dan dua yang paling sulit direproduksi
+belakangan karena angka di bawahnya bergerak.
+
+**Satu hal yang akan kamu temui di landing.** Asset wall berjalan pada siklus tetap dan barisnya
+berbeda fase satu sama lain, jadi tidak ada dua take hero yang terlihat sama. Itu wajar, dan layak
+satu take ekstra untuk memilih framing yang kamu suka, bukan sesuatu yang perlu dilawan.
 
 ---
 
-## Editing guide
+## Panduan pengeditan
 
-### Tooling
+### Perkakas
 
-Anything with a timeline works. DaVinci Resolve if you want the free grade and good text tools,
-Final Cut if it is already installed, CapCut only for the vertical social cut. Screen capture with
-the OS recorder at 60fps rather than a browser extension, which will drop frames on the dense
-tables.
+Apa pun yang punya timeline bisa. DaVinci Resolve kalau mau grading gratis dan tool teks yang bagus,
+Final Cut kalau sudah terpasang, CapCut hanya untuk cut sosial vertikal. Rekam layar dengan
+perekam bawaan OS di 60fps, bukan extension browser, yang akan menjatuhkan frame di tabel-tabel
+rapat itu.
 
-### Assembly order
+### Urutan perakitan
 
-1. **Lay the narration first.** Record all eight scenes of voice in one sitting, one file, with a
-   clap or a marker between scenes. Cut it into eight clips and space them on the timeline before
-   any picture goes down. The video is an argument and the argument lives in the voice.
-2. **Drop picture under it.** Every scene's picture is trimmed to the narration, not the other way
-   round. If a shot is too short, hold the last frame rather than slowing the whole clip.
-3. **Then trim silence.** Cut breaths down to about 250ms and pauses between scenes to about
-   400ms. Do not remove every pause; the numbers need a beat after them.
+1. **Taruh narasinya dulu.** Rekam suara kesembilan adegan dalam satu duduk, satu file, dengan
+   tepukan atau penanda di antara adegan. Potong jadi sembilan klip dan tata jaraknya di timeline
+   sebelum satu gambar pun turun. Video ini sebuah argumen, dan argumennya hidup di suara.
+2. **Turunkan gambarnya di bawahnya.** Gambar tiap adegan dipangkas mengikuti narasi, bukan
+   sebaliknya. Kalau shot-nya terlalu pendek, tahan frame terakhirnya, jangan melambatkan seluruh
+   klip.
+3. **Baru pangkas keheningannya.** Potong tarikan napas ke sekitar 250ms dan jeda antar adegan ke
+   sekitar 400ms. Jangan buang semua jeda; angka butuh satu ketukan sesudahnya.
 
-### Cutting rules
+### Aturan memotong
 
-- **No transitions.** Hard cuts throughout. One exception: a 6 frame dissolve into the closing
-  still, and only because a hard cut to a static card reads as a crash.
-- **Cut on the action**, not after it. The frame the slider stops on is the frame that holds.
-- **Never cut in the middle of a number being read aloud.**
-- **Two seconds minimum** on any frame containing a figure the viewer is expected to read.
-- Dead air over an unchanged screen is the sign to shorten the picture, not to add music.
+- **Tanpa transisi.** Hard cut sepanjang video. Satu pengecualian: dissolve 6 frame masuk ke frame
+  diam penutup, dan itu pun hanya karena hard cut ke kartu statis terbaca seperti crash.
+- **Potong di gerakannya**, bukan sesudahnya. Frame tempat slider berhenti itu frame yang ditahan.
+- **Jangan pernah memotong di tengah angka yang sedang diucapkan.**
+- **Minimal dua detik** untuk frame mana pun yang memuat angka yang diharapkan dibaca penonton.
+- Hening di atas layar yang tidak berubah adalah tanda gambarnya harus dipendekkan, bukan tanda
+  perlu ditambah musik.
 
-### Zooms and emphasis
+### Zoom dan penekanan
 
-The console is dense, so most figures need help.
+Console-nya padat, jadi kebanyakan angka butuh bantuan.
 
-- Use a **punch-in**, a static scale to about 130% held for the duration, not a moving zoom.
-  Recording at 2560 wide is what makes this stay sharp at 1080p.
-- Punch in on exactly four things: the refused-notional line (scene 1 and 4), the verdict column
-  collapsing (scene 5), the signature dialog's amount and expiry (scene 6), and the matching hash
-  (scene 7). Four punch-ins in three minutes. A fifth starts to feel like a sales video.
-- No highlight circles, no arrows, no drop shadows on callouts.
+- Pakai **punch-in**, skala statis sekitar 130% yang ditahan selama durasinya, bukan zoom yang
+  bergerak. Merekam di lebar 2560 itulah yang membuat ini tetap tajam di 1080p.
+- Punch-in tepat di empat tempat: kolom verdict yang runtuh (adegan 4), baris notional yang ditolak
+  (adegan 6), jumlah dan masa berlaku di dialog tanda tangan (adegan 7), dan hash yang cocok
+  (adegan 8). Empat punch-in dalam tiga menit. Yang kelima mulai terasa seperti video jualan.
+- **Tidak satu pun di landing.** Adegan 1 sampai 3 adalah satu-satunya bentangan video ini yang
+  tidak punya angka untuk dibaca, dan itulah yang membuatnya pembuka dan bukan tur. Punch-in di
+  sana adalah penekanan atas ketiadaan.
+- Tanpa lingkaran penanda, tanpa panah, tanpa drop shadow di callout.
 
-### On-screen text
+### Teks di layar
 
-Follow `docs/09-design.md`, because the video will sit beside the product.
+Ikuti `docs/09-design.md`, karena video ini akan duduk bersebelahan dengan produknya.
 
-- Monospace for every number, tabular figures, right-aligned.
-- Lower thirds are a thin panel on near black with a hairline border. No gradient, no glass, no
-  drop shadow.
-- Colour semantics are the app's and they are not the trading convention. `signal` for allowed,
-  `caution` for a refusal with its reason in words, and `refuse` red only when the run itself
-  broke. **A refusal is not red here.** If a frame of a normal run is mostly red, the grade is
-  wrong, not the run.
-- Every refusal on screen carries its reason. `REJECT PRICE_IMPACT, 90bp against a 50bp limit`, not
-  `REJECT`.
-- No em-dashes in any card, caption or lower third.
+- Monospace untuk tiap angka, tabular figures, rata kanan.
+- Lower third berupa panel tipis di atas near black dengan border setipis rambut. Tanpa gradien,
+  tanpa glass, tanpa drop shadow.
+- Semantik warnanya milik app dan bukan konvensi trading. `signal` untuk allowed, `caution` untuk
+  penolakan beserta alasannya dalam kata, dan merah `refuse` hanya kalau run-nya sendiri yang
+  rusak. **Penolakan di sini bukan merah.** Kalau satu frame dari run normal isinya merah semua,
+  grading-nya yang salah, bukan run-nya.
+- Setiap penolakan di layar membawa alasannya. `REJECT PRICE_IMPACT, 90bp against a 50bp limit`,
+  bukan `REJECT`.
+- Tanpa em-dash di kartu, caption, atau lower third mana pun.
 
-### Speed badges
+### Badge kecepatan
 
-Three ramps, each with a badge in the lower right: `4x, real time 38s`. Same type as the lower
-thirds, no box, 60% opacity. Badge appears with the ramp and leaves with it.
+Tiga ramp, dan hanya tiga: stage tengah dari run (adegan 6), tunggu konfirmasi (adegan 7), dan
+jalannya `pnpm capacity` (adegan 9). Masing-masing membawa badge di kanan bawah:
+`4x, real time 38s`. Tipografi sama dengan lower third, tanpa kotak, opasitas 60%. Badge muncul
+bersama ramp-nya dan pergi bersamanya.
 
-### Sound
+### Suara
 
-- Voice recorded on a real microphone in a soft room, not the laptop's. One pass, then a second
-  pass of just the sentences you fumbled.
-- High-pass at 80Hz, light compression, normalise to about -16 LUFS integrated with true peak
-  under -1dB.
-- No music under the narration. If the open feels bare, a very quiet bed under scenes 1 and 2 only,
-  ducked 18dB under voice, out by 0:32.
-- Keep the UI's own sounds out. Mute system audio during capture.
+- Suara direkam dengan mikrofon sungguhan di ruang yang tidak menggema, bukan mikrofon laptop. Satu
+  pass, lalu satu pass kedua khusus kalimat-kalimat yang tersandung.
+- High-pass di 80Hz, kompresi ringan, normalisasi ke sekitar -16 LUFS integrated dengan true peak
+  di bawah -1dB.
+- Tanpa musik di bawah narasi. Kalau pembukanya terasa kosong, bed yang sangat pelan di adegan 1
+  dan 2 saja, di-duck 18dB di bawah suara, habis di 0:34.
+- Jauhkan suara UI-nya sendiri. Matikan audio sistem selama perekaman.
 
-### Captions
+### Caption
 
-- Burn them in, two lines maximum, bottom centre, above the lower thirds.
-- Caption what was actually said, including the fumbles you kept.
-- Also export an `.srt` alongside, for platforms that want it.
-- Numbers as digits in the caption even where the narration says them as words. `$248,298` reads
-  faster than the spoken form.
+- Burn in, maksimal dua baris, bawah tengah, di atas lower third.
+- Caption apa yang benar-benar diucapkan, termasuk tersandung yang kamu pertahankan.
+- Ekspor juga `.srt` di sebelahnya, untuk platform yang memintanya.
+- Angka sebagai digit di caption, bahkan di tempat narasi mengucapkannya sebagai kata. `$248,298`
+  terbaca lebih cepat daripada bentuk ucapannya.
 
-### Export
+### Ekspor
 
-| Setting | Value |
+| Setelan | Nilai |
 |---|---|
-| Resolution | 1920x1080 |
-| Frame rate | 60fps, matching capture |
+| Resolusi | 1920x1080 |
+| Frame rate | 60fps, mengikuti rekaman |
 | Codec | H.264, high profile |
-| Bitrate | 16 to 20 Mbps VBR, two pass |
+| Bitrate | 16 sampai 20 Mbps VBR, dua pass |
 | Audio | AAC 320kbps stereo |
-| Colour | Rec.709, no LUT, no grade beyond a small lift on the terminal scenes if they read as crushed |
+| Warna | Rec.709, tanpa LUT, tanpa grading selain sedikit lift di adegan terminal kalau terbaca gepeng |
 
-Check the export on a phone before publishing. The tables are the thing that fails there, and if a
-figure is unreadable on a phone it needs a punch-in it did not get.
+Cek hasil ekspornya di ponsel sebelum dipublikasikan. Tabel adalah bagian yang gagal di sana, dan
+kalau ada angka yang tidak terbaca di ponsel berarti dia butuh punch-in yang belum dia dapat.
 
 ---
 
-## When something breaks on camera
+## Kalau ada yang rusak di depan kamera
 
-It will. The house position is that a real system misbehaving on camera is worth more than a
-staged one behaving, as long as you say what happened.
+Pasti ada. Posisi rumah kami: sistem sungguhan yang berulah di kamera lebih berharga daripada
+sistem yang dipanggungkan dan berkelakuan baik, asalkan kamu mengatakan apa yang terjadi.
 
-| What happens | What to do |
+| Yang terjadi | Yang dilakukan |
 |---|---|
-| The guard refuses the fill | **Keep it.** Re-record the narration for that scene to say what was refused and why. This is the product doing its job and it is a better scene than the one you planned |
-| The oracle is stale and nothing can execute | Stop. Check `/api/health`, wait for the publisher, come back. Do not record a fill against a price the system will not defend |
-| A run returns fewer legs than expected | Keep it and adjust the numbers. Do not re-run until the basket looks good; that turns a measurement into a selection |
-| The wallet extension hangs | Reload, reconnect. The connection survives a reload by design |
-| `/api/run` starts returning 429 | You have retaken too fast. Wait a minute. The limiter is per instance and deliberate (D78) |
-| A number on screen disagrees with the narration | Re-record the line, not the shot. Never let the two disagree, it is the one thing a judge can falsify in a minute |
+| Guard menolak fill-nya | **Pertahankan.** Rekam ulang narasi adegan itu untuk menyebut apa yang ditolak dan kenapa. Ini produknya sedang bekerja, dan itu adegan yang lebih bagus daripada yang kamu rencanakan |
+| Oracle basi dan tidak ada yang bisa dieksekusi | Berhenti. Cek `/api/health`, tunggu publisher, kembali lagi. Jangan merekam fill melawan harga yang sistemnya sendiri tidak mau bela |
+| Run mengembalikan leg lebih sedikit dari perkiraan | Pertahankan dan sesuaikan angkanya. Jangan mengulang run sampai basketnya terlihat bagus; itu mengubah pengukuran jadi seleksi |
+| Extension wallet menggantung | Reload, sambungkan lagi. Koneksinya memang dirancang selamat dari reload |
+| `/api/run` mulai menjawab 429 | Kamu terlalu cepat mengulang take. Tunggu semenit. Limiter-nya per instance dan memang disengaja (D78) |
+| Angka di layar berbeda dengan narasi | Rekam ulang kalimatnya, bukan shot-nya. Jangan pernah biarkan keduanya berbeda, itu satu-satunya hal di sini yang bisa dipatahkan juri dalam semenit |
 
 ---
 
-## Publishing checklist
+## Checklist sebelum publikasi
 
-- [ ] Every figure spoken matches every figure on screen matches the video description
-- [ ] All plan figures came from one `pnpm plan 250000` run
-- [ ] Capacity figure carries its date and the previous reading
-- [ ] No em-dash anywhere: narration, captions, lower thirds, title, description
-- [ ] No key, seed, `.env`, or private address in any frame. Scrub the terminal scenes frame by
-      frame
-- [ ] Test counts, receipt count and contract counts match `pnpm check:tests` and a `count()` read
-- [ ] Contract counts stated as seven on mainnet plus seven on testnet, never fourteen on mainnet
-- [ ] Captions burned in, `.srt` exported
-- [ ] Checked on a phone
-- [ ] Thumbnail is the refused-notional frame, not a logo
-- [ ] Title says tokenised real world assets
-- [ ] Linked from the site, from `10-submission.md`'s description if the field allows a link, and
-      posted from `@reckonz_xyz` per `11-social.md`
-- [ ] `05-status.md` updated: the demo video item moves out of "Blocking for a credible demo"
+- [ ] Tiap angka yang diucapkan sama dengan tiap angka di layar sama dengan deskripsi video
+- [ ] Semua angka plan berasal dari satu run `pnpm plan 250000`
+- [ ] Angka capacity membawa tanggalnya dan pembacaan sebelumnya
+- [ ] Tanpa em-dash di mana pun: narasi, caption, lower third, judul, deskripsi
+- [ ] Tidak ada key, seed, `.env`, atau alamat privat di frame mana pun. Sisir adegan terminal
+      frame demi frame
+- [ ] Jumlah test, jumlah receipt dan jumlah kontrak cocok dengan `pnpm check:tests` dan pembacaan
+      `count()`
+- [ ] Jumlah kontrak disebut sebagai tujuh di mainnet plus tujuh di testnet, jangan pernah empat
+      belas di mainnet
+- [ ] Caption sudah burned in, `.srt` sudah diekspor
+- [ ] Sudah dicek di ponsel
+- [ ] Thumbnail-nya frame notional yang ditolak, bukan logo
+- [ ] Judulnya menyebut tokenised real world assets
+- [ ] Sudah ditaut dari situs, dari deskripsi di `10-submission.md` kalau field-nya mengizinkan
+      tautan, dan diposting dari `@reckonz_xyz` sesuai `11-social.md`
+- [ ] `05-status.md` diperbarui: item video demo pindah keluar dari "Blocking for a credible demo"
 
 ---
 
-## Suggested title and description
+## Usulan judul dan deskripsi
 
-**Title**
+Keduanya dipublikasikan, jadi keduanya bahasa Inggris.
+
+**Judul**
 
 > Reckonz: tokenised stocks on X Layer, sized to what the market can actually absorb
 
-**Description**
+**Deskripsi**
 
 > Reckonz turns an investment thesis into on-chain positions in tokenised real world assets, sized
 > to what the market can actually absorb, and into the exit rules that close them. The assets are
