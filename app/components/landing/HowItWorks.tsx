@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 
 import { DrawnStroke } from './DrawnStroke';
-import { Slides, type Shot } from './Slides';
 import { useInView } from './useInView';
 
 /**
@@ -79,41 +78,29 @@ const HEADING = 'How It Works';
  * The rows are rows because they arrive separately, not because they mean
  * different things. Two by two is simply how many fit across.
  */
-const ROWS: { title: string; line: string; shots: Shot[] }[][] = [
+const ROWS = [
   [
     {
       title: 'Assets',
       line: 'Thirty tokenised stocks, each sized against the depth that has to absorb it.',
-      shots: [
-        { src: '/landing/assets1.png', alt: 'The assets board: thirty tokenised stocks with a value, a gap risk and the size each market can take' },
-        { src: '/landing/assets2.png', alt: 'One asset in detail: price impact against size, and what a real quote costs at each size' },
-      ],
+      src: undefined as string | undefined,
     },
     {
       title: 'Idea',
       line: 'Write it in plain words; the chain answers with what it will refuse.',
-      shots: [
-        { src: '/landing/idea1.png', alt: 'A thesis typed in plain words, and the six stages of the run that answers it' },
-        { src: '/landing/idea2.png', alt: 'What the chain will take: 3,446 executable and 1,554 handed back, above the compiled claim with its causal chain, unstated assumptions and beneficiaries' },
-      ],
+      src: undefined as string | undefined,
     },
   ],
   [
     {
       title: 'Receipts',
       line: 'Every fill leaves evidence anyone can re-derive from the chain.',
-      shots: [
-        { src: '/landing/receipt1.png', alt: 'Published theses, each showing whether it was published before every fill, above the twenty-one settled receipts' },
-        { src: '/landing/receipt2.png', alt: 'Receipt #18 in full: the fill, its shortfall against fair value, a verified evidence hash, and the guard decision taken before any gas was spent' },
-      ],
+      src: undefined as string | undefined,
     },
     {
       title: 'Trade',
       line: 'You set the bounds, the chain enforces them, and no key of ours moves money.',
-      shots: [
-        { src: '/landing/trade1.png', alt: "A mandate's caps and spendable epoch, beside a quote with its impact, floor, oracle reading and verdict" },
-        { src: '/landing/trade2.png', alt: 'Positions, triggers and the allowlist, beside the verdict and a plain list of what the signature actually authorises' },
-      ],
+      src: undefined as string | undefined,
     },
   ],
 ];
@@ -247,7 +234,7 @@ function CardRow({
   first,
   stroke,
 }: {
-  cards: { title: string; line: string; shots: Shot[] }[];
+  cards: { title: string; line: string; src?: string }[];
   armed: boolean;
   first: boolean;
   stroke?: boolean;
@@ -292,21 +279,8 @@ function CardRow({
           the closing section and, when there is one, the footer. */}
       {stroke && <ClosingStroke />}
 
-      {/* `seen`, not `on`.
-       *
-       * `on` latches: it goes true the first time the row is seen and is only
-       * put back by the section leaving, which is exactly right for the
-       * entrance — a frame that opened should stay open. It is wrong for a
-       * clock. A row that merely passes through the viewport, on a refresh that
-       * restores the scroll position or while Lenis eases back to the top, sets
-       * `on` and never unsets it, so the slides run their whole cycle at a
-       * reader still sitting in the hero and the second shot is already up by
-       * the time anyone arrives.
-       *
-       * `seen` is the live answer, and a clock should be told what is true now
-       * rather than what has ever been true. */}
       {cards.map((card) => (
-        <Card key={card.title} {...card} armed={seen} />
+        <Card key={card.title} {...card} />
       ))}
     </div>
   );
@@ -363,23 +337,23 @@ function Letters({ text }: { text: string }) {
  * cards run the same numbers — the pair opens together, and nothing
  * distinguishes the left one from the right one in time.
  */
-function Card({
-  title,
-  line,
-  shots,
-  armed,
-}: {
-  title: string;
-  line: string;
-  shots: Shot[];
-  armed: boolean;
-}) {
+function Card({ title, line, src }: { title: string; line: string; src?: string }) {
   return (
     <figure className="relative z-10">
-      {/* The frame and its bars both live in `Slides` now. They were here, and
-          the frame's empty state read `Assets lands here` — a caption for a
-          picture that did not exist yet. The pictures exist. */}
-      <Slides shots={shots} armed={armed} />
+      {/* Dark in both themes, and a literal rather than a token, for the reason
+          the hero's wall is: this is a ground that pictures are lit against,
+          and a ground that turns white in light mode takes the light with it. */}
+      <div className="frame-open aspect-[16/10] w-full overflow-hidden rounded-[1.25rem] bg-[#0b0d10]">
+        {src ? (
+          <img src={src} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full w-full items-end p-6">
+            <span className="font-mono text-fine tracking-[0.12em] text-faint uppercase">
+              {title} lands here
+            </span>
+          </div>
+        )}
+      </div>
 
       <figcaption className="mt-[clamp(1rem,1.6vw,1.5rem)]">
         {/* Four copies of one word in a one-line box. The track travels three

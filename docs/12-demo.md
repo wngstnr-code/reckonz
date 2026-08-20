@@ -262,25 +262,29 @@ yang layak dapat shot sendiri.
 
 ---
 
-### Adegan 3. Empat permukaan, lalu masuk (0:34 sampai 0:46)
+### Adegan 3. Empat permukaan, lalu masuk (0:34 sampai 0:42)
 
-**Layar.** Scroll ke `HowItWorks`. Empat kartu, masing-masing memutar dua screenshot asli dengan
-jamnya sendiri. Diamkan sekitar delapan detik supaya paling tidak satu kartu terlihat berganti.
-Lalu naik ke top bar dan klik masuk ke app. **Jangan cut ke `/assets`. Klik tombolnya dan biarkan
-halamannya termuat.**
+**Layar.** Scroll ke `HowItWorks`. Empat kartu dengan nama halamannya dan satu baris masing-masing;
+frame-nya membuka waktu barisnya tiba dan namanya bergulir ke tempatnya. Frame-nya sendiri kosong,
+jadi jangan berlama-lama di sini: begitu baris kedua selesai tiba, naik ke top bar dan klik masuk ke
+app. **Jangan cut ke `/assets`. Klik tombolnya dan biarkan halamannya termuat.**
+
+Delapan detik, bukan dua belas. Kartunya sekarang menyebut nama dan janji, dan janji itu ditepati
+oleh halaman aslinya empat detik kemudian. Menahan frame kosong lebih lama dari itu adalah meminta
+penonton menunggu gambar yang tidak akan datang.
 
 **Narasi.**
 
 > Four surfaces, in the order you would use them: what the market can take, the sentence you write
 > against it, what the chain kept afterwards, and the part that needs your wallet.
-> Those are real screens, so let us open the real thing.
+> Rather than show you pictures of them, let us open the real thing.
 
 [Klik itu sambungan antara pitch dan produk dan harus terlihat. Cut di sini akan meninggalkan
 penonton tidak yakin apakah sisa videonya masih situs yang sama.]
 
 ---
 
-### Adegan 4. Papannya, dan keruntuhannya (0:46 sampai 1:08)
+### Adegan 4. Papannya, dan keruntuhannya (0:42 sampai 1:08)
 
 **Layar.** `/assets` waktu termuat, membawa angka bukan spinner. Tampilan tabel. Lalu geser slider
 ukuran melewati anak tangga terukurnya: $25, $1,000, $5,000, $10,000. Biarkan kolom verdict runtuh
@@ -432,7 +436,7 @@ rekam adegan 5 sampai tuntas, lalu berhenti dan cek hasilnya sebelum menyentuh a
 |---|---|---|
 | 1 | `reckonz.xyz`, paling atas | Gerakkan pointer menyeberang wall pelan-pelan. Barisnya mengerem berhenti di bawahnya dan itulah shot-nya |
 | 2 | landing, `Approach` | Atur waktu scroll supaya kartunya mendarat di kamera. Gerakan wheel kecil dan disengaja; Lenis meluncur sekitar sedetik setelah tiap satu |
-| 3 | landing, `HowItWorks` | Diamkan sekitar delapan detik supaya satu kartu terlihat berganti. Akhiri dengan klik masuk ke app |
+| 3 | landing, `HowItWorks` | Frame-nya kosong, jadi tahan hanya sampai baris kedua tiba. Akhiri dengan klik masuk ke app |
 | 4 | `/assets`, tampilan tabel | Geser slider pelan, satu anak tangga per ketukan. Akhiri dengan klik **Idea** |
 | 5 | `/idea` | Ketik dengan kecepatan manusia. `/api/run` dibatasi 3 burst dan 6 per menit (D78), jadi jangan memberondong take ulang. Cek dulu tesisnya belum ada di registry. Akhiri dengan **Take it to the trade page** |
 | 6 | `/trade` | Health check dulu. Wallet di chain 196. Tampilkan saldo demo, jangan mengaburkan saldo asli. Akhiri dengan klik **Receipts** di nav |
