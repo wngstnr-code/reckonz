@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { shortfallMeasured } from '@/src/abi';
@@ -29,7 +30,16 @@ export function ReceiptDetail({
 }: {
   receipt: ViewReceipt;
   thesis: WireThesis | null;
-  evidence: EvidenceCheck;
+  /**
+   * Handed in unresolved, on purpose.
+   *
+   * Everything above this prop comes out of a store the page has already read.
+   * The check does not: it re-derives a hash from a bundle that may only exist
+   * in the archive, which is a network fetch, and awaiting it in the page made
+   * the receipt's own facts wait behind a panel most readers never scroll to.
+   * It is a promise now and the panel is the only thing suspended on it.
+   */
+  evidence: Promise<EvidenceCheck>;
   explorer: string | null;
   /** `ReceiptRegistry`, so a reader can re-read this receipt at the source. */
   registry: string | null;
@@ -162,15 +172,13 @@ export function ReceiptDetail({
         </ul>
       </Section>
 
-      <Section title="Evidence">
-        <Evidence hash={receipt.evidenceHash} check={evidence} />
-      </Section>
-
-      {evidence.kind === 'verified' && (
-        <Section title="The decision">
-          <Decision bundle={evidence.bundle} receipt={receipt} />
-        </Section>
-      )}
+      {/* Both sections are inside one boundary because the second one's
+          existence is decided by the first one's answer. Suspending them
+          separately would mean rendering a heading for a decision that may
+          turn out not to be readable. */}
+      <Suspense fallback={<EvidencePending />}>
+        <Verified evidence={evidence} receipt={receipt} />
+      </Suspense>
 
       <Section title="Thesis">
         {thesis ? (
@@ -485,4 +493,54 @@ function formatGap(seconds: number): string {
   const hours = Math.round(minutes / 60);
   if (hours < 48) return `${hours} hours`;
   return `${Math.round(hours / 24)} days`;
+}
+
+/**
+ * The evidence panel, once the archive has answered.
+ *
+ * An async server component rather than a `use()` in a client one, because
+ * nothing here is interactive and the bundle is large enough that shipping it
+ * over the wire to be rendered in the browser would be paying twice.
+ */
+async function Verified({
+  evidence,
+  receipt,
+}: {
+  evidence: Promise<EvidenceCheck>;
+  receipt: ViewReceipt;
+}) {
+  const check = await evidence;
+
+  return (
+    <>
+      <Section title="Evidence">
+        <Evidence hash={receipt.evidenceHash} check={check} />
+      </Section>
+
+      {check.kind === 'verified' && (
+        <Section title="The decision">
+          <Decision bundle={check.bundle} receipt={receipt} />
+        </Section>
+      )}
+    </>
+  );
+}
+
+/**
+ * What stands in while the bundle is being fetched.
+ *
+ * It says the check is running rather than showing a grey rectangle, because
+ * the three answers this panel can give are `verified`, `mismatch` and
+ * `unreachable`, and a reader who sees a placeholder settle into `unreachable`
+ * needs to have understood that something was being attempted. A skeleton would
+ * have implied the answer was already known and merely being painted.
+ */
+function EvidencePending() {
+  return (
+    <Section title="Evidence">
+      <p className="text-data leading-relaxed text-dim">
+        Re-deriving the hash from the bundle it claims.
+      </p>
+    </Section>
+  );
 }

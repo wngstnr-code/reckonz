@@ -93,7 +93,14 @@ export default async function ReceiptPage({ params }: { params: Params }) {
     );
   }
 
-  const evidence = await checkEvidence(found.receipt.evidenceHash);
+  /* Started, not awaited. `ReceiptDetail` suspends the one panel that needs it
+     while every fact the store already holds renders immediately. The catch is
+     not optional: an unawaited rejection here would take the request down
+     rather than the panel, and `unreachable` is exactly what a bundle we could
+     not fetch is. */
+  const evidence = checkEvidence(found.receipt.evidenceHash).catch(
+    () => ({ kind: 'unreachable' }) as const,
+  );
 
   return (
     <>
