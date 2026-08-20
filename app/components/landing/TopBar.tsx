@@ -29,8 +29,13 @@ import { Menu } from './Menu';
  * and the claim scrolls up through that middle without ever meeting them.
  *
  * So each object carries its own surface instead. The pills already had one.
- * The mark gets one here — invisible on the white page, and the thing that
- * keeps it readable once the dark wall has scrolled up behind it.
+ *
+ * **The mark no longer does.** It was given one to stay readable once the dark
+ * wall scrolled up behind it, and the strip below took that job over: the claim
+ * sits above the card, so it has always left the window by the time the wall
+ * reaches the bar, and the strip is up before the dark ever arrives. A pill
+ * that only ever showed as a white rectangle on a white page was left doing
+ * nothing but announcing itself against the blur.
  *
  * ## …and why there is one now, further down
  *
@@ -74,12 +79,7 @@ export function TopBar() {
           : 'border-transparent bg-transparent'
       }`}
     >
-      <Link
-        href="/"
-        className={`pointer-events-auto flex shrink-0 items-center gap-3 rounded-full py-2 pr-5 pl-4 transition-colors duration-300 ${
-          past ? 'bg-transparent' : 'bg-ground'
-        }`}
-      >
+      <Link href="/" className="pointer-events-auto flex shrink-0 items-center gap-3">
         {/* Mint, as everywhere else the mark appears. The wordmark beside it
             takes the page's ink, so the mark is the only coloured thing in the
             row and stays the thing the eye lands on first. */}
