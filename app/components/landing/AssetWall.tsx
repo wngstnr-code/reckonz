@@ -215,19 +215,29 @@ export function AssetWall({ symbols }: { symbols: string[] }) {
     let offsets: number[][] = [];
     let sizes: number[] = [];
 
-    let boxes: (DOMRect | null)[] = tracks.map(() => null);
+    const boxes: (DOMRect | null)[] = tracks.map(() => null);
+    const forgetBoxes = () => boxes.fill(null);
 
     const measure = () => {
       offsets = faces.map((row) => row.map((tile) => tile.offsetLeft));
       sizes = faces.map((row) => row[0]?.offsetWidth ?? 1);
-      boxes = tracks.map(() => null);
+      forgetBoxes();
     };
     measure();
 
     /* The row's own animation, so its direction can be changed without touching
        its keyframes. Empty until the animation starts, which is why it is read
        lazily rather than captured here. */
-    const animationOf = (track: HTMLElement) => track.getAnimations()[0] ?? null;
+    /* `getAnimations()` builds a fresh array and walks the element's timeline
+       every call, and this used to be called once per row per frame — 180 of
+       them a second for a set of three objects that are created once by the
+       stylesheet and never replaced. Cached on first sight, and still looked up
+       lazily because at mount the CSS animation may not have started yet. */
+    const animations: (Animation | null)[] = tracks.map(() => null);
+    const animationOf = (track: HTMLElement, r: number) => {
+      if (!animations[r]) animations[r] = track.getAnimations()[0] ?? null;
+      return animations[r];
+    };
 
     /* One rate per row, eased between travelling and stopped, plus what was
        last actually handed to the animation. */
@@ -243,6 +253,12 @@ export function AssetWall({ symbols }: { symbols: string[] }) {
        value can skip the DOM entirely. Seeded with the resting state, which is
        also what the stylesheet's defaults are. */
     const written = faces.map((row) => row.map(() => ({ shrink: 1, shift: 0 })));
+
+    /* Scratch space for the two passes, allocated once rather than per row per
+       frame. Six arrays a frame is nothing to a modern collector, and it is
+       also nothing to keep instead — the sizes never change. */
+    const target = faces.map((row) => new Array<number>(row.length).fill(1));
+    const targetShift = faces.map((row) => new Array<number>(row.length).fill(0));
 
     let pointerX = 0;
     let pointerY = 0;
@@ -281,7 +297,7 @@ export function AssetWall({ symbols }: { symbols: string[] }) {
          * opportunity rather than snapping `startTime` under it, so the row
          * changes speed without ever jumping position. The endpoint is always
          * committed exactly, so the row cannot settle at 0.97 of its speed. */
-        const animation = animationOf(track);
+        const animation = animationOf(track, r);
         if (
           animation &&
           (Math.abs(rate[r] - committed[r]) > RATE_STEP || (rate[r] === wanted && committed[r] !== wanted))
@@ -313,17 +329,17 @@ export function AssetWall({ symbols }: { symbols: string[] }) {
         }
 
         // Pass one: how big each tile wants to be.
-        const target: number[] = [];
+        const want = target[r];
         for (let i = 0; i < row.length; i++) {
           const horizontalRing = box
             ? Math.abs(pointerX - (box.left + offsets[r][i] + size / 2)) / pitch
             : Infinity;
-          target.push(shrinkAt(Math.max(horizontalRing, verticalRing)));
+          want[i] = shrinkAt(Math.max(horizontalRing, verticalRing));
         }
 
         for (let i = 0; i < row.length; i++) {
-          shrink[r][i] += (target[i] - shrink[r][i]) * EASE;
-          if (Math.abs(target[i] - shrink[r][i]) > 0.001) settled = false;
+          shrink[r][i] += (want[i] - shrink[r][i]) * EASE;
+          if (Math.abs(want[i] - shrink[r][i]) > 0.001) settled = false;
         }
 
         // Pass two: close the gaps the shrinking opened.
@@ -337,16 +353,17 @@ export function AssetWall({ symbols }: { symbols: string[] }) {
           if (shrink[r][i] < shrink[r][focus]) focus = i;
         }
 
-        const targetShift: number[] = new Array(row.length).fill(0);
+        const wantShift = targetShift[r];
+        wantShift.fill(0);
         let given = 0;
         for (let i = focus + 1; i < row.length; i++) {
           given += (1 - shrink[r][i - 1]) * size;
-          targetShift[i] = -given;
+          wantShift[i] = -given;
         }
         given = 0;
         for (let i = focus - 1; i >= 0; i--) {
           given += (1 - shrink[r][i + 1]) * size;
-          targetShift[i] = given;
+          wantShift[i] = given;
         }
 
         /* Writes, not arithmetic, are what this loop costs. A wall of 120
@@ -362,7 +379,7 @@ export function AssetWall({ symbols }: { symbols: string[] }) {
            frame, and under a moving pointer it is the handful of tiles inside
            the well. */
         for (let i = 0; i < row.length; i++) {
-          shift[r][i] += (targetShift[i] - shift[r][i]) * EASE;
+          shift[r][i] += (wantShift[i] - shift[r][i]) * EASE;
           const tile = row[i];
 
           const nextShrink = Math.round(shrink[r][i] * 1e4) / 1e4;
@@ -411,19 +428,58 @@ export function AssetWall({ symbols }: { symbols: string[] }) {
       }
     };
 
-    const resizes = new ResizeObserver(measure);
+    /* `measure` reads `offsetLeft` on all ninety tiles, which is a forced
+       layout, and a window being dragged fires this many times a second.
+       Coalesced to one read per frame: the sizes cannot change more often than
+       that anyway, and dropping the extras keeps a resize from being the one
+       interaction that stutters. */
+    let pendingMeasure = 0;
+    const resizes = new ResizeObserver(() => {
+      if (pendingMeasure) return;
+      pendingMeasure = requestAnimationFrame(() => {
+        pendingMeasure = 0;
+        measure();
+      });
+    });
     resizes.observe(wall);
 
     /* Scrolled past, the wall costs nothing: the CSS animations pause and the
        loop is not scheduled. A marquee nobody can see is the clearest case of
-       work worth not doing, and this page is a scroll from top to bottom. */
+       work worth not doing, and this page is a scroll from top to bottom.
+       
+       **A screen of warning either side, which is the `rootMargin`.** Without
+       it the wall woke at the instant its first pixel arrived, and that is the
+       most expensive frame it could have picked. Off screen the compositor
+       discards the raster for these tracks — three layers about 6,800 x 200
+       CSS px each, which at a 2x device ratio is some 5.5 megapixels of
+       rastered marks apiece, every one of them carrying a blur. Resuming at the
+       boundary means painting all of that in the same frames the page is
+       already moving, which is the hitch felt scrolling back up into the hero.
+       
+       Waking a screen early moves that work to frames where nothing is
+       demanding anything, and the only thing it costs is a marquee running for
+       a second while nobody is looking at it. */
     const seen = new IntersectionObserver(
       ([entry]) => {
         onScreen = entry.isIntersecting;
         wall.classList.toggle('wall-idle', !onScreen);
-        if (onScreen && !frame) frame = requestAnimationFrame(draw);
+
+        if (onScreen) {
+          if (!frame) frame = requestAnimationFrame(draw);
+          return;
+        }
+
+        /* Leaving with a pointer still in the wall used to strand the
+           promotion: the loop stops being scheduled off screen, and it is the
+           loop that withdraws `wall-live`, so ninety tile layers were kept
+           alive for a page nobody was looking at until the wall came back.
+           The state is dropped on the way out instead, and the boxes with it,
+           because they describe where the tracks were a scroll ago. */
+        inside = false;
+        wall.classList.remove('wall-live');
+        forgetBoxes();
       },
-      { threshold: 0 },
+      { threshold: 0, rootMargin: '100% 0px' },
     );
     seen.observe(wall);
 
@@ -435,8 +491,12 @@ export function AssetWall({ symbols }: { symbols: string[] }) {
      * the well it was maintaining was sliding across the wall on its own,
      * which is not an effect anybody asked for. Letting go of the pointer for
      * the duration hands those frames back. */
+    /* Lenis drives the scroll position with `window.scrollTo` on every frame of
+       a glide, so this fires around sixty times a second for the second or so
+       after each wheel. It allocated a fresh array of nulls on every one of
+       them; it clears the one it has now. */
     const onScroll = () => {
-      boxes = tracks.map(() => null);
+      forgetBoxes();
       if (!inside) return;
       inside = false;
       if (!frame) frame = requestAnimationFrame(draw);
@@ -465,6 +525,7 @@ export function AssetWall({ symbols }: { symbols: string[] }) {
     wall.addEventListener('pointerleave', onLeave);
     return () => {
       cancelAnimationFrame(frame);
+      if (pendingMeasure) cancelAnimationFrame(pendingMeasure);
       resizes.disconnect();
       seen.disconnect();
       window.removeEventListener('scroll', onScroll);
@@ -472,7 +533,15 @@ export function AssetWall({ symbols }: { symbols: string[] }) {
       wall.removeEventListener('pointermove', onMove);
       wall.removeEventListener('pointerleave', onLeave);
     };
-  }, [symbols]);
+    /* Keyed on the contents rather than the array.
+     *
+     * `symbols` is rebuilt by the parent on every render, so a dependency on
+     * the array itself would tear this whole effect down and stand it back up
+     * — disconnecting both observers, re-querying ninety tiles and forcing a
+     * layout to measure them — every time anything above it re-rendered. The
+     * page is static today and nothing does; that is a fact about the page, not
+     * a property of this component. */
+  }, [symbols.join(',')]);
 
   return (
     <div
