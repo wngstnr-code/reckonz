@@ -948,6 +948,57 @@
   }
 }
 
+/* One shot uncovering the last one.
+ *
+ * A wipe rather than a crossfade, because a crossfade of two pictures over a
+ * dark frame passes through a moment where both are half transparent and the
+ * frame shows through both — the shot does not change, it blinks. Nothing here
+ * ever drops below full opacity.
+ *
+ * `clip-path` and this curve are the page's own vocabulary: the frame around it
+ * opens the same way, and the headings roll out of masks. The slight scale is
+ * what keeps it from reading as a line sweeping across a static twin — the
+ * picture settles as it is revealed, which is the same arrival the cards make.
+ */
+.shot-in {
+  animation: shot-in 780ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes shot-in {
+  from {
+    clip-path: inset(0 100% 0 0);
+    transform: scale(1.035);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+    transform: scale(1);
+  }
+}
+
+/* The clock under a card's picture.
+ *
+ * `linear`, and it is the one animation on this page that must be: every other
+ * curve here is describing a movement, and this one is reporting how much time
+ * is left. An eased progress bar lies about the middle of its own duration.
+ *
+ * The duration is set inline by `Slides`, from the same constant that drives
+ * the advance, so the two clocks cannot drift apart. `both` holds the last
+ * frame — without it the bar snaps back to empty at the moment the next
+ * picture arrives.
+ */
+.slide-fill {
+  animation: slide-fill linear both;
+}
+
+@keyframes slide-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
 /* The name, rolling past itself.
  *
  * Four identical copies in a box one of them tall; the track travels three, so
