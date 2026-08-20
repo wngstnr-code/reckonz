@@ -1,4 +1,7 @@
+'use client';
+
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { Logo } from '../console/Logo';
 import { Menu } from './Menu';
 
@@ -28,13 +31,54 @@ import { Menu } from './Menu';
  * So each object carries its own surface instead. The pills already had one.
  * The mark gets one here — invisible on the white page, and the thing that
  * keeps it readable once the dark wall has scrolled up behind it.
+ *
+ * ## …and why there is one now, further down
+ *
+ * The objection above was never to a background as such. It was to a
+ * background *while the claim is passing through*: the bar would have been the
+ * thing the sentence disappeared behind, and at rest it would have been painted
+ * over it. Both stop being true the moment the claim has left the window, so
+ * that is exactly when the strip arrives.
+ *
+ * It watches `[data-hero-claim]` rather than a scroll offset. A number would
+ * have to be re-derived every time the type size, the top padding or the
+ * sentence's own length changed, and it would be wrong on the first viewport
+ * that wrapped the claim to four lines instead of three. The element leaving
+ * the window is the thing actually being described.
+ *
+ * The mark's own surface drops to transparent while the strip is up, because
+ * two opaque grounds at slightly different opacities meet in a visible seam.
  */
 export function TopBar() {
+  const [past, setPast] = useState(false);
+
+  useEffect(() => {
+    const claim = document.querySelector('[data-hero-claim]');
+    if (!claim) return;
+
+    // threshold 0: intersecting is true while any part of the sentence is still
+    // in the window, so the strip waits for the last line of it to go.
+    const seen = new IntersectionObserver(
+      ([entry]) => setPast(!entry.isIntersecting),
+      { threshold: 0 },
+    );
+    seen.observe(claim);
+    return () => seen.disconnect();
+  }, []);
+
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-0 z-40 flex items-start justify-between gap-x-8 px-[max(2rem,5vw)] pt-10">
+    <div
+      className={`pointer-events-none fixed inset-x-0 top-0 z-40 flex items-start justify-between gap-x-8 border-b px-[max(2rem,5vw)] pt-10 pb-5 transition-[background-color,border-color,backdrop-filter] duration-300 ease-out ${
+        past
+          ? 'border-line bg-ground/70 backdrop-blur-xl'
+          : 'border-transparent bg-transparent'
+      }`}
+    >
       <Link
         href="/"
-        className="pointer-events-auto flex shrink-0 items-center gap-3 rounded-full bg-ground py-2 pr-5 pl-4"
+        className={`pointer-events-auto flex shrink-0 items-center gap-3 rounded-full py-2 pr-5 pl-4 transition-colors duration-300 ${
+          past ? 'bg-transparent' : 'bg-ground'
+        }`}
       >
         {/* Mint, as everywhere else the mark appears. The wordmark beside it
             takes the page's ink, so the mark is the only coloured thing in the

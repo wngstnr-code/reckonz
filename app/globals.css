@@ -1075,3 +1075,67 @@
     animation: none;
   }
 }
+
+/* The landing page's scrollbar.
+ *
+ * A real scrollbar, styled, not a drawn stand-in. Lenis moves the document's
+ * own scroll position rather than transforming a container, so the browser's
+ * bar is still the honest indicator of where the page is, and it still drags.
+ *
+ * Scoped by a class on <html> because that is the only element the document
+ * scrollbar can be styled from, and the console must not inherit it: a working
+ * surface keeps the scrollbar the operating system gave it.
+ *
+ * The shape is two pills, one inside the other. `background-clip: padding-box`
+ * with a transparent border is what insets them from the gutter's edges, and
+ * the track's vertical margin is what keeps it clear of the top and bottom of
+ * the window rather than running into the corners.
+ *
+ * Both colours are tokens, so the bar inverts with the theme: ink on line is a
+ * near-black thumb on a light rail today, and a light thumb on a dark rail the
+ * moment `data-theme="dark"` is set. A hardcoded black would have disappeared
+ * into the dark ground entirely. */
+.landing-scroll::-webkit-scrollbar {
+  width: 11px;
+}
+
+/* The rail is the middle half of the window, not the whole edge.
+ *
+ * `margin` on the track does not merely inset the paint: it shortens the area
+ * the thumb is allowed to travel in, so the thumb still reaches both ends of
+ * the rail at both ends of the document. A drawn-short rail with a thumb
+ * running past it would be a broken indicator; this one stays honest.
+ *
+ * 32vh top and bottom leaves a rail of 36vh, near enough a third of the window.
+ * Half was tried first and still read as an edge-to-edge bar with gaps at the
+ * ends rather than as a short marker sitting in the middle. */
+.landing-scroll::-webkit-scrollbar-track {
+  margin: 32vh 0;
+  background-color: var(--color-line);
+  background-clip: padding-box;
+  border: 3px solid transparent;
+  border-radius: 999px;
+}
+
+.landing-scroll::-webkit-scrollbar-thumb {
+  background-color: var(--color-ink);
+  background-clip: padding-box;
+  border: 3px solid transparent;
+  border-radius: 999px;
+}
+
+/* Firefox has no pills and no insets, only a width keyword and two colours.
+   Naming the same two tokens keeps it the same bar in the ways it can be.
+   
+   Guarded, and the guard is the whole point. Chrome has supported
+   `scrollbar-width` since 121, and where both are present the standard
+   properties win and the `::-webkit-scrollbar` rules above are ignored
+   entirely — measured here as a scrollbar gutter of 0px, which is the browser
+   saying it kept its own overlay bar. So the standard properties are served
+   only to engines that have no webkit pseudo-elements to lose. */
+@supports not selector(::-webkit-scrollbar) {
+  .landing-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-ink) var(--color-line);
+  }
+}

@@ -1,7 +1,7 @@
 {
   "name": "reckonz",
   "version": "1.0.0",
-  "description": "Reckonz \u2014 non-custodial execution and risk tooling for tokenised equities on X Layer",
+  "description": "Reckonz — non-custodial execution and risk tooling for tokenised equities on X Layer",
   "main": "index.js",
   "scripts": {
     "verify": "tsx src/verify.ts",
@@ -56,6 +56,7 @@
     "@google/genai": "^2.16.0",
     "@vercel/blob": "^2.8.0",
     "@walletconnect/ethereum-provider": "^2.23.10",
+    "lenis": "^1.3.26",
     "next": "^16.3.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
