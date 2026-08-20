@@ -88,6 +88,19 @@ export function Slides({ shots, armed }: { shots: Shot[]; armed: boolean }) {
     remaining.current = HOLD_MS;
   }, [index]);
 
+  // Back to the first shot whenever the row is not on screen.
+  //
+  // Stopping the clock is not enough on its own: a row that passed through the
+  // viewport for two seconds would be left showing half a bar, and a reader
+  // arriving later would meet a card mid-sentence with no idea it had a first
+  // picture. Every reader gets the same card in the same state, from the top.
+  useEffect(() => {
+    if (armed) return;
+    setIndex(0);
+    setMoved(false);
+    remaining.current = HOLD_MS;
+  }, [armed]);
+
   useEffect(() => {
     if (!armed || still || held || shots.length < 2) return;
 

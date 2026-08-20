@@ -286,8 +286,21 @@ function CardRow({
           the closing section and, when there is one, the footer. */}
       {stroke && <ClosingStroke />}
 
+      {/* `seen`, not `on`.
+       *
+       * `on` latches: it goes true the first time the row is seen and is only
+       * put back by the section leaving, which is exactly right for the
+       * entrance — a frame that opened should stay open. It is wrong for a
+       * clock. A row that merely passes through the viewport, on a refresh that
+       * restores the scroll position or while Lenis eases back to the top, sets
+       * `on` and never unsets it, so the slides run their whole cycle at a
+       * reader still sitting in the hero and the second shot is already up by
+       * the time anyone arrives.
+       *
+       * `seen` is the live answer, and a clock should be told what is true now
+       * rather than what has ever been true. */}
       {cards.map((card) => (
-        <Card key={card.title} {...card} armed={on} />
+        <Card key={card.title} {...card} armed={seen} />
       ))}
     </div>
   );
