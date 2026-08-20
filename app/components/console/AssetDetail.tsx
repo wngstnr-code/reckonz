@@ -100,8 +100,20 @@ export function AssetDetail({
        * without the right one giving up its two columns, and `minmax(0,…)` is
        * what stops a wide curve from refusing to.
        */}
-      <section className="mt-9 grid gap-5 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
-        <div className="rounded-2xl border border-line bg-panel p-6">
+      <section className="mt-9 grid gap-x-10 gap-y-6 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+        {/* The frame, and no fill.
+         *
+         * A surface under the chart made it a second ground on a page that
+         * already has one, and the curve is drawn in `currentColor` over a
+         * gradient of the same — it wants the page's own background behind it,
+         * not a tint that shifts what the fade fades into. The border stays
+         * because the chart needs an edge to be a chart rather than a shape
+         * loose on the page.
+         *
+         * Transparent rather than `bg-ground`: whatever is behind this is the
+         * page's background by definition, and naming a token here is a second
+         * place to be wrong the day the surface changes. */}
+        <div className="rounded-2xl border border-line p-6">
           <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
             <h2 className="font-mono text-micro text-faint uppercase">Price impact against size</h2>
             <span className="font-mono text-micro text-faint">limit {limit}bp</span>
@@ -119,10 +131,20 @@ export function AssetDetail({
           />
         </div>
 
-        {/* Two by two, and `content-start` so the pairs sit against the top of
-            the panel rather than spreading to match the curve beside them. Four
-            figures stretched down a tall box read as a list with gaps in it. */}
-        <div className="grid grid-cols-2 content-start gap-x-8 gap-y-7 rounded-2xl border border-line bg-panel p-6">
+        {/* No box at all on this side.
+         *
+         * Two framed panels side by side is a layout arguing that these are two
+         * comparable objects. They are not: the chart is a picture and needs an
+         * edge to be one, while these are readings and belong to the page. A
+         * frame around them made four numbers look like a widget.
+         *
+         * `pt-6` is the only thing left of the panel, and it earns its keep —
+         * it matches the padding across the gap, so the first label here sits
+         * on the same line as the chart's. `content-start` keeps the pairs
+         * against the top rather than spreading to the curve's full height;
+         * four figures stretched down a tall column read as a list with gaps in
+         * it. */}
+        <div className="grid grid-cols-2 content-start gap-x-8 gap-y-7 pt-6">
           {asset.publishable && asset.fairValue !== null ? (
             <Figure label="Fair value" value={`${asset.fairValue.toFixed(2)}`}>
               from {asset.reference ?? 'the issuer'}, ±{pct(asset.confidenceBps)}
