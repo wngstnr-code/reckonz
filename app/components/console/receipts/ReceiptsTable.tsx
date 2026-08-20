@@ -16,6 +16,25 @@ import { direction, e8, notionalOf, short, usdg, when } from './format';
  * One row per receipt, not per fill. A receipt is what the chain signs and what
  * the evidence hash binds; splitting it into legs would put the same hash on
  * several rows and invite the reader to count it twice.
+ *
+ * ## The whole row is the target
+ *
+ * Only `#12` used to be. A row is one object — every cell in it describes the
+ * same receipt — so a reader who has decided to open it aims at whatever they
+ * happen to be reading and hits nothing eight times out of nine. The card view
+ * beside this one has always been a single link over the whole card; the table
+ * was the odd one out.
+ *
+ * It is done with an overlay rather than with an `onClick`, and that is the
+ * whole design: the target stays a real `<a href>`. Middle-click opens a tab,
+ * the browser shows the destination on hover, the keyboard reaches it, and the
+ * row needs no JavaScript and no client boundary. A row that navigates from a
+ * handler has none of that.
+ *
+ * `relative` on the `<tr>` is what scopes the overlay to its own row. Without a
+ * positioned ancestor the anchor would size itself against the scroll container
+ * instead and one row's link would cover the entire table, which is a failure
+ * that looks like it works until you click the wrong receipt.
  */
 export function ReceiptsTable({ receipts }: { receipts: ViewReceipt[] }) {
   return (
@@ -41,11 +60,21 @@ export function ReceiptsTable({ receipts }: { receipts: ViewReceipt[] }) {
             const worst = r.fills.length ? Math.max(...r.fills.map((f) => f.slippageBps)) : 0;
 
             return (
-              <tr key={r.id} className="border-b border-line/60 last:border-b-0">
+              <tr
+                key={r.id}
+                className="relative border-b border-line/60 transition-colors duration-150 last:border-b-0 hover:bg-raised focus-within:bg-raised"
+              >
                 <td className="py-2.5 pr-4">
+                  {/* `after:` is the row-sized hit area. The anchor itself stays
+                      where it is and keeps reading as the receipt number.
+
+                      Focus is shown by the row, not by a ring around `#12`: the
+                      thing being focused is the whole row, and `focus-within`
+                      on the parent says so with the same tint the pointer
+                      gets. */}
                   <Link
                     href={`/receipts/${r.id}` as Route}
-                    className="font-mono text-meta text-ink hover:text-signal"
+                    className="font-mono text-meta text-ink after:absolute after:inset-0 hover:text-signal focus-visible:outline-none"
                   >
                     #{r.id}
                   </Link>
@@ -89,11 +118,16 @@ export function ReceiptsTable({ receipts }: { receipts: ViewReceipt[] }) {
                 <td className="py-2.5 pr-4 font-mono text-meta text-dim">
                   {r.thesisId === null ? <span className="text-faint">n/a</span> : `#${r.thesisId}`}
                 </td>
+                {/* The hash had a `title` with the full value on it. It is gone
+                    rather than raised above the overlay: an element that keeps
+                    its own tooltip has to sit above the hit area, and a dead
+                    patch at the end of a row that is otherwise entirely
+                    clickable is a worse inconsistency than a tooltip. The full
+                    hash is on the detail page, which is now one click from
+                    anywhere in the row. */}
                 <td className="py-2.5 font-mono text-meta">
                   {hasEvidence(r) ? (
-                    <span className="text-dim" title={r.evidenceHash}>
-                      {short(r.evidenceHash)}
-                    </span>
+                    <span className="text-dim">{short(r.evidenceHash)}</span>
                   ) : (
                     <span className="text-refuse">none</span>
                   )}
