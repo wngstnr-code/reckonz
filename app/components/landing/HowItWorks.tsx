@@ -66,6 +66,12 @@ const HEADING = 'How It Works';
 /**
  * The four pages of the app, in the order a reader meets them here.
  *
+ * **That order is the walk, not the nav.** Assets is what exists and how little
+ * of it the pools can take; Idea is the sentence a reader writes against that;
+ * Receipts is what the chain kept afterwards; Trade is the part that needs
+ * their wallet. Idea used to sit third, behind Receipts, which asked the reader
+ * to be shown the evidence for a run before being shown a run.
+ *
  * One line each, and the smaller size is what makes them lines rather than
  * paragraphs. Every line is the page's own `description` cut to length — if one
  * of them stops being true, the page said so first.
@@ -84,21 +90,21 @@ const ROWS: { title: string; line: string; shots: Shot[] }[][] = [
       ],
     },
     {
-      title: 'Receipts',
-      line: 'Every fill leaves evidence anyone can re-derive from the chain.',
-      shots: [
-        { src: '/landing/receipt1.png', alt: 'Published theses, each showing whether it was published before every fill, above the twenty-one settled receipts' },
-        { src: '/landing/receipt2.png', alt: 'Receipt #18 in full: the fill, its shortfall against fair value, a verified evidence hash, and the guard decision taken before any gas was spent' },
-      ],
-    },
-  ],
-  [
-    {
       title: 'Idea',
       line: 'Write it in plain words; the chain answers with what it will refuse.',
       shots: [
         { src: '/landing/idea1.png', alt: 'A thesis typed in plain words, and the six stages of the run that answers it' },
         { src: '/landing/idea2.png', alt: 'What the chain will take: 3,446 executable and 1,554 handed back, above the compiled claim with its causal chain, unstated assumptions and beneficiaries' },
+      ],
+    },
+  ],
+  [
+    {
+      title: 'Receipts',
+      line: 'Every fill leaves evidence anyone can re-derive from the chain.',
+      shots: [
+        { src: '/landing/receipt1.png', alt: 'Published theses, each showing whether it was published before every fill, above the twenty-one settled receipts' },
+        { src: '/landing/receipt2.png', alt: 'Receipt #18 in full: the fill, its shortfall against fair value, a verified evidence hash, and the guard decision taken before any gas was spent' },
       ],
     },
     {
