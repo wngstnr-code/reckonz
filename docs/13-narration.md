@@ -6,8 +6,8 @@ what order it happens in, and how it is cut. If the two ever disagree about a sh
 This exists because the script inside `12-demo.md` is written to be *read*, and this one is written
 to be *said*. Short sentences. Common words. Nothing that needs a run-up.
 
-**Every number is a blank.** Anywhere you see **`[ … ]`**, stop, look at the screen, and say what is
-actually there. Nothing in this file claims a measurement. That is on purpose: the pools move, the
+**Every number is a blank.** Seven of them. Anywhere you see **`[ … ]`**, stop, look at the screen,
+and say what is actually there. Nothing in this file claims a measurement. That is on purpose: the pools move, the
 board is re-measured every few minutes, and a script that hard-codes a reading is a script that
 tells the truth on exactly one day.
 
@@ -22,18 +22,20 @@ Fill these in before you record, so you are reading rather than hunting.
 
 | # | Blank | Where to get it |
 |---|---|---|
-| 1 | the amount you ask for | You choose it. Use the same amount in scene 5. |
-| 2 | the amount that fits | The run in scene 5, capacity stage. Same run as blank 1. |
-| 3 | allowed at the smallest size | `/assets` header: *At $25, **N** allowed* |
-| 4 | a middle size, and how many | Drag the slider. Pick the step where it drops hard. |
-| 5 | how many legs fit | The run's capacity stage |
-| 6 | the amount handed back | Same stage |
-| 7 | what one shot would have cost | Same stage, the naive figure |
-| 8 | what the part that fits pays | Same stage, the planned figure |
-| 9 | what the universe takes today | `pnpm capacity`, the TOTAL row, 0.5% column |
+| 1 | allowed at the smallest size | `/assets` header: *At $25, **N** allowed* |
+| 2 | a middle size, and how many | Drag the slider. Pick the step where it drops hard. |
+| 3 | how many legs fit | The run's capacity stage |
+| 4 | the amount handed back | Same stage |
+| 5 | what one shot would have cost | Same stage, the naive figure |
+| 6 | what the part that fits pays | Same stage, the planned figure |
+| 7 | what the universe takes today | `pnpm capacity`, the TOTAL row, 0.5% column |
 
-Blanks 1 and 2 must come from **the same run** as blanks 5 to 8. Scene 1 is quoting the run the
-viewer sees later. Two different runs in one video is a hole somebody will find.
+Blanks 3 to 6 all come from **one run**. Do not mix a capacity stage from one run with a cost from
+another; they are four readings of a single answer.
+
+**The opening has no blanks in it**, and that is deliberate. Scene 1 states the shape and scene 5
+pays for it with the figures. An opening that spends the number leaves the middle of the video with
+nothing left to prove.
 
 **Say "about" before any large number.** *About two hundred forty-eight thousand* is easier to say
 than the exact figure, and it is more honest anyway — it is a reading, not a price.
@@ -45,11 +47,19 @@ than the exact figure, and it is more honest anyway — it is a reading, not a p
 > Thirty US stocks are tokenised on X Layer.
 > Apple, Nvidia, Tesla, and twenty-seven more.
 >
-> Ask this system for **[1: the amount you ask for]**.
-> It says only **[2: the amount that fits]** fits, and hands the rest back.
+> Ask this system for a quarter of a million dollars of them.
+> It will hand most of it back.
 >
 > Saying no is the product.
-> Here is how it gets to that number.
+> Here is how it works that out.
+
+*The amount is yours to choose, so say it as a round figure — "a quarter of a million" is easier
+to get out than "two hundred and fifty thousand", and it sounds surer. Use the same amount in the
+run in scene 5.*
+
+*"Most of it back" is safe at any result. If the run places less than a tenth of what you asked
+for, which is what has happened every time so far, you can say "almost all of it back" instead.
+Same length, same rhythm, so you can decide after you see the number rather than before.*
 
 ---
 
@@ -79,8 +89,8 @@ than the exact figure, and it is more honest anyway — it is a reading, not a p
 >
 > This slider is not a guess. These are ten real quotes, walked through the pools.
 >
-> At the smallest size, **[3: how many are allowed]** are allowed.
-> At **[4: a size, and how many]**.
+> At the smallest size, **[1: how many are allowed]** are allowed.
+> At **[2: a size, and how many]**.
 > Push it higher and they all refuse. Every card says why.
 
 *Say the refusal the way the cards say it. If they read "price here is too far from fair", say that.
@@ -96,10 +106,10 @@ Do not call it depth if the screen is calling it something else.*
 > The ones the chain cannot measure are handed back to you.
 >
 > Then it sizes it against the depth you just saw.
-> **[5: how many legs fit]** fit. **[6: the amount handed back]** goes back.
+> **[3: how many legs fit]** fit. **[4: the amount handed back]** goes back.
 >
-> All at once, it would have paid about **[7: what one shot would cost]** in price impact.
-> The part that fits pays **[8: what it actually pays]**.
+> All at once, it would have paid about **[5: what one shot would cost]** in price impact.
+> The part that fits pays **[6: what it actually pays]**.
 >
 > The claim goes on chain before anything is traded against it.
 > You cannot rewrite it after the trade goes bad.
@@ -140,7 +150,7 @@ Do not call it depth if the screen is calling it something else.*
 ## 8. The close
 
 > One last number, and it is our weakest.
-> Today the whole universe takes about **[9: what it takes today]** at half a percent.
+> Today the whole universe takes about **[7: what it takes today]** at half a percent.
 >
 > We publish it with the date, because it is a reading, not a promise.
 > Thin depth is why this refuses size. And why it never holds your money.
@@ -149,13 +159,13 @@ Do not call it depth if the screen is calling it something else.*
 
 ## Length
 
-488 words, counted rather than guessed. At 120 words a minute — a comfortable pace, and slower than
+482 words, counted rather than guessed. At 120 words a minute — a comfortable pace, and slower than
 a native speaker would read it — that is about **four minutes of speech**, before you leave any
 pauses.
 
 | Scene | Words | Speech |
 |---|---|---|
-| 1. Landing | 51 | 26s |
+| 1. Landing | 45 | 23s |
 | 2. What it does | 37 | 19s |
 | 3. The four pages | 28 | 14s |
 | 4. The board | 66 | 33s |
