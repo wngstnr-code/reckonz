@@ -5903,3 +5903,130 @@ paragraph into something that looked like a form. That section is a *reading* su
 a mandate is, which is worth reading with or without an account. The rule's second half is about
 actions; a section that explains something falls under the first half and should stay quiet about
 wallets. Button removed, prose kept.
+
+---
+
+## D103 — The capacity table reported one venue's depth as the chain's ceiling
+
+Started as a question with no engineering in it: does the OKX DEX aggregator carry xStocks on X
+Layer? The public API is gated (`OK-ACCESS-KEY` required on every `/api/v5/dex/aggregator/*`
+route, and no key in this repo), so the check was done through the DEX web app instead. It does
+carry them. `wTSLAx` resolves by address, quotes, and routes.
+
+Then the numbers disagreed with ours, which is the part worth keeping.
+
+### The measurement
+
+Quotes for USDG into `wTSLAx`, ours from live pool state, theirs with the 0.5% OKX service fee
+stripped so the two are comparable:
+
+```
+in (USDG)      ours                       OKX pre-fee     
+     1,000     2.849387   impact 0.08%    ~2.85304
+    10,000     28.367227  impact 0.52%    ~28.4414
+    22,475     56.719902  EXHAUSTED       —
+   100,000     56.719902  EXHAUSTED       ~266.26
+ 1,000,005     56.719902  EXHAUSTED       ~419.04
+```
+
+Where both measure, we agree to within 26bp and we are the pessimistic side. Then we stop dead and
+they keep going, by a factor of seven.
+
+### Two explanations that were wrong, and the one that was not
+
+**Not a missing fee tier.** `findAllPools` sweeps every tier. For `wTSLAx`/USDG there are two: the
+0.01% pool at zero liquidity and the 0.05% pool we quote. Every USDT0 pool reads zero as well.
+
+**Not a truncated tick window.** `WORD_WINDOW` was raised from 6 to 40, a span of ±102,400 ticks,
+and the output was identical to the last digit. Reverted.
+
+**The pool is simply that small.** Balances on `0xe1071DB4…62Ed1`, read directly: **104.688 wTSLAx
+and 57,651 USDG**. A million dollars cannot buy 419 tokens from a pool holding 104. So
+`exhaustedWindow` here does not mean "our data ran out", it means "this pool ran out" — the
+simulation walks gap after gap looking for liquidity that is not there, and leaves the window
+doing it.
+
+The aggregator is bigger because it is looking somewhere we are not. GeckoTerminal, same asset,
+same chain:
+
+```
+wTSLAx / USDG  0.05%   uniswap-v3   liq  $94,279   vol24h $139.5M
+USDC   / wTSLAx 0.05%  uniswap-v3   liq $209,265   vol24h  $27.7M
+wTSLAx / USD₮0 0.3%    uniswap-v3   liq       $3
+```
+
+The **USDC** pool is more than twice the depth of the USDG one, and `loadVenues` has never looked
+at it: it calls `findAllPools(USDG.address, asset)` and nothing else, and `XSTOCKS` is defined as
+the assets that have a USDG pool at all. For `wTSLAx` our published capacity is roughly a third of
+what the chain will actually absorb.
+
+### What was wrong about saying it, which is the real defect
+
+The direction is conservative, so nobody was sized into a market that could not take it. The
+failure is in the reporting. The table said *"Absorbable USDG before price impact exceeds the
+limit"*, and for `wTSLAx` printed **22,475 in both the 2% and the 5% column**. Two limits, one
+number, because neither limit was ever reached — the pool emptied first. Read as written, that is
+a claim about the market. It was a claim about one pool.
+
+This is D34 one level up. There, a number was the search bound wearing a measurement's clothes.
+Here, a venue's floor was wearing the chain's ceiling's.
+
+### Done
+
+`capacityDetail()` in `src/planner.ts` returns `{ size, poolLimited }`. `poolLimited` is decided by
+*why* the search rejected the size above the answer: a quote that came back `exhaustedWindow` was
+never measured, so the bound is depth; a whole quote that simply cost too much is a real impact
+limit. `capacity()` stays as it was, returning `.size`, because every existing caller sizes a leg
+and none of them needs the second half.
+
+`pnpm capacity` marks those cells with `*`, states the venue in its header, and prints a footnote
+saying the asset can be deeper than the number. Live afterwards: `wTSLAx 14,759 21,909 24,691*
+24,691*`, and `wEWYx` marked in all four columns, which is the same fact about a dead pool.
+
+Three unit tests, 296 total. The counts in `CLAUDE.md`, `README.md` and `docs/05-status.md` were
+updated with them.
+
+### Not done, and it is the bigger half
+
+Extending `loadVenues` to USDC and USDT0 pools, and `bestQuote` to choose across quote currencies,
+would make the number correct rather than merely honest. It is not a display change: settlement in
+`Executor` is USDG, so a USDC venue implies a two-hop route and an on-chain decision about it. That
+is a separate piece of work with a contract in it, and it should not be smuggled in behind a
+footnote.
+
+**Also worth recording, since it settles an open question.** D62 checked OKX's *spot* API and found
+zero tokenised equities. The DEX side is the opposite: xStocks are there, quoted, and routed. Our
+reason for not using the aggregator was never coverage — it is that `PolicyGuard` has to bound the
+trade in the same transaction, and calldata from someone else's quote server cannot be bounded that
+way. That reason is unchanged. It is now the only reason.
+
+### Amended the same day — the number was re-measured, and it went down
+
+Sweeping the capacity figure to a fresh reading was supposed to be bookkeeping. It was not.
+
+```
+2026-08-11   ~48,353 at 0.5%     ~515,340 at 5%     30 of 30 assets quoting
+2026-08-15    97,329             759,633
+2026-08-20    37,756             218,412            17 of 30 assets quoting
+```
+
+Thirteen assets no longer have a USDG pool with in-range liquidity at all. `wGLDx` was the deepest
+thing in the universe on 11 August at $10,752 absorbable; its USDG pool held **$39** on the 20th.
+`wQQQx` and `wIWMx` quote nothing. `wTSLAx`, which had been an ordinary ~$1,100 row, is now 39% of
+the whole universe's absorbable size.
+
+**This contradicts a claim we had been making in public.** D49 read the growth as OKX order-book
+arbitrage deepening the pools, and the submission draft ended on *"the liquidity is arriving on its
+own"*. Two doublings made that feel like a trend. It was not a trend, it was two samples: the same
+pools more than halved in the five days after. The claim is now written as what it always was —
+these pools move fast, in both directions, and a capacity figure is a measurement with a date.
+
+Swept: `README.md`, `docs/01-xlayer-reality.md` (full table replaced), `02-product.md`,
+`03-architecture.md`, `05-status.md`, `06-assessment.md`, `10-submission.md`. Historical statements
+in the log and in earlier decisions were left alone, because they were true on their dates and are
+the only record of the movement. **`docs/11-social.md` was not swept** — its drafts are built on
+"$48,000 → $97,329, we measured again today", which the 20 August reading turns into a different
+post rather than a stale number. That is a writing decision, not a find-and-replace.
+
+The conclusion under all four readings is unchanged, which is the part that matters: 15 bps of
+$37,756 is **$57** per full turnover, and an AUM product still has nowhere to put money.
