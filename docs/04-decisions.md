@@ -6076,3 +6076,35 @@ wrong origin. Both redirects are built from `APP_ORIGIN` now. Verified across bo
 
 The API is deliberately left answering on both hosts. The console calls it same-origin from the app
 domain, and redirecting a POST across hosts drops its body.
+
+---
+
+## D105 — A registry we could not read was rendering as a receipt that does not exist
+
+`/receipts/[id]` caught a failed registry read and returned `null`, and the page turned that single
+null into `notFound()`. So a throttled RPC produced **404: This page could not be found** over a
+receipt that is on chain and settled. Reported from a browser, on a receipt that answered 200 six
+times in a row a minute later — which is exactly the profile of a transient read, and exactly why
+the wrong page is dangerous: it is a page nobody can reproduce that says the record is not there.
+
+The conflation was deliberate and written down: both are "no page here". That reasoning is wrong on
+the half that matters. One is a fact about the chain and the other is a fact about our connection to
+it, and this is the page whose entire job is to prove the fills happened. D77's shape, one layer
+out: two facts, only one of them a measurement, must not share a rendering.
+
+`find()` now answers three ways — `ok`, `missing`, `unreadable` — and the ordering carries the rule:
+the read has to succeed before anything can be said about whether the receipt is there, so a failed
+read can never be reported as a missing receipt. Only `missing` is a 404. A bad id (`abc`, `-1`, out
+of range) is `missing` too, because nothing was read and nothing on our side failed.
+
+The `unreadable` panel is the one the index has always rendered, now shared from
+`app/components/console/receipts/Unreadable.tsx` rather than living as a local function in one of
+the two files. The index and the detail route were saying different things about one failure.
+
+**It answers 200, and that is a real limitation.** A page cannot set a status code the way
+`notFound()` can. A machine fetching the route sees success; a human sees the truth. `GET
+/api/health` remains the operational answer for anything automated (D81).
+
+Measured against the dev server, forcing the read to reject: `/receipts/20` renders
+`Could not read receipt #20` at 200 with the title `Receipt #20`, and with the read working,
+`/receipts/20` is 200, `/receipts/999`, `/receipts/abc` and `/receipts/-1` are all 404.

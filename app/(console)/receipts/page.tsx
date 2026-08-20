@@ -5,6 +5,7 @@ import { Section } from '@/app/components/console/trade/Section';
 import { Integrity } from '@/app/components/console/receipts/Integrity';
 import { ReceiptFigures } from '@/app/components/console/receipts/ReceiptFigures';
 import { ReceiptsView } from '@/app/components/console/receipts/ReceiptsView';
+import { Unreadable } from '@/app/components/console/receipts/Unreadable';
 import { Theses } from '@/app/components/console/receipts/Theses';
 
 export const metadata = {
@@ -76,25 +77,5 @@ export default async function ReceiptsPage() {
         <Integrity snapshot={snapshot} summary={summary} />
       </Section>
     </>
-  );
-}
-
-/**
- * A throttled RPC is not an empty registry.
- *
- * The public endpoint rate-limits hard, and rendering "no receipts yet" over a
- * failed read would be the most damaging thing this page could say: it is the
- * page that exists to prove the fills happened.
- */
-function Unreadable() {
-  return (
-    <div className="max-w-[62ch] rounded-xl border border-caution/40 bg-caution/6 p-4">
-      <h2 className="font-mono text-micro text-caution uppercase">Could not read the registry</h2>
-      <p className="mt-2.5 text-data leading-relaxed text-dim">
-        The chain did not answer. That is not the same as no receipts: nothing is being shown
-        because nothing could be read. The registries are append-only, so whatever settled is still
-        there.
-      </p>
-    </div>
   );
 }
