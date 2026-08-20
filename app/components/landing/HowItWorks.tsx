@@ -95,7 +95,7 @@ const ROWS = [
     {
       title: 'Receipts',
       line: 'Every fill leaves evidence anyone can re-derive from the chain.',
-      src: undefined as string | undefined,
+      src: '/landing/receipt.jpeg' as string | undefined,
     },
     {
       title: 'Trade',
