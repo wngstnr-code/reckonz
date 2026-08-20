@@ -2,7 +2,7 @@
 
 **Non-custodial execution and risk tooling for tokenised equities on X Layer.**
 
-![tests](https://img.shields.io/badge/tests-322_passing-brightgreen) ![network](https://img.shields.io/badge/network-X_Layer_mainnet_196-blue) ![contracts](https://img.shields.io/badge/contracts-14_verified_on_Sourcify-1ba27a) ![receipts](https://img.shields.io/badge/onchain_receipts-18-orange)
+![tests](https://img.shields.io/badge/tests-402_passing-brightgreen) ![network](https://img.shields.io/badge/network-X_Layer_mainnet_196-blue) ![contracts](https://img.shields.io/badge/contracts-14_verified_on_Sourcify-1ba27a) ![receipts](https://img.shields.io/badge/onchain_receipts-18-orange)
 
 > **"You cannot, and here is the number."**
 
@@ -20,10 +20,10 @@ Built for the **X Layer "AI Season" hackathon (AI-RWA track)** by Team Indonesia
 ## The problem
 
 Tokenised equities finally exist on-chain, and the tooling around them behaves as if the liquidity
-does too. **The entire xStock universe on X Layer absorbs about $97,329 at 0.5% price impact**
-(measured 2026-08-15; it was about $48,000 four days earlier). Every allocator built on top of it
-will still show a clean pie chart, take the full amount, and hand the user the difference as
-slippage.
+does too. **The entire xStock universe on X Layer absorbs $37,756 at 0.5% price impact**
+(measured 2026-08-20; it was $97,329 on the 15th and about $48,000 on the 11th). Every allocator
+built on top of it will still show a clean pie chart, take the full amount, and hand the user the
+difference as slippage.
 
 The second problem is the one AI made worse. An agent that trades on your behalf is a key that can
 move money, bounded at best by a session policy and a spend cap. Those bound *where funds may go and
@@ -214,7 +214,7 @@ pnpm oracle [usdg]           # fair value, gap risk, and the guard's decision pe
 pnpm thesis "free text"      # thesis -> assets -> sizing -> mandate
 pnpm track-record            # every published thesis and what it actually did
 pnpm evidence <hash>         # re-derive a receipt's evidence bundle and compare
-pnpm test                    # 227 TypeScript unit tests plus 106 Foundry tests
+pnpm test                    # 296 TypeScript unit tests plus 106 Foundry tests
 ```
 
 Anything that writes on chain takes its chain from `TARGET` (`testnet` by default), so nothing can
@@ -258,25 +258,32 @@ Pool state is prefetched into two multicalls, so the simulation is pure and sync
 
 ## The finding
 
-Absorbable USDG before price impact exceeds the limit. All 30 xStocks with a USDG pool, measured
-against live state on 2026-08-11:
+Absorbable USDG before price impact exceeds the limit. Measured against live state on
+2026-08-20, across the 17 of 30 xStocks that had a USDG pool with in-range liquidity that day:
 
 ```
 asset       spot           0.50%     1.00%     2.00%     5.00%
-wGLDx         405.44      10,752    22,569    46,201   115,189
-wQQQx         723.83       3,885     8,155    16,696    42,316
-wSPYx         777.17       3,871     8,126    16,635    42,161
-wIWMx         301.39       3,645     7,651    15,664    39,700
-wNVDAx        219.17       2,223     4,062     7,149    14,864
-...24 more, each ~800-1,100 at 0.5%
-TOTAL                     48,353   100,887   205,365   515,340
+wTSLAx        350.28      14,761    21,911    24,693*   24,693*
+wNVDAx        219.11       6,625    10,750    16,481    29,791
+wSPYx         773.97       3,865     8,112    16,606    42,084
+wAAPLx        317.76       2,166     3,572     6,116    13,445
+wCOINx        164.96       1,136     2,384     4,881    12,371
+...12 more, each ~460-1,100 at 0.5%
+TOTAL                     37,756    65,607   106,961   218,412
 ```
 
-**About $48k at 0.5% impact on 11 August. About $97k on the 15th, with no code change.** We publish
-that number with its date rather than hide it, because it is a reading of the pools and not a
-property of them: OKX's own custodial order book settles these tickers on X Layer, and arbitrage
-between the two is deepening the market underneath us. Re-run `pnpm capacity` and you will get a
-third number. That is the point being made, not a risk to the claim.
+**About $48k at 0.5% impact on 11 August. $97,329 on the 15th. $37,756 on the 20th.** We publish
+the number with its date rather than hide it, because it is a reading of the pools and not a
+property of them, and the reading does not only go up: `wGLDx` was the deepest asset in the
+universe on 11 August and its USDG pool held **$39** on the 20th. Re-run `pnpm capacity` and you
+will get a fourth number. That is the point being made, not a risk to the claim: an allocator that
+quotes any of these as a standing fact is the thing this repo exists to argue against.
+
+**It is also one venue's number.** Each row is the asset's USDG pool on Uniswap V3, in-range
+liquidity only. Where a pool empties before the impact limit is reached, `pnpm capacity` marks the
+cell with `*`: that figure is the pool's depth, not a measured impact, and the asset can be deeper
+than it. `wTSLAx` also trades against USDC in a pool with twice the depth, which this table does
+not count. See D103.
 
 Depth is not uniform even though TVL nearly is, which is the whole argument for measuring absorbable
 size rather than reading TVL off a dashboard.
@@ -343,7 +350,7 @@ true reason rather than the false claim that the asset does not exist.
 - **On-chain data.** 18 receipts in an append-only registry on mainnet, five carrying evidence
   hashes anyone can re-derive; fees actually collected; a 2-of-3 Safe as admin; every deployed
   address verified on Sourcify.
-- **Code quality.** 106 Foundry plus 293 TypeScript tests in CI on every push, arithmetic mirrors
+- **Code quality.** 106 Foundry plus 296 TypeScript tests in CI on every push, arithmetic mirrors
   pinned against **real mainnet receipts** rather than invented vectors, one source per kind of fact,
   and an append-only decision log that records the mistakes instead of hiding them.
 - **Innovation.** Bounded agent execution is commodity by now. Bounding on **market conditions**,
@@ -361,7 +368,7 @@ true reason rather than the false claim that the asset does not exist.
 Shipped: mainnet stack with a publish-time bound, exits (contract, CLI and browser), evidence
 bundles archived publicly, the oracle cross-check, `/api/health` with a 503 that means it, RPC
 failover across three endpoints, WalletConnect for phones, rate limiting on every public route, and
-293 unit tests including the red-team suite. Next:
+296 unit tests including the red-team suite. Next:
 
 - **Something that calls `/api/health`.** An endpoint is not a monitor; one uptime check on a
   one-minute timer closes the gap that caused a two-day silent outage.

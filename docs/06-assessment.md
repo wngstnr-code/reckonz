@@ -50,12 +50,14 @@ Ordered by severity.
 
 ### 1 — The market, today, barely exists 🔴
 
-The entire xStock universe on X Layer absorbed $97,329 at 0.5% impact on 2026-08-15. Fifteen basis
-points on that is roughly **$146** per full turnover. Not $146k. A hundred and forty-six dollars.
+The entire xStock universe on X Layer absorbed $37,756 at 0.5% impact on 2026-08-20. Fifteen basis
+points on that is roughly **$57** per full turnover. Not $57k. Fifty-seven dollars.
 
-(That was ~$11k and $16 until 2026-08-11, then ~$48k and $73, then this. Each re-measurement has
-roughly doubled the number and changed nothing below it — which is the point worth noticing, and
-the reason the figure now carries its date. See D34, D49, D84.)
+(That was ~$11k and $16 until 2026-08-11, then ~$48k and $73, then $97,329 and $146 on the 15th,
+then this. Four readings inside a 3x range, in nine days, and nothing below the number moved at
+any of them — which is the point worth noticing, and the reason the figure carries its date. The
+earlier entries here read as though each measurement doubled the last; the 20 August reading is
+lower than all but one of them. See D34, D49, D84, D103.)
 
 **The one number that genuinely complicates this.** Depth is not volume, and until D84 only depth
 had ever been measured here. Those pools traded **$12,038,377 in 24h** on 2026-08-15. Fifteen bps

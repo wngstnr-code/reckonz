@@ -114,57 +114,54 @@ TVL is misleading here; the liquidity is spread wide, not concentrated at price.
 matters is absorbable size, measured by simulating swaps against live pool state
 (`pnpm capacity`):
 
-All 30, measured 2026-08-11. The `*` marks below are **stale**: they were the eight assets
-`ASSETS` covered before D38. The oracle now prices **28 of 30** — every asset here except
-**wSKHYx** (does not reconcile with SK Hynix, −86.4%, D39) and **wSPCXx** (SpaceX is private).
-The capacity numbers themselves are unaffected; they measure the pools, not the oracle.
+Measured **2026-08-20**, and the `*` marks here mean something new: the cell is the USDG
+pool's **depth**, reached before the impact limit was, so it is not an impact measurement and a
+wider limit will not move it (D103). Only **17 of the 30** had a USDG pool with in-range
+liquidity that day; the other 13 quoted nothing at all.
 
 ```
 asset       spot           0.50%     1.00%     2.00%     5.00%
-wAAPLx        309.77       1,069     2,243     4,592    11,638
-wAMDx         472.15         787     1,651     3,380     8,566
-wAMZNx        277.45       1,081     2,269     4,646    11,775
-wASMLx       1749.54       1,078     2,263     4,633    11,743
-wAVGOx        425.26       1,072     2,251     4,608    11,678
-wCOINx        149.34       1,081     2,269     4,644    11,771
-wCRCLx  *      66.98         840     1,762     3,608     9,144
-wDELLx        461.57         892     1,873     3,834     9,718
-wEWYx         165.37         891     1,870     3,828     9,702
-wGLDx         405.44      10,752    22,569    46,201   115,189
-wGOOGLx       357.72       1,072     2,251     4,608    11,678
-wHOODx         94.87         819     1,718     3,517     8,914
-wIBMx         241.12         815     1,710     3,501     8,873
-wINTCx  *      98.52         843     1,770     3,624     9,186
-wIWMx         301.39       3,645     7,651    15,664    39,700
-wMETAx        596.75       1,077     2,261     4,628    11,731
-wMRVLx        211.15         812     1,704     3,488     8,839
-wMSFTx        508.46       1,083     2,274     4,655    11,798
-wMSTRx         97.52         818     1,718     3,516     8,911
-wMUx    *     871.33         811     1,703     3,486     8,837
-wNVDAx  *     219.17       2,223     4,062     7,149    14,864
-wORCLx        152.27       1,108     2,326     4,761    12,066
-wPLTRx        173.18       1,125     2,361     4,834    12,253
-wQQQx         723.83       3,885     8,155    16,696    42,316
-wSKHYx  *     137.10         806     1,692     3,465     8,781
-wSNDKx  *    1253.22         855     1,794     3,672     9,307
-wSPCXx  *     136.66         890     1,868     3,825     9,694
-wSPYx   *     777.17       3,871     8,126    16,635    42,161
-wTSLAx        331.50       1,128     2,367     4,846    12,282
-wTSMx         422.81       1,122     2,356     4,823    12,223
-TOTAL                     48,353   100,887   205,365   515,340
+wAAPLx        317.76       2,166     3,572     6,116    13,445
+wAMDx         471.40         786     1,651     3,379     8,564
+wCOINx        164.96       1,136     2,384     4,881    12,371
+wCRCLx         80.60         878     1,844     3,774     9,566
+wEWYx         174.01           0*        0*        0*        0*
+wGOOGLx       346.09         463       532       630       846
+wIBMx         242.19         817     1,715     3,510     8,896
+wMETAx        552.43       1,037     2,176     4,454    11,289
+wMSFTx        487.03       1,060     2,226     4,557    11,549
+wMSTRx        107.58         859     1,804     3,693     9,360
+wMUx          949.04         817     1,714     3,510     8,895
+wNVDAx        219.11       6,625    10,750    16,481    29,791
+wSKHYx        161.93         810     1,700     3,480     8,819
+wSNDKx       1596.31         846     1,777     3,637     9,218
+wSPCXx        139.21         828     1,739     3,560     9,022
+wSPYx         773.97       3,865     8,112    16,606    42,084
+wTSLAx        350.28      14,761    21,911    24,693*   24,693*
+wAMZNx wASMLx wAVGOx wDELLx wGLDx wHOODx wINTCx wIWMx
+wMRVLx wORCLx wPLTRx wQQQx wTSMx                        no USDG pool
+TOTAL                     37,756    65,607   106,961   218,412
 ```
 
-Gold is the outlier by an order of magnitude — $10.7k at 0.5% against ~$1k for a typical
-equity wrapper — and the index ETFs (wSPYx, wQQQx, wIWMx) sit between. Depth is not
-uniform even though TVL nearly is, which is the whole argument for measuring absorbable
-size rather than reading TVL off a dashboard.
+**The shape inverted in nine days.** On 2026-08-11 gold was the outlier by an order of magnitude
+($10,752 at 0.5%) and a typical equity wrapper sat near $1,000. Today `wGLDx`'s USDG pool holds
+**$39**, `wQQQx` and `wIWMx` quote nothing, and `wTSLAx` alone carries 39% of the universe's
+absorbable size. Depth is not uniform, it is not stable, and it is not TVL, which is the whole
+argument for measuring absorbable size rather than reading a dashboard.
 
-**The entire tokenised-equity universe on X Layer absorbed $97,329 at 0.5% impact on
-2026-08-15**, and $759,633 at 5%. Write it with the date: this is a reading of the pools on a
-given day, not a property of the market. It was ~$48k and ~$515k four days earlier, and ~$11k
-before 2026-08-11 — that last one a real number describing only the eight assets the oracle
-prices, reported as though it covered all thirty. See D84 for the current measurement, D34 for
-that earlier correction.
+**The entire tokenised-equity universe on X Layer absorbed $37,756 at 0.5% impact on
+2026-08-20**, and $218,412 at 5%. Write it with the date: this is a reading of the pools on a
+given day, not a property of the market. It was $97,329 and $759,633 on 2026-08-15, ~$48k and
+~$515k on the 11th, and ~$11k before that — the last one a real number describing only the eight
+assets the oracle prices, reported as though it covered all thirty. **The reading does not only
+go up.** D49's arbitrage-deepens-the-pools argument was written when it had doubled twice; it has
+now more than halved, and the honest form of the claim is that these pools move fast in both
+directions. See D84 for the 15 August measurement, D103 for what the number does and does not
+cover, D34 for the earliest correction.
+
+Two limits on the number itself, both live: it counts the **USDG pool only** (`wTSLAx` also
+trades against USDC in a pool with twice the depth, uncounted), and only **in-range** liquidity.
+It is a floor, and it is measured; it is not the chain's ceiling.
 
 None of the movement changes the conclusion: an AUM product still has nowhere to put money. See
 `02-product.md`.

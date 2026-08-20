@@ -68,16 +68,16 @@ written with that in mind, and the phrase appears in the first sentence on purpo
 > was made on. That hash is published *before* anything is signed and the bundle is archived
 > publicly, so anyone can re-derive it and check that it matches. Fees have been collected on
 > mainnet; admin of the fee collector, the oracle and the receipt registry is a 2-of-3 Safe. Every
-> contract is verified on Sourcify (seven on mainnet, seven on testnet), and 106 Solidity plus 227
+> contract is verified on Sourcify (seven on mainnet, seven on testnet), and 106 Solidity plus 296
 > TypeScript tests run in CI on every push.
 >
-> **Honest about the market.** The entire xStock universe on X Layer absorbed $97,329 at 0.5%
-> price impact on 15 August 2026, and about $48,000 four days earlier. We publish that number with
-> its date rather than hide it, because it is a reading of the pools and not a property of them:
-> OKX's own order book settles these tickers on X Layer, and arbitrage between the two is deepening
-> the market underneath us. The same pools traded $12.0M in 24 hours. Thin depth is the reason this
-> product refuses size, and the reason it was built non-custodially. The discipline layer is
-> deployed, tested and audited now; the liquidity is arriving on its own.
+> **Honest about the market.** The entire xStock universe on X Layer absorbed $37,756 at 0.5%
+> price impact on 20 August 2026, against $97,329 on the 15th and about $48,000 on the 11th. We
+> publish that number with its date rather than hide it, because it is a reading of the pools and
+> not a property of them, and it moves in both directions: OKX's own order book settles these
+> tickers on X Layer, arbitrage runs between the two, and the depth follows it around. The same
+> pools traded $12.0M in 24 hours on 15 August. Thin, moving depth is the reason this product
+> refuses size, and the reason it was built non-custodially.
 
 **Word count ~630**, up from ~430 when the "How it works" paragraph was added. That paragraph is
 the one that cannot be cut: without it a reader finishes the description without ever learning what
@@ -189,11 +189,11 @@ parent company has just tied itself to tokenised equities with ICE alongside, an
 book is visibly deepening these pools.
 
 **Numbers to re-check before pasting, and every one of these has already moved once.** Receipts
-(18), theses (3), tests (106 + 227), capacity ($97,329 at 0.5%, 2026-08-15), 24h pool volume
-($12.0M, same day), and the $250,000 → $20,361 run (2026-08-16). `pnpm capacity`,
+(18), theses (3), tests (106 + 296), capacity ($37,756 at 0.5%, 2026-08-20), 24h pool volume
+($12.0M, 2026-08-15), and the $250,000 → $20,361 run (2026-08-16). `pnpm capacity`,
 `pnpm plan 250000`, `pnpm check:tests` and a `count()` read settle all of them. **Re-run them on
-the day you paste**: capacity changed by more than 2x between 11 and 15 August, and the plan figure
-changed by 3x between 15 and 16 August, both with no code change. A stale number in a submission is
+the day you paste**: capacity more than doubled between 11 and 15 August and then more than halved
+by the 20th, and the plan figure changed by 3x between 15 and 16 August, all with no code change. A stale number in a submission is
 the one thing here a judge can falsify in a minute.
 
 Take all four plan figures from a single `pnpm plan 250000` run. `pnpm thesis` sizes a slightly

@@ -54,8 +54,9 @@ The system then does four things, and the fourth of them is the one nobody else 
 *whether at all*; it never takes deposits.
 
 This was decided after measuring capacity. A vault that gathers assets has no room to
-gather them into: the whole universe absorbed $97,329 at 0.5% impact on 2026-08-15,
-having doubled from ~$48k in four days without changing the answer (D84). `PolicyGuard`,
+gather them into: the whole universe absorbed $37,756 at 0.5% impact on 2026-08-20,
+after $97,329 on the 15th and ~$48k on the 11th. Four readings, a 3x range, and the
+answer never moved (D84, D103). `PolicyGuard`,
 `ReceiptRegistry` and `ThesisRegistry` are unaffected — only the question of whether
 funds sit in our contract changed, and they do not.
 
@@ -66,7 +67,7 @@ funds sit in our contract changed, and they do not.
 | **Execution fee** | 15 bps on notional routed | ✅ **Live on mainnet.** `FeeCollector` `0x3A1D6b9129E69fEF189E538996B18cebd56C3Dd0`, ceiling fixed in code at 50 bps. Took its first fee on the second real fill. |
 | **Thesis subscription** | Pay to follow a published thesis — per-call via x402, or a subscription | **Highest margin, needs no AUM.** This is the actual business. Depends entirely on the on-chain track record being unfakeable. |
 | **Oracle feed** | Other X Layer protocols pay for fair value + gap risk | **Most durable.** Slow to start, compounds as xStocks grow. |
-| Management / performance fee | bps on AUM | **Dead on arrival.** Capacity was $97,329 across all 30 assets on 2026-08-15; 2% of that is $1,946 a year. It has doubled once already and the verdict did not move. Do not build the story on it. |
+| Management / performance fee | bps on AUM | **Dead on arrival.** Capacity was $37,756 across the whole universe on 2026-08-20; 2% of that is $755 a year. It has doubled twice and more than halved once, and the verdict did not move at any of those numbers. Do not build the story on it. |
 | Order flow / market making | — | No. Adds inventory risk, muddies the positioning. |
 
 Early revenue = execution fees. Business = subscriptions. Long game = the oracle.

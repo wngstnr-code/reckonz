@@ -1,6 +1,6 @@
 # Status — resume here
 
-Last updated **2026-08-19**. Submission deadline **2026-08-21 23:59 UTC** (2 days).
+Last updated **2026-08-20**. Submission deadline **2026-08-21 23:59 UTC** (1 day).
 
 Repo: **github.com/wngstnr-code/reckonz** — private, `main`. `docs/` is **in the repo** as of
 2026-08-11; it used to be gitignored, which stopped working once the project became two people.
@@ -16,7 +16,7 @@ colliding. `06-assessment.md` is the honest read on whether this is a business.
 ```bash
 cd /Users/mac/Desktop/okxai
 set -a && source .env && set +a     # PRIVATE_KEY, GEMINI_API_KEY, CASH
-pnpm typecheck && pnpm test         # expect: clean, 293 unit tests, then 106 passed
+pnpm typecheck && pnpm test         # expect: clean, 296 unit tests, then 106 passed
 git status --short                  # expect: clean; docs/ is tracked now, not ignored
 pnpm dev                            # the web app, port 3000 (falls back if taken)
 ```
@@ -260,12 +260,14 @@ resolving to pnpm's own package-publishing command instead.
 
 ### Results worth keeping
 
-**Capacity** — the whole xStock universe (all 30) absorbed **$97,329 at 0.5% impact** on
-2026-08-15, $759,633 at 5%. Always quote it with the date: it was ~$48k/~$515k four days earlier
-and doubled with no change on our side (D84). Full table in `01-xlayer-reality.md`. This is the
-fact that killed the AUM business and produced D6, and it has survived every re-measurement — the
-earlier ~$11k/~$112k covered the eight priced assets and, at 5%, included a search bound mistaken
-for a measurement (D33, D34).
+**Capacity** — the whole xStock universe absorbed **$37,756 at 0.5% impact** on 2026-08-20,
+$218,412 at 5%, across the 17 of 30 assets that had a USDG pool with in-range liquidity that day.
+Always quote it with the date: $97,329/$759,633 on 2026-08-15, ~$48k/~$515k on the 11th, and the
+reading moves **both ways** with no change on our side (D84, D103). It is also a floor, not a
+ceiling: USDG pools only, and `wTSLAx` has a USDC pool with twice the depth that nothing counts.
+Full table in `01-xlayer-reality.md`. This is the fact that killed the AUM business and produced
+D6, and it has survived every re-measurement — the earlier ~$11k/~$112k covered the eight priced
+assets and, at 5%, included a search bound mistaken for a measurement (D33, D34).
 
 **Volume** — the same pools traded **$12,038,377 in 24h** on 2026-08-15, 81% of it in wAAPLx and
 wGOOGLx alone. Depth is not volume, and this repo had only ever measured depth. Read the
@@ -699,7 +701,26 @@ reminder.
 
 ## Log
 
-**2026-08-19 (latest, thirty-fourth)** — **a rule for the disconnected visitor** (D102), which had
+**2026-08-20 (latest, thirty-fifth)** — **the capacity table was reporting one venue's depth as
+the chain's ceiling** (D103). Started as a question about whether the OKX DEX aggregator carries
+xStocks on X Layer: it does, `wTSLAx` quotes and routes there, and its quotes ran seven times past
+where ours stop. Not a fee tier and not the tick window — the USDG pool holds **104.688 wTSLAx**,
+and a **USDC** pool with twice its depth is one `loadVenues` never looks at. `capacityDetail()` now
+returns `poolLimited`, `pnpm capacity` marks those cells `*` and names its venue in the header, and
+296 unit tests. The number is honest now; making it *correct* means multi-hop settlement and is
+deliberately not done. Also settled: D62 found zero tokenised equities on OKX's spot API, and the
+DEX side is the opposite — our reason for not routing through the aggregator is `PolicyGuard`
+bounding the trade in the same transaction, and that is now the only reason.
+
+Then the capacity figure was re-measured and swept across every doc that states it, which was
+supposed to be bookkeeping and was not: **$37,756 at 0.5%**, $218,412 at 5%, down from $97,329 on
+15 August, with only **17 of 30** assets still quoting a USDG pool. `wGLDx` went from the deepest
+asset in the universe to a $39 pool in nine days. D49's "arbitrage is deepening the pools" was two
+samples read as a trend, and the submission line "the liquidity is arriving on its own" is gone.
+`docs/11-social.md` is deliberately **not** swept: its drafts are built on the old story and need
+rewriting, not renumbering.
+
+**2026-08-19 (thirty-fourth)** — **a rule for the disconnected visitor** (D102), which had
 never been decided: four pages had three different treatments of the same state, one of which
 replaced the entire mandate form with a sentence pointing at the header. `docs/09-design.md` now
 carries it, and `/trade` disconnected measures zero bare "connect a wallet" sentences against three
@@ -839,7 +860,7 @@ the `sessionStorage` hand-off, so arriving at `/trade` from a published thesis �
 produces a follow — the fill panel's follow banner never rendered, while the thesis hash still rode
 along on the fill.
 
-`pnpm typecheck` clean, 293 unit tests pass, `pnpm build` clean, `/trade` now server-rendered per
+`pnpm typecheck` clean, 296 unit tests pass, `pnpm build` clean, `/trade` now server-rendered per
 request. Nav and footer untouched.
 
 **2026-08-18 (twenty-fourth)** — **the worker's price history is in the repo, and the

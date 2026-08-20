@@ -244,9 +244,12 @@ it had been "verified" by checking a codesize and a selector.
 
 ## Known risks, to state rather than hide
 
-- **Capacity ceiling $97,329** at 0.5% impact on 2026-08-15, across all 30 xStocks — quote it with
-  the date, since it doubled in the four days before that (D84). Telling users this is the product;
-  it also means revenue cannot come from AUM at any of the numbers measured so far.
+- **Capacity floor $37,756** at 0.5% impact on 2026-08-20, across the 17 xStocks with a live USDG
+  pool — quote it with the date, since it was $97,329 five days earlier (D84) and the reading moves
+  in both directions. It is a floor rather than a ceiling: the USDG pool only, in-range liquidity
+  only, and `wTSLAx` alone has a USDC pool with twice the depth that nothing here counts (D103).
+  Telling users this is the product; it also means revenue cannot come from AUM at any of the
+  numbers measured so far.
 - **Oracle credibility** — answered by confidence bands and the "guard, not truth" framing.
 - **The oracle prices 30 of 30 assets** (D62; 28 under D38's exchange reference). Both former
   refusals are closed: `wSKHYx` tracks a US depositary receipt rather than the Seoul share, and
