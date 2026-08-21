@@ -71,7 +71,19 @@ import { useInView } from './useInView';
 /** Broken by hand, because the line breaks are the composition. */
 const HEADING = ['You write the thesis.', 'The chain answers.'];
 
-export function Approach({ videoSrc }: { videoSrc?: string }) {
+export function Approach({
+  videoSrc,
+  loopSrc,
+}: {
+  videoSrc?: string;
+  /* The card's holding pattern, not a second video. `videoSrc` is the recorded
+     run and it brings a `PLAY` control with it; `loopSrc` is silent brand
+     motion that fills the empty state until the run exists. Once `videoSrc` is
+     set this is never rendered, so the swap needs no cleanup.
+     A list, in preference order, because one file is not enough — see the
+     `<source>` comment in DemoFrame. */
+  loopSrc?: string[];
+}) {
   const { ref, seen } = useInView<HTMLElement>();
   const shellRef = useRef<HTMLDivElement | null>(null);
   const restRef = useRef<HTMLDivElement | null>(null);
@@ -306,6 +318,7 @@ export function Approach({ videoSrc }: { videoSrc?: string }) {
         <div className={`card-zoom h-full w-full ${landed ? 'pointer-events-auto' : ''}`}>
           <DemoFrame
             src={videoSrc}
+            loopSrc={loopSrc}
             playing={playing}
             landed={landed}
             onPlay={() => setPlaying(true)}
@@ -386,11 +399,13 @@ function Ornament() {
  */
 function DemoFrame({
   src,
+  loopSrc,
   playing,
   landed,
   onPlay,
 }: {
   src?: string;
+  loopSrc?: string[];
   playing: boolean;
   landed: boolean;
   onPlay: () => void;
@@ -432,10 +447,50 @@ function DemoFrame({
           /* No video, so no invitation to play one. The reveal is the same
              clock and the same position; only the sentence changes, because a
              `PLAY` control over a card with nothing behind it is a button that
-             lies. */
-          <p className="reel-in absolute inset-0 flex items-center justify-center font-mono text-fine tracking-[0.12em] text-faint uppercase">
-            The recorded run lands here
-          </p>
+             lies. The same reason keeps the loop out of the `src` branch: it is
+             a logo wheel, and offering it behind a control that says "play the
+             recorded run" would be the page claiming it is one. */
+          <>
+            {loopSrc && loopSrc.length > 0 && (
+              <video
+                autoPlay
+                muted
+                loop
+                playsInline
+                aria-hidden
+                /* Decorative and silent, so it is hidden from assistive tech and
+                   stood down entirely for anyone who has asked for less motion.
+                   `motion-reduce:hidden` leaves the card its own #0b0d10 ground,
+                   which is what it looked like before this existed. */
+                className="motion-reduce:hidden absolute inset-0 h-full w-full object-cover"
+              >
+                {/* **One file is not enough, and the failure is silent.** The
+                    first cut of this was a single H.264 High@L5.0 mp4. It served
+                    fine, reported no error, and sat at `readyState 0` forever:
+                    the browser had accepted the element, started the fetch, and
+                    could not decode it. A black card and a clean console.
+                    `<source>` lets the browser pick what it can actually play,
+                    so a codec it refuses costs the next line rather than the
+                    whole card. The mp4 is deliberately Main@L4.0. */}
+                {loopSrc.map((s) => (
+                  <source
+                    key={s}
+                    src={s}
+                    type={s.endsWith('.webm') ? 'video/webm' : 'video/mp4'}
+                  />
+                ))}
+              </video>
+            )}
+            {/* Bottom, not centre: the loop carries the wordmark in the middle
+                of the frame, and the two stacked on each other are unreadable. */}
+            <p
+              className={`reel-in absolute inset-x-0 flex justify-center font-mono text-fine tracking-[0.12em] text-faint uppercase ${
+                loopSrc?.length ? 'bottom-10' : 'inset-y-0 items-center'
+              }`}
+            >
+              The recorded run lands here
+            </p>
+          </>
         ))}
     </div>
   );

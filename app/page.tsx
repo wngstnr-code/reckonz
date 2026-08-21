@@ -51,7 +51,9 @@ export default function LandingPage() {
       <SmoothScroll />
       <TopBar />
       <Hero symbols={symbols} />
-      <Approach />
+      {/* WebM first: it is less than half the size and every target browser
+          takes it. The mp4 is the fallback, not the preference. */}
+      <Approach loopSrc={['/landing/reckonz-wheel.webm', '/landing/reckonz-wheel.mp4']} />
       <HowItWorks />
       <Closing />
       <Footer />
