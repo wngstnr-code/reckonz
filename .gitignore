@@ -37,3 +37,11 @@ tsconfig.tsbuildinfo
 # `public/` would serve them from our own domain, and they are three megabytes of
 # somebody else's art in a public repo.
 public/Landing reference/
+
+# The working notes, and the agent brief that points at them. They are how the
+# two of us keep from repeating each other's mistakes, and they were tracked for
+# exactly that reason — but they are not the deliverable, and the repo that gets
+# read is the one without them. Local-only again: still on both machines, still
+# written to, never pushed.
+docs/
+CLAUDE.md
