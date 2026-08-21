@@ -859,6 +859,40 @@
   transform: translateY(calc((1 - var(--reveal, 0)) * 1.5rem));
 }
 
+/* The same clock, without the travel.
+ *
+ * The scrim that dims the wheel behind the control has to arrive with it — the
+ * loop is at full strength while the card is still flying, and only steps back
+ * once there is something to read on top of it. It cannot borrow `.reel-in`:
+ * that one slides up 1.5rem, and a full-bleed layer that slides shows a band of
+ * the card's own ground under its bottom edge for as long as it is moving.
+ */
+.reel-fade {
+  opacity: var(--reveal, 0);
+}
+
+/* The mark that hands the frame over, on the same clock read backwards.
+ *
+ * The hole in the middle of the wheel holds two things at different moments:
+ * the Reckonz mark while the card is still flying, and the control once it has
+ * landed. `1 - --reveal` is what makes that one exchange rather than two
+ * animations — there is no moment where both are legible and none where the
+ * hole is empty.
+ *
+ * It leaves upward and `.reel-in` arrives from below, so the two move the same
+ * way through the same 1.5rem. The mark is not sliding out of the way of the
+ * control; the control is what the mark turns into.
+ */
+.reel-out {
+  /* Twice the rate, so the mark is gone by the time the control is half here.
+     On the same rate the two crossed in the middle and both sat at a third of
+     their strength over each other — a hand-over has to have a moment where
+     the hand is empty, or it reads as one thing printed on another. Opacity
+     clamps at zero, so the second half of the reveal costs nothing. */
+  opacity: calc(1 - var(--reveal, 0) * 2);
+  transform: translateY(calc(var(--reveal, 0) * -1.5rem));
+}
+
 @media (prefers-reduced-motion: reduce) {
   .reveal-on .rise-mask > span {
     animation: none;
@@ -871,7 +905,8 @@
      JavaScript pins `--grow` to 1 for the same reason — this is the half that
      survives if the effect never runs. */
   .card-zoom,
-  .reel-in {
+  .reel-in,
+  .reel-out {
     transform: none;
   }
 }

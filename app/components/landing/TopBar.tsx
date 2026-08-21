@@ -92,9 +92,17 @@ export function TopBar() {
        * the blur was buying. What it costs is one composited rectangle.
        *
        * If this ever needs the blur back, it needs the wall to stop being what
-       * is under it, not a smaller radius. */
-      className={`pointer-events-none fixed inset-x-0 top-0 z-40 flex items-start justify-between gap-x-8 border-b px-[max(2rem,5vw)] pt-10 pb-5 transition-[background-color,border-color] duration-300 ease-out ${
-        past ? 'border-line bg-ground/92' : 'border-transparent bg-transparent'
+       * is under it, not a smaller radius.
+       *
+       * **And no rule under it.** There was a hairline on the strip's bottom
+       * edge, drawn on the assumption that a bar over moving content needs to
+       * say where it ends. It does not: the ground at 92% already separates the
+       * bar from the page, and the line only stated the separation a second
+       * time — as the one hard edge on a page whose every other boundary is a
+       * change of tone. What is left is a strip that appears and disappears
+       * with the scroll and never announces its own frame. */
+      className={`pointer-events-none fixed inset-x-0 top-0 z-40 flex items-start justify-between gap-x-8 px-[max(2rem,5vw)] pt-10 pb-5 transition-[background-color] duration-300 ease-out ${
+        past ? 'bg-ground/92' : 'bg-transparent'
       }`}
     >
       <Link href="/" className="pointer-events-auto flex shrink-0 items-center gap-3">

@@ -51,9 +51,17 @@ export default function LandingPage() {
       <SmoothScroll />
       <TopBar />
       <Hero symbols={symbols} />
-      {/* WebM first: it is less than half the size and every target browser
+      {/* The recording is what PLAY starts; the wheel is what the card shows
+          until then. Both, because a poster frame and a recording are different
+          jobs — the loop is the brand holding the frame, and it steps behind a
+          scrim the moment the control appears over it.
+
+          WebM first: it is less than half the size and every target browser
           takes it. The mp4 is the fallback, not the preference. */}
-      <Approach loopSrc={['/landing/reckonz-wheel.webm', '/landing/reckonz-wheel.mp4']} />
+      <Approach
+        videoSrc="/landing/reckonz-demo.mp4"
+        loopSrc={['/landing/reckonz-wheel.webm', '/landing/reckonz-wheel.mp4']}
+      />
       <HowItWorks />
       <Closing />
       <Footer />

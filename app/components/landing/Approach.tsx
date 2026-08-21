@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { Logo } from '../console/Logo';
 import { DrawnStroke } from './DrawnStroke';
 import { useInView } from './useInView';
 
@@ -76,10 +77,11 @@ export function Approach({
   loopSrc,
 }: {
   videoSrc?: string;
-  /* The card's holding pattern, not a second video. `videoSrc` is the recorded
-     run and it brings a `PLAY` control with it; `loopSrc` is silent brand
-     motion that fills the empty state until the run exists. Once `videoSrc` is
-     set this is never rendered, so the swap needs no cleanup.
+  /* The card's thumbnail, not a second video. `videoSrc` is the recorded run
+     and it brings a `PLAY` control with it; `loopSrc` is silent brand motion
+     that holds the frame until the reader starts the run — and holds it alone,
+     with the sentence instead of the control, if there is no run yet. Either
+     way it is gone the moment the recording is playing.
      A list, in preference order, because one file is not enough — see the
      `<source>` comment in DemoFrame. */
   loopSrc?: string[];
@@ -287,42 +289,61 @@ export function Approach({
        * that stacking order at all any more.
        *
        * **The box is the finished state and the transform is everything else.**
-       * The element is already the panel it becomes: the page's own left and
-       * right inset, clear of the bar, a screen tall. So the landing is the
-       * untransformed element rather than a set of numbers that cancel out.
+       * The element is already the panel it becomes: the largest 16:9 rectangle
+       * that fits between the page's own left and right inset, clear of the
+       * bar, centred in what is left. So the landing is the untransformed
+       * element rather than a set of numbers that cancel out.
        *
        * 7rem clears the bar's pill with air to spare, and it is a literal
        * because the bar is `fixed` and takes no space in the flow — there is
-       * nothing here that could measure it.
+       * nothing here that could measure it. It is spent twice: once as the top
+       * inset, and once inside the width below, where the 9rem is it plus the
+       * 2rem at the bottom.
        *
        * Not clipped by the section's `overflow-hidden`: a fixed element's
        * containing block is the viewport, and nothing above it sets a transform
        * or filter that would take that over. */}
-      <div
-        ref={shellRef}
-        className="pointer-events-none fixed inset-x-[max(2rem,5vw)] top-[7rem] bottom-[2rem] z-30"
-      >
-        {/* **The events belong on the thing that moves.**
+      <div className="pointer-events-none fixed inset-x-[max(2rem,5vw)] top-[7rem] bottom-[2rem] z-30 flex items-center justify-center">
+        {/* **The panel is the recording's shape, not the window's.**
          *
-         * They were on the shell, and the shell never moves — it is the box the
-         * card is measured against, pinned over the viewport from the first
-         * paint to the last. So once the card had ridden away it left behind an
-         * invisible rectangle, still covering most of the screen, still taking
-         * every click. Everything below this section stopped being clickable,
-         * and nothing looked wrong.
+         * It was the whole area between those insets, which is whatever ratio
+         * the window happens to be — so a 16:9 capture either sat in a band of
+         * card or lost an edge of the interface it was demonstrating. Neither
+         * is a demo. The box is 16:9 and as large as fits: the width is the
+         * lesser of the room across and the room down converted through the
+         * ratio, and the flex parent centres whichever axis had the slack.
          *
-         * The card is the transformed element, so its hit area travels with it.
-         * When it is a third of the size and off in the corner, that corner is
-         * the only part of the screen that answers; when it has left over the
-         * top, nothing does. */}
-        <div className={`card-zoom h-full w-full ${landed ? 'pointer-events-auto' : ''}`}>
-          <DemoFrame
-            src={videoSrc}
-            loopSrc={loopSrc}
-            playing={playing}
-            landed={landed}
-            onPlay={() => setPlaying(true)}
-          />
+         * `dvh` rather than `svh`, because the reference is the box drawn just
+         * above — inset from the *current* viewport — and with a phone's bars
+         * retracted `svh` describes a shorter screen than the insets do.
+         *
+         * This is still the untransformed box the flight is measured from, and
+         * the gap up the page copies its ratio, so the hole the card leaves is
+         * the shape of the card that left it. Only the shape changed. */}
+        <div ref={shellRef} className="aspect-[16/9] w-[min(100%,calc((100dvh_-_9rem)*16/9))]">
+          {/* **The events belong on the thing that moves.**
+           *
+           * They were on the shell, and the shell never moves — it is the box the
+           * card is measured against, pinned over the viewport from the first
+           * paint to the last. So once the card had ridden away it left behind an
+           * invisible rectangle, still covering most of the screen, still taking
+           * every click. Everything below this section stopped being clickable,
+           * and nothing looked wrong.
+           *
+           * The card is the transformed element, so its hit area travels with it.
+           * When it is a third of the size and off in the corner, that corner is
+           * the only part of the screen that answers; when it has left over the
+           * top, nothing does. */}
+          <div className={`card-zoom h-full w-full ${landed ? 'pointer-events-auto' : ''}`}>
+            <DemoFrame
+              src={videoSrc}
+              loopSrc={loopSrc}
+              playing={playing}
+              landed={landed}
+              onPlay={() => setPlaying(true)}
+              onEnd={() => setPlaying(false)}
+            />
+          </div>
         </div>
       </div>
     </section>
@@ -378,6 +399,62 @@ function Ornament() {
   );
 }
 
+/** How long the two layers overlap, in milliseconds.
+ *
+ * Long enough to read as one picture becoming another rather than as a switch,
+ * short enough that a reader who has just pressed PLAY is not waiting on it.
+ * The number is shared by the CSS transition and the two bits of bookkeeping
+ * that must not happen until it is over, so it lives here rather than in a
+ * class name that a timer would have to be kept in step with.
+ */
+const DISSOLVE = 420;
+
+/** The player's three words. White from a literal for the same reason the
+ *  lockup is: this card is #0b0d10 in both themes and off the token ladder. */
+const LABEL =
+  'text-[clamp(0.7rem,0.9vw,0.9rem)] font-medium tracking-[0.08em] text-white uppercase [text-shadow:0_1px_12px_rgba(0,0,0,0.85)] transition-opacity duration-200 hover:opacity-60';
+
+/**
+ * What the wheel does when it has to share the frame with the control.
+ *
+ * **The collision is unavoidable, so the loop gives way.** `PLAY ▶ REEL` is set
+ * at display size in the middle of the card, and the loop carries the wordmark
+ * in exactly that place — white type over white type, which no amount of
+ * dimming separates because the two are the same colour. Dropping the control
+ * to the bottom edge, where the empty state puts its sentence, only moves the
+ * problem: the bottom of the ring is a row of bright logos, and a 6rem lockup
+ * lands straight on them. The composition is a circle, so it is loud in the
+ * middle and loud around the outside, and there is no quiet corner to retreat
+ * to.
+ *
+ * So the middle is cut out of it. A radial mask makes the loop transparent
+ * inside `57%` of its half-height and solid again by `68%`, which takes the
+ * wordmark with it and leaves every logo on the ring untouched — the card's own
+ * ground shows through the hole, and the lockup sits on flat #0b0d10.
+ *
+ * The scale is what makes the hole big enough. The mask is a fraction of the
+ * element, so scaling the loop scales the hole with it: at `1.2` the opening is
+ * wider than the words on a desktop card, where at `1` the ends of `PLAY` and
+ * `REEL` sat on the ring. It costs nothing at the top and bottom — the ring
+ * occupies about four fifths of the frame's height, so a fifth more still
+ * clears the edges.
+ *
+ * **And below `sm` the wheel does not run at all.** The lockup is sized off the
+ * viewport and the ring off the card, and on a phone the words come out wider
+ * than the whole ring — there is no hole that fits them, at any scale. The
+ * choice there is between a control laid across the logos and no wheel, and it
+ * is not close: the card falls back to its own ground, which is what it was
+ * before any of this, and the wheel is a thing the phone never sees rather than
+ * a thing the phone sees broken. It is also 200px of ring with unreadable
+ * tickers in it, so little is lost.
+ *
+ * Not applied in the empty state. There is no lockup there, only a line of 13px
+ * type along the bottom, and a wheel with its middle removed to make room for
+ * nothing is just a broken wheel.
+ */
+const BEHIND_CONTROL =
+  'max-sm:hidden scale-[1.2] [mask-image:radial-gradient(circle_closest-side_at_50%_50%,transparent_57%,#000_68%)] [-webkit-mask-image:radial-gradient(circle_closest-side_at_50%_50%,transparent_57%,#000_68%)]';
+
 /**
  * The demo, and what to show while there is not one.
  *
@@ -403,14 +480,111 @@ function DemoFrame({
   playing,
   landed,
   onPlay,
+  onEnd,
 }: {
   src?: string;
   loopSrc?: string[];
   playing: boolean;
   landed: boolean;
   onPlay: () => void;
+  onEnd: () => void;
 }) {
   const video = useRef<HTMLVideoElement | null>(null);
+  const loop = useRef<HTMLVideoElement | null>(null);
+  /* The two nodes the player writes to every few frames. Refs, not state: the
+     progress bar moves four times a second and the cursor moves with the hand,
+     and neither is a fact any other part of this component reads. */
+  const progress = useRef<HTMLDivElement | null>(null);
+  const cursor = useRef<HTMLDivElement | null>(null);
+  const seeker = useRef<HTMLInputElement | null>(null);
+  /* These two are state, because they are words on the screen: the label says
+     PLAY or PAUSE and MUTE or UNMUTE, and it changes about as often as the
+     reader presses it. */
+  const [paused, setPaused] = useState(false);
+  const [muted, setMuted] = useState(false);
+  /**
+   * Whether the controls are showing.
+   *
+   * They follow the pointer being over the card: hand on it and the bar rises
+   * out of the bottom edge with its gradient; hand off and both go, leaving the
+   * recording with nothing on it at all. That is the point of a player drawn by
+   * hand rather than the browser's — the chrome is only there while it is being
+   * used, and a demo nobody is touching is just the demo.
+   *
+   * It starts **true**, and that is not a detail. A touch screen has no pointer
+   * to be over anything, so a bar that waited for `pointerenter` would never
+   * appear on a phone; starting shown means the only thing that hides it is a
+   * pointer actually leaving, which is an event that device never sends.
+   */
+  const [hover, setHover] = useState(true);
+
+  /**
+   * Closing the run, which is the only way out of it that is not the end.
+   *
+   * The recording stops on the click rather than at the end of the dissolve —
+   * it is the one part of this that is audible, and a reader who has just
+   * dismissed something should not still be hearing it. The rewind stays where
+   * it was, after the fade, for the reason written on the effect above.
+   */
+  const close = () => {
+    video.current?.pause();
+    onEnd();
+  };
+
+  /* Escape closes it too. The cursor is the affordance and a pointer is what
+     that assumes; this is the same door for anyone not using one. Bound only
+     while the run is up, so nothing on the rest of the page answers Escape. */
+  useEffect(() => {
+    if (!playing) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playing]);
+
+  /**
+   * What has to happen at the far end of the dissolve, in both directions.
+   *
+   * The two layers cross-fade, which means both are on screen for `DISSOLVE`
+   * milliseconds and neither may be touched until it is over:
+   *
+   *  - **Into the run.** The wheel keeps turning while it fades. Pausing it on
+   *    the click freezes a picture the reader is still looking at, and a still
+   *    frame dissolving out is the one thing that would make the swap read as a
+   *    swap. It stops once it is invisible, so nothing decodes two videos for
+   *    longer than the fade.
+   *  - **Back to the wheel.** The recording is rewound *after* it is covered.
+   *    Rewinding it on `ended` — which is where this started — cuts to the
+   *    title card underneath a half-transparent wheel, so the reader watches
+   *    the demo start again through the thing that replaced it.
+   *
+   * A timer rather than `transitionend`, because the transition is off under
+   * `prefers-reduced-motion` and the event would then never arrive: the pause
+   * and the rewind are bookkeeping, and they have to happen whether or not
+   * anything animated. Cleared on the way out, so a reader who presses PLAY
+   * again mid-fade cancels the pause rather than racing it.
+   */
+  useEffect(() => {
+    if (playing) {
+      // Every run opens with its controls up, wherever the hand happens to be.
+      setHover(true);
+      const t = setTimeout(() => loop.current?.pause(), DISSOLVE);
+      return () => clearTimeout(t);
+    }
+    // `catch`: autoplay of a muted, inline video is allowed, but a promise
+    // rejected by a policy we cannot see should not become an unhandled one.
+    void loop.current?.play().catch(() => {});
+    const t = setTimeout(() => {
+      if (video.current) video.current.currentTime = 0;
+      // The bar goes back to nothing with it. `timeupdate` would do this by
+      // itself on the next play, but not until a frame had been shown.
+      if (progress.current) progress.current.style.width = '0%';
+      if (seeker.current) seeker.current.value = '0';
+    }, DISSOLVE);
+    return () => clearTimeout(t);
+  }, [playing]);
 
   return (
     <div className="relative h-full w-full overflow-hidden rounded-[2rem] bg-[#0b0d10]">
@@ -419,70 +593,202 @@ function DemoFrame({
           ref={video}
           src={src}
           playsInline
-          controls={playing}
+          /* **No native chrome, and no way to leave the card.**
+           *
+           * `controls` would put the browser's own bar over a composition that
+           * has one of its own, and it brings a fullscreen button with it — the
+           * card is a fixed 16:9 panel in the middle of a page, and a reader who
+           * blows it up to the screen leaves the page to come back to. So the
+           * controls below are the whole of it: play, position, sound. There is
+           * nothing here that changes the size of anything.
+           *
+           * `controlsList` and `disablePictureInPicture` close the two doors
+           * that are left when a browser decides to offer its own menu anyway. */
+          controlsList="nodownload nofullscreen noremoteplayback"
+          disablePictureInPicture
+          onPlaying={() => setPaused(false)}
+          onPause={() => setPaused(true)}
+          /* Four times a second, straight to the node — see the ref above. */
+          onTimeUpdate={(e) => {
+            const el = e.currentTarget;
+            if (!el.duration) return;
+            const at = el.currentTime / el.duration;
+            if (progress.current) progress.current.style.width = `${at * 100}%`;
+            // The invisible range carries the same number, or the first arrow
+            // key would jump the recording back to wherever it was left.
+            if (seeker.current) seeker.current.value = String(Math.round(at * 1000));
+          }}
+          /* Metadata only. The card is click-to-play and the recording is tens of
+             megabytes; `auto` would spend all of it on every reader who scrolls
+             past without ever pressing PLAY. */
+          preload="metadata"
+          /* **The run ends where it started.**
+           *
+           * A recording that stops on its own last frame leaves the card as a
+           * still of whatever the demo happened to close on, with no way back
+           * to the thumbnail short of a reload. So the end of the video puts
+           * the idle state back: the wheel returns, and the control with it.
+           *
+           * The rewind that goes with it is in the effect above, at the end of
+           * the dissolve, not here — the frame this is parked on is still being
+           * looked at through the wheel coming back over it.
+           *
+           * The reader who has just watched it is still at the scroll position
+           * that produced the control, so `--reveal` is already 1: what comes
+           * back is the wheel with `PLAY ▶ REEL` on it, not the mark. The mark
+           * belongs to the arrival, and the card has already arrived. */
+          onEnded={onEnd}
           className="h-full w-full object-cover"
         />
       )}
 
-      {/* Nothing over the video once it is running. */}
-      {!playing &&
-        (src ? (
-          /* `disabled` rather than only `pointer-events-none` on the card: a
-             pointer can be told to pass through an element, a keyboard cannot,
-             and a control the page has not offered yet should not be reachable
-             by tab either. */
-          <button
-            type="button"
-            disabled={!landed}
-            onClick={() => {
-              onPlay();
-              void video.current?.play();
-            }}
-            className="reel-in group absolute inset-0 flex items-center justify-center"
-            aria-label="Play the recorded run"
-          >
-            <ReelLockup />
-          </button>
-        ) : (
-          /* No video, so no invitation to play one. The reveal is the same
-             clock and the same position; only the sentence changes, because a
-             `PLAY` control over a card with nothing behind it is a button that
-             lies. The same reason keeps the loop out of the `src` branch: it is
-             a logo wheel, and offering it behind a control that says "play the
-             recorded run" would be the page claiming it is one. */
-          <>
-            {loopSrc && loopSrc.length > 0 && (
-              <video
-                autoPlay
-                muted
-                loop
-                playsInline
+      {/* **The idle layer, and why it stays mounted through the run.**
+       *
+       * It used to be conditional, on the sound principle that nothing belongs
+       * over the video once it is running. But a layer that unmounts cannot
+       * fade, and one that remounts arrives as a black rectangle while the
+       * wheel decodes its first frame — so the swap in both directions was a
+       * cut. It is opaque, so fading it out *is* the cross-dissolve: there is
+       * no second animation on the recording, and nothing to keep in step.
+       *
+       * `pointer-events-none` while it is going: it covers the whole card, and
+       * the browser's own controls are underneath it. */}
+      <div
+        className={`absolute inset-0 transition-opacity ease-out motion-reduce:transition-none ${
+          playing ? 'pointer-events-none opacity-0' : 'opacity-100'
+        }`}
+        /* The duration is written here rather than as a `duration-*` class so
+           that it and the timers in the effect above cannot drift apart:
+           `DISSOLVE` is the only place the number exists. `transition-none`
+           under reduced motion overrides the property, so this is inert there
+           rather than fighting it. */
+        style={{ transitionDuration: `${DISSOLVE}ms` }}
+      >
+          {/* **The wheel is the thumbnail, in both states.**
+           *
+           * It was the empty state only, on the argument that a logo loop
+           * behind a control reading "play the recorded run" would be the page
+           * claiming the loop is the run. That was the wrong end of the
+           * problem: what a thumbnail claims is *this is the thing you are
+           * about to start*, and every video on the web makes that claim with a
+           * frame that is not the film. The fix for the collision is
+           * `BEHIND_CONTROL` and the scrim under it, which put the loop behind
+           * the control rather than beside it — not withholding the brand
+           * motion and leaving a black rectangle where a thumbnail goes.
+           *
+           * The ground under it is the card's own, and it is not decoration.
+           * `preload="metadata"` gives the recording a first frame, and the
+           * mask cuts a hole in the middle of the loop: without something
+           * opaque between them, that hole is a keyhole onto the recording's
+           * title card — neither the wheel nor the run, and bright enough to
+           * take the white control with it. */}
+          {loopSrc && loopSrc.length > 0 && <div aria-hidden className="absolute inset-0 bg-[#0b0d10]" />}
+
+          {loopSrc && loopSrc.length > 0 && (
+            <video
+              ref={loop}
+              autoPlay
+              muted
+              loop
+              playsInline
+              aria-hidden
+              /* Decorative and silent, so it is hidden from assistive tech and
+                 stood down entirely for anyone who has asked for less motion.
+                 `motion-reduce:hidden` leaves the card its own #0b0d10 ground,
+                 which is what it looked like before this existed.
+                 The mask and the scale are the control's, not the loop's — see
+                 the comment on them below, and they are only applied when there
+                 is a control to make room for. */
+              className={`motion-reduce:hidden absolute inset-0 h-full w-full object-cover ${
+                src ? BEHIND_CONTROL : ''
+              }`}
+            >
+              {/* **One file is not enough, and the failure is silent.** The
+                  first cut of this was a single H.264 High@L5.0 mp4. It served
+                  fine, reported no error, and sat at `readyState 0` forever:
+                  the browser had accepted the element, started the fetch, and
+                  could not decode it. A black card and a clean console.
+                  `<source>` lets the browser pick what it can actually play,
+                  so a codec it refuses costs the next line rather than the
+                  whole card. The mp4 is deliberately Main@L4.0. */}
+              {loopSrc.map((s) => (
+                <source key={s} src={s} type={s.endsWith('.webm') ? 'video/webm' : 'video/mp4'} />
+              ))}
+            </video>
+          )}
+
+          {src ? (
+            <>
+              {/* The last of it, where the hole does not reach.
+               *
+               * The mask takes the wordmark out; this takes the edge off what
+               * is left, because the ends of `PLAY` and `REEL` still pass close
+               * to the ring. A third is enough — any more and the wheel stops
+               * being the thing the card is showing.
+               *
+               * It arrives on the control's own clock, so the wheel is at full
+               * strength for the whole flight and only steps back once there is
+               * something on top of it to read. */}
+              {loopSrc && loopSrc.length > 0 && (
+                <div aria-hidden className="reel-fade absolute inset-0 bg-[#0b0d10]/35" />
+              )}
+
+              {/* **What is in the hole before the control is.**
+               *
+               * The mask leaves a clean opening in the middle of the wheel and
+               * the control does not arrive until a quarter of a viewport after
+               * the landing, so without this the card flies with a hole in it.
+               * The mark fills it, at the size the wordmark it replaced was
+               * never allowed to be — and it is the *mark*, not the lockup from
+               * the header: the wheel is already a ring of thirty logos, and a
+               * word set in the middle of it competes with every one of them.
+               *
+               * Mint, as everywhere else the mark appears. White was tried
+               * first, on the argument that it should match the control it
+               * hands over to; it read as the control's own placeholder rather
+               * than as the brand, and the card lost the one coloured thing on
+               * it. The exchange is legible either way — the two never share a
+               * frame — so the mark keeps its colour.
+               *
+               * It is on `--reveal` read backwards, so it is gone by the time
+               * the control is readable. `aria-hidden`, because it says
+               * "Reckonz" to a screen reader on a page whose header already
+               * does, and the button behind it carries the only label that
+               * matters here. */}
+              <span
                 aria-hidden
-                /* Decorative and silent, so it is hidden from assistive tech and
-                   stood down entirely for anyone who has asked for less motion.
-                   `motion-reduce:hidden` leaves the card its own #0b0d10 ground,
-                   which is what it looked like before this existed. */
-                className="motion-reduce:hidden absolute inset-0 h-full w-full object-cover"
+                className="reel-out pointer-events-none absolute inset-0 flex items-center justify-center"
               >
-                {/* **One file is not enough, and the failure is silent.** The
-                    first cut of this was a single H.264 High@L5.0 mp4. It served
-                    fine, reported no error, and sat at `readyState 0` forever:
-                    the browser had accepted the element, started the fetch, and
-                    could not decode it. A black card and a clean console.
-                    `<source>` lets the browser pick what it can actually play,
-                    so a codec it refuses costs the next line rather than the
-                    whole card. The mp4 is deliberately Main@L4.0. */}
-                {loopSrc.map((s) => (
-                  <source
-                    key={s}
-                    src={s}
-                    type={s.endsWith('.webm') ? 'video/webm' : 'video/mp4'}
-                  />
-                ))}
-              </video>
-            )}
-            {/* Bottom, not centre: the loop carries the wordmark in the middle
-                of the frame, and the two stacked on each other are unreadable. */}
+                <Logo className="h-[34%] w-auto text-signal" />
+              </span>
+
+              {/* `disabled` rather than only `pointer-events-none` on the card:
+                 a pointer can be told to pass through an element, a keyboard
+                 cannot, and a control the page has not offered yet should not be
+                 reachable by tab either. */}
+              <button
+                type="button"
+                disabled={!landed}
+                onClick={() => {
+                  onPlay();
+                  void video.current?.play();
+                }}
+                className="reel-in group absolute inset-0 flex items-center justify-center"
+                aria-label="Play the recorded run"
+              >
+                <ReelLockup />
+              </button>
+            </>
+          ) : (
+            /* No video, so no invitation to play one. The reveal is the same
+               clock and the same position; only the sentence changes, because a
+               `PLAY` control over a card with nothing behind it is a button that
+               lies. */
+            /* Bottom, not centre: the loop carries the wordmark in the middle
+               of the frame, and the two stacked on each other are unreadable.
+               The control above solves the same collision the other way, with a
+               scrim — a line of 13px type does not need one, and dimming the
+               whole card to carry it would be spending the wheel on a caption. */
             <p
               className={`reel-in absolute inset-x-0 flex justify-center font-mono text-fine tracking-[0.12em] text-faint uppercase ${
                 loopSrc?.length ? 'bottom-10' : 'inset-y-0 items-center'
@@ -490,8 +796,201 @@ function DemoFrame({
             >
               The recorded run lands here
             </p>
-          </>
-        ))}
+          )}
+      </div>
+
+      {/* **The player, and why it is not the browser's.**
+       *
+       * Three controls and a cursor. `PLAY` at one end, `MUTE` at the other,
+       * the position between them — which is every control a recording on a
+       * landing page needs, and the native bar's own list plus a fullscreen
+       * button the card cannot honour.
+       *
+       * It fades opposite the idle layer on the same clock, so the two halves
+       * of the dissolve are one movement: the wheel goes as the controls come,
+       * and the recording underneath never moves.
+       */}
+      {src && (
+        <div
+          /* On the wrapper rather than on the close button under it: these two
+             do not bubble, so they fire when the pointer crosses the card's own
+             edge and not when it passes from the video to a control. */
+          onPointerEnter={() => setHover(true)}
+          onPointerLeave={() => setHover(false)}
+          className={`absolute inset-0 transition-opacity ease-out motion-reduce:transition-none ${
+            playing ? 'opacity-100' : 'pointer-events-none opacity-0'
+          }`}
+          style={{ transitionDuration: `${DISSOLVE}ms` }}
+        >
+          {/* **The whole picture is the way out, and the cursor says so.**
+           *
+           * A close button parked in a corner is a widget on top of a film. The
+           * reference's move is better: the pointer itself becomes the control,
+           * so there is nothing over the recording until the reader's hand is,
+           * and the thing under their hand is the size of a coin rather than
+           * something to aim at.
+           *
+           * The native cursor goes off (`cursor-none`) and the circle is drawn
+           * at the pointer instead, written straight to the node — a `mousemove`
+           * that set React state would re-render the player on every pixel of
+           * hand movement to move one element.
+           *
+           * It is a real `<button>` with a real label, so it is reachable and
+           * announced; the circle is `aria-hidden` decoration on top of it. */}
+          <button
+            type="button"
+            aria-label="Close the recorded run"
+            onClick={close}
+            onPointerMove={(e) => {
+              const box = e.currentTarget.getBoundingClientRect();
+              if (!cursor.current) return;
+              cursor.current.style.transform = `translate3d(${e.clientX - box.left}px, ${
+                e.clientY - box.top
+              }px, 0) translate(-50%, -50%)`;
+            }}
+            onPointerEnter={() => cursor.current?.style.setProperty('opacity', '1')}
+            onPointerLeave={() => cursor.current?.style.setProperty('opacity', '0')}
+            className="absolute inset-0 cursor-none"
+          />
+
+          <div
+            ref={cursor}
+            aria-hidden
+            /* The ring is the same concession as the scrim: a white disc on the
+               recording's white panels is a hole in the picture rather than a
+               control. It costs nothing where the reference's black frame would
+               have been. */
+            className="pointer-events-none absolute top-0 left-0 flex h-[clamp(3rem,6vw,5.5rem)] w-[clamp(3rem,6vw,5.5rem)] items-center justify-center rounded-full bg-white opacity-0 ring-1 ring-ink/15 transition-opacity duration-200"
+          >
+            {/* Thin, and drawn rather than typed: a multiplication sign at this
+                size is a glyph with a typeface's opinion in it. */}
+            <svg viewBox="0 0 24 24" className="h-[38%] w-[38%] text-ink" aria-hidden>
+              <path
+                d="M5 5 19 19M19 5 5 19"
+                stroke="currentColor"
+                strokeWidth={1.4}
+                strokeLinecap="round"
+              />
+            </svg>
+          </div>
+
+          {/* **The scrim under the bar, which the reference does not have.**
+           *
+           * Theirs is a film of a black speaker in a black room; ours is a
+           * screen recording of a light interface, and white labels on it are
+           * invisible for most of its three minutes.
+           *
+           * As little of it as the labels need, and no more. It was a quarter
+           * of the card at 85%, which read as a black band laid over the demo
+           * rather than as the demo. At a seventh and 60% it is enough to hold
+           * three words and a line — the shadow on the type below does the rest
+           * of the work, and it costs nothing anywhere the type is not. */}
+          <div
+            aria-hidden
+            className={`pointer-events-none absolute inset-x-0 bottom-0 h-[14%] bg-gradient-to-t from-[#0b0d10]/60 via-[#0b0d10]/20 to-transparent transition-opacity duration-300 ease-out motion-reduce:transition-none ${
+              hover ? 'opacity-100' : 'opacity-0'
+            }`}
+          />
+
+          {/* The bar. `pointer-events-none` on the row and back on for each
+              control, so the gaps between them still close the video — the row
+              runs the full width of the card and most of it is empty.
+
+              **Hard against the bottom edge**, because the recording burns its
+              own subtitles in about a fifth of the way up. Anything with air
+              under it lands on them, and two lines of white type crossing each
+              other is worse than either alone. The padding left is the rounded
+              corner's, not composition: the card is `rounded-[2rem]`, and a
+              label flush to the edge would be clipped by the curve. */}
+          <div
+            /* It leaves downward rather than fading on the spot: the card
+               clips, so `translate-y-full` puts the row past the bottom edge
+               and the controls read as having gone somewhere. The opacity is
+               there for the corners the curve exposes on the way. */
+            className={`pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-center gap-[clamp(0.75rem,1.1vw,1.15rem)] px-[clamp(1.5rem,3vw,3rem)] pb-[clamp(0.5rem,0.9vw,0.9rem)] transition-[transform,opacity] duration-300 ease-out motion-reduce:transition-none ${
+              hover ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'
+            }`}
+          >
+            {/* **Both labels are one fixed width, and it is the wider word's.**
+             *
+             * They sit against the track now rather than out at the card's
+             * edges, which means their width is the track's position: `PLAY` is
+             * two characters shorter than `PAUSE` and `MUTE` three shorter than
+             * `UNMUTE`, so text that measured itself would shove the line
+             * sideways every time the reader pressed something. At a fixed
+             * `7.5ch` each — with the left one set left and the right one right
+             * — the words change inside a box that does not, and the line stays
+             * exactly where it was put. */}
+            <button
+              type="button"
+              onClick={() => {
+                const el = video.current;
+                if (!el) return;
+                if (el.paused) void el.play();
+                else el.pause();
+              }}
+              className={`${LABEL} pointer-events-auto w-[7.5ch] text-left`}
+            >
+              {paused ? 'Play' : 'Pause'}
+            </button>
+
+            {/* The position, and the only part of this that is two elements.
+             *
+             * What is drawn is the pair of bars; what takes the input is a
+             * native range on top of them at zero opacity. That is what buys
+             * dragging, arrow keys and a real accessible name for the cost of
+             * one invisible element — a div with a click handler would give the
+             * mouse a seek and everyone else nothing. */}
+            {/* **A measure, not a stretch.**
+             *
+             * It was `flex-1`, so the line was as long as the card was wide —
+             * on a large screen that is well over a metre of track for three
+             * minutes of video, and the head moves so slowly across it that it
+             * reads as not moving. A fixed 780px is about two thirds of what it
+             * was and the same on every screen, which is the point: this is a
+             * ruler, and a ruler that changes length is not one.
+             *
+             * `max-w-full` is the one thing that may still shrink it, and only
+             * where the alternative is a row wider than the card it sits in. */}
+            <div className="pointer-events-auto relative w-[780px] max-w-full">
+              <div className="h-[6px] w-full bg-white/25 shadow-[0_1px_12px_rgba(0,0,0,0.55)]">
+                <div ref={progress} className="h-full w-0 bg-white" />
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={1000}
+                defaultValue={0}
+                ref={seeker}
+                aria-label="Seek within the recorded run"
+                onChange={(e) => {
+                  const el = video.current;
+                  if (!el || !el.duration) return;
+                  el.currentTime = (Number(e.currentTarget.value) / 1000) * el.duration;
+                }}
+                /* Taller than what it drives. The line is 6px and a 6px hit
+                   area is a line you have to aim at; the input reaches a little
+                   above and below it, where a hand going for the track already
+                   is. */
+                className="absolute inset-x-0 -inset-y-2.5 w-full cursor-pointer opacity-0"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                const el = video.current;
+                if (!el) return;
+                el.muted = !el.muted;
+                setMuted(el.muted);
+              }}
+              className={`${LABEL} pointer-events-auto w-[7.5ch] text-right`}
+            >
+              {muted ? 'Unmute' : 'Mute'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
