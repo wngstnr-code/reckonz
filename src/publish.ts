@@ -12,7 +12,8 @@ import { FAIR_VALUE_ORACLE_ABI } from './abi';
 import { crossCheck, describeCrossCheck } from './crosscheck';
 import { ASSETS, computeFairValue, issuerSymbolFor, MEASURED, toOraclePayload } from './fairvalue';
 import { publishRunway } from './health';
-import { issuerBook } from './issuer';
+import { issuerBook, type IssuerQuote } from './issuer';
+import { type IssuerState, writeHeartbeat } from './publisher-status';
 import { readAll } from './observations';
 import { capacity, loadVenues } from './planner';
 import { addressBySymbol } from './pool';
@@ -148,7 +149,66 @@ if (PUBLISH_SYMBOLS.length) {
  * book is cached for 30 seconds anyway — asking per asset would just make the
  * loop's timing depend on the cache TTL.
  */
-const book = await issuerBook();
+let book: Map<string, IssuerQuote>;
+try {
+  book = await issuerBook();
+} catch (e) {
+  // The issuer not answering is a heartbeat, not a stack trace. Without this the
+  // process died here and wrote nothing, and `/api/health` — which can only see
+  // observations ageing — would call an unreachable price source a dead
+  // publisher. Same wrong sentence, different cause.
+  await writeHeartbeat({
+    at: Math.floor(Date.now() / 1000),
+    target: t,
+    cycle: 'failed',
+    considered: selected.length,
+    published: 0,
+    issuer: 'unreachable',
+    quotable: 0,
+    period: null,
+  });
+  console.error(`\n  ✗ the issuer did not answer: ${e instanceof Error ? e.message : String(e)}\n`);
+  process.exit(1);
+}
+
+/**
+ * What the issuer is doing, as three states rather than one shrug.
+ *
+ * `publish.ts` said "the issuer is unreachable or carrying nothing" for weeks,
+ * and that `or` was the whole ambiguity: the first is an outage, the second is
+ * a Saturday. The API answers both explicitly — `canQuote` per asset and
+ * `currentPeriod` for the session — and nothing was reading either.
+ *
+ * Measured over the assets *this run* was asked to price, not the issuer's whole
+ * 714-name catalogue: a run narrowed by `PUBLISH_SYMBOLS` must report on what it
+ * narrowed to, or it vouches for assets it never looked at.
+ *
+ * **No quotes at all reads as `unreachable`, never as `closed`.** The book being
+ * empty, and the book being full of names none of which are ours, are both a
+ * failure to obtain prices — the second is a broken symbol mapping. `closed` is
+ * the one state that does not page, so nothing may fall into it by accident: it
+ * has to be the issuer actively declining to quote assets we did find.
+ */
+const quotesForSelected = selected
+  .map((spec) => book.get(issuerSymbolFor(spec.symbol)))
+  .filter((q): q is IssuerQuote => q !== undefined);
+const quotable = quotesForSelected.filter((q) => q.canQuote && !q.halted).length;
+const issuerState: IssuerState =
+  quotesForSelected.length === 0 ? 'unreachable' : quotable > 0 ? 'quoting' : 'closed';
+const issuerPeriod = quotesForSelected[0]?.period ?? null;
+
+/** One shape for every exit, so no path can forget a field. */
+const beat = (cycle: 'published' | 'withheld' | 'failed', published: number) =>
+  writeHeartbeat({
+    at: Math.floor(Date.now() / 1000),
+    target: t,
+    cycle,
+    considered: selected.length,
+    published,
+    issuer: issuerState,
+    quotable,
+    period: issuerPeriod,
+  });
 const lastMark = new Map<string, { mid: number; observedAt: number }>();
 for (const sample of readAll()) {
   const seen = lastMark.get(sample.symbol);
@@ -233,15 +293,26 @@ if (withheldByCheck.length) {
 // the decision to the loop's failure counter, which is what should escalate a
 // source outage rather than a quiet cycle that looks like it worked.
 if (items.length && !items.some((i) => i.hasValue)) {
+  await beat('withheld', 0);
   console.error(
-    '\n  ✗ not one asset could be priced — the issuer is unreachable or carrying nothing.\n' +
+    `\n  ✗ not one asset could be priced — the issuer is ${
+      issuerState === 'closed' ? `quoting nothing (session: ${issuerPeriod ?? 'unknown'})` : 'unreachable'
+    }.\n` +
       '    Publishing nothing: the existing observations go stale inside maxAge and the\n' +
-      '    guard refuses on their staleness, which costs no gas to achieve.\n',
+      '    guard refuses on their staleness, which costs no gas to achieve.\n' +
+      '    The heartbeat says which of those this is, so /api/health does not have to guess.\n',
   );
   process.exit(1);
 }
 
 const assets = items.map((i) => i.asset);
+
+/**
+ * Values the chain kept, counted from the read-back rather than from what was
+ * sent. The oracle's own jump bound can refuse a value we published, so the two
+ * numbers are not the same fact and only one of them is evidence.
+ */
+let landed = 0;
 
 // 2 — publish
 console.log(`\n  publishing ${assets.length} observations…`);
@@ -339,6 +410,7 @@ for (let i = 0; i < assets.length; i++) {
   // "the oracle declined my number" from "I published a withhold" would keep
   // resending and never learn it has to confirm.
   const sent = items.find((it) => it.asset === assets[i])!;
+  if (obs.hasValue) landed += 1;
   if (sent.hasValue && !obs.hasValue) {
     const a = await client.readContract({
       address: ORACLE,
@@ -357,4 +429,8 @@ for (let i = 0; i < assets.length; i++) {
     );
   }
 }
+
+// The cycle worked. Saying so is what lets `/api/health` tell a publisher that
+// stopped from one that is alive and withholding — see `src/publisher-status.ts`.
+await beat('published', landed);
 console.log();

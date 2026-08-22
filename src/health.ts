@@ -24,7 +24,34 @@
  * a thing with tests rather than a thing woven through a handler.
  */
 
+import type { HeartbeatRead, IssuerState } from './publisher-status';
+
 export type HealthStatus = 'ok' | 'degraded' | 'down';
+
+/**
+ * Why, when the answer is `down`. Null whenever it is not.
+ *
+ * The status says whether a fill can happen; the cause says what to do about it,
+ * and they are not the same question. `issuer-closed` and `publisher-stopped`
+ * are both "no fill can happen right now" and they call for opposite actions —
+ * one is a person being paged at 3am, the other is a market being shut on a
+ * Saturday. Collapsing them into one 503 is what made the route say the
+ * publisher had stopped while it was running perfectly.
+ *
+ * The status is deliberately still `down` for every one of these. A closed
+ * market is not a fault, but it is also not a system that can trade, and this
+ * route answers the second question. Who pages on which cause belongs to the
+ * pager — `health-check.yml` reads this field — not to a route that lies about
+ * executability to keep a dashboard green.
+ */
+export type HealthCause =
+  | 'rpc'
+  | 'no-allowlist'
+  | 'issuer-closed'
+  | 'issuer-unreachable'
+  | 'publisher-stopped'
+  | 'publisher-failing'
+  | 'unknown';
 
 /**
  * Gas for one publish of the whole universe, in units.
@@ -43,6 +70,16 @@ const GAS_PER_TRANSACTION = 60_000n;
 
 /** The worker's cadence, and what a runway in *days* is measured against. */
 export const PUBLISH_INTERVAL_SEC = 600;
+
+/**
+ * How old a heartbeat may be before the publisher counts as stopped.
+ *
+ * Two and a half cycles, derived from the cadence rather than restated as a
+ * number (D5). One cycle is too tight — a run that goes long, a blob write that
+ * retries, and a healthy publisher reads as dead. Much more and a stopped
+ * publisher hides for an hour, which is the outage this whole file exists for.
+ */
+export const HEARTBEAT_MAX_AGE_SEC = Math.round(PUBLISH_INTERVAL_SEC * 2.5);
 
 /**
  * Days of publishing left, at the current gas price and cadence.
@@ -124,6 +161,11 @@ export interface HealthInput {
   compilerConfigured: boolean;
   /** Null when the publisher's balance could not be read at all. */
   publisher: PublisherGas | null;
+  /**
+   * The publisher's own account of its last cycle. Never `null` — the read has
+   * three outcomes and two of them are not "no heartbeat"; see `HeartbeatRead`.
+   */
+  publisherReport: HeartbeatRead;
 }
 
 export interface PublisherGas {
@@ -134,6 +176,8 @@ export interface PublisherGas {
 
 export interface HealthReport {
   status: HealthStatus;
+  /** Set only when `status` is `down`; see `HealthCause`. */
+  cause: HealthCause | null;
   /** Short sentences, worst first. Empty when everything is fine. */
   problems: string[];
   checkedAt: number;
@@ -144,6 +188,20 @@ export interface HealthReport {
   compilerConfigured: boolean;
   /** Null when the balance could not be read; see `publishRunway`. */
   runway: Runway | null;
+  /** What the publisher last said about itself; null when it could not be read. */
+  publisherCycle: PublisherCycle | null;
+}
+
+export interface PublisherCycle {
+  at: number;
+  ageSeconds: number;
+  cycle: string;
+  issuer: IssuerState;
+  quotable: number;
+  considered: number;
+  period: string | null;
+  /** False once the heartbeat is older than `HEARTBEAT_MAX_AGE_SEC`. */
+  alive: boolean;
 }
 
 /**
@@ -160,14 +218,29 @@ export interface HealthReport {
  * that answers every request in 200ms while refusing every trade is down for
  * the only purpose it has, and a monitor that calls that healthy is a monitor
  * that will let it sit like that for two days.
+ *
+ * **`status` is not the whole answer, and never was.** Staleness alone cannot
+ * tell a dead publisher from a live one refusing to price a closed market, and
+ * for a week this file guessed — it said "the publisher has almost certainly
+ * stopped" every weekend, about a worker that was running on time. `cause`
+ * carries that second dimension, and it comes from the publisher's own
+ * heartbeat rather than from an inference over timestamps. See `causeOf`.
  */
 export function classifyHealth(input: HealthInput, now = Math.floor(Date.now() / 1000)): HealthReport {
   const problems: string[] = [];
   let status: HealthStatus = 'ok';
+  let cause: HealthCause | null = null;
+  /** First cause wins: the branches run worst-first, and so does the sentence. */
+  const blame = (c: HealthCause) => {
+    if (cause === null) cause = c;
+  };
+
+  const cycle = describeCycle(input.publisherReport, now);
 
   if (input.blockNumber === null) {
     problems.push('the X Layer RPC did not answer — nothing can be quoted or executed');
     status = 'down';
+    blame('rpc');
   }
 
   const usable = input.assets.filter((a) => !a.stale && a.hasValue);
@@ -185,13 +258,14 @@ export function classifyHealth(input: HealthInput, now = Math.floor(Date.now() /
         'read failed. Nothing is executable either way.',
     );
     status = 'down';
+    blame('no-allowlist');
   } else if (usable.length === 0) {
     const worst = oldest(input.assets);
-    problems.push(
+    const head =
       `every asset mandate #${input.mandateId} allows has an unusable oracle value — ` +
-        `the guard will refuse every fill${worst === null ? '' : ` (oldest ${worst}s)`}. ` +
-        'The publisher has almost certainly stopped.',
-    );
+      `the guard will refuse every fill${worst === null ? '' : ` (oldest ${worst}s)`}.`;
+    problems.push(`${head} ${explainUnusable(cycle)}`);
+    blame(causeOf(cycle));
     status = 'down';
   } else if (stale.length > 0) {
     problems.push(
@@ -241,6 +315,7 @@ export function classifyHealth(input: HealthInput, now = Math.floor(Date.now() /
 
   return {
     status,
+    cause: status === 'down' ? cause : null,
     problems,
     checkedAt: now,
     chain: {
@@ -252,7 +327,88 @@ export function classifyHealth(input: HealthInput, now = Math.floor(Date.now() /
     archiveConfigured: input.archiveConfigured,
     compilerConfigured: input.compilerConfigured,
     runway,
+    publisherCycle: cycle,
   };
+}
+
+/** The heartbeat as the report carries it, with the age already worked out. */
+function describeCycle(read: HeartbeatRead, now: number): PublisherCycle | null {
+  if (read.kind !== 'ok') return null;
+  const ageSeconds = Math.max(0, now - read.heartbeat.at);
+  return {
+    at: read.heartbeat.at,
+    ageSeconds,
+    cycle: read.heartbeat.cycle,
+    issuer: read.heartbeat.issuer,
+    quotable: read.heartbeat.quotable,
+    considered: read.heartbeat.considered,
+    period: read.heartbeat.period,
+    alive: ageSeconds <= HEARTBEAT_MAX_AGE_SEC,
+  };
+}
+
+/**
+ * Which of the five "nothing is executable" states this is.
+ *
+ * Read the table, not the prose: every row is a real state this system has been
+ * in, and the second one is the whole reason the heartbeat exists.
+ *
+ * | heartbeat | issuer | cause |
+ * |---|---|---|
+ * | fresh | closed | `issuer-closed` — working correctly, refusing to invent a price |
+ * | fresh | unreachable | `issuer-unreachable` — the source is down, not us |
+ * | fresh | quoting | `publisher-failing` — prices exist and are not landing |
+ * | stale | — | `publisher-stopped` — the worker is not completing cycles |
+ * | unread | — | `unknown` — say so, rather than guess |
+ */
+function causeOf(cycle: PublisherCycle | null): HealthCause {
+  if (cycle === null) return 'unknown';
+  if (!cycle.alive) return 'publisher-stopped';
+  if (cycle.issuer === 'closed') return 'issuer-closed';
+  if (cycle.issuer === 'unreachable') return 'issuer-unreachable';
+  return 'publisher-failing';
+}
+
+/**
+ * The sentence a person reads at 3am, or a judge reads on a Saturday.
+ *
+ * Each one has to name the state *and* what it is not, because the failure this
+ * replaced was a confident wrong diagnosis rather than a missing one.
+ */
+function explainUnusable(cycle: PublisherCycle | null): string {
+  if (cycle === null) {
+    return (
+      "The publisher's own report could not be read, so this cannot tell a stopped publisher " +
+      'from an issuer that is closed. Treat it as an outage until the heartbeat is readable again.'
+    );
+  }
+  if (!cycle.alive) {
+    return (
+      `The publisher has not completed a cycle in ${cycle.ageSeconds}s, so it has stopped ` +
+      'rather than withheld — this is the worker, not the market.'
+    );
+  }
+  switch (cycle.issuer) {
+    case 'closed':
+      return (
+        `The issuer is not quoting any of the ${cycle.considered} assets it was asked about` +
+        `${cycle.period === null ? '' : ` (session: ${cycle.period})`}, so the oracle is ` +
+        'publishing nothing rather than a number it could not defend. The publisher completed a ' +
+        `cycle ${cycle.ageSeconds}s ago: this is the system refusing, not the system broken. ` +
+        'It resumes on its own when the market reopens.'
+      );
+    case 'unreachable':
+      return (
+        `The publisher is alive — last cycle ${cycle.ageSeconds}s ago — and the issuer's price ` +
+        'API did not answer, so there is nothing to publish. The fault is upstream of the oracle.'
+      );
+    default:
+      return (
+        `The publisher is alive and the issuer is quoting ${cycle.quotable} of ` +
+        `${cycle.considered} assets, so prices exist and are not reaching the chain. Check the ` +
+        "worker's own logs, its gas, and the RPC it writes through."
+      );
+  }
 }
 
 function oldest(assets: AssetHealth[]): number | null {

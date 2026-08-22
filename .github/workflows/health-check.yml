@@ -20,6 +20,14 @@
 # warning worth having early rather than the one that comes when everything has
 # already stopped. So the HTTP code is not the signal here; the body is.
 #
+# **Why one `down` does not page.** `status` answers "can a fill happen"; `cause`
+# answers "what should anyone do about it". They came apart on 2026-08-22, when
+# the issuer stopped quoting for the weekend and the route reported a publisher
+# that had "almost certainly stopped" — about a worker running exactly on time.
+# `cause: issuer-closed` is a market being shut, and it is logged rather than
+# alerted. Every other cause still pages, and the status stays 503 either way:
+# the fix for a wrong diagnosis is a better diagnosis, never a quieter one.
+#
 # `schedule` is best-effort and drifts under load — fine for an alert, which is
 # why `publish-oracle.yml` refuses to rely on it for a cadence (D46).
 
@@ -90,7 +98,27 @@ jobs:
               exit 1
               ;;
             down)
-              echo "::error::DOWN — nothing can execute right now"
+              cause=$(jq -r '.cause // "unknown"' body.json)
+
+              # The one `down` that is not a fault, and the reason `cause` exists.
+              #
+              # The issuer stops quoting a TwentyFourFive asset over a weekend, so
+              # `bid`, `ask` and `mid` come back null, the cross-check refuses every
+              # value as incoherent (D79), and the publisher spends no gas saying so.
+              # Nothing can trade — which is why the route still answers 503, and
+              # still should — but nothing is broken either, and paging a person
+              # every Saturday for a market being shut is how a monitor gets muted.
+              #
+              # This is the *only* cause that does not page. `publisher-stopped`,
+              # `publisher-failing`, `issuer-unreachable` and `unknown` all still do.
+              if [ "$cause" = "issuer-closed" ]; then
+                echo "issuer closed — the oracle is withholding on purpose, not failing"
+                jq -r '.problems[] | "  · " + .' body.json
+                jq -r '.publisherCycle | "  last publisher cycle: \(.ageSeconds)s ago (\(.cycle)), issuer \(.issuer)"' body.json
+                exit 0
+              fi
+
+              echo "::error::DOWN ($cause) — nothing can execute right now"
               jq -r '.problems[] | "  · " + .' body.json
               exit 1
               ;;

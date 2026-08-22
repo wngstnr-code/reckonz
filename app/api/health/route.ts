@@ -5,6 +5,7 @@ import { MAINNET, PUBLISHER } from '@/src/deployments';
 import { hasBlobCredentials } from '@/src/evidence-store';
 import { classifyHealth, healthHttpStatus, type AssetHealth, type PublisherGas } from '@/src/health';
 import { loadToken } from '@/src/pool';
+import { readHeartbeat } from '@/src/publisher-status';
 import { clientKey, createGate, tooMany } from '@/src/ratelimit';
 
 export const runtime = 'nodejs';
@@ -142,6 +143,13 @@ export async function GET(request: Request) {
       }
     }
 
+    // The publisher's own account of its last cycle, and the only fact here that
+    // does not come from the chain. Without it the rule can see that nothing is
+    // fresh but not *why*, and it spent a weekend telling anyone who asked that
+    // the publisher had stopped while the worker was running on time. Never
+    // throws: an unreadable heartbeat is a state, not an exception.
+    const publisherReport = await readHeartbeat();
+
     const report = classifyHealth({
       blockNumber,
       rpcLatencyMs,
@@ -150,6 +158,7 @@ export async function GET(request: Request) {
       archiveConfigured: hasBlobCredentials(),
       compilerConfigured: Boolean(process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY),
       publisher,
+      publisherReport,
     });
 
     const body = JSON.stringify(

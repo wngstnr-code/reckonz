@@ -10,12 +10,14 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   classifyHealth,
+  HEARTBEAT_MAX_AGE_SEC,
   healthHttpStatus,
   publishRunway,
   RUNWAY_WARN_DAYS,
   type AssetHealth,
   type HealthInput,
 } from './health';
+import type { HeartbeatRead, IssuerState } from './publisher-status';
 
 /**
  * A publisher with plenty of gas: 0.05 OKB at 0.02 gwei, which is what the key
@@ -44,6 +46,27 @@ const STALE: AssetHealth = {
   stale: true,
 };
 
+/** The moment every heartbeat test measures against. */
+const NOW = 1_787_389_051;
+
+function beat(
+  over: { ageSeconds?: number; issuer?: IssuerState; quotable?: number } = {},
+): HeartbeatRead {
+  return {
+    kind: 'ok',
+    heartbeat: {
+      at: NOW - (over.ageSeconds ?? 120),
+      target: 'mainnet',
+      cycle: 'published',
+      considered: 4,
+      published: 4,
+      issuer: over.issuer ?? 'quoting',
+      quotable: over.quotable ?? 4,
+      period: over.issuer === 'closed' ? 'closed' : 'market',
+    },
+  };
+}
+
 function input(over: Partial<HealthInput> = {}): HealthInput {
   return {
     blockNumber: 67_941_400n,
@@ -53,6 +76,7 @@ function input(over: Partial<HealthInput> = {}): HealthInput {
     archiveConfigured: true,
     compilerConfigured: true,
     publisher: FUNDED,
+    publisherReport: beat(),
     ...over,
   };
 }
@@ -66,15 +90,124 @@ test('everything working is ok, with nothing to say', () => {
 
 // ------------------------------------------------- the outage that happened
 
+/*
+ * The heartbeat cases.
+ *
+ * 2026-08-22: `/api/health` answered 503 all weekend saying "the publisher has
+ * almost certainly stopped", about a worker that was running on time and
+ * refusing to price a market the issuer had closed. The rule was not wrong, it
+ * was starved — one fact, two states. These are the states.
+ */
+
+test('a closed issuer is down, and does not accuse the publisher of stopping', () => {
+  const r = classifyHealth(
+    input({
+      assets: [STALE, { ...STALE, symbol: 'wQQQx' }],
+      publisherReport: beat({ issuer: 'closed', quotable: 0 }),
+    }),
+    NOW,
+  );
+  assert.equal(r.status, 'down');
+  assert.equal(r.cause, 'issuer-closed');
+  // The exact regression: the sentence must not claim a working worker is dead.
+  assert.ok(!/publisher has almost certainly stopped/.test(r.problems[0]!));
+  assert.match(r.problems[0]!, /not quoting/);
+  assert.match(r.problems[0]!, /refusing, not the system broken/);
+  assert.equal(r.publisherCycle?.alive, true);
+});
+
+test('a stale heartbeat is the one case that may blame the publisher', () => {
+  const r = classifyHealth(
+    input({
+      assets: [STALE],
+      publisherReport: beat({ ageSeconds: HEARTBEAT_MAX_AGE_SEC + 1, issuer: 'closed' }),
+    }),
+    NOW,
+  );
+  assert.equal(r.cause, 'publisher-stopped');
+  assert.match(r.problems[0]!, /has not completed a cycle/);
+  assert.equal(r.publisherCycle?.alive, false);
+});
+
+test('a live publisher with a quoting issuer is failing, not resting', () => {
+  const r = classifyHealth(
+    input({ assets: [STALE], publisherReport: beat({ issuer: 'quoting' }) }),
+    NOW,
+  );
+  assert.equal(r.cause, 'publisher-failing');
+  assert.match(r.problems[0]!, /prices exist and are not reaching the chain/);
+});
+
+test('an unreachable issuer is named as upstream, not as our worker', () => {
+  const r = classifyHealth(
+    input({ assets: [STALE], publisherReport: beat({ issuer: 'unreachable', quotable: 0 }) }),
+    NOW,
+  );
+  assert.equal(r.cause, 'issuer-unreachable');
+  assert.match(r.problems[0]!, /fault is upstream/);
+});
+
+test('an unreadable heartbeat says so, rather than guessing either way', () => {
+  for (const report of [
+    { kind: 'missing' } as const,
+    { kind: 'unreadable', reason: 'HTTP 500' } as const,
+  ]) {
+    const r = classifyHealth(input({ assets: [STALE], publisherReport: report }), NOW);
+    assert.equal(r.cause, 'unknown');
+    assert.match(r.problems[0]!, /cannot tell a stopped publisher from an issuer that is closed/);
+    assert.equal(r.publisherCycle, null);
+  }
+});
+
+test('the heartbeat explains a down, it never argues one away', () => {
+  // A publisher can be alive, on time, and reporting a healthy cycle while every
+  // observation on chain is stale. The chain decides; the heartbeat annotates.
+  const r = classifyHealth(input({ assets: [STALE], publisherReport: beat() }), NOW);
+  assert.equal(r.status, 'down');
+});
+
+test('the boundary is inclusive, so a heartbeat exactly at the limit is alive', () => {
+  const at = classifyHealth(
+    input({ assets: [STALE], publisherReport: beat({ ageSeconds: HEARTBEAT_MAX_AGE_SEC }) }),
+    NOW,
+  );
+  assert.equal(at.cause, 'publisher-failing');
+  const past = classifyHealth(
+    input({ assets: [STALE], publisherReport: beat({ ageSeconds: HEARTBEAT_MAX_AGE_SEC + 1 }) }),
+    NOW,
+  );
+  assert.equal(past.cause, 'publisher-stopped');
+});
+
+test('cause is null while anything can still trade', () => {
+  assert.equal(classifyHealth(input()).cause, null);
+  assert.equal(classifyHealth(input({ archiveConfigured: false })).cause, null);
+  assert.equal(classifyHealth(input({ assets: [FRESH, STALE] })).cause, null);
+});
+
+test('the RPC keeps the blame when it is down, whatever the publisher says', () => {
+  // Every asset reads as unusable when the chain cannot be reached at all, and
+  // the second branch must not overwrite the first cause with a symptom.
+  const r = classifyHealth(
+    input({ blockNumber: null, rpcLatencyMs: null, assets: [], publisherReport: beat() }),
+    NOW,
+  );
+  assert.equal(r.cause, 'rpc');
+});
+
 test('a stale oracle across the whole allowlist is DOWN, not degraded', () => {
   // The exact state of production for two days. A monitor that reads this as
   // healthy is a monitor that lets it sit there — the deployment was answering
   // in milliseconds the entire time.
+  // The default heartbeat is anchored to `NOW`, and this case deliberately runs
+  // against the real clock — so it is also long stale, which is what production
+  // looked like: a worker that had genuinely stopped.
   const r = classifyHealth(input({ assets: [STALE, { ...STALE, symbol: 'wQQQx' }] }));
   assert.equal(r.status, 'down');
   assert.equal(healthHttpStatus(r.status), 503);
+  assert.equal(r.cause, 'publisher-stopped');
   assert.match(r.problems[0]!, /refuse every fill/);
-  assert.match(r.problems[0]!, /publisher has almost certainly stopped/);
+  assert.match(r.problems[0]!, /has not completed a cycle/);
   assert.match(r.problems[0]!, /173242s/);
 });
 
