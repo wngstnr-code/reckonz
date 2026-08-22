@@ -6,6 +6,7 @@ import {
   healthSentence,
   type HealthTone,
 } from '@/app/components/console/HealthBadge';
+import type { HealthCause } from '@/src/health';
 
 /**
  * A gallery for states that cannot be summoned by waiting.
@@ -33,6 +34,36 @@ const WHEN: Record<HealthTone, string> = {
   loading: 'The first half second of every page load, before the first answer arrives.',
 };
 
+/**
+ * The rows, which are states rather than tones.
+ *
+ * `down` appears twice, because it reads two ways and the difference is in the
+ * words rather than the mark (D106). The weekend one is the whole reason this
+ * gallery earns its keep here: it is true for two days out of seven and it was
+ * the state nobody could look at, because you cannot arrange a closed market on
+ * a Tuesday afternoon.
+ */
+interface Case {
+  key: string;
+  tone: HealthTone;
+  cause?: HealthCause;
+  when: string;
+}
+
+const CASES: Case[] = HEALTH_TONES.flatMap((tone): Case[] =>
+    tone === 'down'
+      ? [
+          { key: 'down', tone, when: WHEN.down },
+          {
+            key: 'down/issuer-closed',
+            tone,
+            cause: 'issuer-closed' as const,
+            when: 'Every weekend, and every night between sessions. The issuer quotes our xStocks 24/5, so outside those hours it publishes no price, the oracle refuses to invent one, and the observations age out. Nothing can trade and nothing is broken.',
+          },
+        ]
+      : [{ key: tone, tone, when: WHEN[tone] }],
+  );
+
 export default function PreviewPage() {
   if (process.env.NODE_ENV === 'production') notFound();
 
@@ -53,34 +84,34 @@ export default function PreviewPage() {
           badge judged on a page background is a badge judged in the wrong
           place. */}
       <div className="mt-5 overflow-hidden rounded-xl border border-line">
-        {HEALTH_TONES.map((tone) => (
+        {CASES.map(({ key, tone, cause }) => (
           <div
-            key={tone}
+            key={key}
             className="flex items-center gap-4 border-b border-line bg-ground px-5 py-2.5 last:border-b-0"
           >
-            <span className="w-28 shrink-0 font-mono text-meta text-faint">{tone}</span>
+            <span className="w-40 shrink-0 font-mono text-meta text-faint">{key}</span>
             <HealthBadge tone={tone} />
-            <span className="font-mono text-meta text-faint">{healthLabel(tone)}</span>
+            <span className="font-mono text-meta text-faint">{healthLabel(tone, cause)}</span>
             <span className="ml-auto font-mono text-meta text-faint">connect wallet</span>
           </div>
         ))}
       </div>
 
       <ol className="mt-8">
-        {HEALTH_TONES.map((tone) => (
-          <li key={tone} className="grid gap-2 border-b border-line/60 py-4 last:border-b-0 md:grid-cols-[10rem_1fr]">
+        {CASES.map(({ key, tone, cause, when }) => (
+          <li key={key} className="grid gap-2 border-b border-line/60 py-4 last:border-b-0 md:grid-cols-[10rem_1fr]">
             <span className="flex items-center gap-2 font-mono text-meta text-faint">
               <HealthBadge tone={tone} />
-              {healthLabel(tone)}
+              {healthLabel(tone, cause)}
             </span>
             <div>
               <p className="text-data text-dim">
                 <span className="text-faint">When: </span>
-                {WHEN[tone]}
+                {when}
               </p>
               <p className="mt-1.5 text-data text-ink">
                 <span className="text-faint">On hover: </span>
-                {healthSentence(tone)}
+                {healthSentence(tone, cause)}
               </p>
             </div>
           </li>

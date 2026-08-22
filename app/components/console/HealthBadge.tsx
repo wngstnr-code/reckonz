@@ -26,6 +26,19 @@
  * not five unrelated pictures. `down` is a clock because the condition really
  * is age — the prices are too old to trade against — and a clock says that
  * faster than any word we could fit in the header.
+ *
+ * **`down` has two readings, and only one of them is a problem** (D106). Our
+ * xStocks are quoted 24/5, so from Friday evening to Sunday the issuer quotes
+ * nothing, the oracle refuses to invent a price, and every observation ages out.
+ * Nothing can trade, which is why the state is still `down` — and nothing is
+ * broken either. A visitor who arrives on a Saturday to *"prices are too old to
+ * trade against"* reads neglect, and it was the route saying that about a system
+ * doing exactly the right thing.
+ *
+ * So the words take the `cause` the route already returns; the mark does not.
+ * Splitting the copy fixes the misreading. Splitting the icon family would mean
+ * a sixth picture for a state that is, visually, the same condition: a market
+ * you cannot trade in right now.
  */
 
 const ICON = {
@@ -57,6 +70,8 @@ const ICON = {
   ),
   loading: <circle cx="12" cy="12" r="9" strokeDasharray="4 3.6" />,
 } as const;
+
+import type { HealthCause } from '@/src/health';
 
 const TONES = {
   ok: {
@@ -91,14 +106,36 @@ const TONES = {
   },
 } as const;
 
+/**
+ * The one `down` that is a closed market rather than a fault.
+ *
+ * Only this cause gets its own words. The other four — `publisher-stopped`,
+ * `publisher-failing`, `issuer-unreachable`, `unknown` — are all genuinely
+ * "something here is not working", and a visitor needs one sentence rather than
+ * our operational vocabulary: which of our processes broke is not their problem
+ * to hold. `problems` in the raw report carries that, one click away.
+ */
+const CLOSED = {
+  label: 'closed',
+  says: 'The market is closed, so the issuer is publishing no prices. You can browse everything here, and trading resumes when it reopens.',
+} as const;
+
+const isClosed = (tone: HealthTone, cause?: HealthCause | null) =>
+  tone === 'down' && cause === 'issuer-closed';
+
 export type HealthTone = keyof typeof TONES;
 
 /** In the order they degrade, which is the order worth reviewing them in. */
 export const HEALTH_TONES = Object.keys(TONES) as HealthTone[];
 
-/** The one word for a state, for the panel that opens on hover. */
-export function healthLabel(tone: HealthTone): string {
-  return TONES[tone].label;
+/**
+ * The one word for a state, for the panel that opens on hover.
+ *
+ * `cause` is optional so the gallery and the `aria-label` can ask without one,
+ * and so this stays callable from anywhere holding only a tone.
+ */
+export function healthLabel(tone: HealthTone, cause?: HealthCause | null): string {
+  return isClosed(tone, cause) ? CLOSED.label : TONES[tone].label;
 }
 
 /** The mark's colour as a border class. Nothing uses it today — the framed
@@ -109,8 +146,8 @@ export function healthBorder(tone: HealthTone): string {
 }
 
 /** What the badge says once the panel is open. */
-export function healthSentence(tone: HealthTone): string {
-  return TONES[tone].says;
+export function healthSentence(tone: HealthTone, cause?: HealthCause | null): string {
+  return isClosed(tone, cause) ? CLOSED.says : TONES[tone].says;
 }
 
 export function HealthBadge({ tone, className }: { tone: HealthTone; className?: string }) {

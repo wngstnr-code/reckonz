@@ -23,6 +23,13 @@ import { HealthBadge, healthLabel, healthSentence, type HealthTone } from './Hea
  * one concrete number. Nothing is hidden: `raw` is the full report, one click
  * away, which is the difference between a summary and a half-truth.
  *
+ * The one concrete number has to follow the state, not just the count (D106).
+ * "4 of 4 assets need a price refresh" is true arithmetic and a false sentence
+ * over a weekend: nothing can refresh them, because the issuer is quoting
+ * nothing. In that state the useful number is the opposite one — how recently
+ * the publisher ran — because it is the fact that says the system is alive and
+ * choosing not to publish.
+ *
  * The route caches for thirty seconds and is rate limited, so one poll a minute
  * is both enough and polite. A request that never answers renders as its own
  * state rather than leaving a stale verdict on screen.
@@ -102,6 +109,9 @@ export function HealthStatus() {
 
   const stale = report?.assets.filter((a) => a.stale).length ?? 0;
   const total = report?.assets.length ?? 0;
+  const cause = report?.cause ?? null;
+  const marketClosed = tone === 'down' && cause === 'issuer-closed';
+  const lastCycle = report?.publisherCycle ?? null;
 
   return (
     <div
@@ -117,7 +127,7 @@ export function HealthStatus() {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         // The mark alone carries no name, so the button has to supply one.
-        aria-label={`System status: ${healthLabel(tone)}`}
+        aria-label={`System status: ${healthLabel(tone, cause)}`}
         // Square, and the same 38px height as the wallet button beside it, so
         // the two sit on one baseline. No frame: the mark is the signal, and a
         // box around it only competes with the wallet button for the eye.
@@ -137,15 +147,26 @@ export function HealthStatus() {
                 icon learnable rather than a symbol you re-decode each time. */}
             <p className="flex items-center gap-2 font-mono text-meta tracking-[0.06em] uppercase">
               <HealthBadge tone={tone} className="h-3.5 w-3.5" />
-              {healthLabel(tone)}
+              {healthLabel(tone, cause)}
             </p>
-            <p className="mt-2 text-data leading-relaxed text-ink">{healthSentence(tone)}</p>
+            <p className="mt-2 text-data leading-relaxed text-ink">
+              {healthSentence(tone, cause)}
+            </p>
 
-            {stale > 0 && (
-              <p className="mt-2 font-mono text-meta text-caution">
-                {stale} of {total} {total === 1 ? 'asset needs' : 'assets need'} a price refresh
-              </p>
-            )}
+            {marketClosed
+              ? lastCycle && (
+                  // Not `caution`: the publisher having run four minutes ago is
+                  // the reassuring half of a closed market, and colouring it as
+                  // a warning would contradict the sentence above it.
+                  <p className="mt-2 font-mono text-meta text-faint">
+                    publisher ran {ago(lastCycle.at)}
+                  </p>
+                )
+              : stale > 0 && (
+                  <p className="mt-2 font-mono text-meta text-caution">
+                    {stale} of {total} {total === 1 ? 'asset needs' : 'assets need'} a price refresh
+                  </p>
+                )}
 
             {report && (
               <div className="mt-3 flex items-baseline gap-3 border-t border-line pt-2.5 font-mono text-meta text-faint">
