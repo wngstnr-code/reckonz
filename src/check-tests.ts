@@ -21,17 +21,29 @@
  * entries, which is how superseded statements are marked everywhere in `docs/`.
  */
 import { execFileSync } from 'node:child_process';
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-/** Files that state the current count. `docs/04-decisions.md` is not here on
- *  purpose: it is append-only and every count in it is a historical one. */
-const FILES = [
-  'CLAUDE.md',
-  'README.md',
-  'docs/05-status.md',
-  'docs/06-assessment.md',
-  'docs/08-parallel.md',
+/**
+ * Files that state the current count. `docs/04-decisions.md` is not here on
+ * purpose: it is append-only and every count in it is a historical one.
+ *
+ * **`optional` is not a convenience.** `CLAUDE.md` and `docs/` left the tree in
+ * "the notes stop being part of what gets read", whose commit message claimed
+ * nothing built against them — this script did, and CI broke on `ENOENT` at the
+ * next push. They are still on both machines and still written to, so they are
+ * still checked wherever they exist and skipped where they do not.
+ *
+ * A file without the flag must exist. Letting every entry be optional would make
+ * a checkout with no docs pass in silence, which is D60 with extra steps: the
+ * number nobody compares is the number that drifts.
+ */
+const FILES: readonly { path: string; optional?: boolean }[] = [
+  { path: 'README.md' },
+  { path: 'CLAUDE.md', optional: true },
+  { path: 'docs/05-status.md', optional: true },
+  { path: 'docs/06-assessment.md', optional: true },
+  { path: 'docs/08-parallel.md', optional: true },
 ];
 
 /**
@@ -133,12 +145,24 @@ function isHistorical(line: string): boolean {
 const problems: string[] = [];
 let checked = 0;
 
+const present = FILES.filter((f) => existsSync(f.path));
+const absent = FILES.filter((f) => !existsSync(f.path));
+const missingRequired = absent.filter((f) => !f.optional);
+
+if (missingRequired.length > 0) {
+  console.error(
+    `\n  cannot read ${missingRequired.map((f) => f.path).join(', ')} — ` +
+      'a file this check is meant to read is gone, and passing without it would be a lie.\n',
+  );
+  process.exit(1);
+}
+
 console.log();
 for (const suite of SUITES) {
   const expected = suite.actual();
   console.log(`  ${suite.name}: ${expected}`);
 
-  for (const file of FILES) {
+  for (const { path: file } of present) {
     const lines = readFileSync(file, 'utf8').split('\n');
     for (const [i, line] of lines.entries()) {
       // Everything below the log heading is history and stays as it was written.
@@ -169,7 +193,13 @@ for (const suite of SUITES) {
   }
 }
 
-console.log(`  claims checked: ${checked} across ${FILES.length} files\n`);
+// Naming the skipped files matters more than counting them: a CI log that says
+// "5 files" while four of them were absent is how a vacuous check looks healthy.
+console.log(
+  `  claims checked: ${checked} across ${present.length} file(s)` +
+    (absent.length === 0 ? '' : `, ${absent.length} not present here: ${absent.map((f) => f.path).join(', ')}`) +
+    '\n',
+);
 
 if (problems.length > 0) {
   console.error('  stale test counts:\n');
